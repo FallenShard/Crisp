@@ -126,8 +126,8 @@ std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const 
                 commandEncoder.bindPipeline(*cubeMapPipeline);
                 cubeMapPipeline->getPipelineLayout()->setPushConstants(cmdBuffer, pushConst.data());
 
-                cubeMapMaterial->bind(cmdBuffer);
-                unitCube.bindAndDraw(cmdBuffer);
+                cubeMapMaterial->bind(commandEncoder);
+                unitCube.bindAndDraw(commandEncoder);
                 commandEncoder.endRendering();
             }
             const VkImageSubresourceRange firstMipRange{
@@ -171,7 +171,7 @@ std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer) {
             beginColorRendering(commandEncoder, view->getHandle(), brdfLut->getExtent2D());
 
             commandEncoder.bindPipeline(*pipeline);
-            renderer->drawFullScreenQuad(cmdBuffer);
+            renderer->drawFullScreenQuad(commandEncoder);
 
             commandEncoder.endRendering();
             commandEncoder.transitionLayout(

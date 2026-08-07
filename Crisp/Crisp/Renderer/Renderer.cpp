@@ -134,16 +134,16 @@ VkShaderModule Renderer::getOrLoadShaderModule(const std::string& key) {
     return m_shaderCache->getOrLoadShaderModule(m_assetPaths.getShaderSpvPath(key));
 }
 
-void Renderer::setDefaultViewport(VkCommandBuffer cmdBuffer) const {
-    vkCmdSetViewport(cmdBuffer, 0, 1, &m_defaultViewport);
+void Renderer::setDefaultViewport(const VulkanCommandEncoder& encoder) const {
+    encoder.setViewport(m_defaultViewport);
 }
 
-void Renderer::setDefaultScissor(VkCommandBuffer cmdBuffer) const {
-    vkCmdSetScissor(cmdBuffer, 0, 1, &m_defaultScissor);
+void Renderer::setDefaultScissor(const VulkanCommandEncoder& encoder) const {
+    encoder.setScissor(m_defaultScissor);
 }
 
-void Renderer::drawFullScreenQuad(VkCommandBuffer cmdBuffer) const {
-    m_fullScreenGeometry->bindAndDraw(cmdBuffer);
+void Renderer::drawFullScreenQuad(const VulkanCommandEncoder& encoder) const {
+    m_fullScreenGeometry->bindAndDraw(encoder);
 }
 
 uint32_t Renderer::getCurrentVirtualFrameIndex() const {
@@ -276,8 +276,8 @@ void Renderer::record(const FrameContext& frameContext) {
         encoder.bindPipeline(*m_scenePipeline);
         encoder.setViewport(m_defaultViewport);
         encoder.setScissor(m_defaultScissor);
-        m_sceneMaterial->bind(cmdBuffer);
-        drawFullScreenQuad(cmdBuffer);
+        m_sceneMaterial->bind(encoder);
+        drawFullScreenQuad(encoder);
     }
 
     for (const auto& drawCommand : m_defaultPassDrawCommands) {

@@ -56,10 +56,9 @@ void addTonemapPass(
                 renderer.getDevice().flushDescriptorUpdates();
             }
 
-            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
-            material->getPipeline()->bind(cmdBufferHandle);
-            material->bind(cmdBufferHandle);
-            renderer.drawFullScreenQuad(cmdBufferHandle);
+            ctx.commandEncoder.bindPipeline(*material->getPipeline());
+            material->bind(ctx.commandEncoder);
+            renderer.drawFullScreenQuad(ctx.commandEncoder);
         });
 }
 

@@ -19,6 +19,56 @@ void VulkanCommandEncoder::bindPipeline(const VulkanPipeline& pipeline) const {
     vkCmdBindPipeline(m_cmdBuffer, pipeline.getBindPoint(), pipeline.getHandle());
 }
 
+void VulkanCommandEncoder::bindDescriptorSets(
+    const VkPipelineBindPoint bindPoint,
+    const VkPipelineLayout layout,
+    const uint32_t firstSet,
+    const std::span<const VkDescriptorSet> sets,
+    const std::span<const uint32_t> dynamicOffsets) const {
+    vkCmdBindDescriptorSets(
+        m_cmdBuffer,
+        bindPoint,
+        layout,
+        firstSet,
+        static_cast<uint32_t>(sets.size()),
+        sets.data(),
+        static_cast<uint32_t>(dynamicOffsets.size()),
+        dynamicOffsets.data());
+}
+
+void VulkanCommandEncoder::bindVertexBuffers(
+    const uint32_t firstBinding,
+    const std::span<const VkBuffer> buffers,
+    const std::span<const VkDeviceSize> offsets) const {
+    CRISP_CHECK_EQ(buffers.size(), offsets.size());
+    if (!buffers.empty()) {
+        vkCmdBindVertexBuffers(
+            m_cmdBuffer, firstBinding, static_cast<uint32_t>(buffers.size()), buffers.data(), offsets.data());
+    }
+}
+
+void VulkanCommandEncoder::bindIndexBuffer(
+    const VkBuffer buffer, const VkDeviceSize offset, const VkIndexType indexType) const {
+    vkCmdBindIndexBuffer(m_cmdBuffer, buffer, offset, indexType);
+}
+
+void VulkanCommandEncoder::draw(
+    const uint32_t vertexCount,
+    const uint32_t instanceCount,
+    const uint32_t firstVertex,
+    const uint32_t firstInstance) const {
+    vkCmdDraw(m_cmdBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+}
+
+void VulkanCommandEncoder::drawIndexed(
+    const uint32_t indexCount,
+    const uint32_t instanceCount,
+    const uint32_t firstIndex,
+    const int32_t vertexOffset,
+    const uint32_t firstInstance) const {
+    vkCmdDrawIndexed(m_cmdBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+}
+
 void VulkanCommandEncoder::insertBarrier(const VulkanSynchronizationScope& scope) const {
     VkMemoryBarrier2 barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER_2};
     barrier.srcStageMask = scope.srcStage;

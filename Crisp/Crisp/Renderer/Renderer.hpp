@@ -65,9 +65,9 @@ public:
     VkShaderModule getShaderModule(const std::string& key) const;
     VkShaderModule getOrLoadShaderModule(const std::string& key);
 
-    void setDefaultViewport(VkCommandBuffer cmdBuffer) const;
-    void setDefaultScissor(VkCommandBuffer cmdBuffer) const;
-    void drawFullScreenQuad(VkCommandBuffer cmdBuffer) const;
+    void setDefaultViewport(const VulkanCommandEncoder& encoder) const;
+    void setDefaultScissor(const VulkanCommandEncoder& encoder) const;
+    void drawFullScreenQuad(const VulkanCommandEncoder& encoder) const;
 
     uint32_t getCurrentVirtualFrameIndex() const;
     uint64_t getCurrentFrameIndex() const;

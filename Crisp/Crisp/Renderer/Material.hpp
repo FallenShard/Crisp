@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -12,6 +13,8 @@
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
+class VulkanCommandEncoder;
+
 class Material {
 public:
     explicit Material(VulkanPipeline* pipeline);
@@ -53,8 +56,8 @@ public:
 
     void setDynamicOffset(uint32_t index, uint32_t offset);
 
-    void bind(VkCommandBuffer cmdBuffer);
-    void bind(VkCommandBuffer cmdBuffer, const std::vector<uint32_t>& dynamicBufferOffsets);
+    void bind(const VulkanCommandEncoder& encoder) const;
+    void bind(const VulkanCommandEncoder& encoder, std::span<const uint32_t> dynamicBufferOffsets) const;
 
     VulkanPipeline* getPipeline() const {
         return m_pipeline;

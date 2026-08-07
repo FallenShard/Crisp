@@ -1,6 +1,7 @@
 #include <Crisp/Geometry/Geometry.hpp>
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
 namespace {
@@ -59,55 +60,38 @@ void Geometry::addNonOwningVertexBuffer(VulkanBuffer* vertexBuffer) {
     m_bindingCount = static_cast<uint32_t>(m_vertexBufferHandles.size());
 }
 
-void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer) const {
-    if (m_bindingCount == 0) {
-        return;
-    }
-
-    vkCmdBindVertexBuffers(cmdBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
+void Geometry::bindVertexBuffers(const VulkanCommandEncoder& encoder) const {
+    encoder.bindVertexBuffers(m_firstBinding, m_vertexBufferHandles, m_offsets);
 }
 
-void Geometry::bindVertexBuffers(VkCommandBuffer cmdBuffer, uint32_t firstBuffer, uint32_t bufferCount) const {
+void Geometry::bindVertexBuffers(
+    const VulkanCommandEncoder& encoder, const uint32_t firstBuffer, const uint32_t bufferCount) const {
     CRISP_CHECK(firstBuffer >= m_firstBinding);
     CRISP_CHECK(firstBuffer + bufferCount <= m_firstBinding + m_bindingCount);
-    if (m_bindingCount == 0) {
-        return;
-    }
-
-    vkCmdBindVertexBuffers(
-        cmdBuffer, firstBuffer, bufferCount, &m_vertexBufferHandles[firstBuffer], &m_offsets[firstBuffer]);
+    encoder.bindVertexBuffers(
+        firstBuffer,
+        std::span{m_vertexBufferHandles}.subspan(firstBuffer, bufferCount),
+        std::span{m_offsets}.subspan(firstBuffer, bufferCount));
 }
 
-void Geometry::bind(VkCommandBuffer commandBuffer) const {
-    if (m_bindingCount > 0) {
-        vkCmdBindVertexBuffers(
-            commandBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
-    }
+void Geometry::bind(const VulkanCommandEncoder& encoder) const {
+    bindVertexBuffers(encoder);
     if (m_indexBuffer) {
-        vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer->getHandle(), 0, VK_INDEX_TYPE_UINT32);
+        encoder.bindIndexBuffer(m_indexBuffer->getHandle(), 0, m_indexType);
     }
 }
 
-void Geometry::draw(VkCommandBuffer commandBuffer) const {
+void Geometry::draw(const VulkanCommandEncoder& encoder) const {
     if (m_indexBuffer) {
-        vkCmdDrawIndexed(commandBuffer, m_indexCount, 1, 0, 0, 0);
+        encoder.drawIndexed(m_indexCount);
     } else {
-        vkCmdDraw(commandBuffer, m_vertexCount, 1, 0, 0);
+        encoder.draw(m_vertexCount);
     }
 }
 
-void Geometry::bindAndDraw(VkCommandBuffer commandBuffer) const {
-    if (m_bindingCount > 0) {
-        vkCmdBindVertexBuffers(
-            commandBuffer, m_firstBinding, m_bindingCount, m_vertexBufferHandles.data(), m_offsets.data());
-    }
-
-    if (m_indexBuffer) {
-        vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer->getHandle(), 0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(commandBuffer, m_indexCount, 1, 0, 0, 0);
-    } else {
-        vkCmdDraw(commandBuffer, m_vertexCount, 1, 0, 0);
-    }
+void Geometry::bindAndDraw(const VulkanCommandEncoder& encoder) const {
+    bind(encoder);
+    draw(encoder);
 }
 
 IndexedGeometryView Geometry::createIndexedGeometryView() const {

@@ -46,11 +46,11 @@ void executeDrawCommand(
         commandEncoder.getHandle(), static_cast<const char*>(command.pushConstantView.data));
 
     if (command.material) {
-        command.material->bind(commandEncoder.getHandle(), command.dynamicBufferOffsets);
+        command.material->bind(commandEncoder, command.dynamicBufferOffsets);
     }
 
-    command.geometry->bindVertexBuffers(commandEncoder.getHandle(), command.firstBuffer, command.bufferCount);
-    command.drawFunc(commandEncoder.getHandle(), command.geometryView);
+    command.geometry->bindVertexBuffers(commandEncoder, command.firstBuffer, command.bufferCount);
+    command.drawFunc(commandEncoder, command.geometryView);
 }
 
 } // namespace
@@ -89,15 +89,15 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         }
         createDrawCommand(drawCommands, m_skybox->getRenderNode(), kForwardLightingPass);
 
-        m_forwardPassMaterial->bind(ctx.commandEncoder.getHandle());
+        m_forwardPassMaterial->bind(ctx.commandEncoder);
         for (const auto& drawCommand : drawCommands) {
             executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
         }
 
         auto* meshPipeline = m_resourceContext->pipelineCache.getPipeline("mesh");
-        meshPipeline->bind(ctx.commandEncoder.getHandle());
+        ctx.commandEncoder.bindPipeline(*meshPipeline);
         auto* meshMaterial = m_resourceContext->getMaterial("mesh");
-        meshMaterial->bind(ctx.commandEncoder.getHandle());
+        meshMaterial->bind(ctx.commandEncoder);
         ctx.commandEncoder.drawMeshTasks(static_cast<uint32_t>(m_meshletData.meshlets.size()));
     });
 

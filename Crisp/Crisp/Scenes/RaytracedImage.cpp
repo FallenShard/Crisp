@@ -143,11 +143,12 @@ void RayTracedImage::draw(Renderer* renderer) {
     }
 
     renderer->enqueueDefaultPassDrawCommand([this, renderer](VkCommandBuffer cmdBuffer) {
-        m_pipeline->bind(cmdBuffer);
-        m_materials[renderer->getCurrentVirtualFrameIndex()]->bind(cmdBuffer);
-        vkCmdSetViewport(cmdBuffer, 0, 1, &m_viewport);
+        const VulkanCommandEncoder encoder(cmdBuffer);
+        encoder.bindPipeline(*m_pipeline);
+        m_materials[renderer->getCurrentVirtualFrameIndex()]->bind(encoder);
+        encoder.setViewport(m_viewport);
 
-        renderer->drawFullScreenQuad(cmdBuffer);
+        renderer->drawFullScreenQuad(encoder);
     });
 }
 

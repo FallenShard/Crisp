@@ -5,6 +5,7 @@
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
 namespace {
@@ -283,8 +284,10 @@ void BindlessImageRegistry::flush() {
 }
 
 void BindlessImageRegistry::bind(
-    const VkCommandBuffer cmdBuffer, const VkPipelineLayout pipelineLayout, const VkPipelineBindPoint bindPoint) const {
-    vkCmdBindDescriptorSets(cmdBuffer, bindPoint, pipelineLayout, 0, 1, &m_set, 0, nullptr);
+    const VulkanCommandEncoder& encoder,
+    const VkPipelineLayout pipelineLayout,
+    const VkPipelineBindPoint bindPoint) const {
+    encoder.bindDescriptorSets(bindPoint, pipelineLayout, 0, std::span{&m_set, 1});
 }
 
 } // namespace crisp

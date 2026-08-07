@@ -149,14 +149,13 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                     {});
             }
 
-            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
-            material->getPipeline()->bind(cmdBufferHandle);
-            material->bind(cmdBufferHandle);
+            ctx.commandEncoder.bindPipeline(*material->getPipeline());
+            material->bind(ctx.commandEncoder);
 
             // SkyTransLut.json bakes the viewport and scissor from the pass render area, so the pipeline
             // declares neither as dynamic state. Setting them here would violate the static state and also
             // cover the swap chain rather than the LUT.
-            renderer.drawFullScreenQuad(cmdBufferHandle);
+            renderer.drawFullScreenQuad(ctx.commandEncoder);
         });
 
     renderGraph.addPass(
@@ -208,10 +207,10 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 renderer.getDevice().flushDescriptorUpdates();
             }
 
-            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
-            pipeline->bind(cmdBufferHandle);
-            material->bind(cmdBufferHandle);
-            vkCmdDispatch(cmdBufferHandle, kMultiScatteringLutResolution, kMultiScatteringLutResolution, 1);
+            ctx.commandEncoder.bindPipeline(*pipeline);
+            material->bind(ctx.commandEncoder);
+            ctx.commandEncoder.dispatchCompute(
+                {kMultiScatteringLutResolution, kMultiScatteringLutResolution, 1});
         });
 
     renderGraph.addPass(
@@ -247,10 +246,9 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                     });
             }
 
-            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
-            material->getPipeline()->bind(cmdBufferHandle);
-            material->bind(cmdBufferHandle);
-            renderer.drawFullScreenQuad(cmdBufferHandle);
+            ctx.commandEncoder.bindPipeline(*material->getPipeline());
+            material->bind(ctx.commandEncoder);
+            renderer.drawFullScreenQuad(ctx.commandEncoder);
         });
 
     renderGraph.addPass(
@@ -287,10 +285,9 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                     });
             }
 
-            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
-            material->getPipeline()->bind(cmdBufferHandle);
-            material->bind(cmdBufferHandle);
-            resourceContext.getGeometry(kVolumeGeometryId).bindAndDraw(cmdBufferHandle);
+            ctx.commandEncoder.bindPipeline(*material->getPipeline());
+            material->bind(ctx.commandEncoder);
+            resourceContext.getGeometry(kVolumeGeometryId).bindAndDraw(ctx.commandEncoder);
         });
 
     renderGraph.addPass(
@@ -331,10 +328,9 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                     });
             }
 
-            const VkCommandBuffer cmdBufferHandle = ctx.commandEncoder.getHandle();
-            material->getPipeline()->bind(cmdBufferHandle);
-            material->bind(cmdBufferHandle);
-            renderer.drawFullScreenQuad(cmdBufferHandle);
+            ctx.commandEncoder.bindPipeline(*material->getPipeline());
+            material->bind(ctx.commandEncoder);
+            renderer.drawFullScreenQuad(ctx.commandEncoder);
         });
 }
 

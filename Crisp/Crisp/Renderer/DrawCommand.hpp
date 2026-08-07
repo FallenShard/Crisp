@@ -5,6 +5,7 @@
 #include <Crisp/Renderer/Material.hpp>
 
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 #include <variant>
@@ -43,18 +44,17 @@ struct PushConstantView {
 };
 
 namespace detail {
-using DrawFunc = void (*)(VkCommandBuffer, const GeometryViewVariant&);
+using DrawFunc = void (*)(const VulkanCommandEncoder&, const GeometryViewVariant&);
 
-inline void draw(VkCommandBuffer cmdBuffer, const GeometryViewVariant& geomView) {
+inline void draw(const VulkanCommandEncoder& encoder, const GeometryViewVariant& geomView) {
     const auto& view = std::get<ListGeometryView>(geomView);
-    vkCmdDraw(cmdBuffer, view.vertexCount, view.instanceCount, view.firstVertex, view.firstInstance);
+    encoder.draw(view.vertexCount, view.instanceCount, view.firstVertex, view.firstInstance);
 }
 
-inline void drawIndexed(VkCommandBuffer cmdBuffer, const GeometryViewVariant& geomView) {
+inline void drawIndexed(const VulkanCommandEncoder& encoder, const GeometryViewVariant& geomView) {
     const auto& view = std::get<IndexedGeometryView>(geomView);
-    vkCmdBindIndexBuffer(cmdBuffer, view.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(
-        cmdBuffer, view.indexCount, view.instanceCount, view.firstIndex, view.vertexOffset, view.firstInstance);
+    encoder.bindIndexBuffer(view.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    encoder.drawIndexed(view.indexCount, view.instanceCount, view.firstIndex, view.vertexOffset, view.firstInstance);
 }
 
 template <typename GeometryView>

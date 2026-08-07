@@ -11,6 +11,8 @@
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 namespace crisp {
+class VulkanCommandEncoder;
+
 class Geometry {
 public:
     Geometry() = default;
@@ -64,11 +66,11 @@ public:
     void addVertexBuffer(std::unique_ptr<VulkanBuffer> vertexBuffer);
     void addNonOwningVertexBuffer(VulkanBuffer* vertexBuffer);
 
-    void bindVertexBuffers(VkCommandBuffer cmdBuffer) const;
-    void bindVertexBuffers(VkCommandBuffer cmdBuffer, uint32_t firstBuffer, uint32_t bufferCount) const;
-    void bind(VkCommandBuffer commandBuffer) const;
-    void draw(VkCommandBuffer commandBuffer) const;
-    void bindAndDraw(VkCommandBuffer commandBuffer) const;
+    void bindVertexBuffers(const VulkanCommandEncoder& encoder) const;
+    void bindVertexBuffers(const VulkanCommandEncoder& encoder, uint32_t firstBuffer, uint32_t bufferCount) const;
+    void bind(const VulkanCommandEncoder& encoder) const;
+    void draw(const VulkanCommandEncoder& encoder) const;
+    void bindAndDraw(const VulkanCommandEncoder& encoder) const;
 
     VulkanBuffer* getVertexBuffer(const uint32_t index = 0) const {
         return m_vertexBuffers[index].get();

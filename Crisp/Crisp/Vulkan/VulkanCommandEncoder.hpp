@@ -15,6 +15,23 @@ public:
     void setViewport(const VkViewport& viewport) const;
     void setScissor(const VkRect2D& scissorRect) const;
     void bindPipeline(const VulkanPipeline& pipeline) const;
+    void bindDescriptorSets(
+        VkPipelineBindPoint bindPoint,
+        VkPipelineLayout layout,
+        uint32_t firstSet,
+        std::span<const VkDescriptorSet> sets,
+        std::span<const uint32_t> dynamicOffsets = {}) const;
+    void bindVertexBuffers(
+        uint32_t firstBinding, std::span<const VkBuffer> buffers, std::span<const VkDeviceSize> offsets) const;
+    void bindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType) const;
+    void draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0, uint32_t firstInstance = 0)
+        const;
+    void drawIndexed(
+        uint32_t indexCount,
+        uint32_t instanceCount = 1,
+        uint32_t firstIndex = 0,
+        int32_t vertexOffset = 0,
+        uint32_t firstInstance = 0) const;
 
     void insertBarrier(const VulkanSynchronizationScope& scope) const;
     void insertBufferMemoryBarrier(

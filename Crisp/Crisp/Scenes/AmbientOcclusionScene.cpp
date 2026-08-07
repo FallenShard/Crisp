@@ -58,14 +58,15 @@ void createDrawCommand(
 
 void drawPostProcessEffect(
     Renderer& renderer, const PostProcessingDrawCommand& command, const RenderPassExecutionContext& ctx) {
-    command.pipeline->bind(ctx.cmdBuffer.getHandle());
+    const VulkanCommandEncoder encoder(ctx.cmdBuffer.getHandle());
+    encoder.bindPipeline(*command.pipeline);
     const auto dynamicState = command.pipeline->getDynamicStateFlags();
     if (dynamicState & PipelineDynamicState::Viewport) {
-        renderer.setDefaultViewport(ctx.cmdBuffer.getHandle());
+        renderer.setDefaultViewport(encoder);
     }
 
     if (dynamicState & PipelineDynamicState::Scissor) {
-        renderer.setDefaultScissor(ctx.cmdBuffer.getHandle());
+        renderer.setDefaultScissor(encoder);
     }
 
     command.pipeline->getPipelineLayout()->setPushConstants(
@@ -77,10 +78,10 @@ void drawPostProcessEffect(
         for (std::size_t i = 0; i < dynamicBufferOffsets.size(); ++i) {
             dynamicBufferOffsets[i] = 0 + dynamicBufferViews[i].subOffset;
         }
-        command.material->bind(ctx.virtualFrameIndex, ctx.cmdBuffer.getHandle(), dynamicBufferOffsets);
+        command.material->bind(encoder, dynamicBufferOffsets);
     }
 
-    renderer.getFullScreenGeometry()->bindAndDraw(ctx.cmdBuffer.getHandle());
+    renderer.getFullScreenGeometry()->bindAndDraw(encoder);
 }
 
 std::unique_ptr<VulkanImage> createRandomRotationImage(Renderer& renderer) {

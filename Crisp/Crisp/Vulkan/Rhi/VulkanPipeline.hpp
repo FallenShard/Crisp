@@ -29,7 +29,6 @@ public:
         return m_pipelineLayout.get();
     }
 
-    void bind(VkCommandBuffer buffer) const;
     void setDebugName(const VulkanDevice& device, std::string_view name) const;
 
     VulkanDescriptorSet allocateDescriptorSet(uint32_t setId) const;

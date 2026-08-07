@@ -16,10 +16,6 @@ VulkanPipeline::VulkanPipeline(
     , m_vertexLayout(std::move(vertexLayout))
     , m_bindPoint(bindPoint) {}
 
-void VulkanPipeline::bind(VkCommandBuffer cmdBuffer) const {
-    vkCmdBindPipeline(cmdBuffer, m_bindPoint, m_handle);
-}
-
 void VulkanPipeline::setDebugName(const VulkanDevice& device, const std::string_view name) const {
     device.setObjectName(*this, fmt::format("{} Pipeline", name));
     device.setObjectName(*m_pipelineLayout, fmt::format("{} Pipeline Layout", name));

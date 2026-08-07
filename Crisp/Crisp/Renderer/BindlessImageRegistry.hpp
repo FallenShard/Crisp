@@ -12,6 +12,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 namespace crisp {
+class VulkanCommandEncoder;
 namespace detail {
 struct SampledImageTag {};
 
@@ -143,7 +144,8 @@ public:
     // One vkUpdateDescriptorSets for everything accumulated since the last call.
     void flush();
 
-    void bind(VkCommandBuffer cmdBuffer, VkPipelineLayout pipelineLayout, VkPipelineBindPoint bindPoint) const;
+    void bind(
+        const VulkanCommandEncoder& encoder, VkPipelineLayout pipelineLayout, VkPipelineBindPoint bindPoint) const;
 
     VkDescriptorSetLayout getSetLayout() const {
         return m_setLayout;
