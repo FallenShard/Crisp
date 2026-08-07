@@ -7,6 +7,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetBinding.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanTimestampQueryPool.hpp>
 #include <Crisp/Vulkan/VulkanSynchronization.hpp>
 
@@ -120,5 +121,10 @@ private:
 
     VkCommandBuffer m_cmdBuffer;
 };
+
+template <typename Func>
+void submitAndWait(const VulkanQueue& queue, Func&& func) {
+    queue.submitAndWait([&func](const VkCommandBuffer cmdBuffer) { func(VulkanCommandEncoder(cmdBuffer)); });
+}
 
 } // namespace crisp

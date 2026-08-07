@@ -274,8 +274,8 @@ void RenderGraph::compile(const VulkanDevice& device, const VkExtent2D& swapChai
     CRISP_LOGD("Compiling RenderGraph...");
     m_swapChainExtent = swapChainExtent;
     determineAliasedResurces();
-    device.getGeneralQueue().submitAndWait([this, &device, &swapChainExtent](const VkCommandBuffer cmdBuffer) {
-        createPhysicalResources(device, swapChainExtent, cmdBuffer);
+    submitAndWait(device.getGeneralQueue(), [this, &device, &swapChainExtent](const VulkanCommandEncoder& encoder) {
+        createPhysicalResources(device, swapChainExtent, encoder);
     });
     m_passProfiler.initialize(device, m_passes.size());
     CRISP_LOGI(
@@ -788,10 +788,9 @@ void RenderGraph::determineAliasedResurces() {
 }
 
 void RenderGraph::createPhysicalResources(
-    const VulkanDevice& device, const VkExtent2D swapChainExtent, const VkCommandBuffer cmdBuffer) {
+    const VulkanDevice& device, const VkExtent2D swapChainExtent, const VulkanCommandEncoder& commandEncoder) {
     CRISP_LOGD("Creating physical resources...");
     m_imageViews.clear();
-    const VulkanCommandEncoder commandEncoder{cmdBuffer};
     for (auto& physicalImage : m_physicalImages) {
         const auto debugName =
             createPhysicalResourceDebugName("Image", m_resources, physicalImage.aliasedResourceIndices);

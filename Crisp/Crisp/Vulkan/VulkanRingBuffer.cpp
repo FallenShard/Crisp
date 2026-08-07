@@ -21,9 +21,8 @@ VulkanRingBuffer::VulkanRingBuffer(
 
     if (data) {
         updateStagingBuffer({.data = data, .size = size}, 0);
-        device->getGeneralQueue().submitAndWait([this](const VkCommandBuffer cmdBuffer) {
-            updateDeviceBuffer(VulkanCommandEncoder{cmdBuffer});
-        });
+        submitAndWait(
+            device->getGeneralQueue(), [this](const VulkanCommandEncoder& encoder) { updateDeviceBuffer(encoder); });
     }
 }
 

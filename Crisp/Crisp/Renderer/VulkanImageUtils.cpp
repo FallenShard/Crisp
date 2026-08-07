@@ -48,8 +48,7 @@ void fillImageLayers(
     VulkanImage& image, Renderer& renderer, const void* data, VkDeviceSize size, uint32_t layerIdx, uint32_t numLayers) {
     auto& device = renderer.getDevice();
     const auto staging = createStagingBuffer(device, data, size);
-    device.getGeneralQueue().submitAndWait([&staging, &image, layerIdx, numLayers](VkCommandBuffer cmdBuffer) {
-        const VulkanCommandEncoder encoder(cmdBuffer);
+    submitAndWait(device.getGeneralQueue(), [&staging, &image, layerIdx, numLayers](const VulkanCommandEncoder& encoder) {
         const auto range = createSubresourceRange(image, layerIdx, numLayers, 0, image.getMipLevels());
         encoder.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite, range);
         encoder.copyBufferToImage(
@@ -72,8 +71,7 @@ std::unique_ptr<VulkanImage> createVulkanImage(Renderer& renderer, const Image& 
         });
 
     const auto staging = createStagingBuffer(renderer.getDevice(), image.getData(), image.getByteSize());
-    renderer.getDevice().getGeneralQueue().submitAndWait([&staging, &vulkanImage](VkCommandBuffer cmdBuffer) {
-        VulkanCommandEncoder commandEncoder(cmdBuffer);
+    submitAndWait(renderer.getDevice().getGeneralQueue(), [&staging, &vulkanImage](const VulkanCommandEncoder& commandEncoder) {
         commandEncoder.transitionLayout(
             *vulkanImage,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -115,9 +113,9 @@ std::unique_ptr<VulkanImage> createVulkanCubeMap(
             faceStaging.push_back(createStagingBuffer(renderer.getDevice(), face.getData(), face.getByteSize()));
         }
 
-        renderer.getDevice().getGeneralQueue().submitAndWait(
-            [&faceStaging, &vulkanImage, mipLevel, mipSize](const VkCommandBuffer cmdBuffer) {
-                VulkanCommandEncoder commandEncoder(cmdBuffer);
+        submitAndWait(
+            renderer.getDevice().getGeneralQueue(),
+            [&faceStaging, &vulkanImage, mipLevel, mipSize](const VulkanCommandEncoder& commandEncoder) {
                 commandEncoder.transitionLayout(
                     *vulkanImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
                 for (uint32_t face = 0; face < faceStaging.size(); ++face) { // NOLINT
@@ -140,8 +138,7 @@ std::unique_ptr<VulkanImage> createVulkanImage(
     auto image = std::make_unique<VulkanImage>(renderer.getDevice(), imageCreateInfo);
 
     const auto staging = createStagingBuffer(renderer.getDevice(), data, size);
-    renderer.getDevice().getGeneralQueue().submitAndWait([&staging, img = image.get()](VkCommandBuffer cmdBuffer) {
-        const VulkanCommandEncoder encoder(cmdBuffer);
+    submitAndWait(renderer.getDevice().getGeneralQueue(), [&staging, img = image.get()](const VulkanCommandEncoder& encoder) {
         const auto fullRange = createSubresourceRange(*img, 0, 1, 0, img->getMipLevels());
         encoder.transitionLayout(*img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite, fullRange);
         encoder.copyBufferToImage(*staging, *img, createBufferImageCopy(*img, img->getExtent(), 0, 1));
@@ -171,9 +168,9 @@ void updateCubeMap(
         faceStaging.push_back(createStagingBuffer(renderer.getDevice(), face.getData(), face.getByteSize()));
     }
 
-    renderer.getDevice().getGeneralQueue().submitAndWait(
-        [&faceStaging, &image, mipLevel, mipSize](VkCommandBuffer cmdBuffer) {
-            const VulkanCommandEncoder encoder(cmdBuffer);
+    submitAndWait(
+        renderer.getDevice().getGeneralQueue(),
+        [&faceStaging, &image, mipLevel, mipSize](const VulkanCommandEncoder& encoder) {
             for (uint32_t i = 0; i < faceStaging.size(); ++i) {
                 const VkExtent3D extent{mipSize, mipSize, 1};
                 const auto range = createSubresourceRange(image, i, 1, mipLevel);

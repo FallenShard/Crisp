@@ -22,8 +22,7 @@ void uploadBufferBlocking(
     const void* data,
     const VkDeviceSize size) {
     const auto staging = createStagingBuffer(device, data, size);
-    queue.submitAndWait([&](const VkCommandBuffer cmdBuffer) {
-        const VulkanCommandEncoder encoder(cmdBuffer);
+    submitAndWait(queue, [&](const VulkanCommandEncoder& encoder) {
         const VkBufferCopy region{.dstOffset = dstOffset, .size = size};
         encoder.copyBuffer(*staging, dstBuffer, region);
     });

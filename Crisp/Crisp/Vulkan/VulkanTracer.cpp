@@ -18,8 +18,8 @@ VulkanTracingContext::VulkanTracingContext(const VulkanDevice& device)
     , m_count(0)
     , m_retrievedQueries(kMaxQueryCount)
     , m_resolvedEvents(0) {
-    device.getGeneralQueue().submitAndWait([this](const VkCommandBuffer cmdBuffer) {
-        VulkanCommandEncoder(cmdBuffer).writeTimestamp(m_queryPool, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, 0);
+    submitAndWait(device.getGeneralQueue(), [this](const VulkanCommandEncoder& encoder) {
+        encoder.writeTimestamp(m_queryPool, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, 0);
     });
     std::array<uint64_t, 1> referenceTimestamp{};
     m_queryPool.getResultsAndWait(referenceTimestamp);

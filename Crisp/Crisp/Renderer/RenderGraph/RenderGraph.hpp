@@ -178,7 +178,8 @@ private:
         const RenderGraphPhysicalImage& image, VkImageUsageFlags usageFlags);
 
     void determineAliasedResurces();
-    void createPhysicalResources(const VulkanDevice& device, VkExtent2D swapChainExtent, VkCommandBuffer cmdBuffer);
+    void createPhysicalResources(
+        const VulkanDevice& device, VkExtent2D swapChainExtent, const VulkanCommandEncoder& commandEncoder);
 
     struct PassProfiler {
         struct Frame {
