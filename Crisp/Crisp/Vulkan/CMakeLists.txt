@@ -155,6 +155,7 @@ add_cpp_static_library(
 target_link_libraries(
     CrispVulkanTracer
     PUBLIC Crisp::Vulkan
+    PUBLIC Crisp::VulkanCommandEncoder
     PUBLIC Crisp::ChromeEventTracer
     PUBLIC Microsoft.GSL::GSL
 )

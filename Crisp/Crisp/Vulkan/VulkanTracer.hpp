@@ -8,6 +8,7 @@
 #include <Crisp/Core/ChromeEventTracer.hpp>
 #include <Crisp/Core/StringLiteral.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanTimestampQueryPool.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
 
@@ -25,12 +26,12 @@ public:
     void retrieveResults();
 
     void writeTimestamp(
-        const VkCommandBuffer cmdBuffer,
+        const VulkanCommandEncoder& encoder,
         const VkPipelineStageFlags2 stageFlags,
         const LiteralWrapper name,
         const ScopeEventType eventType) {
         m_events.emplace_back(ScopeEvent{m_count, name, eventType});
-        m_queryPool.writeTimestamp(cmdBuffer, stageFlags, m_count++);
+        encoder.writeTimestamp(m_queryPool, stageFlags, m_count++);
     }
 
     std::span<const ScopeEvent> getTracedEvents() const {
@@ -61,20 +62,20 @@ class VulkanTracingScope {
 public:
     explicit VulkanTracingScope(
         VulkanTracingContext* context,
-        const VkCommandBuffer cmdBuffer,
+        const VulkanCommandEncoder& encoder,
         const LiteralWrapper name,
         const VkPipelineStageFlags2 stageFlags = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT)
         : m_context(context)
-        , m_cmdBuffer(cmdBuffer)
+        , m_encoder(encoder)
         , m_name(name) {
         if (context) {
-            context->writeTimestamp(m_cmdBuffer, stageFlags, m_name, ScopeEventType::Begin);
+            context->writeTimestamp(m_encoder, stageFlags, m_name, ScopeEventType::Begin);
         }
     }
 
     ~VulkanTracingScope() {
         if (m_context) {
-            m_context->writeTimestamp(m_cmdBuffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, m_name, ScopeEventType::End);
+            m_context->writeTimestamp(m_encoder, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, m_name, ScopeEventType::End);
         }
     }
 
@@ -85,12 +86,12 @@ public:
 
 private:
     VulkanTracingContext* m_context;
-    const VkCommandBuffer m_cmdBuffer;
+    const VulkanCommandEncoder m_encoder;
     const LiteralWrapper m_name;
 };
 
-#define CRISP_TRACE_VK_SCOPE(scopeName, cmdBuffer)                                                                     \
-    VulkanTracingScope CRISP_CONCATENATE(scope, __LINE__)(detail::getTraceContext(), cmdBuffer, scopeName);
+#define CRISP_TRACE_VK_SCOPE(scopeName, encoder)                                                                       \
+    VulkanTracingScope CRISP_CONCATENATE(scope, __LINE__)(detail::getTraceContext(), encoder, scopeName);
 
 #define CRISP_TRACE_VK_ADVANCE(virtualFrameIndex)                                                                      \
     {                                                                                                                  \

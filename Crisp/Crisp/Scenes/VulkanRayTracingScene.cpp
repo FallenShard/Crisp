@@ -167,7 +167,7 @@ void VulkanRayTracingScene::update(const UpdateParams& updateParams) {
 }
 
 void VulkanRayTracingScene::render(const FrameContext& frameContext) {
-    CRISP_TRACE_VK_SCOPE("VulkanRayTracingScene::render", frameContext.commandEncoder.getHandle());
+    CRISP_TRACE_VK_SCOPE("VulkanRayTracingScene::render", frameContext.commandEncoder);
 
     frameContext.commandEncoder.insertBarrier(kRayTracingRead >> kTransferWrite);
 

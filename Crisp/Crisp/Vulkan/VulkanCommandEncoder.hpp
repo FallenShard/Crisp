@@ -7,6 +7,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetBinding.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanTimestampQueryPool.hpp>
 #include <Crisp/Vulkan/VulkanSynchronization.hpp>
 
 namespace crisp {
@@ -87,6 +88,9 @@ public:
 
     void updateBuffer(const VulkanBuffer& buffer, std::span<const std::byte> data) const;
     void buildAccelerationStructure(VulkanAccelerationStructure& accelerationStructure) const;
+
+    void writeTimestamp(const VulkanTimestampQueryPool& queryPool, VkPipelineStageFlags2 stage, uint32_t queryIndex)
+        const;
 
     template <typename T, typename... Ts>
     void setPushConstants(

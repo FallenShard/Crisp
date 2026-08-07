@@ -426,6 +426,12 @@ void VulkanCommandEncoder::buildAccelerationStructure(VulkanAccelerationStructur
     vkCmdBuildAccelerationStructuresKHR(m_cmdBuffer, 1, &buildInfo, &buildRange);
 }
 
+void VulkanCommandEncoder::writeTimestamp(
+    const VulkanTimestampQueryPool& queryPool, const VkPipelineStageFlags2 stage, const uint32_t queryIndex) const {
+    CRISP_CHECK_LT(queryIndex, queryPool.getQueryCount());
+    vkCmdWriteTimestamp2(m_cmdBuffer, stage, queryPool.getHandle(), queryIndex);
+}
+
 void VulkanCommandEncoder::setPushConstants(
     const VulkanPipelineLayout& layout, const std::span<const std::byte> data) const {
     for (const auto& range : layout.getPushConstantRanges()) {

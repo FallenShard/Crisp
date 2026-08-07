@@ -148,7 +148,7 @@ void PbrScene::update(const UpdateParams& updateParams) {
 }
 
 void PbrScene::render(const FrameContext& frameContext) {
-    CRISP_TRACE_VK_SCOPE("PbrScene::render", frameContext.commandEncoder.getHandle());
+    CRISP_TRACE_VK_SCOPE("PbrScene::render", frameContext.commandEncoder);
 
     frameContext.commandEncoder.insertBarrier((kVertexUniformRead | kFragmentUniformRead) >> kTransferWrite);
 

@@ -361,13 +361,12 @@ void RenderGraph::execute(const FrameContext& frameContext) {
             }
         };
 
-    const auto cmdBuffer = encoder.getHandle();
     auto* gpuProfileFrame = m_passProfiler.beginFrame(frameContext.virtualFrameIndex);
 
     for (const auto&& [idx, pass] : std::views::enumerate(m_passes)) {
         if (gpuProfileFrame) {
-            gpuProfileFrame->queryPool->writeTimestamp(
-                cmdBuffer, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, static_cast<uint32_t>(idx) * 2);
+            encoder.writeTimestamp(
+                *gpuProfileFrame->queryPool, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, static_cast<uint32_t>(idx) * 2);
         }
 
         // CRISP_LOGI("Executing pass: {}", pass.name);
@@ -466,8 +465,8 @@ void RenderGraph::execute(const FrameContext& frameContext) {
         }
 
         if (gpuProfileFrame) {
-            gpuProfileFrame->queryPool->writeTimestamp(
-                cmdBuffer, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, static_cast<uint32_t>(idx) * 2 + 1);
+            encoder.writeTimestamp(
+                *gpuProfileFrame->queryPool, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, static_cast<uint32_t>(idx) * 2 + 1);
         }
     }
 

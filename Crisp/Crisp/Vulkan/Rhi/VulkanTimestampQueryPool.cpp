@@ -19,7 +19,8 @@ uint64_t createTimestampMask(const uint32_t timestampValidBits) {
 
 VulkanTimestampQueryPool::VulkanTimestampQueryPool(
     const VulkanDevice& device, const VulkanQueue& queue, const uint32_t queryCount, const std::string_view debugName)
-    : m_device(&device)
+    : VulkanResource(device.getResourceDeallocator())
+    , m_device(&device)
     , m_queryCount(queryCount)
     , m_timestampMask(createTimestampMask(queue.getTimestampValidBits()))
     , m_timestampPeriodNs(device.getTimestampPeriod()) {
@@ -37,18 +38,8 @@ VulkanTimestampQueryPool::VulkanTimestampQueryPool(
     reset();
 }
 
-VulkanTimestampQueryPool::~VulkanTimestampQueryPool() {
-    m_device->getResourceDeallocator().deferDestruction(m_handle);
-}
-
 void VulkanTimestampQueryPool::reset() const {
     vkResetQueryPool(m_device->getHandle(), m_handle, 0, m_queryCount);
-}
-
-void VulkanTimestampQueryPool::writeTimestamp(
-    const VkCommandBuffer cmdBuffer, const VkPipelineStageFlags2 stage, const uint32_t queryIndex) const {
-    CRISP_CHECK_LT(queryIndex, m_queryCount);
-    vkCmdWriteTimestamp2(cmdBuffer, stage, m_handle, queryIndex);
 }
 
 bool VulkanTimestampQueryPool::tryGetResults(const std::span<uint64_t> results, const uint32_t firstQuery) const {
