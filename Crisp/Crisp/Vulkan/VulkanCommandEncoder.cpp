@@ -410,4 +410,13 @@ void VulkanCommandEncoder::traceRays(
         1);
 }
 
+void VulkanCommandEncoder::setPushConstants(
+    const VulkanPipelineLayout& layout, const std::span<const std::byte> data) const {
+    for (const auto& range : layout.getPushConstantRanges()) {
+        CRISP_CHECK_LE(range.offset + range.size, data.size());
+        vkCmdPushConstants(
+            m_cmdBuffer, layout.getHandle(), range.stageFlags, range.offset, range.size, data.data() + range.offset);
+    }
+}
+
 } // namespace crisp

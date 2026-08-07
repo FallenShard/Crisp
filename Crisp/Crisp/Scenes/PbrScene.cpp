@@ -42,8 +42,7 @@ void executeDrawCommand(
         commandEncoder.setScissor(command.scissor.extent.width != 0 ? command.scissor : renderer.getDefaultScissor());
     }
 
-    command.pipeline->getPipelineLayout()->setPushConstants(
-        commandEncoder.getHandle(), static_cast<const char*>(command.pushConstantView.data));
+    commandEncoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
 
     if (command.material) {
         commandEncoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.dynamicBufferOffsets));

@@ -69,8 +69,7 @@ void drawPostProcessEffect(
         renderer.setDefaultScissor(encoder);
     }
 
-    command.pipeline->getPipelineLayout()->setPushConstants(
-        ctx.cmdBuffer.getHandle(), static_cast<const char*>(command.pushConstantView.data));
+    encoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
 
     if (command.material) {
         const auto& dynamicBufferViews = command.material->getDynamicBufferViews();

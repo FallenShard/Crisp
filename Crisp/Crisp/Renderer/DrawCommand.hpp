@@ -8,6 +8,8 @@
 #include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
+#include <cstddef>
+#include <span>
 #include <variant>
 #include <vector>
 
@@ -40,6 +42,10 @@ struct PushConstantView {
     void set(const std::vector<unsigned char>& buffer) {
         data = buffer.data();
         size = buffer.size();
+    }
+
+    std::span<const std::byte> asSpan() const {
+        return {static_cast<const std::byte*>(data), size};
     }
 };
 

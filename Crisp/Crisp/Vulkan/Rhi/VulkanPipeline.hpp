@@ -37,24 +37,6 @@ public:
         return m_pipelineLayout->getDescriptorType(setIndex, binding);
     }
 
-    template <typename T>
-    void setPushConstant(
-        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, const T& value) const {
-        vkCmdPushConstants(cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, sizeof(T), &value);
-    }
-
-    void setPushConstant(
-        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, uint32_t size, const char* value)
-        const {
-        vkCmdPushConstants(
-            cmdBuffer, m_pipelineLayout->getHandle(), shaderStages, offset, size, value + offset); // NOLINT
-    }
-
-    template <typename T, typename... Ts>
-    void setPushConstants(VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, T&& arg, Ts&&... args) const {
-        setPushConstantsWithOffset(cmdBuffer, shaderStages, 0, std::forward<T>(arg), std::forward<Ts>(args)...);
-    }
-
     PipelineDynamicStateFlags getDynamicStateFlags() const {
         return m_dynamicStateFlags;
     }
@@ -74,16 +56,6 @@ public:
     void swapAll(VulkanPipeline& other);
 
 protected:
-    template <typename T, typename... Ts>
-    void setPushConstantsWithOffset(
-        VkCommandBuffer cmdBuffer, VkShaderStageFlags shaderStages, uint32_t offset, T&& arg, Ts&&... args) const {
-        setPushConstant(cmdBuffer, shaderStages, offset, std::forward<T>(arg));
-
-        if constexpr (sizeof...(Ts) > 0) {
-            setPushConstantsWithOffset(cmdBuffer, shaderStages, offset + sizeof(T), std::forward<Ts>(args)...);
-        }
-    }
-
     std::unique_ptr<VulkanPipelineLayout> m_pipelineLayout;
     PipelineDynamicStateFlags m_dynamicStateFlags;
     VulkanVertexLayout m_vertexLayout;

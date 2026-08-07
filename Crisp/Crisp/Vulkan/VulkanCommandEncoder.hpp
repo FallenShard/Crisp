@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <span>
 
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetBinding.hpp>
@@ -90,11 +91,31 @@ public:
     void drawMeshTasks(uint32_t groupCount) const;
     void traceRays(std::span<const VkStridedDeviceAddressRegionKHR> bindingRegions, const VkExtent2D& gridSize) const;
 
+    template <typename T, typename... Ts>
+    void setPushConstants(
+        const VulkanPipelineLayout& layout, VkShaderStageFlags stageFlags, const T& value, const Ts&... rest) const {
+        setPushConstantsAt(layout, stageFlags, 0, value, rest...);
+    }
+    void setPushConstants(const VulkanPipelineLayout& layout, std::span<const std::byte> data) const;
+
     VkCommandBuffer getHandle() const {
         return m_cmdBuffer;
     }
 
 private:
+    template <typename T, typename... Ts>
+    void setPushConstantsAt(
+        const VulkanPipelineLayout& layout,
+        VkShaderStageFlags stageFlags,
+        uint32_t offset,
+        const T& value,
+        const Ts&... rest) const {
+        vkCmdPushConstants(m_cmdBuffer, layout.getHandle(), stageFlags, offset, sizeof(T), &value);
+        if constexpr (sizeof...(Ts) > 0) {
+            setPushConstantsAt(layout, stageFlags, offset + sizeof(T), rest...);
+        }
+    }
+
     VkCommandBuffer m_cmdBuffer;
 };
 

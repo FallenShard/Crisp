@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <span>
 #include <vector>
 
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
@@ -43,16 +44,8 @@ public:
 
     VkDescriptorSet allocateSet(uint32_t setIndex) const;
 
-    void setPushConstants(VkCommandBuffer cmdBuffer, const char* data) const {
-        for (const auto& pushConstant : m_pushConstants) {
-            vkCmdPushConstants(
-                cmdBuffer,
-                m_handle,
-                pushConstant.stageFlags,
-                pushConstant.offset,
-                pushConstant.size,
-                data + pushConstant.offset); // NOLINT
-        }
+    std::span<const VkPushConstantRange> getPushConstantRanges() const {
+        return m_pushConstants;
     }
 
     uint32_t getDescriptorSetLayoutCount() const {

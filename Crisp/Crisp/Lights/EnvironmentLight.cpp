@@ -1,5 +1,7 @@
 #include <Crisp/Lights/EnvironmentLight.hpp>
 
+#include <span>
+
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/Material.hpp>
@@ -124,7 +126,8 @@ std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const 
                 memcpy(pushConst.data(), glm::value_ptr(MVP), sizeof(glm::mat4));
 
                 commandEncoder.bindPipeline(*cubeMapPipeline);
-                cubeMapPipeline->getPipelineLayout()->setPushConstants(cmdBuffer, pushConst.data());
+                commandEncoder.setPushConstants(
+                    *cubeMapPipeline->getPipelineLayout(), std::as_bytes(std::span(pushConst)));
 
                 commandEncoder.bindDescriptorSets(cubeMapMaterial->getDescriptorSetBinding());
                 unitCube.bindAndDraw(commandEncoder);
