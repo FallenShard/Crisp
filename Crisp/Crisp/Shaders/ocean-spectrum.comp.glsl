@@ -56,9 +56,18 @@ void main()
     const vec2 k = vec2(idx) * 2.0f * PI / vec2(Lx, Lz);
     const float kLen = sqrt(dot(k, k)) + 0.000001f;
 
+    // A discrete sample of a continuous spectral density has to carry the area of its spectral
+    // cell, dkx * dkz, and the inverse transform applies a 1 / (N * M) normalisation that the
+    // synthesis formula h(x) = sum_k h~(k) * e^(i*k*x) does not ask for. Folding both in here
+    // makes `A` the physical Phillips constant instead of a magic number that silently absorbs
+    // the transform's scaling.
+    const float dkx = 2.0f * PI / Lx;
+    const float dkz = 2.0f * PI / Lz;
+    const float amplitudeScale = float(N) * float(M) * sqrt(dkx * dkz);
+
     // Initial spectrum contains uniform gaussian samples, 2 + 2 components.
     const vec4 initialSpectrum = imageLoad(initialSpectrumImg, ivec2(gl_GlobalInvocationID.xy));
-    const float sqrtFactor = sqrt(2.0f) * 0.5f;
+    const float sqrtFactor = sqrt(2.0f) * 0.5f * amplitudeScale;
     const vec2 h0 = initialSpectrum.xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(k));
     vec2 h0_star = initialSpectrum.zw * sqrtFactor * sqrt(calculatePhillipsSpectrum(-k));
     h0_star.y = -h0_star.y;

@@ -21,10 +21,14 @@ auto logger = spdlog::stdout_color_st("OceanScene");
 
 constexpr int32_t N = 512;
 constexpr int32_t logN = std::bit_width(static_cast<uint32_t>(N)) - 1;
-constexpr float Lx = 2.0f * N;
 constexpr float kGravity = 9.81f;
 
-constexpr float kGeometryPatchWorldSize = 20.0f;
+// World-space extent of a single ocean patch. This is the same L that defines the spectral grid
+// k = 2 * pi * n / L, so the spectrum and the tessellated geometry have to agree on it. With
+// N = 512 that gives 0.5 m grid cells and a shortest resolvable wavelength of 1 m.
+constexpr float kPatchWorldSize = 256.0f;
+constexpr float kCellSize = kPatchWorldSize / N;
+
 constexpr uint32_t kInstanceCount = 64;
 
 struct OscillationPassData {
@@ -191,7 +195,9 @@ void createFftDispatches(
 
 OceanScene::OceanScene(Renderer* renderer, Window* window)
     : Scene(renderer, window)
-    , m_oceanParams(createOceanParameters(N, Lx, 10.0f, 0.0f, 4.0f, 0.5f))
+    // `A` is now the Phillips constant: at 10 m/s wind it puts the spectral peak at an 85 m
+    // wavelength with a significant wave height of ~2.3 m. The small-wave cutoff is one grid cell.
+    , m_oceanParams(createOceanParameters(N, kPatchWorldSize, 10.0f, 0.0f, 0.001f, kCellSize))
     , m_choppiness(0.0f) {
     setupInput();
     setupResources();
@@ -216,7 +222,7 @@ void OceanScene::setupResources() {
 
     std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {
         {VertexAttribute::Position}, {VertexAttribute::Normal}};
-    TriangleMesh mesh = createGridMesh(kGeometryPatchWorldSize, N);
+    TriangleMesh mesh = createGridMesh(kPatchWorldSize, N);
     m_resourceContext->addGeometry(
         "ocean", createGeometry(*m_renderer, mesh, vertexFormat, VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT));
     m_resourceContext->getGeometry("ocean").setInstanceCount(kInstanceCount);
@@ -287,8 +293,9 @@ void OceanScene::drawGui() {
         m_oceanParams.windDirection = windVelocity / m_oceanParams.windSpeed;
         m_oceanParams.Lw = m_oceanParams.windSpeed * m_oceanParams.windSpeed / kGravity;
     }
-    ImGui::SliderFloat("Amplitude", &m_oceanParams.A, 0.0f, 1000.0f);
-    ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 10.0f);
+    ImGui::SliderFloat("Amplitude", &m_oceanParams.A, 0.0f, 0.01f, "%.5f");
+    // The spectrum tail is exp(-k^2 * l^2), so the cutoff is only meaningful relative to the cell.
+    ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 4.0f * kCellSize);
     ImGui::SliderFloat("Choppiness", &m_choppiness, 0.0f, 10.0f);
     ImGui::End();
 
@@ -524,7 +531,7 @@ void OceanScene::buildRenderGraph() {
             ctx.commandEncoder.setPushConstants(
                 *m_passResources->geometry.pipeline->getPipelineLayout(),
                 VK_SHADER_STAGE_COMPUTE_BIT,
-                GeometryUpdateParams{N, kGeometryPatchWorldSize, m_choppiness});
+                GeometryUpdateParams{N, kPatchWorldSize, m_choppiness});
             ctx.commandEncoder.dispatchCompute(m_passResources->geometry.dispatchSize);
         });
 
@@ -557,7 +564,7 @@ void OceanScene::buildRenderGraph() {
             ctx.commandEncoder.setViewport(m_renderer->getDefaultViewport());
             ctx.commandEncoder.setScissor(m_renderer->getDefaultScissor());
             ctx.commandEncoder.setPushConstants(
-                *m_oceanPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, kGeometryPatchWorldSize);
+                *m_oceanPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, kPatchWorldSize);
             ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
             geometry.bindAndDraw(ctx.commandEncoder);
         });
