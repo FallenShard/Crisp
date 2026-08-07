@@ -8,18 +8,16 @@
 #include <Crisp/Renderer/ComputePipeline.hpp>
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphIo.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 #include <Crisp/Vulkan/VulkanStagingBuffer.hpp>
 
 namespace crisp {
 namespace {
 auto logger = spdlog::stdout_color_st("OceanScene");
-
-constexpr const char* kMainPass = kForwardLightingPass;
-constexpr const char* kSpectrumPass = "oscillationPass";
-constexpr const char* kGeometryPass = "geometryPass";
 
 constexpr int32_t N = 512;
 constexpr int32_t logN = std::bit_width(static_cast<uint32_t>(N)) - 1;
@@ -58,26 +56,13 @@ struct VerticalBitReversePassData {
 };
 
 struct GeometryPassData {
-    RenderGraphResourceHandle buffer;
+    RenderGraphResourceHandle positions;
+    RenderGraphResourceHandle normals;
 };
 
-VkImageMemoryBarrier2 createImageMemoryReadBarrier(
-    const VkImage imageHandle, const uint32_t layerIdx, const VulkanSynchronizationScope& scope) {
-    VkImageMemoryBarrier2 barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
-    barrier.srcStageMask = scope.srcStage;
-    barrier.srcAccessMask = scope.srcAccess;
-    barrier.dstStageMask = scope.dstStage;
-    barrier.dstAccessMask = scope.dstAccess;
-    barrier.image = imageHandle;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseArrayLayer = layerIdx;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    return barrier;
-}
+struct OceanOutputData {
+    RenderGraphResourceHandle hdrImage;
+};
 
 struct ComputeDispatch {
     std::unique_ptr<VulkanPipeline> pipeline;
@@ -86,15 +71,22 @@ struct ComputeDispatch {
     VkExtent3D workGroupSize;
     VkExtent3D dispatchSize;
 
-    inline void bind(const RenderPassExecutionContext& ctx) const {
-        pipeline->bind(ctx.cmdBuffer.getHandle());
-        material->bind(ctx.virtualFrameIndex, ctx.cmdBuffer.getHandle());
+    void bind(const FrameContext& ctx) const {
+        ctx.commandEncoder.bindPipeline(*pipeline);
+        ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
     }
 };
 
-ComputeDispatch OscillationPassDispatch{};
-FlatStringHashMap<ComputeDispatch> BitReversePasses{};
-FlatStringHashMap<ComputeDispatch> IfftPasses{};
+} // namespace
+
+struct OceanPassResources {
+    ComputeDispatch oscillation;
+    ComputeDispatch geometry;
+    FlatStringHashMap<ComputeDispatch> bitReverse;
+    FlatStringHashMap<ComputeDispatch> ifft;
+};
+
+namespace {
 
 ComputeDispatch createOscillationPassDispatch(
     Renderer& renderer, const rg::RenderGraph& renderGraph, const ImageCache& imageCache) {
@@ -121,18 +113,12 @@ ComputeDispatch createOscillationPassDispatch(
 
 template <size_t Tag>
 ComputeDispatch createBitReverseDispatch(
-    Renderer& renderer,
-    const rg::RenderGraph& renderGraph,
-    const VulkanImageView& sourceView,
-    const VulkanImageView& dstView) {
+    Renderer& renderer, const VulkanImageView& sourceView, const VulkanImageView& dstView) {
     ComputeDispatch dispatch{};
     dispatch.workGroupSize = {16, 16, 1};
     dispatch.dispatchSize = computeWorkGroupCount(glm::uvec3(N, N, 1), dispatch.workGroupSize);
     dispatch.pipeline = createComputePipeline(renderer, "ocean-reverse-bits.comp", dispatch.workGroupSize);
     dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
-    auto& pd = renderGraph.getBlackboard().get<HorizontalBitReversePassData<Tag>>();
-    dispatch.material->writeDescriptor(
-        0, 0, renderGraph.getResourceImageView(pd.image).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     dispatch.material->writeDescriptor(0, 0, sourceView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     dispatch.material->writeDescriptor(0, 1, dstView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     return dispatch;
@@ -140,10 +126,7 @@ ComputeDispatch createBitReverseDispatch(
 
 template <size_t Tag, bool Horizontal>
 ComputeDispatch createIfftDispatch(
-    Renderer& renderer,
-    const rg::RenderGraph& renderGraph,
-    const VulkanImageView& sourceView,
-    const VulkanImageView& dstView) {
+    Renderer& renderer, const VulkanImageView& sourceView, const VulkanImageView& dstView) {
     constexpr glm::uvec3 workAmount = Horizontal ? glm::uvec3(N / 2, N, 1) : glm::uvec3(N, N / 2, 1);
     const std::string shaderName = Horizontal ? "ifft-hori.comp" : "ifft-vert.comp";
 
@@ -152,61 +135,56 @@ ComputeDispatch createIfftDispatch(
     dispatch.dispatchSize = computeWorkGroupCount(workAmount, dispatch.workGroupSize);
     dispatch.pipeline = createComputePipeline(renderer, shaderName, dispatch.workGroupSize);
     dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
-    auto& pd = renderGraph.getBlackboard().get<HorizontalBitReversePassData<Tag>>();
-    dispatch.material->writeDescriptor(
-        0, 0, renderGraph.getResourceImageView(pd.image).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     dispatch.material->writeDescriptor(0, 0, sourceView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     dispatch.material->writeDescriptor(0, 1, dstView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     return dispatch;
 }
 
 template <size_t Tag>
-void createFftDispatches(Renderer& renderer, const rg::RenderGraph& renderGraph, const VulkanImageView& srcView) {
-    BitReversePasses[fmt::format("bit-reverse-h-{}", Tag)] = createBitReverseDispatch<Tag>(
+void createFftDispatches(
+    OceanPassResources& passResources,
+    Renderer& renderer,
+    const rg::RenderGraph& renderGraph,
+    const VulkanImageView& srcView) {
+    passResources.bitReverse[fmt::format("bit-reverse-h-{}", Tag)] = createBitReverseDispatch<Tag>(
         renderer,
-        renderGraph,
         srcView,
         renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalBitReversePassData<Tag>>().image));
-    // for (int32_t i = 0; i < logN; ++i) {
-    //     if (i == 0) {
-    //         IfftPasses[fmt::format("ifft-h-{}-{}", Tag, i)] = createIfftDispatch<Tag, true>(
-    //             renderer,
-    //             renderGraph,
-    //             renderGraph.getResourceImageView(
-    //                 renderGraph.getBlackboard().get<HorizontalBitReversePassData<Tag>>().image),
-    //             renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image[i]));
-    //     } else {
-    //         IfftPasses[fmt::format("ifft-h-{}-{}", Tag, i)] = createIfftDispatch<Tag, true>(
-    //             renderer,
-    //             renderGraph,
-    //             renderGraph.getResourceImageView(
-    //                 renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image[i - 1]),
-    //             renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image[i]));
-    //     }
-    // }
+    for (int32_t i = 0; i < logN; ++i) {
+        if (i == 0) {
+            passResources.ifft[fmt::format("ifft-h-{}-{}", Tag, i)] = createIfftDispatch<Tag, true>(
+                renderer,
+                renderGraph.getResourceImageView(
+                    renderGraph.getBlackboard().get<HorizontalBitReversePassData<Tag>>().image),
+                renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image[i]));
+        } else {
+            passResources.ifft[fmt::format("ifft-h-{}-{}", Tag, i)] = createIfftDispatch<Tag, true>(
+                renderer,
+                renderGraph.getResourceImageView(
+                    renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image[i - 1]),
+                renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image[i]));
+        }
+    }
 
-    // BitReversePasses[fmt::format("bit-reverse-v-{}", Tag)] = createBitReverseDispatch<Tag>(
-    //     renderer,
-    //     renderGraph,
-    //     renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image.back()),
-    //     renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalBitReversePassData<Tag>>().image));
-    // for (int32_t i = 0; i < logN; ++i) {
-    //     if (i == 0) {
-    //         IfftPasses[fmt::format("ifft-v-{}-{}", Tag, i)] = createIfftDispatch<Tag, false>(
-    //             renderer,
-    //             renderGraph,
-    //             renderGraph.getResourceImageView(
-    //                 renderGraph.getBlackboard().get<VerticalBitReversePassData<Tag>>().image),
-    //             renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image[i]));
-    //     } else {
-    //         IfftPasses[fmt::format("ifft-v-{}-{}", Tag, i)] = createIfftDispatch<Tag, false>(
-    //             renderer,
-    //             renderGraph,
-    //             renderGraph.getResourceImageView(
-    //                 renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image[i - 1]),
-    //             renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image[i]));
-    //     }
-    // }
+    passResources.bitReverse[fmt::format("bit-reverse-v-{}", Tag)] = createBitReverseDispatch<Tag>(
+        renderer,
+        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image.back()),
+        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalBitReversePassData<Tag>>().image));
+    for (int32_t i = 0; i < logN; ++i) {
+        if (i == 0) {
+            passResources.ifft[fmt::format("ifft-v-{}-{}", Tag, i)] = createIfftDispatch<Tag, false>(
+                renderer,
+                renderGraph.getResourceImageView(
+                    renderGraph.getBlackboard().get<VerticalBitReversePassData<Tag>>().image),
+                renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image[i]));
+        } else {
+            passResources.ifft[fmt::format("ifft-v-{}-{}", Tag, i)] = createIfftDispatch<Tag, false>(
+                renderer,
+                renderGraph.getResourceImageView(
+                    renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image[i - 1]),
+                renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image[i]));
+        }
+    }
 }
 
 } // namespace
@@ -215,319 +193,88 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     : Scene(renderer, window)
     , m_oceanParams(createOceanParameters(N, Lx, 10.0f, 0.0f, 4.0f, 0.5f))
     , m_choppiness(0.0f) {
-    m_window->keyPressed += [this](Key key, int /*modifiers*/) {
+    setupInput();
+    setupResources();
+    buildRenderGraph();
+
+    m_renderer->getDevice().flushDescriptorUpdates();
+}
+
+void OceanScene::setupInput() {
+    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe([this](Key key, int /*modifiers*/) {
         if (key == Key::Space) {
             m_paused = !m_paused;
         } else if (key == Key::F5) {
             m_resourceContext->recreatePipelines();
         }
-    };
+    }));
+}
 
+void OceanScene::setupResources() {
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
-    m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
+    m_resourceContext->createUniformRingBuffer("camera", sizeof(CameraParameters));
 
     std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {
         {VertexAttribute::Position}, {VertexAttribute::Normal}};
     TriangleMesh mesh = createGridMesh(kGeometryPatchWorldSize, N);
     m_resourceContext->addGeometry(
         "ocean", createGeometry(*m_renderer, mesh, vertexFormat, VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT));
-    m_resourceContext->getGeometry("ocean")->setInstanceCount(kInstanceCount);
+    m_resourceContext->getGeometry("ocean").setInstanceCount(kInstanceCount);
 
-    auto displacementYImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
-    auto displacementXImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
-    auto displacementZImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
-    auto normalXImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
-    auto normalZImage = createStorageImage(m_renderer->getDevice(), 2, N, N, VK_FORMAT_R32G32_SFLOAT);
     auto spectrumImage = createInitialSpectrum();
     m_resourceContext->imageCache.addImageView(
         "randImageView", createView(m_renderer->getDevice(), *spectrumImage, VK_IMAGE_VIEW_TYPE_2D, 0, 1));
     m_resourceContext->imageCache.addImage("randImage", std::move(spectrumImage));
 
-    buildNewFFT();
+    auto& imageCache = m_resourceContext->imageCache;
+    imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice(), 16.0f));
+    imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), 16.0f));
+    imageCache.addSampler("linearMipmap", createLinearClampSampler(m_renderer->getDevice(), 16.0f, 9.0f));
+    imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
 
-    // m_renderer->enqueueResourceUpdate(
-    //     [dy = displacementYImage.get(),
-    //      dx = displacementXImage.get(),
-    //      dz = displacementZImage.get(),
-    //      nx = normalXImage.get(),
-    //      nz = normalZImage.get()](VkCommandBuffer cmdBuffer) {
-    //         const auto transitionToGeneral = [cmdBuffer](VulkanImage& image) {
-    //             image.transitionLayout(
-    //                 cmdBuffer,
-    //                 VK_IMAGE_LAYOUT_GENERAL,
-    //                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-    //                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-    //         };
-    //         transitionToGeneral(*dy);
-    //         transitionToGeneral(*dx);
-    //         transitionToGeneral(*dz);
-    //         transitionToGeneral(*nx);
-    //         transitionToGeneral(*nz);
-    //     });
+    m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 1);
+    const auto transformHandle = m_transformBuffer->getNextIndex();
+    m_transformBuffer->getPack(transformHandle).M = glm::mat4(1.0f);
 
-    // auto& imageCache = m_resourceContext->imageCache;
-    // const auto addImage = [&imageCache](std::unique_ptr<VulkanImage> image, const std::string& name) {
-    //     for (uint32_t i = 0; i < 2; ++i) {
-    //         const std::string viewName{fmt::format("{}View{}", name, i)};
-    //         imageCache.addImageView(viewName, createView(*image, VK_IMAGE_VIEW_TYPE_2D, i, 1));
-    //     }
-    //     imageCache.addImage(name, std::move(image));
-    // };
-    // addImage(std::move(displacementYImage), "fftImage");
-    // addImage(std::move(displacementXImage), "displacementX");
-    // addImage(std::move(displacementZImage), "displacementZ");
-    // addImage(std::move(normalXImage), "normalX");
-    // addImage(std::move(normalZImage), "normalZ");
+    m_envLight = std::make_unique<EnvironmentLight>(
+        *m_renderer,
+        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps/TableMountain").unwrap());
+}
 
-    // imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice(), MaxAnisotropy));
-    // imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), MaxAnisotropy));
-    // imageCache.addSampler("linearMipmap", createLinearClampSampler(m_renderer->getDevice(), MaxAnisotropy, 9.0f));
-
-    // auto& oscillationPass = m_renderGraphLegacy->addComputePass(kSpectrumPass);
-    // oscillationPass.workGroupSize = glm::ivec3(16, 16, 1);
-    // oscillationPass.numWorkGroups = computeWorkGroupCount(glm::uvec3(N, N, 1), oscillationPass.workGroupSize);
-    // oscillationPass.pipeline = createComputePipeline(*m_renderer, "ocean-spectrum.comp",
-    // oscillationPass.workGroupSize); oscillationPass.material =
-    // std::make_unique<Material>(oscillationPass.pipeline.get()); oscillationPass.material->writeDescriptor(
-    //     0, 0, imageCache.getImageView("randImageView").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    // oscillationPass.material->writeDescriptor(
-    //     0, 1, imageCache.getImageView("fftImageView0").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    // oscillationPass.material->writeDescriptor(
-    //     0, 2, imageCache.getImageView("displacementXView0").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    // oscillationPass.material->writeDescriptor(
-    //     0, 3, imageCache.getImageView("displacementZView0").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    // oscillationPass.material->writeDescriptor(
-    //     0, 4, imageCache.getImageView("normalXView0").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    // oscillationPass.material->writeDescriptor(
-    //     0, 5, imageCache.getImageView("normalZView0").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-
-    // oscillationPass.preDispatchCallback =
-    //     [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-    //         VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-    //         barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-    //         barrier.buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer()->getHandle();
-    //         barrier.offset = 0;
-    //         barrier.size = VK_WHOLE_SIZE;
-
-    //         vkCmdPipelineBarrier(
-    //             cmdBuffer.getHandle(),
-    //             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-    //             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-    //             0,
-    //             0,
-    //             nullptr,
-    //             1,
-    //             &barrier,
-    //             0,
-    //             nullptr);
-
-    //         node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_oceanParams);
-    //     };
-
-    // int layerToRead = applyFFT("fftImage");
-    // int ltr1 = applyFFT("displacementX");
-    // int ltr2 = applyFFT("displacementZ");
-
-    // int ln1 = applyFFT("normalX");
-    // int ln2 = applyFFT("normalZ");
-
-    // auto& geometryPass = m_renderGraphLegacy->addComputePass(kGeometryPass);
-    // geometryPass.workGroupSize = glm::ivec3(16, 16, 1);
-    // geometryPass.numWorkGroups = computeWorkGroupCount(glm::uvec3(N + 1, N + 1, 1), geometryPass.workGroupSize);
-    // geometryPass.pipeline = createComputePipeline(*m_renderer, "ocean-geometry.comp", geometryPass.workGroupSize);
-    // geometryPass.material = std::make_unique<Material>(geometryPass.pipeline.get());
-    // geometryPass.material->writeDescriptor(
-    //     0, 0, m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->createDescriptorInfo());
-    // geometryPass.material->writeDescriptor(
-    //     0, 1, m_resourceContext->getGeometry("ocean")->getVertexBuffer(1)->createDescriptorInfo());
-    // geometryPass.material->writeDescriptor(
-    //     0,
-    //     2,
-    //     imageCache.getImageView("fftImageView" + std::to_string(layerToRead))
-    //         .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
-    // geometryPass.material->writeDescriptor(
-    //     0,
-    //     3,
-    //     imageCache.getImageView("displacementXView" + std::to_string(ltr1))
-    //         .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
-    // geometryPass.material->writeDescriptor(
-    //     0,
-    //     4,
-    //     imageCache.getImageView("displacementZView" + std::to_string(ltr2))
-    //         .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
-    // geometryPass.material->writeDescriptor(
-    //     0,
-    //     5,
-    //     imageCache.getImageView("normalXView" + std::to_string(ln1))
-    //         .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
-    // geometryPass.material->writeDescriptor(
-    //     0,
-    //     6,
-    //     imageCache.getImageView("normalZView" + std::to_string(ln2))
-    //         .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
-
-    // geometryPass.preDispatchCallback =
-    //     [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-    //         std::array<VkBufferMemoryBarrier, 2> barriers{};
-    //         barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    //         barriers[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //         barriers[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-    //         barriers[0].buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->getHandle();
-    //         barriers[0].offset = 0;
-    //         barriers[0].size = VK_WHOLE_SIZE;
-
-    //         barriers[1].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    //         barriers[1].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //         barriers[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-    //         barriers[1].buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(1)->getHandle();
-    //         barriers[1].offset = 0;
-    //         barriers[1].size = VK_WHOLE_SIZE;
-
-    //         vkCmdPipelineBarrier(
-    //             cmdBuffer.getHandle(),
-    //             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-    //             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-    //             0,
-    //             0,
-    //             nullptr,
-    //             2,
-    //             barriers.data(),
-    //             0,
-    //             nullptr);
-
-    //         struct GeometryUpdateParams {
-    //             int patchSize{N};
-    //             float patchWorldSize{};
-    //             float choppiness{};
-    //         };
-
-    //         GeometryUpdateParams params{};
-    //         params.patchWorldSize = kGeometryPatchWorldSize;
-    //         params.choppiness = m_choppiness;
-    //         node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, params);
-    //     };
-
-    // m_renderGraphLegacy->addRenderPass(
-    //     kMainPass,
-    //     createForwardLightingPass(
-    //         m_renderer->getDevice(), m_resourceContext->renderTargetCache, renderer->getSwapChainExtent()));
-
-    // m_renderGraphLegacy->addDependency(
-    //     kGeometryPass,
-    //     kMainPass,
-    //     [this](const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-    //         VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-    //         barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-    //         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //         barrier.buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer()->getHandle();
-    //         barrier.offset = 0;
-    //         barrier.size = VK_WHOLE_SIZE;
-    //         cmdBuffer.insertBufferMemoryBarrier(
-    //             barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
-
-    //         barrier.buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(1)->getHandle();
-    //         barrier.offset = 0;
-    //         barrier.size = VK_WHOLE_SIZE;
-    //         cmdBuffer.insertBufferMemoryBarrier(
-    //             barrier, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
-    //     });
-
-    // m_renderGraphLegacy->addDependency(kMainPass, "SCREEN", 0);
-    // m_renderGraphLegacy->sortRenderPasses().unwrap();
-    // m_renderGraphLegacy->printExecutionOrder();
-    // m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(kMainPass).renderPass.get(), 0);
-
-    // m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 200);
-
-    // m_envLight = std::make_unique<EnvironmentLight>(
-    //     *m_renderer,
-    //     loadImageBasedLightingData(m_renderer->getResourcesPath() /
-    //     "Textures/EnvironmentMaps/TableMountain").unwrap());
-    // m_skybox = m_envLight->createSkybox(
-    //     *m_renderer, m_renderGraphLegacy->getRenderPass(kMainPass), imageCache.getSampler("linearClamp"));
-    // m_renderer->flushResourceUpdates(true);
-
-    // VulkanPipeline* pipeline =
-    //     m_resourceContext->createPipeline("ocean", "ocean.json", m_renderGraphLegacy->getRenderPass(kMainPass), 0);
-    // Material* material = m_resourceContext->createMaterial("ocean", pipeline);
-    // material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
-    // material->writeDescriptor(
-    //     0,
-    //     1,
-    //     imageCache.getImageView("fftImageView" + std::to_string(layerToRead))
-    //         .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
-    // material->writeDescriptor(
-    //     0,
-    //     2,
-    //     imageCache.getImageView("displacementXView" + std::to_string(ltr1))
-    //         .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
-    // material->writeDescriptor(
-    //     0,
-    //     3,
-    //     imageCache.getImageView("displacementZView" + std::to_string(ltr2))
-    //         .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
-
-    // material->writeDescriptor(
-    //     0,
-    //     4,
-    //     imageCache.getImageView("normalXView" + std::to_string(ln1))
-    //         .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
-    // material->writeDescriptor(
-    //     0,
-    //     5,
-    //     imageCache.getImageView("normalZView" + std::to_string(ln2))
-    //         .getDescriptorInfo(&imageCache.getSampler("linearRepeat"), VK_IMAGE_LAYOUT_GENERAL));
-    // material->writeDescriptor(1, 0, *m_resourceContext->getUniformBuffer("camera"));
-    // material->writeDescriptor(1, 1, m_envLight->getDiffuseMapView(), imageCache.getSampler("linearClamp"));
-    // material->writeDescriptor(1, 2, m_envLight->getSpecularMapView(), imageCache.getSampler("linearMipmap"));
-    // imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
-    // material->writeDescriptor(1, 3, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
-
-    // auto node = std::make_unique<RenderNode>(*m_transformBuffer, m_transformBuffer->getNextIndex());
-    // node->transformPack->M = glm::mat4(1.0f);
-    // node->geometry = m_resourceContext->getGeometry("ocean");
-    // node->pass(kMainPass).material = material;
-    // node->pass(kMainPass).setPushConstants(kGeometryPatchWorldSize);
-    // m_renderNodes.emplace_back(std::move(node));
-
-    m_renderer->getDevice().flushDescriptorUpdates();
+OceanScene::~OceanScene() {
+    m_passResources.reset();
 }
 
 void OceanScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
-
-    m_renderGraphLegacy->resize(width, height);
-    m_renderer->setSceneImageView(m_renderGraphLegacy->getNode(kMainPass).renderPass.get(), 0);
+    m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&OceanOutputData::hdrImage>());
 }
 
-void OceanScene::update(float dt) {
-    m_cameraController->update(dt);
-    const CameraParameters cameraParams = m_cameraController->getCameraParameters();
+void OceanScene::update(const UpdateParams& updateParams) {
+    m_cameraController->update(updateParams.dt);
+    const auto& cameraParams = m_cameraController->getCameraParameters();
+    m_transformBuffer->update(cameraParams.V, cameraParams.P);
+    m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(
+        cameraParams, updateParams.frameInFlightIdx);
+    m_transformBuffer->updateStagingBuffer(updateParams.frameInFlightIdx);
 
-    // m_transformBuffer->update(cameraParams.V, cameraParams.P);
-    // m_skybox->updateTransforms(cameraParams.V, cameraParams.P);
-
-    // m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer(cameraParams);
-
-    // if (!m_paused) {
-    //     m_oceanParams.time += dt;
-    // }
+    if (!m_paused) {
+        m_oceanParams.time += updateParams.dt;
+    }
 }
 
-void OceanScene::render() {
-    m_renderer->enqueueDrawCommand([this](const VkCommandBuffer cmdBuffer) {
-        m_renderGraph->execute(
-            cmdBuffer, m_renderer->getCurrentVirtualFrameIndex(), m_renderer->getDevice().getHandle());
-    });
+void OceanScene::render(const FrameContext& frameContext) {
+    auto* cameraBuffer = m_resourceContext->getRingBuffer("camera");
+    cameraBuffer->updateDeviceBuffer(frameContext.commandEncoder);
 
-    // m_renderGraphLegacy->clearCommandLists();
-    // m_renderGraphLegacy->buildCommandLists(m_renderNodes);
-    // m_renderGraphLegacy->addToCommandLists(m_skybox->getRenderNode());
-    // m_renderGraphLegacy->executeCommandLists();
+    m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder);
+    frameContext.commandEncoder.insertBarrier(kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead));
+
+    m_renderGraph->execute(frameContext);
 }
 
-void OceanScene::renderGui() {
+void OceanScene::drawGui() {
     ImGui::Begin("Ocean Parameters");
     glm::vec2 windVelocity = m_oceanParams.windDirection * m_oceanParams.windSpeed;
     if (ImGui::SliderFloat("Wind Speed X", &windVelocity.x, 0.001f, 100.0f)) {
@@ -544,6 +291,12 @@ void OceanScene::renderGui() {
     ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 10.0f);
     ImGui::SliderFloat("Choppiness", &m_choppiness, 0.0f, 10.0f);
     ImGui::End();
+
+    ImGui::SetNextWindowSize(ImVec2(440.0f, 500.0f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Render Graph")) {
+        drawRenderGraphGui(*m_renderGraph);
+    }
+    ImGui::End();
 }
 
 std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum() {
@@ -553,223 +306,29 @@ std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum() {
     const auto staging = createStagingBuffer(
         m_renderer->getDevice(), oceanSpectrum.data(), oceanSpectrum.size() * sizeof(oceanSpectrum[0]));
     m_renderer->getDevice().getGeneralQueue().submitAndWait([&staging, img = image.get()](VkCommandBuffer cmdBuffer) {
-        img->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
-        img->copyFrom(cmdBuffer, *staging, 0, 1);
-        img->transitionLayout(cmdBuffer, VK_IMAGE_LAYOUT_GENERAL, kTransferWrite >> kComputeStorageWrite);
+        const VulkanCommandEncoder encoder(cmdBuffer);
+        encoder.transitionLayout(*img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
+        const VkBufferImageCopy region{
+            .bufferRowLength = img->getWidth(),
+            .bufferImageHeight = img->getHeight(),
+            .imageSubresource =
+                {
+                    .aspectMask = img->getAspectMask(),
+                    .mipLevel = 0,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+            .imageExtent = {img->getWidth(), img->getHeight(), 1},
+        };
+        encoder.copyBufferToImage(*staging, *img, region);
+        encoder.transitionLayout(*img, VK_IMAGE_LAYOUT_GENERAL, kTransferWrite >> kComputeStorageWrite);
     });
 
     return image;
 }
 
-int OceanScene::applyFFT(std::string image) {
-    struct BitReversalPushConstants {
-        int32_t reversalDirection; // 0 is horizontal, 1 is vertical.
-        int32_t passCount;         // Logarithm of the patch discretization size.
-    };
-
-    struct IFFTPushConstants {
-        int32_t passIdx; // Index of the current pass.
-        int32_t N;       // Number of elements in the array.
-    };
-
-    auto& imageCache = m_resourceContext->imageCache;
-    int32_t imageLayerRead = 0;
-    int32_t imageLayerWrite = 1;
-    {
-        const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
-        const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
-
-        auto& bitReversePass = m_renderGraphLegacy->addComputePass(image + "BitReversePass0");
-        bitReversePass.workGroupSize = {16, 16, 1};
-        bitReversePass.numWorkGroups = {N / 16, N / 16, 1};
-        bitReversePass.pipeline =
-            createComputePipeline(*m_renderer, "ocean-reverse-bits.comp", bitReversePass.workGroupSize);
-        bitReversePass.material = std::make_unique<Material>(bitReversePass.pipeline.get());
-        bitReversePass.material->writeDescriptor(
-            0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-        bitReversePass.material->writeDescriptor(
-            0, 1, imageCache.getImageView(imageViewWrite).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-
-        bitReversePass.preDispatchCallback =
-            [image](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                node.pipeline->setPushConstants(
-                    cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{0, logN});
-            };
-        m_renderGraphLegacy->addDependency(
-            kSpectrumPass,
-            image + "BitReversePass0",
-            [this, image, imageLayerRead](
-                const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
-                    m_resourceContext->imageCache.getImage(image).getHandle(),
-                    imageLayerRead,
-                    kComputeWrite >> kComputeRead));
-            });
-        CRISP_LOGI("{} R: {} W: {}", image + "BitReversePass0", imageLayerRead, imageLayerWrite);
-
-        std::swap(imageLayerRead, imageLayerWrite);
-    }
-
-    // Horizontal IFFT passes.
-    for (int i = 0; i < logN; ++i) {
-        const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
-        const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
-
-        std::string name = image + "TrueFFTPass" + std::to_string(i);
-        auto& fftPass = m_renderGraphLegacy->addComputePass(name);
-        fftPass.workGroupSize = {16, 16, 1};
-        fftPass.numWorkGroups = {N / 2 / 16, N / 16, 1};
-        fftPass.pipeline = createComputePipeline(*m_renderer, "ifft-hori.comp", fftPass.workGroupSize);
-        fftPass.material = std::make_unique<Material>(fftPass.pipeline.get());
-        fftPass.material->writeDescriptor(
-            0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-        fftPass.material->writeDescriptor(
-            0, 1, imageCache.getImageView(imageViewWrite).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-
-        fftPass.preDispatchCallback =
-            [i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                node.pipeline->setPushConstants(
-                    cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
-            };
-
-        CRISP_LOGI("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
-
-        if (i == 0) {
-            m_renderGraphLegacy->addDependency(
-                image + "BitReversePass0",
-                name,
-                [this, image, imageLayerRead](
-                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
-                        m_resourceContext->imageCache.getImage(image).getHandle(),
-                        imageLayerRead,
-                        kComputeWrite >> kComputeRead));
-                });
-        }
-
-        if (i > 0) {
-            std::string prevName = image + "TrueFFTPass" + std::to_string(i - 1);
-            m_renderGraphLegacy->addDependency(
-                prevName,
-                name,
-                [this, image, imageLayerRead](
-                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
-                        m_resourceContext->imageCache.getImage(image).getHandle(),
-                        imageLayerRead,
-                        kComputeWrite >> kComputeRead));
-                });
-        }
-
-        std::swap(imageLayerRead, imageLayerWrite);
-    }
-
-    {
-        const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
-        const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
-        auto& bitReversePass2 = m_renderGraphLegacy->addComputePass(image + "BitReversePass1");
-        bitReversePass2.workGroupSize = {16, 16, 1};
-        bitReversePass2.numWorkGroups = {N / 16, N / 16, 1};
-        bitReversePass2.pipeline =
-            createComputePipeline(*m_renderer, "ocean-reverse-bits.comp", bitReversePass2.workGroupSize);
-        bitReversePass2.material = std::make_unique<Material>(bitReversePass2.pipeline.get());
-        bitReversePass2.material->writeDescriptor(
-            0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-        bitReversePass2.material->writeDescriptor(
-            0, 1, imageCache.getImageView(imageViewWrite).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-
-        bitReversePass2.preDispatchCallback =
-            [image](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                node.pipeline->setPushConstants(
-                    cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{1, logN});
-            };
-
-        CRISP_LOGI("{} R: {} W: {}", image + "BitReversePass1", imageLayerRead, imageLayerWrite);
-
-        m_renderGraphLegacy->addDependency(
-            image + "TrueFFTPass" + std::to_string(logN - 1),
-            image + "BitReversePass1",
-            [this, image, imageLayerRead](
-                const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
-                    m_resourceContext->imageCache.getImage(image).getHandle(),
-                    imageLayerRead,
-                    kComputeWrite >> kComputeRead));
-            });
-        std::swap(imageLayerRead, imageLayerWrite);
-    }
-
-    // Vertical IFFT pass.
-    std::string finalImageView;
-    for (int i = 0; i < logN; ++i) {
-        const std::string imageViewRead = fmt::format("{}View{}", image, imageLayerRead);
-        const std::string imageViewWrite = fmt::format("{}View{}", image, imageLayerWrite);
-
-        std::string name = image + "TrueFFTPassVert" + std::to_string(i);
-        auto& fftPass = m_renderGraphLegacy->addComputePass(name);
-        fftPass.workGroupSize = {16, 16, 1};
-        fftPass.numWorkGroups = {N / 16, N / 16 / 2, 1};
-        fftPass.pipeline = createComputePipeline(*m_renderer, "ifft-vert.comp", fftPass.workGroupSize);
-        fftPass.material = std::make_unique<Material>(fftPass.pipeline.get());
-        fftPass.material->writeDescriptor(
-            0, 0, imageCache.getImageView(imageViewRead).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-        fftPass.material->writeDescriptor(
-            0, 1, imageCache.getImageView(imageViewWrite).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-
-        CRISP_LOGI("{} R: {} W: {}", name, imageLayerRead, imageLayerWrite);
-
-        fftPass.preDispatchCallback =
-            [i](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                node.pipeline->setPushConstants(
-                    cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
-            };
-
-        if (i == logN - 1) {
-            finalImageView = imageViewWrite;
-            m_renderGraphLegacy->addDependency(
-                name,
-                kGeometryPass,
-                [this, image, imageLayerWrite](
-                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
-                        m_resourceContext->imageCache.getImage(image).getHandle(),
-                        imageLayerWrite,
-                        kComputeWrite >> kVertexRead));
-                });
-        } else if (i == 0) {
-            m_renderGraphLegacy->addDependency(
-                image + "BitReversePass1",
-                name,
-                [this, image, imageLayerRead](
-                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
-                        m_resourceContext->imageCache.getImage(image).getHandle(),
-                        imageLayerRead,
-                        kComputeWrite >> kComputeRead));
-                });
-        }
-
-        if (i > 0) {
-            std::string prevName = image + "TrueFFTPassVert" + std::to_string(i - 1);
-            m_renderGraphLegacy->addDependency(
-                prevName,
-                name,
-                [this, image, imageLayerRead](
-                    const VulkanRenderPass&, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                    cmdBuffer.insertImageMemoryBarrier(createImageMemoryReadBarrier(
-                        m_resourceContext->imageCache.getImage(image).getHandle(),
-                        imageLayerRead,
-                        kComputeWrite >> kComputeRead));
-                });
-        }
-
-        std::swap(imageLayerRead, imageLayerWrite);
-    }
-
-    return imageLayerRead;
-}
-
-void OceanScene::buildNewFFT() {
+void OceanScene::buildRenderGraph() {
+    m_passResources = std::make_unique<OceanPassResources>();
     m_renderGraph = std::make_unique<rg::RenderGraph>();
     m_renderGraph->getBlackboard().insert<OscillationPassData>();
     m_renderGraph->addPass(
@@ -793,18 +352,12 @@ void OceanScene::buildNewFFT() {
                 {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
                 fmt::format("{}-normal-z", "oscillation"));
         },
-        [this](const RenderPassExecutionContext& ctx) {
-            OscillationPassDispatch.bind(ctx);
-            OscillationPassDispatch.pipeline->setPushConstants(
-                ctx.cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_oceanParams);
+        [this](const FrameContext& ctx) {
+            m_passResources->oscillation.bind(ctx);
+            ctx.commandEncoder.setPushConstants(
+                *m_passResources->oscillation.pipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, m_oceanParams);
 
-            ctx.cmdBuffer.insertBufferMemoryBarrier(
-                m_resourceContext->getGeometry("ocean").getVertexBuffer()->getHandle(),
-                0,
-                VK_WHOLE_SIZE,
-                kVertexRead >> (kComputeStorageRead | kComputeStorageWrite));
-
-            ctx.cmdBuffer.dispatchCompute(OscillationPassDispatch.dispatchSize);
+            ctx.commandEncoder.dispatchCompute(m_passResources->oscillation.dispatchSize);
         });
 
     auto addFftPasses = [this]<size_t Tag>(const RenderGraphResourceHandle image) {
@@ -829,157 +382,158 @@ void OceanScene::buildNewFFT() {
                     },
                     fmt::format("{}-image", bitReversePassHorName));
             },
-            [](const RenderPassExecutionContext& ctx) {
-                const auto& dispatch{BitReversePasses.at(fmt::format("bit-reverse-h-{}", Tag))};
+            [this](const FrameContext& ctx) {
+                const auto& dispatch{m_passResources->bitReverse.at(fmt::format("bit-reverse-h-{}", Tag))};
                 dispatch.bind(ctx);
-                dispatch.pipeline->setPushConstants(
-                    ctx.cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{0, logN});
-                ctx.cmdBuffer.dispatchCompute(dispatch.dispatchSize);
+                ctx.commandEncoder.setPushConstants(
+                    *dispatch.pipeline->getPipelineLayout(),
+                    VK_SHADER_STAGE_COMPUTE_BIT,
+                    BitReversalPushConstants{0, logN});
+                ctx.commandEncoder.dispatchCompute(dispatch.dispatchSize);
             });
 
-        // struct IFFTPushConstants {
-        //     int32_t passIdx; // Index of the current pass.
-        //     int32_t N;       // Number of elements in the array.
-        // };
-        // for (int i = 0; i < logN; ++i) {
+        struct IFFTPushConstants {
+            int32_t passIdx; // Index of the current pass.
+            int32_t N;       // Number of elements in the array.
+        };
+        for (int i = 0; i < logN; ++i) {
 
-        //     const std::string passName = fmt::format("ifft-h-{}-{}", Tag, i);
-        //     m_renderGraph->addPass(
-        //         passName,
-        //         [passName, i](rg::RenderGraph::Builder& builder) {
-        //             builder.setType(PassType::Compute);
-        //             auto& data =
-        //                 i == 0 ? builder.getBlackboard().insert<HorizontalFftPassData<Tag>>()
-        //                        : builder.getBlackboard().get<HorizontalFftPassData<Tag>>();
-        //             if (i == 0) {
-        //                 data.image.resize(logN);
-        //                 builder.readStorageImage(builder.getBlackboard().get<HorizontalBitReversePassData<Tag>>().image);
-        //             } else {
-        //                 builder.readStorageImage(data.image[i - 1]);
-        //             }
-        //             data.image[i] = builder.createStorageImage(
-        //                 {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format =
-        //                 VK_FORMAT_R32G32_SFLOAT}, fmt::format("{}-image", passName));
-        //         },
-        //         [i](const RenderPassExecutionContext& ctx) {
-        //             const auto& dispatch{IfftPasses.at(fmt::format("ifft-h-{}-{}", Tag, i))};
-        //             dispatch.bind(ctx);
-        //             dispatch.pipeline->setPushConstants(
-        //                 ctx.cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
-        //             ctx.cmdBuffer.dispatchCompute(dispatch.dispatchSize);
-        //         });
-        // }
+            const std::string passName = fmt::format("ifft-h-{}-{}", Tag, i);
+            m_renderGraph->addPass(
+                passName,
+                [passName, i](rg::RenderGraph::Builder& builder) {
+                    builder.setType(PassType::Compute);
+                    auto& data =
+                        i == 0 ? builder.getBlackboard().insert<HorizontalFftPassData<Tag>>()
+                               : builder.getBlackboard().get<HorizontalFftPassData<Tag>>();
+                    if (i == 0) {
+                        data.image.resize(logN);
+                        builder.readStorageImage(builder.getBlackboard().get<HorizontalBitReversePassData<Tag>>().image);
+                    } else {
+                        builder.readStorageImage(data.image[i - 1]);
+                    }
+                    data.image[i] = builder.createStorageImage(
+                        {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
+                        fmt::format("{}-image", passName));
+                },
+                [this, i](const FrameContext& ctx) {
+                    const auto& dispatch{m_passResources->ifft.at(fmt::format("ifft-h-{}-{}", Tag, i))};
+                    dispatch.bind(ctx);
+                    ctx.commandEncoder.setPushConstants(
+                        *dispatch.pipeline->getPipelineLayout(),
+                        VK_SHADER_STAGE_COMPUTE_BIT,
+                        IFFTPushConstants{i + 1, N});
+                    ctx.commandEncoder.dispatchCompute(dispatch.dispatchSize);
+                });
+        }
 
-        // const std::string bitReversePassVertName{fmt::format("bit-reverse-v-{}", Tag)};
-        // m_renderGraph->addPass(
-        //     bitReversePassVertName,
-        //     [bitReversePassVertName](rg::RenderGraph::Builder& builder) {
-        //         builder.setType(PassType::Compute);
-        //         builder.readStorageImage(builder.getBlackboard().get<HorizontalFftPassData<Tag>>().image.back());
-        //         auto& data = builder.getBlackboard().insert<VerticalBitReversePassData<Tag>>();
-        //         data.image = builder.createStorageImage(
-        //             {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-        //             fmt::format("{}-image", bitReversePassVertName));
-        //     },
-        //     [](const RenderPassExecutionContext& ctx) {
-        //         const auto& dispatch{BitReversePasses.at(fmt::format("bit-reverse-v-{}", Tag))};
-        //         dispatch.bind(ctx);
-        //         dispatch.pipeline->setPushConstants(
-        //             ctx.cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, BitReversalPushConstants{1, logN});
-        //         ctx.cmdBuffer.dispatchCompute(dispatch.dispatchSize);
-        //     });
+        const std::string bitReversePassVertName{fmt::format("bit-reverse-v-{}", Tag)};
+        m_renderGraph->addPass(
+            bitReversePassVertName,
+            [bitReversePassVertName](rg::RenderGraph::Builder& builder) {
+                builder.setType(PassType::Compute);
+                builder.readStorageImage(builder.getBlackboard().get<HorizontalFftPassData<Tag>>().image.back());
+                auto& data = builder.getBlackboard().insert<VerticalBitReversePassData<Tag>>();
+                data.image = builder.createStorageImage(
+                    {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
+                    fmt::format("{}-image", bitReversePassVertName));
+            },
+            [this](const FrameContext& ctx) {
+                const auto& dispatch{m_passResources->bitReverse.at(fmt::format("bit-reverse-v-{}", Tag))};
+                dispatch.bind(ctx);
+                ctx.commandEncoder.setPushConstants(
+                    *dispatch.pipeline->getPipelineLayout(),
+                    VK_SHADER_STAGE_COMPUTE_BIT,
+                    BitReversalPushConstants{1, logN});
+                ctx.commandEncoder.dispatchCompute(dispatch.dispatchSize);
+            });
 
-        // for (int i = 0; i < logN; ++i) {
-        //     const std::string passName = fmt::format("ifft-v-{}-{}", Tag, i);
-        //     m_renderGraph->addPass(
-        //         passName,
-        //         [passName, i](rg::RenderGraph::Builder& builder) {
-        //             builder.setType(PassType::Compute);
-        //             auto& data =
-        //                 i == 0 ? builder.getBlackboard().insert<VerticalFftPassData<Tag>>()
-        //                        : builder.getBlackboard().get<VerticalFftPassData<Tag>>();
-        //             if (i == 0) {
-        //                 data.image.resize(logN);
-        //                 builder.readStorageImage(builder.getBlackboard().get<VerticalBitReversePassData<Tag>>().image);
-        //             } else {
-        //                 builder.readStorageImage(data.image[i - 1]);
-        //             }
-        //             data.image[i] = builder.createStorageImage(
-        //                 {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format =
-        //                 VK_FORMAT_R32G32_SFLOAT}, fmt::format("{}-image", passName));
-        //         },
-        //         [i](const RenderPassExecutionContext& ctx) {
-        //             const auto& dispatch{IfftPasses.at(fmt::format("ifft-v-{}-{}", Tag, i))};
-        //             dispatch.bind(ctx);
-        //             dispatch.pipeline->setPushConstants(
-        //                 ctx.cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, IFFTPushConstants{i + 1, N});
-        //             ctx.cmdBuffer.dispatchCompute(dispatch.dispatchSize);
-        //         });
-        // }
+        for (int i = 0; i < logN; ++i) {
+            const std::string passName = fmt::format("ifft-v-{}-{}", Tag, i);
+            m_renderGraph->addPass(
+                passName,
+                [passName, i](rg::RenderGraph::Builder& builder) {
+                    builder.setType(PassType::Compute);
+                    auto& data =
+                        i == 0 ? builder.getBlackboard().insert<VerticalFftPassData<Tag>>()
+                               : builder.getBlackboard().get<VerticalFftPassData<Tag>>();
+                    if (i == 0) {
+                        data.image.resize(logN);
+                        builder.readStorageImage(builder.getBlackboard().get<VerticalBitReversePassData<Tag>>().image);
+                    } else {
+                        builder.readStorageImage(data.image[i - 1]);
+                    }
+                    data.image[i] = builder.createStorageImage(
+                        {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
+                        fmt::format("{}-image", passName));
+                },
+                [this, i](const FrameContext& ctx) {
+                    const auto& dispatch{m_passResources->ifft.at(fmt::format("ifft-v-{}-{}", Tag, i))};
+                    dispatch.bind(ctx);
+                    ctx.commandEncoder.setPushConstants(
+                        *dispatch.pipeline->getPipelineLayout(),
+                        VK_SHADER_STAGE_COMPUTE_BIT,
+                        IFFTPushConstants{i + 1, N});
+                    ctx.commandEncoder.dispatchCompute(dispatch.dispatchSize);
+                });
+        }
     };
     addFftPasses.operator()<0>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementY);
-    // addFftPasses.operator()<1>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementX);
-    // addFftPasses.operator()<2>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementZ);
-    // addFftPasses.operator()<3>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalX);
-    // addFftPasses.operator()<4>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ);
+    addFftPasses.operator()<1>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementX);
+    addFftPasses.operator()<2>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementZ);
+    addFftPasses.operator()<3>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalX);
+    addFftPasses.operator()<4>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ);
 
     m_renderGraph->addPass(
         "geometry",
         [this](rg::RenderGraph::Builder& builder) {
             builder.setType(PassType::Compute);
-            builder.readTexture(builder.getBlackboard().get<HorizontalBitReversePassData<0>>().image);
-            // builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image.back());
-            // builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image.back());
-            // builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<2>>().image.back());
-            // builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<3>>().image.back());
-            // builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<4>>().image.back());
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image.back());
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image.back());
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<2>>().image.back());
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<3>>().image.back());
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<4>>().image.back());
 
             auto& data = builder.getBlackboard().insert<GeometryPassData>();
-            data.buffer = builder.createBuffer(
+            auto& geometry = m_resourceContext->getGeometry("ocean");
+            data.positions = builder.importBuffer(
                 {
-                    .formatHint = VK_FORMAT_R8_UINT,
-                    .size = 100,
+                    .formatHint = VK_FORMAT_R32G32B32_SFLOAT,
+                    .size = geometry.getVertexBuffer(0)->getSize(),
                     .usageFlags = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
+                    .externalBuffer = geometry.getVertexBuffer(0)->getHandle(),
                 },
-                "dummy-geometry");
-
-            // builder.importBuffer(
-            //     {
-            //         .formatHint = VK_FORMAT_R32G32B32_SFLOAT,
-            //         .size = m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->getSize(),
-            //         .usageFlags = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
-            //         .externalBuffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer(0)->getHandle(),
-            //     },
-            //     "geometry-positions");
+                "ocean-positions");
+            data.normals = builder.importBuffer(
+                {
+                    .formatHint = VK_FORMAT_R32G32B32_SFLOAT,
+                    .size = geometry.getVertexBuffer(1)->getSize(),
+                    .usageFlags = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
+                    .externalBuffer = geometry.getVertexBuffer(1)->getHandle(),
+                },
+                "ocean-normals");
         },
-        [this](const RenderPassExecutionContext& ctx) {
-            // VkBufferMemoryBarrier barrier = {VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
-            // barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            // barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-            // barrier.buffer = m_resourceContext->getGeometry("ocean")->getVertexBuffer()->getHandle();
-            // barrier.offset = 0;
-            // barrier.size = VK_WHOLE_SIZE;
+        [this](const FrameContext& ctx) {
+            struct GeometryUpdateParams {
+                int32_t patchSize;
+                float patchWorldSize;
+                float choppiness;
+            };
 
-            // vkCmdPipelineBarrier(
-            //     ctx.cmdBuffer.getHandle(),
-            //     VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-            //     VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            //     0,
-            //     0,
-            //     nullptr,
-            //     1,
-            //     &barrier,
-            //     0,
-            //     nullptr);
-
-            // node.pipeline->setPushConstants(ctx.cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_oceanParams);
+            m_passResources->geometry.bind(ctx);
+            ctx.commandEncoder.setPushConstants(
+                *m_passResources->geometry.pipeline->getPipelineLayout(),
+                VK_SHADER_STAGE_COMPUTE_BIT,
+                GeometryUpdateParams{N, kGeometryPatchWorldSize, m_choppiness});
+            ctx.commandEncoder.dispatchCompute(m_passResources->geometry.dispatchSize);
         });
 
     m_renderGraph->addPass(
         kForwardLightingPass,
         [](rg::RenderGraph::Builder& builder) {
-            builder.readBuffer(builder.getBlackboard().get<GeometryPassData>().buffer);
-            auto& data = builder.getBlackboard().insert<ForwardLightingData>();
+            builder.readBuffer(builder.getBlackboard().get<GeometryPassData>().positions, kVertexRead);
+            builder.readBuffer(builder.getBlackboard().get<GeometryPassData>().normals, kVertexRead);
+            auto& data = builder.getBlackboard().insert<OceanOutputData>();
             data.hdrImage = builder.createAttachment(
                 {
                     .sizePolicy = SizePolicy::SwapChainRelative,
@@ -987,6 +541,7 @@ void OceanScene::buildNewFFT() {
                 },
                 fmt::format("{}-color", kForwardLightingPass),
                 VkClearValue{.color{{0.0f, 0.0f, 0.0f, 0.0f}}});
+            builder.exportTexture(data.hdrImage);
 
             builder.createAttachment(
                 {
@@ -996,31 +551,90 @@ void OceanScene::buildNewFFT() {
                 fmt::format("{}-depth", kForwardLightingPass),
                 VkClearValue{.depthStencil{0.0f, 0}});
         },
-        [this](const RenderPassExecutionContext& ctx) {});
+        [this](const FrameContext& ctx) {
+            auto& geometry = m_resourceContext->getGeometry("ocean");
+            ctx.commandEncoder.bindPipeline(*m_oceanPipeline);
+            ctx.commandEncoder.setViewport(m_renderer->getDefaultViewport());
+            ctx.commandEncoder.setScissor(m_renderer->getDefaultScissor());
+            ctx.commandEncoder.setPushConstants(
+                *m_oceanPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, kGeometryPatchWorldSize);
+            ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
+            geometry.bindAndDraw(ctx.commandEncoder);
+        });
 
-    m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
-        m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
-    });
-    m_renderer->flushResourceUpdates(true);
-    toGraphViz(*m_renderGraph, "D:/graph.dot").unwrap();
+    m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&OceanOutputData::hdrImage>());
 
-    OscillationPassDispatch = createOscillationPassDispatch(*m_renderer, *m_renderGraph, m_resourceContext->imageCache);
+    m_passResources->oscillation =
+        createOscillationPassDispatch(*m_renderer, *m_renderGraph, m_resourceContext->imageCache);
     createFftDispatches<0>(
+        *m_passResources,
         *m_renderer,
         *m_renderGraph,
         m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementY));
-    // createFftDispatches<1>(
-    //     *m_renderer, *m_renderGraph,
-    //     m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementX));
-    // createFftDispatches<2>(
-    //     *m_renderer, *m_renderGraph,
-    //     m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementZ));
-    // createFftDispatches<3>(
-    //     *m_renderer, *m_renderGraph,
-    //     m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalX));
-    // createFftDispatches<4>(
-    //     *m_renderer, *m_renderGraph,
-    //     m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ));
+    createFftDispatches<1>(
+        *m_passResources,
+        *m_renderer,
+        *m_renderGraph,
+        m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementX));
+    createFftDispatches<2>(
+        *m_passResources,
+        *m_renderer,
+        *m_renderGraph,
+        m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementZ));
+    createFftDispatches<3>(
+        *m_passResources,
+        *m_renderer,
+        *m_renderGraph,
+        m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalX));
+    createFftDispatches<4>(
+        *m_passResources,
+        *m_renderer,
+        *m_renderGraph,
+        m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ));
+
+    const auto finalFftView = [this]<size_t Tag>() -> const VulkanImageView& {
+        return m_renderGraph->getResourceImageView(
+            m_renderGraph->getBlackboard().get<VerticalFftPassData<Tag>>().image.back());
+    };
+
+    auto& geometryDispatch = m_passResources->geometry;
+    geometryDispatch.workGroupSize = {16, 16, 1};
+    geometryDispatch.dispatchSize = computeWorkGroupCount(glm::uvec3(N + 1, N + 1, 1), geometryDispatch.workGroupSize);
+    geometryDispatch.pipeline =
+        createComputePipeline(*m_renderer, "ocean-geometry.comp", geometryDispatch.workGroupSize);
+    geometryDispatch.material = std::make_unique<Material>(geometryDispatch.pipeline.get());
+    auto& geometry = m_resourceContext->getGeometry("ocean");
+    geometryDispatch.material->writeDescriptor(0, 0, geometry.getVertexBuffer(0)->createDescriptorInfo());
+    geometryDispatch.material->writeDescriptor(0, 1, geometry.getVertexBuffer(1)->createDescriptorInfo());
+    auto& linearRepeat = m_resourceContext->imageCache.getSampler("linearRepeat");
+    geometryDispatch.material->writeDescriptor(0, 2, finalFftView.operator()<0>(), linearRepeat);
+    geometryDispatch.material->writeDescriptor(0, 3, finalFftView.operator()<1>(), linearRepeat);
+    geometryDispatch.material->writeDescriptor(0, 4, finalFftView.operator()<2>(), linearRepeat);
+    geometryDispatch.material->writeDescriptor(0, 5, finalFftView.operator()<3>(), linearRepeat);
+    geometryDispatch.material->writeDescriptor(0, 6, finalFftView.operator()<4>(), linearRepeat);
+
+    m_oceanPipeline = m_resourceContext->createPipeline(
+        "ocean", "Ocean.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+    m_oceanMaterial = m_resourceContext->createMaterial("ocean", m_oceanPipeline);
+    m_oceanMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
+    m_oceanMaterial->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
+    m_oceanMaterial->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
+    m_oceanMaterial->writeDescriptor(0, 3, finalFftView.operator()<2>(), linearRepeat);
+    m_oceanMaterial->writeDescriptor(0, 4, finalFftView.operator()<3>(), linearRepeat);
+    m_oceanMaterial->writeDescriptor(0, 5, finalFftView.operator()<4>(), linearRepeat);
+    m_oceanMaterial->writeDescriptor(1, 0, *m_resourceContext->getRingBuffer("camera"));
+    m_oceanMaterial->writeDescriptor(
+        1, 1, m_envLight->getDiffuseMapView(), m_resourceContext->imageCache.getSampler("linearClamp"));
+    m_oceanMaterial->writeDescriptor(
+        1, 2, m_envLight->getSpecularMapView(), m_resourceContext->imageCache.getSampler("linearMipmap"));
+    m_oceanMaterial->writeDescriptor(
+        1,
+        3,
+        m_resourceContext->imageCache.getImage("brdfLut").getView(),
+        m_resourceContext->imageCache.getSampler("linearClamp"));
+
+    m_renderer->getDevice().flushDescriptorUpdates();
 }
 
 } // namespace crisp

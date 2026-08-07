@@ -6,7 +6,7 @@
 // #include <Crisp/Scenes/FluidSimulationScene.hpp>
 // #include <Crisp/Scenes/GltfViewerScene.hpp>
 // #include <Crisp/Scenes/NormalMappingScene.hpp>
-// #include <Crisp/Scenes/OceanScene.hpp>
+#include <Crisp/Scenes/OceanScene.hpp>
 #include <Crisp/Scenes/PbrScene.hpp>
 // #include <Crisp/Scenes/RayTracerScene.hpp>
 // #include <Crisp/Scenes/ShadowMappingScene.hpp>
@@ -64,9 +64,9 @@ std::unique_ptr<Scene> createScene(
     if (name == kSceneNames[7]) {
         return std::make_unique<VulkanRayTracingScene>(renderer, window, outputDir);
     }
-    // if (name == kSceneNames[8]) {
-    //     return std::make_unique<OceanScene>(renderer, window);
-    // }
+    if (name == kSceneNames[8]) {
+        return std::make_unique<OceanScene>(renderer, window);
+    }
     // if (name == kSceneNames[9]) {
     //     return std::make_unique<GltfViewerScene>(renderer, window);
     // }
