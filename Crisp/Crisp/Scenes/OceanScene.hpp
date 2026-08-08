@@ -33,12 +33,16 @@ private:
 
     std::unique_ptr<FreeCameraController> m_cameraController;
     std::unique_ptr<TransformBuffer> m_transformBuffer;
+    TransformHandle m_transformHandle{TransformHandle::createInvalidHandle()};
     VulkanPipeline* m_oceanPipeline{nullptr};
     Material* m_oceanMaterial{nullptr};
 
     std::unique_ptr<EnvironmentLight> m_envLight;
     OceanParameters m_oceanParams;
     float m_choppiness;
+
+    // Uniform scale on the ocean's model matrix, so a patch can be inspected as an object.
+    float m_modelScale{1.0f};
 
     bool m_paused{false};
 };

@@ -17,8 +17,6 @@
 
 namespace crisp {
 namespace {
-auto logger = spdlog::stdout_color_st("OceanScene");
-
 constexpr int32_t N = 512;
 constexpr int32_t logN = std::bit_width(static_cast<uint32_t>(N)) - 1;
 constexpr float kGravity = 9.81f;
@@ -236,8 +234,7 @@ void OceanScene::setupResources() {
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 1);
-    const auto transformHandle = m_transformBuffer->getNextIndex();
-    m_transformBuffer->getPack(transformHandle).M = glm::mat4(1.0f);
+    m_transformHandle = m_transformBuffer->getNextIndex();
 
     m_envLight = std::make_unique<EnvironmentLight>(
         *m_renderer,
@@ -257,6 +254,9 @@ void OceanScene::resize(int width, int height) {
 void OceanScene::update(const UpdateParams& updateParams) {
     m_cameraController->update(updateParams.dt);
     const auto& cameraParams = m_cameraController->getCameraParameters();
+
+    // Set M before update(), which derives MV, MVP and the normal matrix from it.
+    m_transformBuffer->getPack(m_transformHandle).M = glm::scale(glm::mat4(1.0f), glm::vec3(m_modelScale));
     m_transformBuffer->update(cameraParams.V, cameraParams.P);
     m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(
         cameraParams, updateParams.frameInFlightIdx);
@@ -293,6 +293,7 @@ void OceanScene::drawGui() {
     ImGui::SliderFloat("Amplitude", &m_oceanParams.A, 0.0f, 0.01f, "%.5f");
     ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 4.0f * kCellSize);
     ImGui::SliderFloat("Choppiness", &m_choppiness, 0.0f, 5.0f);
+    ImGui::SliderFloat("Model Scale", &m_modelScale, 0.001f, 1.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
     ImGui::End();
 
     ImGui::SetNextWindowSize(ImVec2(440.0f, 500.0f), ImGuiCond_FirstUseEver);
@@ -305,7 +306,7 @@ void OceanScene::drawGui() {
 std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum() {
     const auto oceanSpectrum{createOceanSpectrum(0, m_oceanParams)};
 
-    auto image = createStorageImage(m_renderer->getDevice(), 1, N, N, VK_FORMAT_R32G32B32A32_SFLOAT);
+    auto image = createStorageImage(m_renderer->getDevice(), 1, N, N, VK_FORMAT_R32G32_SFLOAT);
     const auto staging = createStagingBuffer(
         m_renderer->getDevice(), oceanSpectrum.data(), oceanSpectrum.size() * sizeof(oceanSpectrum[0]));
     m_renderer->getDevice().getGeneralQueue().submitAndWait([&staging, img = image.get()](VkCommandBuffer cmdBuffer) {

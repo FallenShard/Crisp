@@ -4,7 +4,7 @@
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
-layout(set = 0, binding = 0, rgba32f) uniform readonly image2D initialSpectrumImg;
+layout(set = 0, binding = 0, rg32f) uniform readonly image2D initialSpectrumImg;
 layout(set = 0, binding = 1, rg32f) uniform writeonly image2D dispYImg;
 layout(set = 0, binding = 2, rg32f) uniform writeonly image2D dispXImg;
 layout(set = 0, binding = 3, rg32f) uniform writeonly image2D dispZImg;

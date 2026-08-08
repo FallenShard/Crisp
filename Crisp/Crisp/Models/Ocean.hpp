@@ -5,15 +5,6 @@
 #include <vector>
 
 namespace crisp {
-struct WindParameters {
-    glm::vec2 speed;
-    glm::vec2 speedNorm;
-    float magnitude;
-    float Lw;
-};
-
-enum class OceanSpectrumData { UniformGaussian, Phillips };
-
 struct OceanParameters {
     int32_t N;
     int32_t M;
@@ -34,8 +25,5 @@ struct OceanParameters {
 OceanParameters createOceanParameters(
     int32_t patchGridSize, float patchWorldSize, float windX, float windZ, float A, float l);
 
-std::vector<glm::vec4> createOceanSpectrum(
-    uint32_t seed,
-    const OceanParameters& oceanParams,
-    OceanSpectrumData spectrumData = OceanSpectrumData::UniformGaussian);
+std::vector<glm::vec2> createOceanSpectrum(uint32_t seed, const OceanParameters& oceanParams);
 } // namespace crisp
