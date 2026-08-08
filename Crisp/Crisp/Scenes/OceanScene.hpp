@@ -4,6 +4,7 @@
 #include <Crisp/Geometry/TransformBuffer.hpp>
 #include <Crisp/Lights/EnvironmentLight.hpp>
 #include <Crisp/Models/Ocean.hpp>
+#include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/Scene.hpp>
@@ -39,6 +40,7 @@ private:
     Material* m_oceanMaterial{nullptr};
 
     std::unique_ptr<EnvironmentLight> m_envLight;
+    std::unique_ptr<Skybox> m_skybox;
     OceanParameters m_oceanParams;
     float m_choppiness;
 

@@ -276,6 +276,7 @@ void OceanScene::update(const UpdateParams& updateParams) {
     m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(
         cameraParams, updateParams.frameInFlightIdx);
     m_transformBuffer->updateStagingBuffer(updateParams.frameInFlightIdx);
+    m_skybox->updateTransforms(cameraParams.V, cameraParams.P, updateParams.frameInFlightIdx);
 
     if (!m_paused) {
         m_oceanParams.time += updateParams.dt;
@@ -287,6 +288,7 @@ void OceanScene::render(const FrameContext& frameContext) {
     cameraBuffer->updateDeviceBuffer(frameContext.commandEncoder);
 
     m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder);
+    m_skybox->updateDeviceBuffer(frameContext.commandEncoder);
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead));
 
     m_renderGraph->execute(frameContext);
@@ -592,10 +594,22 @@ void OceanScene::buildRenderGraph() {
                 OceanVertexPushConstants{kPatchWorldSize, m_instancesPerSide});
             ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
             geometry.bindAndDraw(ctx.commandEncoder);
+
+            const RenderNode& skyboxNode = m_skybox->getRenderNode();
+            const auto& skyboxMaterialData = skyboxNode.materials.at({kForwardLightingPass, 0}).at(-1);
+            ctx.commandEncoder.bindPipeline(*skyboxMaterialData.material->getPipeline());
+            ctx.commandEncoder.bindDescriptorSets(skyboxMaterialData.material->getDescriptorSetBinding());
+            skyboxNode.geometry->bindAndDraw(ctx.commandEncoder);
         });
 
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     m_renderer->setSceneImageView(&m_renderGraph->getImageView<&OceanOutputData::hdrImage>());
+
+    m_skybox = std::make_unique<Skybox>(
+        m_renderer,
+        m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass),
+        m_envLight->getCubeMapView(),
+        m_resourceContext->imageCache.getSampler("linearClamp"));
 
     m_passResources->oscillation =
         createOscillationPassDispatch(*m_renderer, *m_renderGraph, m_resourceContext->imageCache);
