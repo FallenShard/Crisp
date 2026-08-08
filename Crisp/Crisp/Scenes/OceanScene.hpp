@@ -25,6 +25,7 @@ private:
     void setupInput();
     void setupResources();
     void buildRenderGraph();
+    void resetCamera();
 
     std::unique_ptr<VulkanImage> createInitialSpectrum();
 

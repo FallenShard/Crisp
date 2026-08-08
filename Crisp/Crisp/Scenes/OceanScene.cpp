@@ -239,6 +239,22 @@ void OceanScene::setupResources() {
     m_envLight = std::make_unique<EnvironmentLight>(
         *m_renderer,
         loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps/TableMountain").unwrap());
+
+    resetCamera();
+}
+
+void OceanScene::resetCamera() {
+    constexpr float kAngularSpeed = glm::radians(90.0f);
+
+    const float patchOnScreenSize = kPatchWorldSize * m_modelScale;
+    const glm::vec3 direction = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
+    const float distance = 1.6f * patchOnScreenSize;
+    const float yaw = glm::radians(45.0f);
+    const float pitch = -glm::atan(1.0f / glm::sqrt(2.0f));
+
+    m_cameraController->setPosition(distance * direction);
+    m_cameraController->updateOrientation(yaw / kAngularSpeed, pitch / kAngularSpeed);
+    m_cameraController->setSpeed(std::max(0.05f, patchOnScreenSize * 0.15f));
 }
 
 OceanScene::~OceanScene() {
@@ -255,7 +271,6 @@ void OceanScene::update(const UpdateParams& updateParams) {
     m_cameraController->update(updateParams.dt);
     const auto& cameraParams = m_cameraController->getCameraParameters();
 
-    // Set M before update(), which derives MV, MVP and the normal matrix from it.
     m_transformBuffer->getPack(m_transformHandle).M = glm::scale(glm::mat4(1.0f), glm::vec3(m_modelScale));
     m_transformBuffer->update(cameraParams.V, cameraParams.P);
     m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(
@@ -296,6 +311,9 @@ void OceanScene::drawGui() {
     ImGui::SliderFloat("Model Scale", &m_modelScale, 0.001f, 1.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
     if (ImGui::SliderInt("Instances Per Side", &m_instancesPerSide, 1, kMaxInstancesPerSide)) {
         m_resourceContext->getGeometry("ocean").setInstanceCount(m_instancesPerSide * m_instancesPerSide);
+    }
+    if (ImGui::Button("Reset View")) {
+        resetCamera();
     }
     ImGui::End();
 
