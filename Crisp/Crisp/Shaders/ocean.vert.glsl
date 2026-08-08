@@ -20,6 +20,7 @@ layout(set = 0, binding = 5) uniform sampler2D normalZMap;
 layout(push_constant) uniform PushConstant
 {
     layout(offset = 0) float patchWorldSize;
+    layout(offset = 4) int instancesPerSide;
 };
 
 layout(location = 0) out vec3 eyePosition;
@@ -48,9 +49,11 @@ float getDz(int i, int j, float factor) {
 
 void main()
 {
-    uint patchRow = gl_InstanceIndex / 8;
-    uint patchCol = gl_InstanceIndex % 8;
-    vec3 offset = vec3(patchCol * patchWorldSize, 0.0f, patchRow * patchWorldSize);
+    uint patchRow = gl_InstanceIndex / uint(instancesPerSide);
+    uint patchCol = gl_InstanceIndex % uint(instancesPerSide);
+    float centerOffset = (float(instancesPerSide) - 1.0f) * 0.5f;
+    vec3 offset = vec3(
+        (float(patchCol) - centerOffset) * patchWorldSize, 0.0f, (float(patchRow) - centerOffset) * patchWorldSize);
     eyeNormal = (N * vec4(normal, 0.0f)).xyz;
     worldNormal = normal;
 

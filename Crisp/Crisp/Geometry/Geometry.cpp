@@ -83,9 +83,9 @@ void Geometry::bind(const VulkanCommandEncoder& encoder) const {
 
 void Geometry::draw(const VulkanCommandEncoder& encoder) const {
     if (m_indexBuffer) {
-        encoder.drawIndexed(m_indexCount);
+        encoder.drawIndexed(m_indexCount, m_instanceCount);
     } else {
-        encoder.draw(m_vertexCount);
+        encoder.draw(m_vertexCount, m_instanceCount);
     }
 }
 

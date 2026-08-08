@@ -44,6 +44,9 @@ private:
     // Uniform scale on the ocean's model matrix, so a patch can be inspected as an object.
     float m_modelScale{1.0f};
 
+    // Instances per side of the tiled ocean grid, centred on the origin. 1 == a single patch.
+    int32_t m_instancesPerSide{1};
+
     bool m_paused{false};
 };
 } // namespace crisp

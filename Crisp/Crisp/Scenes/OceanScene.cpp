@@ -25,7 +25,7 @@ constexpr float kGravity = 9.81f;
 constexpr float kPatchWorldSize = 256.0f;
 constexpr float kCellSize = kPatchWorldSize / N;
 
-constexpr uint32_t kInstanceCount = 64;
+constexpr int32_t kMaxInstancesPerSide = 8;
 
 struct OscillationPassData {
     RenderGraphResourceHandle displacementY;
@@ -220,7 +220,7 @@ void OceanScene::setupResources() {
     TriangleMesh mesh = createGridMesh(kPatchWorldSize, N);
     m_resourceContext->addGeometry(
         "ocean", createGeometry(*m_renderer, mesh, vertexFormat, VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT));
-    m_resourceContext->getGeometry("ocean").setInstanceCount(kInstanceCount);
+    m_resourceContext->getGeometry("ocean").setInstanceCount(m_instancesPerSide * m_instancesPerSide);
 
     auto spectrumImage = createInitialSpectrum();
     m_resourceContext->imageCache.addImageView(
@@ -294,6 +294,9 @@ void OceanScene::drawGui() {
     ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 4.0f * kCellSize);
     ImGui::SliderFloat("Choppiness", &m_choppiness, 0.0f, 5.0f);
     ImGui::SliderFloat("Model Scale", &m_modelScale, 0.001f, 1.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
+    if (ImGui::SliderInt("Instances Per Side", &m_instancesPerSide, 1, kMaxInstancesPerSide)) {
+        m_resourceContext->getGeometry("ocean").setInstanceCount(m_instancesPerSide * m_instancesPerSide);
+    }
     ImGui::End();
 
     ImGui::SetNextWindowSize(ImVec2(440.0f, 500.0f), ImGuiCond_FirstUseEver);
@@ -556,12 +559,19 @@ void OceanScene::buildRenderGraph() {
                 VkClearValue{.depthStencil{0.0f, 0}});
         },
         [this](const FrameContext& ctx) {
+            struct OceanVertexPushConstants {
+                float patchWorldSize;
+                int32_t instancesPerSide;
+            };
+
             auto& geometry = m_resourceContext->getGeometry("ocean");
             ctx.commandEncoder.bindPipeline(*m_oceanPipeline);
             ctx.commandEncoder.setViewport(m_renderer->getDefaultViewport());
             ctx.commandEncoder.setScissor(m_renderer->getDefaultScissor());
             ctx.commandEncoder.setPushConstants(
-                *m_oceanPipeline->getPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, kPatchWorldSize);
+                *m_oceanPipeline->getPipelineLayout(),
+                VK_SHADER_STAGE_VERTEX_BIT,
+                OceanVertexPushConstants{kPatchWorldSize, m_instancesPerSide});
             ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
             geometry.bindAndDraw(ctx.commandEncoder);
         });
