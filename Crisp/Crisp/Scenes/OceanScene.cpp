@@ -35,23 +35,16 @@ struct OscillationPassData {
     RenderGraphResourceHandle normalZ;
 };
 
+// Shared-memory IFFT: one dispatch per direction folds the bit-reversal and all logN butterfly
+// stages into a single pass (a workgroup owns a whole row/column in `shared` memory), rather than
+// 1 + logN separate dispatches each round-tripping through VRAM.
 template <size_t Tag>
 struct HorizontalFftPassData {
-    std::vector<RenderGraphResourceHandle> image;
-};
-
-template <size_t Tag>
-struct VerticalFftPassData {
-    std::vector<RenderGraphResourceHandle> image;
-};
-
-template <size_t Tag>
-struct HorizontalBitReversePassData {
     RenderGraphResourceHandle image;
 };
 
 template <size_t Tag>
-struct VerticalBitReversePassData {
+struct VerticalFftPassData {
     RenderGraphResourceHandle image;
 };
 
@@ -82,7 +75,6 @@ struct ComputeDispatch {
 struct OceanPassResources {
     ComputeDispatch oscillation;
     ComputeDispatch geometry;
-    FlatStringHashMap<ComputeDispatch> bitReverse;
     FlatStringHashMap<ComputeDispatch> ifft;
 };
 
@@ -111,28 +103,17 @@ ComputeDispatch createOscillationPassDispatch(
     return dispatch;
 }
 
-template <size_t Tag>
-ComputeDispatch createBitReverseDispatch(
-    Renderer& renderer, const VulkanImageView& sourceView, const VulkanImageView& dstView) {
-    ComputeDispatch dispatch{};
-    dispatch.workGroupSize = {16, 16, 1};
-    dispatch.dispatchSize = computeWorkGroupCount(glm::uvec3(N, N, 1), dispatch.workGroupSize);
-    dispatch.pipeline = createComputePipeline(renderer, "ocean-reverse-bits.comp", dispatch.workGroupSize);
-    dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
-    dispatch.material->writeDescriptor(0, 0, sourceView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    dispatch.material->writeDescriptor(0, 1, dstView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    return dispatch;
-}
-
 template <size_t Tag, bool Horizontal>
-ComputeDispatch createIfftDispatch(
+ComputeDispatch createSharedIfftDispatch(
     Renderer& renderer, const VulkanImageView& sourceView, const VulkanImageView& dstView) {
-    constexpr glm::uvec3 workAmount = Horizontal ? glm::uvec3(N / 2, N, 1) : glm::uvec3(N, N / 2, 1);
-    const std::string shaderName = Horizontal ? "ifft-hori.comp" : "ifft-vert.comp";
+    const std::string shaderName = Horizontal ? "ifft-shared-hori.comp" : "ifft-shared-vert.comp";
 
     ComputeDispatch dispatch{};
-    dispatch.workGroupSize = {16, 16, 1};
-    dispatch.dispatchSize = computeWorkGroupCount(workAmount, dispatch.workGroupSize);
+    // One workgroup per row (horizontal) or column (vertical); N/2 threads butterfly the whole
+    // line in shared memory, so the dispatch is 1-wide in the direction being transformed.
+    dispatch.workGroupSize = {static_cast<uint32_t>(N / 2), 1, 1};
+    dispatch.dispatchSize =
+        Horizontal ? VkExtent3D{1, static_cast<uint32_t>(N), 1} : VkExtent3D{static_cast<uint32_t>(N), 1, 1};
     dispatch.pipeline = createComputePipeline(renderer, shaderName, dispatch.workGroupSize);
     dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
     dispatch.material->writeDescriptor(0, 0, sourceView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -146,45 +127,12 @@ void createFftDispatches(
     Renderer& renderer,
     const rg::RenderGraph& renderGraph,
     const VulkanImageView& srcView) {
-    passResources.bitReverse[fmt::format("bit-reverse-h-{}", Tag)] = createBitReverseDispatch<Tag>(
+    passResources.ifft[fmt::format("ifft-h-{}", Tag)] = createSharedIfftDispatch<Tag, true>(
+        renderer, srcView, renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image));
+    passResources.ifft[fmt::format("ifft-v-{}", Tag)] = createSharedIfftDispatch<Tag, false>(
         renderer,
-        srcView,
-        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalBitReversePassData<Tag>>().image));
-    for (int32_t i = 0; i < logN; ++i) {
-        if (i == 0) {
-            passResources.ifft[fmt::format("ifft-h-{}-{}", Tag, i)] = createIfftDispatch<Tag, true>(
-                renderer,
-                renderGraph.getResourceImageView(
-                    renderGraph.getBlackboard().get<HorizontalBitReversePassData<Tag>>().image),
-                renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image[i]));
-        } else {
-            passResources.ifft[fmt::format("ifft-h-{}-{}", Tag, i)] = createIfftDispatch<Tag, true>(
-                renderer,
-                renderGraph.getResourceImageView(
-                    renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image[i - 1]),
-                renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image[i]));
-        }
-    }
-
-    passResources.bitReverse[fmt::format("bit-reverse-v-{}", Tag)] = createBitReverseDispatch<Tag>(
-        renderer,
-        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image.back()),
-        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalBitReversePassData<Tag>>().image));
-    for (int32_t i = 0; i < logN; ++i) {
-        if (i == 0) {
-            passResources.ifft[fmt::format("ifft-v-{}-{}", Tag, i)] = createIfftDispatch<Tag, false>(
-                renderer,
-                renderGraph.getResourceImageView(
-                    renderGraph.getBlackboard().get<VerticalBitReversePassData<Tag>>().image),
-                renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image[i]));
-        } else {
-            passResources.ifft[fmt::format("ifft-v-{}-{}", Tag, i)] = createIfftDispatch<Tag, false>(
-                renderer,
-                renderGraph.getResourceImageView(
-                    renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image[i - 1]),
-                renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image[i]));
-        }
-    }
+        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image),
+        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image));
 }
 
 } // namespace
@@ -382,122 +330,48 @@ void OceanScene::buildRenderGraph() {
         });
 
     auto addFftPasses = [this]<size_t Tag>(const RenderGraphResourceHandle image) {
-        struct BitReversalPushConstants {
-            int32_t reversalDirection; // 0 is horizontal, 1 is vertical.
-            int32_t passCount;         // Logarithm of the patch discretization size.
+        struct IfftPushConstants {
+            int32_t N;
+            int32_t logN;
         };
 
-        const std::string bitReversePassHorName{fmt::format("bit-reverse-h-{}", Tag)};
+        const std::string horiPassName{fmt::format("ifft-h-{}", Tag)};
         m_renderGraph->addPass(
-            bitReversePassHorName,
-            [image, bitReversePassHorName](rg::RenderGraph::Builder& builder) {
+            horiPassName,
+            [image, horiPassName](rg::RenderGraph::Builder& builder) {
                 builder.setType(PassType::Compute);
                 builder.readStorageImage(image);
-                auto& data = builder.getBlackboard().insert<HorizontalBitReversePassData<Tag>>();
-                data.image = builder.createStorageImage(
-                    {
-                        .sizePolicy = SizePolicy::Absolute,
-                        .width = N,
-                        .height = N,
-                        .format = VK_FORMAT_R32G32_SFLOAT,
-                    },
-                    fmt::format("{}-image", bitReversePassHorName));
-            },
-            [this](const FrameContext& ctx) {
-                const auto& dispatch{m_passResources->bitReverse.at(fmt::format("bit-reverse-h-{}", Tag))};
-                dispatch.bind(ctx);
-                ctx.commandEncoder.setPushConstants(
-                    *dispatch.pipeline->getPipelineLayout(),
-                    VK_SHADER_STAGE_COMPUTE_BIT,
-                    BitReversalPushConstants{0, logN});
-                ctx.commandEncoder.dispatchCompute(dispatch.dispatchSize);
-            });
-
-        struct IFFTPushConstants {
-            int32_t passIdx; // Index of the current pass.
-            int32_t N;       // Number of elements in the array.
-        };
-        for (int i = 0; i < logN; ++i) {
-
-            const std::string passName = fmt::format("ifft-h-{}-{}", Tag, i);
-            m_renderGraph->addPass(
-                passName,
-                [passName, i](rg::RenderGraph::Builder& builder) {
-                    builder.setType(PassType::Compute);
-                    auto& data =
-                        i == 0 ? builder.getBlackboard().insert<HorizontalFftPassData<Tag>>()
-                               : builder.getBlackboard().get<HorizontalFftPassData<Tag>>();
-                    if (i == 0) {
-                        data.image.resize(logN);
-                        builder.readStorageImage(builder.getBlackboard().get<HorizontalBitReversePassData<Tag>>().image);
-                    } else {
-                        builder.readStorageImage(data.image[i - 1]);
-                    }
-                    data.image[i] = builder.createStorageImage(
-                        {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-                        fmt::format("{}-image", passName));
-                },
-                [this, i](const FrameContext& ctx) {
-                    const auto& dispatch{m_passResources->ifft.at(fmt::format("ifft-h-{}-{}", Tag, i))};
-                    dispatch.bind(ctx);
-                    ctx.commandEncoder.setPushConstants(
-                        *dispatch.pipeline->getPipelineLayout(),
-                        VK_SHADER_STAGE_COMPUTE_BIT,
-                        IFFTPushConstants{i + 1, N});
-                    ctx.commandEncoder.dispatchCompute(dispatch.dispatchSize);
-                });
-        }
-
-        const std::string bitReversePassVertName{fmt::format("bit-reverse-v-{}", Tag)};
-        m_renderGraph->addPass(
-            bitReversePassVertName,
-            [bitReversePassVertName](rg::RenderGraph::Builder& builder) {
-                builder.setType(PassType::Compute);
-                builder.readStorageImage(builder.getBlackboard().get<HorizontalFftPassData<Tag>>().image.back());
-                auto& data = builder.getBlackboard().insert<VerticalBitReversePassData<Tag>>();
+                auto& data = builder.getBlackboard().insert<HorizontalFftPassData<Tag>>();
                 data.image = builder.createStorageImage(
                     {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-                    fmt::format("{}-image", bitReversePassVertName));
+                    fmt::format("{}-image", horiPassName));
             },
             [this](const FrameContext& ctx) {
-                const auto& dispatch{m_passResources->bitReverse.at(fmt::format("bit-reverse-v-{}", Tag))};
+                const auto& dispatch{m_passResources->ifft.at(fmt::format("ifft-h-{}", Tag))};
                 dispatch.bind(ctx);
                 ctx.commandEncoder.setPushConstants(
-                    *dispatch.pipeline->getPipelineLayout(),
-                    VK_SHADER_STAGE_COMPUTE_BIT,
-                    BitReversalPushConstants{1, logN});
+                    *dispatch.pipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, IfftPushConstants{N, logN});
                 ctx.commandEncoder.dispatchCompute(dispatch.dispatchSize);
             });
 
-        for (int i = 0; i < logN; ++i) {
-            const std::string passName = fmt::format("ifft-v-{}-{}", Tag, i);
-            m_renderGraph->addPass(
-                passName,
-                [passName, i](rg::RenderGraph::Builder& builder) {
-                    builder.setType(PassType::Compute);
-                    auto& data =
-                        i == 0 ? builder.getBlackboard().insert<VerticalFftPassData<Tag>>()
-                               : builder.getBlackboard().get<VerticalFftPassData<Tag>>();
-                    if (i == 0) {
-                        data.image.resize(logN);
-                        builder.readStorageImage(builder.getBlackboard().get<VerticalBitReversePassData<Tag>>().image);
-                    } else {
-                        builder.readStorageImage(data.image[i - 1]);
-                    }
-                    data.image[i] = builder.createStorageImage(
-                        {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-                        fmt::format("{}-image", passName));
-                },
-                [this, i](const FrameContext& ctx) {
-                    const auto& dispatch{m_passResources->ifft.at(fmt::format("ifft-v-{}-{}", Tag, i))};
-                    dispatch.bind(ctx);
-                    ctx.commandEncoder.setPushConstants(
-                        *dispatch.pipeline->getPipelineLayout(),
-                        VK_SHADER_STAGE_COMPUTE_BIT,
-                        IFFTPushConstants{i + 1, N});
-                    ctx.commandEncoder.dispatchCompute(dispatch.dispatchSize);
-                });
-        }
+        const std::string vertPassName{fmt::format("ifft-v-{}", Tag)};
+        m_renderGraph->addPass(
+            vertPassName,
+            [vertPassName](rg::RenderGraph::Builder& builder) {
+                builder.setType(PassType::Compute);
+                builder.readStorageImage(builder.getBlackboard().get<HorizontalFftPassData<Tag>>().image);
+                auto& data = builder.getBlackboard().insert<VerticalFftPassData<Tag>>();
+                data.image = builder.createStorageImage(
+                    {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
+                    fmt::format("{}-image", vertPassName));
+            },
+            [this](const FrameContext& ctx) {
+                const auto& dispatch{m_passResources->ifft.at(fmt::format("ifft-v-{}", Tag))};
+                dispatch.bind(ctx);
+                ctx.commandEncoder.setPushConstants(
+                    *dispatch.pipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, IfftPushConstants{N, logN});
+                ctx.commandEncoder.dispatchCompute(dispatch.dispatchSize);
+            });
     };
     addFftPasses.operator()<0>(m_renderGraph->getBlackboard().get<OscillationPassData>().packedHeightDispX);
     addFftPasses.operator()<1>(m_renderGraph->getBlackboard().get<OscillationPassData>().packedDispZNormalX);
@@ -507,9 +381,8 @@ void OceanScene::buildRenderGraph() {
         "geometry",
         [this](rg::RenderGraph::Builder& builder) {
             builder.setType(PassType::Compute);
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image.back());
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image.back());
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<2>>().image.back());
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image);
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image);
 
             auto& data = builder.getBlackboard().insert<GeometryPassData>();
             auto& geometry = m_resourceContext->getGeometry("ocean");
@@ -622,8 +495,7 @@ void OceanScene::buildRenderGraph() {
         m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ));
 
     const auto finalFftView = [this]<size_t Tag>() -> const VulkanImageView& {
-        return m_renderGraph->getResourceImageView(
-            m_renderGraph->getBlackboard().get<VerticalFftPassData<Tag>>().image.back());
+        return m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<VerticalFftPassData<Tag>>().image);
     };
 
     auto& geometryDispatch = m_passResources->geometry;
