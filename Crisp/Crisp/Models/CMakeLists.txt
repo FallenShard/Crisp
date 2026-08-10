@@ -33,3 +33,7 @@ target_link_libraries(CrispOceanTest
     PRIVATE Crisp::VulkanTestUtils
     PRIVATE Crisp::Models
 )
+add_test_shader(CrispOceanTest "../Shaders/ocean-spectrum.comp.glsl")
+add_test_shader(CrispOceanTest "../Shaders/ocean-reverse-bits.comp.glsl")
+add_test_shader(CrispOceanTest "../Shaders/ifft-hori.comp.glsl")
+add_test_shader(CrispOceanTest "../Shaders/ifft-vert.comp.glsl")

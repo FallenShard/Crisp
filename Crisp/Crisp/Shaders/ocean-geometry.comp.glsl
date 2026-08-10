@@ -12,11 +12,11 @@ layout (set = 0, binding = 1) buffer Normals
     float normals[];
 };
 
-layout(set = 0, binding = 2) uniform sampler2D displacementMap;
-layout(set = 0, binding = 3) uniform sampler2D displacementXMap;
-layout(set = 0, binding = 4) uniform sampler2D displacementZMap;
-layout(set = 0, binding = 5) uniform sampler2D normalXMap;
-layout(set = 0, binding = 6) uniform sampler2D normalZMap;
+// height/dispX packed as one complex FFT's real/imaginary channels (dispZ/normalX likewise); see
+// ocean-spectrum.comp.glsl. normalX isn't sampled here -- makeNormal uses finite differences of
+// the displaced positions instead, not the spectral slope.
+layout(set = 0, binding = 2) uniform sampler2D packedHeightDispXMap;
+layout(set = 0, binding = 3) uniform sampler2D packedDispZNormalXMap;
 
 layout(push_constant) uniform PushConstant
 {
@@ -31,15 +31,15 @@ float getFactor(int i, int j) {
 }
 
 float getHeight(int i, int j, float factor) {
-    return texelFetch(displacementMap, ivec2(i, j), 0).r * factor;
+    return texelFetch(packedHeightDispXMap, ivec2(i, j), 0).r * factor;
 }
 
 float getDx(int i, int j, float factor) {
-    return texelFetch(displacementXMap, ivec2(i, j), 0).r * factor;
+    return texelFetch(packedHeightDispXMap, ivec2(i, j), 0).g * factor;
 }
 
 float getDz(int i, int j, float factor) {
-    return texelFetch(displacementZMap, ivec2(i, j), 0).r * factor;
+    return texelFetch(packedDispZNormalXMap, ivec2(i, j), 0).r * factor;
 }
 
 // Choppy waves (Tessendorf, Simulating Ocean Water, "Choppy Waves"). The spectrum pass uses the

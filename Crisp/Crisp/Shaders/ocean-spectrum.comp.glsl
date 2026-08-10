@@ -5,11 +5,13 @@
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 layout(set = 0, binding = 0, rg32f) uniform readonly image2D initialSpectrumImg;
-layout(set = 0, binding = 1, rg32f) uniform writeonly image2D dispYImg;
-layout(set = 0, binding = 2, rg32f) uniform writeonly image2D dispXImg;
-layout(set = 0, binding = 3, rg32f) uniform writeonly image2D dispZImg;
-layout(set = 0, binding = 4, rg32f) uniform writeonly image2D normalXImg;
-layout(set = 0, binding = 5, rg32f) uniform writeonly image2D normalZImg;
+// Each of height/dispX/dispZ/normalX/normalZ inverse-transforms to a real-valued field on its
+// own (each is separately Hermitian-symmetric). IFFT is linear, so IFFT(A + i*B) = a(x) + i*b(x)
+// once A and B are each real once transformed -- packing two channels per complex FFT this way
+// halves the FFT work without changing the per-channel math at all. normalZ is left unpaired.
+layout(set = 0, binding = 1, rg32f) uniform writeonly image2D packedHeightDispXImg;
+layout(set = 0, binding = 2, rg32f) uniform writeonly image2D packedDispZNormalXImg;
+layout(set = 0, binding = 3, rg32f) uniform writeonly image2D normalZImg;
 
 layout(push_constant) uniform PushConstant
 {
@@ -80,15 +82,17 @@ void main()
     const vec2 phaseVec = vec2(cos(phase), sin(phase));
 
     const vec2 hkt = complexMul(h0, phaseVec) + complexMul(h0Conj, vec2(phaseVec.x, -phaseVec.y));
-    imageStore(dispYImg, gid, vec4(hkt, 0.0, 0.0f));
 
     const vec2 dispX = complexMul(hkt, vec2(0, -k.x / kLen));
     const vec2 dispZ = complexMul(hkt, vec2(0, -k.y / kLen));
-    imageStore(dispXImg, gid, vec4(dispX, 0.0, 0.0f));
-    imageStore(dispZImg, gid, vec4(dispZ, 0.0, 0.0f));
-
     const vec2 normalX = complexMul(hkt, vec2(0, k.x));
     const vec2 normalZ = complexMul(hkt, vec2(0, k.y));
-    imageStore(normalXImg, gid, vec4(normalX, 0.0, 0.0f));
+
+    // i*B = i*(Br + i*Bi) = -Bi + i*Br.
+    const vec2 packedHeightDispX = vec2(hkt.x - dispX.y, hkt.y + dispX.x);
+    const vec2 packedDispZNormalX = vec2(dispZ.x - normalX.y, dispZ.y + normalX.x);
+
+    imageStore(packedHeightDispXImg, gid, vec4(packedHeightDispX, 0.0, 0.0f));
+    imageStore(packedDispZNormalXImg, gid, vec4(packedDispZNormalX, 0.0, 0.0f));
     imageStore(normalZImg, gid, vec4(normalZ, 0.0, 0.0f));
 }

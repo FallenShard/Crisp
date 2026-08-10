@@ -27,11 +27,11 @@ constexpr float kCellSize = kPatchWorldSize / N;
 
 constexpr int32_t kMaxInstancesPerSide = 8;
 
+// height/dispX and dispZ/normalX are each packed into one complex FFT channel (see
+// ocean-spectrum.comp.glsl); normalZ is left unpaired. 5 logical fields, 3 FFT channels.
 struct OscillationPassData {
-    RenderGraphResourceHandle displacementY;
-    RenderGraphResourceHandle displacementX;
-    RenderGraphResourceHandle displacementZ;
-    RenderGraphResourceHandle normalX;
+    RenderGraphResourceHandle packedHeightDispX;
+    RenderGraphResourceHandle packedDispZNormalX;
     RenderGraphResourceHandle normalZ;
 };
 
@@ -99,15 +99,15 @@ ComputeDispatch createOscillationPassDispatch(
     dispatch.material->writeDescriptor(
         0, 0, imageCache.getImageView("randImageView").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     dispatch.material->writeDescriptor(
-        0, 1, renderGraph.getResourceImageView(opd.displacementY).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+        0,
+        1,
+        renderGraph.getResourceImageView(opd.packedHeightDispX).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     dispatch.material->writeDescriptor(
-        0, 2, renderGraph.getResourceImageView(opd.displacementX).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+        0,
+        2,
+        renderGraph.getResourceImageView(opd.packedDispZNormalX).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     dispatch.material->writeDescriptor(
-        0, 3, renderGraph.getResourceImageView(opd.displacementZ).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    dispatch.material->writeDescriptor(
-        0, 4, renderGraph.getResourceImageView(opd.normalX).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    dispatch.material->writeDescriptor(
-        0, 5, renderGraph.getResourceImageView(opd.normalZ).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+        0, 3, renderGraph.getResourceImageView(opd.normalZ).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     return dispatch;
 }
 
@@ -363,18 +363,12 @@ void OceanScene::buildRenderGraph() {
         [](rg::RenderGraph::Builder& builder) {
             builder.setType(PassType::Compute);
             auto& data = builder.getBlackboard().get<OscillationPassData>();
-            data.displacementY = builder.createStorageImage(
+            data.packedHeightDispX = builder.createStorageImage(
                 {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-                fmt::format("{}-disp-y", "oscillation"));
-            data.displacementX = builder.createStorageImage(
+                fmt::format("{}-packed-height-dispx", "oscillation"));
+            data.packedDispZNormalX = builder.createStorageImage(
                 {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-                fmt::format("{}-disp-x", "oscillation"));
-            data.displacementZ = builder.createStorageImage(
-                {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-                fmt::format("{}-disp-z", "oscillation"));
-            data.normalX = builder.createStorageImage(
-                {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-                fmt::format("{}-normal-x", "oscillation"));
+                fmt::format("{}-packed-dispz-normalx", "oscillation"));
             data.normalZ = builder.createStorageImage(
                 {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
                 fmt::format("{}-normal-z", "oscillation"));
@@ -505,11 +499,9 @@ void OceanScene::buildRenderGraph() {
                 });
         }
     };
-    addFftPasses.operator()<0>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementY);
-    addFftPasses.operator()<1>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementX);
-    addFftPasses.operator()<2>(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementZ);
-    addFftPasses.operator()<3>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalX);
-    addFftPasses.operator()<4>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ);
+    addFftPasses.operator()<0>(m_renderGraph->getBlackboard().get<OscillationPassData>().packedHeightDispX);
+    addFftPasses.operator()<1>(m_renderGraph->getBlackboard().get<OscillationPassData>().packedDispZNormalX);
+    addFftPasses.operator()<2>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ);
 
     m_renderGraph->addPass(
         "geometry",
@@ -518,8 +510,6 @@ void OceanScene::buildRenderGraph() {
             builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image.back());
             builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image.back());
             builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<2>>().image.back());
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<3>>().image.back());
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<4>>().image.back());
 
             auto& data = builder.getBlackboard().insert<GeometryPassData>();
             auto& geometry = m_resourceContext->getGeometry("ocean");
@@ -617,23 +607,15 @@ void OceanScene::buildRenderGraph() {
         *m_passResources,
         *m_renderer,
         *m_renderGraph,
-        m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementY));
+        m_renderGraph->getResourceImageView(
+            m_renderGraph->getBlackboard().get<OscillationPassData>().packedHeightDispX));
     createFftDispatches<1>(
         *m_passResources,
         *m_renderer,
         *m_renderGraph,
-        m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementX));
+        m_renderGraph->getResourceImageView(
+            m_renderGraph->getBlackboard().get<OscillationPassData>().packedDispZNormalX));
     createFftDispatches<2>(
-        *m_passResources,
-        *m_renderer,
-        *m_renderGraph,
-        m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().displacementZ));
-    createFftDispatches<3>(
-        *m_passResources,
-        *m_renderer,
-        *m_renderGraph,
-        m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalX));
-    createFftDispatches<4>(
         *m_passResources,
         *m_renderer,
         *m_renderGraph,
@@ -656,9 +638,6 @@ void OceanScene::buildRenderGraph() {
     auto& linearRepeat = m_resourceContext->imageCache.getSampler("linearRepeat");
     geometryDispatch.material->writeDescriptor(0, 2, finalFftView.operator()<0>(), linearRepeat);
     geometryDispatch.material->writeDescriptor(0, 3, finalFftView.operator()<1>(), linearRepeat);
-    geometryDispatch.material->writeDescriptor(0, 4, finalFftView.operator()<2>(), linearRepeat);
-    geometryDispatch.material->writeDescriptor(0, 5, finalFftView.operator()<3>(), linearRepeat);
-    geometryDispatch.material->writeDescriptor(0, 6, finalFftView.operator()<4>(), linearRepeat);
 
     m_oceanPipeline = m_resourceContext->createPipeline(
         "ocean", "Ocean.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
@@ -667,8 +646,6 @@ void OceanScene::buildRenderGraph() {
     m_oceanMaterial->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
     m_oceanMaterial->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
     m_oceanMaterial->writeDescriptor(0, 3, finalFftView.operator()<2>(), linearRepeat);
-    m_oceanMaterial->writeDescriptor(0, 4, finalFftView.operator()<3>(), linearRepeat);
-    m_oceanMaterial->writeDescriptor(0, 5, finalFftView.operator()<4>(), linearRepeat);
     m_oceanMaterial->writeDescriptor(1, 0, *m_resourceContext->getRingBuffer("camera"));
     m_oceanMaterial->writeDescriptor(
         1, 1, m_envLight->getDiffuseMapView(), m_resourceContext->imageCache.getSampler("linearClamp"));

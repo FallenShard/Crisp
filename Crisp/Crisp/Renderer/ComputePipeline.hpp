@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <functional>
 
 #include <Crisp/Math/Headers.hpp>
@@ -12,6 +13,12 @@ class Renderer;
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     Renderer& renderer,
     const std::string& shaderName,
+    const VkExtent3D& workGroupSize,
+    const std::function<void(PipelineLayoutBuilder&)>& builderOverride = {});
+
+std::unique_ptr<VulkanPipeline> createComputePipeline(
+    const VulkanDevice& device,
+    const std::filesystem::path& spvPath,
     const VkExtent3D& workGroupSize,
     const std::function<void(PipelineLayoutBuilder&)>& builderOverride = {});
 
