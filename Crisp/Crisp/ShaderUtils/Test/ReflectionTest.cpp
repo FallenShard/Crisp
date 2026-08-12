@@ -85,10 +85,22 @@ TEST(ReflectionTest, VertexShader) {
     EXPECT_THAT(
         reflection.attributes,
         ElementsAre(
-            AllOf(Field(&AttribDesc::location, 0), Field(&AttribDesc::format, VK_FORMAT_R32G32B32_SFLOAT)),
-            AllOf(Field(&AttribDesc::location, 1), Field(&AttribDesc::format, VK_FORMAT_R32G32B32_SFLOAT)),
-            AllOf(Field(&AttribDesc::location, 2), Field(&AttribDesc::format, VK_FORMAT_R32G32_SFLOAT)),
-            AllOf(Field(&AttribDesc::location, 3), Field(&AttribDesc::format, VK_FORMAT_R32G32B32A32_SFLOAT))));
+            AllOf(
+                Field(&AttribDesc::name, "position"),
+                Field(&AttribDesc::location, 0),
+                Field(&AttribDesc::format, VK_FORMAT_R32G32B32_SFLOAT)),
+            AllOf(
+                Field(&AttribDesc::name, "normal"),
+                Field(&AttribDesc::location, 1),
+                Field(&AttribDesc::format, VK_FORMAT_R32G32B32_SFLOAT)),
+            AllOf(
+                Field(&AttribDesc::name, "texCoord"),
+                Field(&AttribDesc::location, 2),
+                Field(&AttribDesc::format, VK_FORMAT_R32G32_SFLOAT)),
+            AllOf(
+                Field(&AttribDesc::name, "tangent"),
+                Field(&AttribDesc::location, 3),
+                Field(&AttribDesc::format, VK_FORMAT_R32G32B32A32_SFLOAT))));
 }
 
 } // namespace

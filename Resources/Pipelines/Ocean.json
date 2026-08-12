@@ -1,10 +1,9 @@
 {
     "shaders": { "vert": "ocean.vert", "frag": "ocean.frag" },
     "vertexInputBindings": [
-        { "formats": [ "vec3" ], "inputRate": "vertex" },
-        { "formats": [ "vec3" ], "inputRate": "vertex" }
+        { "locations": [ 0 ], "inputRate": "vertex" },
+        { "locations": [ 1 ], "inputRate": "vertex" }
     ],
-    "vertexAttributes": [ [ "vec3" ], [ "vec3" ] ],
     "descriptorSets": [
         { "buffered": false, "dynamicBuffers": [ 0 ] },
         { "buffered": false, "dynamicBuffers": [ 0 ] }

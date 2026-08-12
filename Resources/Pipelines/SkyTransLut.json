@@ -1,14 +1,10 @@
 {
-    "shaders": {
-        "vert": "fullscreen-quad.vert",
-        "frag": "sky-trans-lut.frag"
-    },
+    "shaders"            : { "vert": "fullscreen-quad.vert", "frag": "sky-trans-lut.frag" },
     "vertexInputBindings": [
-        { "formats": [ "vec2" ], "inputRate": "vertex" }
+        { "locations": [ 0 ], "inputRate": "vertex" }
     ],
-    "vertexAttributes": [ [ "vec2" ] ],
-    "descriptorSets": [
+    "descriptorSets"     : [
         { "buffered": false, "dynamicBuffers": [ 0 ] }
     ],
-    "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] }
+    "viewport"           : { "viewports": [ "pass" ], "scissors": [ "pass" ] }
 }

@@ -4,9 +4,8 @@
         "frag": "gui-quad-unif-col.frag"
     },
     "vertexInputBindings": [
-        { "formats": [ "vec2" ], "inputRate": "vertex" }
+        { "locations": [ 0 ], "inputRate": "vertex" }
     ],
-    "vertexAttributes": [ [ "vec2" ] ],
     "descriptorSets": [
         { "buffered": true, "dynamicBuffers": [ 0, 1 ] }
     ],

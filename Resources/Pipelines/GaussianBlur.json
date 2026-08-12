@@ -4,7 +4,6 @@
         "frag": "gaussian-blur.frag"
     },
     "vertexInputBindings": [
-        { "formats": [ "vec2" ], "inputRate": "vertex" }
-    ],
-    "vertexAttributes": [ [ "vec2" ] ]
+        { "locations": [ 0 ], "inputRate": "vertex" }
+    ]
 }

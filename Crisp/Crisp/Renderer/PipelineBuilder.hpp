@@ -21,6 +21,8 @@ public:
     PipelineBuilder& addVertexInputBinding(
         uint32_t binding, VkVertexInputRate inputRate, std::span<const VkFormat> formats);
     PipelineBuilder& addVertexAttributes(uint32_t binding, std::span<const VkFormat> formats);
+    PipelineBuilder& addVertexAttributes(
+        uint32_t binding, std::span<const uint32_t> locations, std::span<const VkFormat> formats);
 
     PipelineBuilder& setFullScreenVertexLayout();
 

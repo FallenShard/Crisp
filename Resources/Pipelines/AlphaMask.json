@@ -2,11 +2,10 @@
     "shaders": { "vert": "leaves.vert", "frag": "leaves.frag" },
     "vertexInputBindings": [
         {
-            "formats": [ "vec3", "vec3", "vec2", "vec3", "vec3" ],
+            "locations": [ 0, 1, 2, 3, 4 ],
             "inputRate": "vertex"
         }
     ],
-    "vertexAttributes": [ [ "vec3", "vec3", "vec2", "vec3", "vec3" ] ],
     "descriptorSets": [
         { "buffered": false, "dynamicBuffers": [ 0    ] },
         { "buffered": true , "dynamicBuffers": [ 2, 3 ] },

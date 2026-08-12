@@ -1,10 +1,9 @@
 {
     "shaders"            : { "vert": "pbr.vert", "frag": "pbr.frag" },
     "vertexInputBindings": [
-        { "formats": [ "vec3"                 ], "inputRate": "vertex" },
-        { "formats": [ "vec3", "vec2", "vec4" ], "inputRate": "vertex" }
+        { "locations": [ 0       ], "inputRate": "vertex" },
+        { "locations": [ 1, 2, 3 ], "inputRate": "vertex" }
     ],
-    "vertexAttributes"   : [ [ "vec3" ], [ "vec3", "vec2", "vec4" ] ],
     "descriptorSets"     : [
         { "buffered": false                                                },
         { "buffered": false                                                },

@@ -1,9 +1,8 @@
 {
     "shaders": { "vert": "depth-normal.vert", "frag": "depth-normal.frag" },
     "vertexInputBindings": [
-        { "formats": [ "vec3", "vec3" ], "inputRate": "vertex" }
+        { "locations": [ 0, 1 ], "inputRate": "vertex" }
     ],
-    "vertexAttributes": [ [ "vec3", "vec3" ] ],
     "descriptorSets": [
         { "buffered": false, "dynamicBuffers": [ 0 ] }
     ],

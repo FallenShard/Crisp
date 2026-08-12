@@ -4,8 +4,7 @@
         "frag": "prefilter-specular.frag"
     },
     "vertexInputBindings": [
-        { "formats": [ "vec3" ], "inputRate": "vertex" }
+        { "locations": [ 0 ], "inputRate": "vertex" }
     ],
-    "vertexAttributes": [ [ "vec3" ] ],
     "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] }
 }

@@ -6,6 +6,7 @@
 
 #include <filesystem>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace crisp {
@@ -24,6 +25,7 @@ struct PipelineLayoutMetadata {
 
 struct ShaderVertexInputMetadata {
     struct VertexAttributeDescription {
+        std::string name;
         VkFormat format;
         uint32_t location;
     };

@@ -41,57 +41,79 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
            shaderFiles.contains(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
 }
 
-[[nodiscard]] Result<> readVertexInputBindings(const nlohmann::json& arrayJson, PipelineBuilder& builder) {
-    for (uint32_t i = 0; i < arrayJson.size(); ++i) {
-        CRISP_CHECK(arrayJson[i].is_object());
+[[nodiscard]] Result<> readVertexInputBindings(
+    const nlohmann::json& arrayJson, const ShaderVertexInputMetadata& reflectedMetadata, PipelineBuilder& builder) {
+    std::vector<bool> assignedAttributes(reflectedMetadata.attributes.size(), false);
 
-        CRISP_CHECK(hasField<JsonType::String>(arrayJson[i], "inputRate"));
+    for (uint32_t i = 0; i < arrayJson.size(); ++i) {
+        const auto& bindingJson = arrayJson[i];
+        if (!bindingJson.is_object()) {
+            return resultError("Vertex input binding {} must be an object.", i);
+        }
+        for (const auto& [key, _] : bindingJson.items()) {
+            if (key != "locations" && key != "inputRate") {
+                return resultError("Vertex input binding {} contains unknown field '{}'.", i, key);
+            }
+        }
+
+        if (!hasField<JsonType::String>(bindingJson, "inputRate")) {
+            return resultError("Vertex input binding {} field 'inputRate' must be a string.", i);
+        }
         VkVertexInputRate inputRate{};
-        if (arrayJson[i]["inputRate"] == "vertex") {
+        if (bindingJson["inputRate"] == "vertex") {
             inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        } else if (arrayJson[i]["inputRate"] == "instance") {
+        } else if (bindingJson["inputRate"] == "instance") {
             inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
         } else {
-            return resultError("Encountered unknown inputRate: {}", arrayJson[i]["inputRate"].dump());
+            return resultError("Vertex input binding {} has unknown inputRate {}.", i, bindingJson["inputRate"].dump());
         }
 
-        CRISP_CHECK(hasField<JsonType::Array>(arrayJson[i], "formats"));
-        std::vector<VkFormat> formats;
-        for (const auto& f : arrayJson[i]["formats"]) {
-            if (f == "vec3") {
-                formats.push_back(VK_FORMAT_R32G32B32_SFLOAT);
-            } else if (f == "vec2") {
-                formats.push_back(VK_FORMAT_R32G32_SFLOAT);
-            } else if (f == "vec4") {
-                formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-            } else {
-                return resultError("Encountered unknown format {}", f.dump());
-            }
+        if (!hasField<JsonType::Array>(bindingJson, "locations")) {
+            return resultError("Vertex input binding {} field 'locations' must be an array.", i);
         }
+
+        std::vector<uint32_t> locations;
+        std::vector<VkFormat> formats;
+        locations.reserve(bindingJson["locations"].size());
+        formats.reserve(bindingJson["locations"].size());
+        for (const auto& locationJson : bindingJson["locations"]) {
+            if (!locationJson.is_number_unsigned()) {
+                return resultError("Vertex input binding {} locations must be unsigned integers.", i);
+            }
+
+            const uint32_t location = locationJson.get<uint32_t>();
+            std::size_t reflectedIndex = 0;
+            while (reflectedIndex < reflectedMetadata.attributes.size() &&
+                   reflectedMetadata.attributes[reflectedIndex].location != location) {
+                ++reflectedIndex;
+            }
+            if (reflectedIndex == reflectedMetadata.attributes.size()) {
+                return resultError(
+                    "Vertex input binding {} references location {}, which the shader does not use.", i, location);
+            }
+            if (assignedAttributes[reflectedIndex]) {
+                return resultError("Shader vertex input location {} is assigned to more than one binding.", location);
+            }
+
+            assignedAttributes[reflectedIndex] = true;
+            locations.push_back(location);
+            formats.push_back(reflectedMetadata.attributes[reflectedIndex].format);
+        }
+
         builder.addVertexInputBinding(i, inputRate, formats);
+        builder.addVertexAttributes(i, locations, formats);
     }
-    return {};
-}
 
-[[nodiscard]] Result<> readVertexAttributes(const nlohmann::json& json, PipelineBuilder& builder) {
-    CRISP_CHECK(json.is_array());
-    for (uint32_t i = 0; i < json.size(); ++i) {
-        CRISP_CHECK(json[i].is_array());
-
-        std::vector<VkFormat> formats;
-        for (const auto& f : json[i]) {
-            if (f == "vec3") {
-                formats.push_back(VK_FORMAT_R32G32B32_SFLOAT);
-            } else if (f == "vec2") {
-                formats.push_back(VK_FORMAT_R32G32_SFLOAT);
-            } else if (f == "vec4") {
-                formats.push_back(VK_FORMAT_R32G32B32A32_SFLOAT);
-            } else {
-                return resultError("Encountered unknown format {}", f.dump());
-            }
+    for (std::size_t i = 0; i < assignedAttributes.size(); ++i) {
+        if (!assignedAttributes[i]) {
+            const auto& attribute = reflectedMetadata.attributes[i];
+            return resultError(
+                "Shader vertex input '{}' at location {} is not assigned to a vertex buffer binding.",
+                attribute.name,
+                attribute.location);
         }
-        builder.addVertexAttributes(i, formats);
     }
+
     return {};
 }
 
@@ -285,8 +307,7 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
             if (!setJson["bindless"].is_array() || setJson["bindless"].size() != 2 ||
                 !setJson["bindless"][0].is_number_unsigned() || !setJson["bindless"][1].is_number_unsigned()) {
                 return resultError(
-                    "Descriptor set {} field 'bindless' must be [binding, descriptorCount] using unsigned integers.",
-                    i);
+                    "Descriptor set {} field 'bindless' must be [binding, descriptorCount] using unsigned integers.", i);
             }
             const auto& arr = setJson["bindless"];
             if (arr[1].get<uint32_t>() == 0) {
@@ -324,12 +345,16 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     const auto shaderFiles{parseShaderFiles(pipelineJson["shaders"]).unwrap()};
 
     PipelineLayoutMetadata shaderMetadata{};
+    ShaderVertexInputMetadata vertexInputMetadata{};
     PipelineBuilder builder{};
     for (const auto& [stageFlag, fileStem] : shaderFiles) {
         const auto absoluteSpvPath = spvShaderDir / (fileStem + ".spv");
         builder.addShaderStage(createShaderStageInfo(stageFlag, shaderCache.getOrLoadShaderModule(absoluteSpvPath)));
         const auto spvFile = readSpirvFile(absoluteSpvPath).unwrap();
         shaderMetadata.merge(reflectPipelineLayoutFromSpirv(spvFile).unwrap());
+        if (stageFlag == VK_SHADER_STAGE_VERTEX_BIT) {
+            vertexInputMetadata = reflectVertexMetadataFromSpirvShader(spvFile).unwrap();
+        }
     }
 
     if (shaderStagesMatchTessellation(shaderFiles)) {
@@ -337,11 +362,17 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
         builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST);
     }
 
-    CRISP_CHECK(hasField<JsonType::Array>(pipelineJson, "vertexInputBindings"));
-    readVertexInputBindings(pipelineJson["vertexInputBindings"], builder).unwrap();
-
-    CRISP_CHECK(hasField<JsonType::Array>(pipelineJson, "vertexAttributes"));
-    readVertexAttributes(pipelineJson["vertexAttributes"], builder).unwrap();
+    if (!hasField<JsonType::Array>(pipelineJson, "vertexInputBindings")) {
+        return resultError("Pipeline field 'vertexInputBindings' must be an array.");
+    }
+    if (pipelineJson.contains("vertexAttributes")) {
+        return resultError(
+            "Pipeline field 'vertexAttributes' is obsolete; vertex formats and attributes are reflected from the "
+            "shader.");
+    }
+    CRISP_TRY(
+        readVertexInputBindings(pipelineJson["vertexInputBindings"], vertexInputMetadata, builder),
+        "Invalid vertex input metadata");
 
     // Optional state for overrides.
     if (hasField<JsonType::Object>(pipelineJson, "inputAssembly")) {

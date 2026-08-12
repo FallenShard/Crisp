@@ -4,9 +4,8 @@
         "frag": "fullscreen-quad.frag"
     },
     "vertexInputBindings": [
-        { "formats": [ "vec2" ], "inputRate": "vertex" }
+        { "locations": [ 0 ], "inputRate": "vertex" }
     ],
-    "vertexAttributes": [ [ "vec2" ] ],
     "descriptorSets": [ { "buffered": false } ],
     "rasterization": { "cullMode": "back" },
     "blend": { "enabled": true }

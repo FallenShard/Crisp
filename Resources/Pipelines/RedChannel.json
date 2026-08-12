@@ -1,9 +1,8 @@
 {
     "shaders": { "vert": "fullscreen-quad.vert", "frag": "red-channel.frag" },
     "vertexInputBindings": [
-        { "formats": [ "vec2" ], "inputRate": "vertex" }
+        { "locations": [ 0 ], "inputRate": "vertex" }
     ],
-    "vertexAttributes": [ [ "vec2" ] ],
     "descriptorSets": [ { "buffered": true } ],
     "rasterization": { "cullMode": "back" }
 }

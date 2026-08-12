@@ -1,5 +1,6 @@
 #include <Crisp/Renderer/PipelineBuilder.hpp>
 
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
@@ -9,15 +10,16 @@ namespace {
 enum class VertexAttributeLayout : uint8_t { Interleaved, Concatenated };
 
 std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes(
-    const uint32_t locationOffset,
     const uint32_t binding,
+    const std::span<const uint32_t> locations,
     const std::span<const VkFormat> formats,
     const VertexAttributeLayout layout) {
+    CRISP_CHECK_EQ(locations.size(), formats.size());
     std::vector<VkVertexInputAttributeDescription> vertexAttribs(formats.size());
 
     uint32_t offset = 0;
     for (uint32_t i = 0; i < vertexAttribs.size(); ++i) {
-        vertexAttribs[i].location = locationOffset + i;
+        vertexAttribs[i].location = locations[i];
         vertexAttribs[i].binding = binding;
         vertexAttribs[i].format = formats[i];
         vertexAttribs[i].offset = layout == VertexAttributeLayout::Interleaved ? offset : 0;
@@ -158,7 +160,16 @@ PipelineBuilder& PipelineBuilder::addVertexInputBinding(
 
 PipelineBuilder& PipelineBuilder::addVertexAttributes(const uint32_t binding, const std::span<const VkFormat> formats) {
     const auto locationOffset = static_cast<uint32_t>(m_vertexLayout.attributes.size());
-    auto attribs = generateVertexInputAttributes(locationOffset, binding, formats, VertexAttributeLayout::Interleaved);
+    std::vector<uint32_t> locations(formats.size());
+    for (uint32_t i = 0; i < locations.size(); ++i) {
+        locations[i] = locationOffset + i;
+    }
+    return addVertexAttributes(binding, locations, formats);
+}
+
+PipelineBuilder& PipelineBuilder::addVertexAttributes(
+    const uint32_t binding, const std::span<const uint32_t> locations, const std::span<const VkFormat> formats) {
+    auto attribs = generateVertexInputAttributes(binding, locations, formats, VertexAttributeLayout::Interleaved);
     m_vertexLayout.attributes.insert(m_vertexLayout.attributes.end(), attribs.begin(), attribs.end());
     m_vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(m_vertexLayout.attributes.size());
     m_vertexInputState.pVertexAttributeDescriptions = m_vertexLayout.attributes.data();

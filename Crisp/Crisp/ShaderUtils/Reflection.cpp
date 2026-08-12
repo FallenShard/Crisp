@@ -151,6 +151,7 @@ Result<ShaderVertexInputMetadata> reflectVertexMetadataFromSpirvShader(std::span
     metadata.attributes.resize(module.input_variable_count);
     for (uint32_t i = 0; i < module.input_variable_count; ++i) {
         const auto& inputVariable = module.input_variables[i]; // NOLINT
+        metadata.attributes[i].name = inputVariable->name == nullptr ? "" : inputVariable->name;
         metadata.attributes[i].format = toVulkanFormat(inputVariable->format).unwrap();
         metadata.attributes[i].location = inputVariable->location;
     }
