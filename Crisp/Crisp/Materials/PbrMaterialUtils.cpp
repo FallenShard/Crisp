@@ -129,9 +129,12 @@ void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& i
     for (auto&& [typeIdx, maps] : std::views::enumerate(mapArrays)) {
         const uint32_t mapTypeIdx{static_cast<uint32_t>(typeIdx)};
         for (auto&& [idx, data] : std::views::enumerate(maps)) {
-            imageCache.addImage(
-                keyCreator.createMapKey(mapTypeIdx, static_cast<uint32_t>(idx)),
-                createVulkanImage(renderer, data, kTexInfos[typeIdx].defaultFormat));
+            const auto key = keyCreator.createMapKey(mapTypeIdx, static_cast<uint32_t>(idx));
+            imageCache.addImage(key, createVulkanImage(renderer, data, kTexInfos[typeIdx].defaultFormat));
+
+            // Textures loaded from disk are the open-ended set the bindless table exists for; LUTs and render
+            // targets stay named in the shaders that read them.
+            imageCache.registerBindlessImage(key);
         }
     };
 }
@@ -160,36 +163,33 @@ Material* createPbrMaterial(
     const TransformBuffer& transformBuffer) {
     auto& imageCache = resourceContext.imageCache;
 
-    auto* material = resourceContext.createMaterial(fmt::format("pbr-{}", materialId), "pbr");
+    // Sets 0-2 only: set 3 is the bindless table, owned and allocated by the registry.
+    auto* material = resourceContext.createMaterial(
+        fmt::format("pbr-{}", materialId), "pbr", 0, BindlessImageRegistry::kGlobalSetIndex);
     material->writeDescriptor(2, 0, transformBuffer.getDescriptorInfo());
 
-    const auto setMaterialTexture =
-        [&material, &imageCache](const uint32_t index, const std::string_view texName, const std::string& texKey) {
-            const std::string fallbackKey = fmt::format("default-{}-0", texName);
-            // material->writeDescriptor(
-            //     1, index, imageCache.getImageView(texKey, fallbackKey), imageCache.getSampler("linearRepeat"));
-            VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-            write.descriptorCount = 1;
-            write.dstArrayElement = index;
-            write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            write.dstBinding = 1;
+    // The handles have to be in params before it is copied into the uniform buffer below.
+    PbrParams params{pbrMaterial.params};
+    params.samplerIndex = imageCache.getSamplerIndex("linearRepeat");
 
-            material->writeDescriptor(
-                1,
-                write,
-                imageCache.getImageView(texKey, fallbackKey).getDescriptorInfo(&imageCache.getSampler("linearRepeat")));
-        };
-
-    for (uint32_t i = 0; i < kPbrMapTypeCount; ++i) {
-        setMaterialTexture(i, kPbrMapNames[i], pbrMaterial.textureKeys[i]);
-    }
+    const auto textureSlot = [&imageCache, &pbrMaterial](const uint32_t index) {
+        return imageCache
+            .getImageHandle(pbrMaterial.textureKeys[index], fmt::format("default-{}-0", kPbrMapNames[index]))
+            .index();
+    };
+    params.albedoTex = textureSlot(0);
+    params.normalTex = textureSlot(1);
+    params.roughnessTex = textureSlot(2);
+    params.metallicTex = textureSlot(3);
+    params.occlusionTex = textureSlot(4);
+    params.emissiveTex = textureSlot(5);
 
     const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
     material->writeDescriptor(
         1,
         0,
         *resourceContext.createRingBufferFromStruct(
-            paramsBufferKey, pbrMaterial.params, VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT));
+            paramsBufferKey, params, VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT));
 
     return material;
 }

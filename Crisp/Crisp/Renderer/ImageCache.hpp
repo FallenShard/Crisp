@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Crisp/Renderer/BindlessImageRegistry.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
@@ -23,6 +24,10 @@ public:
 
     void addSampler(const std::string& key, std::unique_ptr<VulkanSampler> sampler);
     VulkanSampler& getSampler(const std::string& key) const;
+    uint32_t getSamplerIndex(const std::string& key) const;
+
+    SampledImageHandle registerBindlessImage(const std::string& key);
+    SampledImageHandle getImageHandle(const std::string& key, const std::string& fallbackKey) const;
 
     Renderer* getRenderer() {
         return m_renderer;
@@ -33,6 +38,8 @@ private:
     FlatStringHashMap<std::unique_ptr<VulkanImage>> m_images;
     FlatStringHashMap<std::unique_ptr<VulkanImageView>> m_imageViews;
     FlatStringHashMap<std::unique_ptr<VulkanSampler>> m_samplers;
+    FlatStringHashMap<SampledImageHandle> m_imageHandles;
+    FlatStringHashMap<uint32_t> m_samplerIndices;
 };
 
 } // namespace crisp

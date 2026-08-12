@@ -5,6 +5,7 @@
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Io/FileUtils.hpp>
 #include <Crisp/Renderer/Material.hpp>
+#include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Renderer/VulkanPipelineIo.hpp>
 #include <Crisp/ShaderUtils/ShaderCompiler.hpp>
 
@@ -16,6 +17,25 @@ std::unique_ptr<Geometry> createFullScreenGeometry(Renderer& renderer) {
     const std::vector<glm::vec2> vertices = {{-1.0f, -1.0f}, {+3.0f, -1.0f}, {-1.0f, +3.0f}};
     const std::vector<glm::uvec3> faces = {{0, 2, 1}};
     return std::make_unique<Geometry>(renderer, vertices, faces);
+}
+
+// Occupies every unwritten slot of the bindless arrays, so an out-of-range or stale index samples something
+// obviously wrong instead of reading an undefined descriptor. Magenta checkerboard, 2x2.
+std::unique_ptr<VulkanImage> createBindlessFallbackImage(Renderer& renderer) {
+    constexpr std::array<uint32_t, 4> kTexels{0xFFFF00FF, 0xFF000000, 0xFF000000, 0xFFFF00FF};
+
+    VkImageCreateInfo createInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    createInfo.imageType = VK_IMAGE_TYPE_2D;
+    createInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+    createInfo.extent = {2, 2, 1};
+    createInfo.mipLevels = 1;
+    createInfo.arrayLayers = 1;
+    createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    createInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    return createVulkanImage(renderer, sizeof(kTexels), kTexels.data(), createInfo);
 }
 
 } // namespace
@@ -68,6 +88,12 @@ Renderer::Renderer(
 
     m_stagingBelt = std::make_unique<VulkanStagingBelt>(*m_device, 16 * 1024 * 1024);
 
+    m_bindlessImageRegistry = std::make_unique<BindlessImageRegistry>(
+        *m_device, *m_physicalDevice, BindlessImageRegistryConfig{.sampledImageCapacity = 1024});
+    m_fallbackImage = createBindlessFallbackImage(*this);
+    m_bindlessImageRegistry->setDefaultSampledImage(m_fallbackImage->getView());
+    m_bindlessImageRegistry->flush();
+
     m_fullScreenGeometry = createFullScreenGeometry(*this);
     m_linearClampSampler = createLinearClampSampler(*m_device);
     m_scenePipeline = createPipeline("GammaCorrect.json", getDefaultRasterizationPassDescriptor());
@@ -92,6 +118,10 @@ const std::filesystem::path& Renderer::getResourcesPath() const {
 
 VulkanInstance& Renderer::getInstance() const {
     return *m_instance;
+}
+
+BindlessImageRegistry& Renderer::getBindlessImageRegistry() const {
+    return *m_bindlessImageRegistry;
 }
 
 const VulkanPhysicalDevice& Renderer::getPhysicalDevice() const {
@@ -197,6 +227,8 @@ std::optional<FrameContext> Renderer::beginFrame() {
     deallocator.setRetirementValue(retirementValue);
     m_stagingBelt->collect(completedValue);
     m_stagingBelt->setRetirementValue(retirementValue);
+    m_bindlessImageRegistry->collect(completedValue);
+    m_bindlessImageRegistry->setRetirementValue(retirementValue);
     CRISP_TRACE_VK_ADVANCE(virtualFrameIndex);
 
     std::function<void()> task;
@@ -207,6 +239,7 @@ std::optional<FrameContext> Renderer::beginFrame() {
     // Flush all noncoherent updates
     m_device->flushMappedRanges();
     m_device->flushDescriptorUpdates();
+    m_bindlessImageRegistry->flush();
 
     const std::optional<uint32_t> swapChainImageIndex = acquireSwapImageIndex(frame);
     if (!swapChainImageIndex.has_value()) {
@@ -332,7 +365,12 @@ std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
     const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
     CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
     return createPipelineFromFile(
-               absolutePipelinePath, m_assetPaths.spvShaderDir, *m_shaderCache, *m_device, rasterizationPassDescriptor)
+               absolutePipelinePath,
+               m_assetPaths.spvShaderDir,
+               *m_shaderCache,
+               *m_device,
+               rasterizationPassDescriptor,
+               m_bindlessImageRegistry->getSetLayout())
         .unwrap();
 }
 

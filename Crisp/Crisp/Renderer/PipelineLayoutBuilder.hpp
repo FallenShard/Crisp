@@ -18,6 +18,11 @@ public:
         VkDescriptorSetLayoutCreateFlags flags = 0);
     PipelineLayoutBuilder& addPushConstant(VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size);
 
+    // Substitutes an externally owned set layout at setIndex, discarding whatever reflection found there. The
+    // bindless table's arrays are sized from device limits rather than the shader's declaration, so the
+    // reflected bindings would be wrong; the registry is the authority.
+    PipelineLayoutBuilder& useExternalDescriptorSet(uint32_t setIndex, VkDescriptorSetLayout setLayout);
+
     std::vector<VkDescriptorSetLayout> createDescriptorSetLayoutHandles(VkDevice device) const;
     std::unique_ptr<VulkanPipelineLayout> create(
         const VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0) const;
@@ -41,5 +46,6 @@ private:
     std::vector<bool> m_setBindless;
     std::vector<bool> m_setBuffered;
     std::vector<std::vector<uint32_t>> m_bindlessBindings;
+    std::vector<VkDescriptorSetLayout> m_externalSetLayouts;
 };
 } // namespace crisp

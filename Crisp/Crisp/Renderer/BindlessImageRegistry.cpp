@@ -286,8 +286,9 @@ void BindlessImageRegistry::flush() {
 void BindlessImageRegistry::bind(
     const VulkanCommandEncoder& encoder,
     const VkPipelineLayout pipelineLayout,
-    const VkPipelineBindPoint bindPoint) const {
-    encoder.bindDescriptorSets(bindPoint, pipelineLayout, 0, std::span{&m_set, 1});
+    const VkPipelineBindPoint bindPoint,
+    const uint32_t setIndex) const {
+    encoder.bindDescriptorSets(bindPoint, pipelineLayout, setIndex, std::span{&m_set, 1});
 }
 
 } // namespace crisp

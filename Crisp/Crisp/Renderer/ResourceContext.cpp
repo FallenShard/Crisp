@@ -5,7 +5,7 @@
 namespace crisp {
 ResourceContext::ResourceContext(Renderer* renderer)
     : imageCache(renderer)
-    , pipelineCache(renderer->getAssetPaths())
+    , pipelineCache(renderer->getAssetPaths(), renderer->getBindlessImageRegistry().getSetLayout())
     , m_renderer(renderer) {}
 
 VulkanPipeline* ResourceContext::createPipeline(
@@ -18,6 +18,12 @@ VulkanPipeline* ResourceContext::createPipeline(
 
 Material* ResourceContext::createMaterial(std::string materialId, const std::string& pipelineId) {
     m_materials[materialId] = std::make_unique<Material>(pipelineCache.getPipeline(pipelineId));
+    return m_materials.at(materialId).get();
+}
+
+Material* ResourceContext::createMaterial(
+    std::string materialId, const std::string& pipelineId, const uint32_t firstSet, const uint32_t setCount) {
+    m_materials[materialId] = std::make_unique<Material>(pipelineCache.getPipeline(pipelineId), firstSet, setCount);
     return m_materials.at(materialId).get();
 }
 

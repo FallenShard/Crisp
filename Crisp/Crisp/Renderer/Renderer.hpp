@@ -7,6 +7,7 @@
 
 #include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Renderer/AssetPaths.hpp>
+#include <Crisp/Renderer/BindlessImageRegistry.hpp>
 #include <Crisp/Renderer/FrameContext.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
@@ -54,6 +55,7 @@ public:
     VulkanInstance& getInstance() const;
     const VulkanPhysicalDevice& getPhysicalDevice() const;
     VulkanDevice& getDevice() const;
+    BindlessImageRegistry& getBindlessImageRegistry() const;
     VulkanSwapChain& getSwapChain() const;
     VkExtent2D getSwapChainExtent() const;
     VkExtent3D getSwapChainExtent3D() const;
@@ -152,6 +154,8 @@ private:
     ConcurrentQueue<std::function<void()>> m_mainThreadQueue;
 
     std::unique_ptr<VulkanStagingBelt> m_stagingBelt;
+    std::unique_ptr<BindlessImageRegistry> m_bindlessImageRegistry;
+    std::unique_ptr<VulkanImage> m_fallbackImage;
     std::vector<std::unique_ptr<VulkanTracingContext>> m_gpuTracingContexts;
 };
 

@@ -14,7 +14,7 @@ namespace crisp {
 
 class PipelineCache {
 public:
-    explicit PipelineCache(AssetPaths assetPaths);
+    PipelineCache(AssetPaths assetPaths, VkDescriptorSetLayout bindlessDescriptorSetLayout);
 
     VulkanPipeline* loadPipeline(
         const std::string& id,
@@ -33,6 +33,7 @@ public:
 
 private:
     AssetPaths m_assetPaths;
+    VkDescriptorSetLayout m_bindlessDescriptorSetLayout;
 
     struct PipelineInfo {
         std::string filename;

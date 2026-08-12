@@ -48,6 +48,18 @@ void executeDrawCommand(
         commandEncoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.dynamicBufferOffsets));
     }
 
+    // Transitional: the table sits above the sets this tree already owns, so it cannot be bound once per command
+    // buffer - a material bind with a layout that differs at a lower set disturbs it. Bound per draw until the
+    // promote-to-set-0 change lands.
+    const auto& pipelineLayout = *command.pipeline->getPipelineLayout();
+    if (pipelineLayout.getDescriptorSetLayoutCount() > BindlessImageRegistry::kGlobalSetIndex) {
+        renderer.getBindlessImageRegistry().bind(
+            commandEncoder,
+            pipelineLayout.getHandle(),
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            BindlessImageRegistry::kGlobalSetIndex);
+    }
+
     command.geometry->bindVertexBuffers(commandEncoder, command.firstBuffer, command.bufferCount);
     command.drawFunc(commandEncoder, command.geometryView);
 }

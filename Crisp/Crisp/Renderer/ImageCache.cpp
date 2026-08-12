@@ -55,11 +55,38 @@ VulkanImageView& ImageCache::getImageView(const std::string& key, const std::str
 }
 
 void ImageCache::addSampler(const std::string& key, std::unique_ptr<VulkanSampler> sampler) {
-    m_samplers[key] = std::move(sampler);
+    auto& cachedSampler = m_samplers[key];
+    cachedSampler = std::move(sampler);
+    m_samplerIndices[key] = m_renderer->getBindlessImageRegistry().addSampler(*cachedSampler, key);
 }
 
 VulkanSampler& ImageCache::getSampler(const std::string& key) const {
     return *m_samplers.at(key);
+}
+
+uint32_t ImageCache::getSamplerIndex(const std::string& key) const {
+    return m_samplerIndices.at(key);
+}
+
+SampledImageHandle ImageCache::registerBindlessImage(const std::string& key) {
+    if (const auto found = m_imageHandles.find(key); found != m_imageHandles.end()) {
+        return found->second;
+    }
+
+    const auto handle = m_renderer->getBindlessImageRegistry().addSampledImage(getImageView(key), key);
+    m_imageHandles.emplace(key, handle);
+    return handle;
+}
+
+SampledImageHandle ImageCache::getImageHandle(const std::string& key, const std::string& fallbackKey) const {
+    if (const auto found = m_imageHandles.find(key); found != m_imageHandles.end()) {
+        return found->second;
+    }
+    if (const auto found = m_imageHandles.find(fallbackKey); found != m_imageHandles.end()) {
+        return found->second;
+    }
+
+    return {BindlessImageRegistry::kDefaultSlot, 0};
 }
 
 } // namespace crisp

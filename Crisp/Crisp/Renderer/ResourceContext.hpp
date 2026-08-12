@@ -90,6 +90,8 @@ public:
         std::string_view filename,
         const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
     Material* createMaterial(std::string materialId, const std::string& pipelineId);
+    Material* createMaterial(
+        std::string materialId, const std::string& pipelineId, uint32_t firstSet, uint32_t setCount);
     Material* createMaterial(std::string materialId, VulkanPipeline* pipeline);
     Material* getMaterial(std::string_view id) const;
 

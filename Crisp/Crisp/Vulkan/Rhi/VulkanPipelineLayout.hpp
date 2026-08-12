@@ -18,6 +18,8 @@ struct DescriptorSetLayout {
     std::vector<uint32_t> bindlessIndices;
 
     bool isBuffered{false};
+
+    bool isExternal{false};
 };
 
 class VulkanPipelineLayout : public VulkanResource<VkPipelineLayout> {
@@ -54,6 +56,10 @@ public:
 
     VkDescriptorSetLayout getDescriptorSetLayout(uint32_t setIndex) const {
         return m_descriptorSetLayouts.at(setIndex).handle;
+    }
+
+    void markSetLayoutExternal(const uint32_t setIndex) {
+        m_descriptorSetLayouts.at(setIndex).isExternal = true;
     }
 
     const std::vector<VkDescriptorSetLayoutBinding>& getDescriptorSetLayoutBindings(uint32_t setIndex) const {

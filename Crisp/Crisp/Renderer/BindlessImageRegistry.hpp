@@ -14,9 +14,8 @@
 namespace crisp {
 class VulkanCommandEncoder;
 namespace detail {
-struct SampledImageTag {};
-
-struct StorageImageTag {};
+struct SampledImageTag;
+struct StorageImageTag;
 } // namespace detail
 
 // A slot in one of the registry's descriptor arrays. Distinct types per array because the arrays alias
@@ -108,6 +107,10 @@ public:
     // Slot 0 of each image array is the fallback and is never handed out.
     static constexpr uint32_t kDefaultSlot{0};
 
+    // Transitional home for the table while the tree still owns sets 0-2. The end state is set 0, bound once
+    // per command buffer; until every pipeline layout agrees on set 0, it is bound per draw instead.
+    static constexpr uint32_t kGlobalSetIndex{3};
+
     BindlessImageRegistry(
         const VulkanDevice& device,
         const VulkanPhysicalDevice& physicalDevice,
@@ -145,7 +148,10 @@ public:
     void flush();
 
     void bind(
-        const VulkanCommandEncoder& encoder, VkPipelineLayout pipelineLayout, VkPipelineBindPoint bindPoint) const;
+        const VulkanCommandEncoder& encoder,
+        VkPipelineLayout pipelineLayout,
+        VkPipelineBindPoint bindPoint,
+        uint32_t setIndex = kGlobalSetIndex) const;
 
     VkDescriptorSetLayout getSetLayout() const {
         return m_setLayout;

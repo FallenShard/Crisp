@@ -54,6 +54,9 @@ VulkanPipelineLayout::VulkanPipelineLayout(
 
 VulkanPipelineLayout::~VulkanPipelineLayout() {
     for (const auto& setLayout : m_descriptorSetLayouts) {
+        if (setLayout.isExternal) {
+            continue;
+        }
         m_deallocator->deferDestruction(setLayout.handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
             spdlog::debug("Destroying set layout: {}", handle);
             vkDestroyDescriptorSetLayout(

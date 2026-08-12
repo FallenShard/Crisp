@@ -61,5 +61,28 @@ TEST_F(PipelineLayoutBuilderTest, BasicUsage) {
     EXPECT_EQ(layout->isDescriptorSetBuffered(2), false);
     ASSERT_EQ(layout->getDynamicBufferCount(2), 0);
 }
+
+TEST_F(PipelineLayoutBuilderTest, BorrowsExternalDescriptorSetLayout) {
+    const VkDescriptorSetLayoutBinding binding{
+        0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr};
+    VkDescriptorSetLayoutCreateInfo createInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+    createInfo.bindingCount = 1;
+    createInfo.pBindings = &binding;
+
+    VkDescriptorSetLayout externalLayout{VK_NULL_HANDLE};
+    ASSERT_EQ(vkCreateDescriptorSetLayout(device_->getHandle(), &createInfo, nullptr, &externalLayout), VK_SUCCESS);
+
+    {
+        PipelineLayoutBuilder builder{};
+        builder.defineDescriptorSet(0, false, {binding});
+        builder.useExternalDescriptorSet(0, externalLayout);
+
+        const auto layout = builder.create(*device_);
+        EXPECT_EQ(layout->getDescriptorSetLayout(0), externalLayout);
+        EXPECT_THAT(layout->getDescriptorSetLayoutBindings(0), IsEmpty());
+    }
+
+    vkDestroyDescriptorSetLayout(device_->getHandle(), externalLayout, nullptr);
+}
 } // namespace
 } // namespace crisp

@@ -236,11 +236,22 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
     return {};
 }
 
-[[nodiscard]] Result<> readDescriptorSetMetadata(const nlohmann::json& json, PipelineLayoutBuilder& layoutBuilder) {
+[[nodiscard]] Result<> readDescriptorSetMetadata(
+    const nlohmann::json& json,
+    PipelineLayoutBuilder& layoutBuilder,
+    const VkDescriptorSetLayout bindlessDescriptorSetLayout) {
     for (int32_t i = 0; i < static_cast<int32_t>(json.size()); ++i) {
         CRISP_CHECK(json[i].is_object());
         CRISP_CHECK(hasField<JsonType::Boolean>(json[i], "buffered"));
         layoutBuilder.setDescriptorSetBuffering(i, json[i]["buffered"].get<bool>());
+
+        if (hasField<JsonType::Boolean>(json[i], "external") && json[i]["external"].get<bool>()) {
+            if (bindlessDescriptorSetLayout == VK_NULL_HANDLE) {
+                return resultError("Descriptor set {} is bindless, but no bindless layout was provided.", i);
+            }
+            layoutBuilder.useExternalDescriptorSet(i, bindlessDescriptorSetLayout);
+            continue;
+        }
 
         if (hasField<JsonType::Array>(json[i], "bindless")) {
             CRISP_CHECK_EQ(json[i]["bindless"].size(), 2);
@@ -263,7 +274,8 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     const std::filesystem::path& spvShaderDir,
     ShaderCache& shaderCache,
     const VulkanDevice& device,
-    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
+    const VkDescriptorSetLayout bindlessDescriptorSetLayout) {
     CRISP_CHECK(pipelineJson.is_object());
 
     CRISP_CHECK(hasField<JsonType::Object>(pipelineJson, "shaders"));
@@ -326,7 +338,7 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
 
     PipelineLayoutBuilder layoutBuilder(std::move(shaderMetadata));
     if (hasField<JsonType::Array>(pipelineJson, "descriptorSets")) {
-        readDescriptorSetMetadata(pipelineJson["descriptorSets"], layoutBuilder).unwrap();
+        readDescriptorSetMetadata(pipelineJson["descriptorSets"], layoutBuilder, bindlessDescriptorSetLayout).unwrap();
     }
 
     return builder.create(device, layoutBuilder.create(device), rasterizationPassDescriptor);
@@ -337,11 +349,13 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFileImpl(
     const std::filesystem::path& spvShaderDir,
     ShaderCache& shaderCache,
     const VulkanDevice& device,
-    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
+    const VkDescriptorSetLayout bindlessDescriptorSetLayout) {
     CRISP_TRY(const auto& json, loadJsonFromFile(path), "Failed to open json config at {}", path.generic_string());
     CRISP_TRY(
         auto pipeline,
-        createPipelineFromJson(json, spvShaderDir, shaderCache, device, rasterizationPassDescriptor),
+        createPipelineFromJson(
+            json, spvShaderDir, shaderCache, device, rasterizationPassDescriptor, bindlessDescriptorSetLayout),
         "Failed to create pipeline from json");
     device.setObjectName(*pipeline, fmt::format("{} Pipeline", path.stem().string()));
     return pipeline;
@@ -354,8 +368,10 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     const std::filesystem::path& spvShaderDir,
     ShaderCache& shaderCache,
     const VulkanDevice& device,
-    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
-    return createPipelineFromFileImpl(path, spvShaderDir, shaderCache, device, rasterizationPassDescriptor);
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
+    const VkDescriptorSetLayout bindlessDescriptorSetLayout) {
+    return createPipelineFromFileImpl(
+        path, spvShaderDir, shaderCache, device, rasterizationPassDescriptor, bindlessDescriptorSetLayout);
 }
 
 } // namespace crisp

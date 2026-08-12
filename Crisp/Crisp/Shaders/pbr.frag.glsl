@@ -1,10 +1,12 @@
 #version 450 core
 
 #extension GL_GOOGLE_include_directive: require
+#extension GL_EXT_nonuniform_qualifier: require
 
 #define PI 3.1415926535897932384626433832795
 
 #include "Brdf/microfacet.part.glsl"
+#include "Common/bindless.part.glsl"
 #include "Common/view.part.glsl"
 
 const vec3 NdcMin = vec3(-1.0f, -1.0f, 0.0f);
@@ -43,7 +45,7 @@ layout(set = 0, binding = 4) uniform sampler2D cascadedShadowMaps[4];
 layout(set = 0, binding = 5) uniform sampler2D brdfLut;
 layout(set = 0, binding = 6) uniform sampler2D sheenLut;
 
-// Material-specific parameters.
+// Material-specific parameters. Must match PbrParams in Materials/PbrMaterial.hpp.
 layout(set = 1, binding = 0) uniform Material
 {
     vec4 albedo;
@@ -51,8 +53,20 @@ layout(set = 1, binding = 0) uniform Material
     float metallic;
     float roughness;
     float aoStrength;
+
+    uint samplerIndex;
+    uint albedoTex;
+    uint normalTex;
+    uint roughnessTex;
+    uint metallicTex;
+    uint occlusionTex;
+    uint emissiveTex;
 } material;
-layout(set = 1, binding = 1) uniform sampler2D textures[];
+
+// The indices come from a UBO bound per draw, so they are dynamically uniform and skip nonuniformEXT.
+vec4 sampleMaterial(const uint textureIndex, const vec2 uv) {
+    return texture(sampler2D(gTextures2D[textureIndex], gSamplers[material.samplerIndex]), uv);
+}
 
 
 vec3 evalDirectionalLightRadiance(out vec3 eyeL) {
@@ -133,7 +147,7 @@ vec3 decodeNormal(in vec2 uv) {
     vec3 bitangent = normalize(eyeBitangent);
     mat3 TBN = mat3(tangent, bitangent, normal);
 
-    vec3 n = texture(textures[1], uv).xyz;
+    vec3 n = sampleMaterial(material.normalTex, uv).xyz;
     return normalize(TBN * normalize(n * 2.0f - 1.0f));
 }
 
@@ -286,12 +300,12 @@ void main() {
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
     // Material properties.
-    const vec3 albedo = texture(textures[0], uvCoord).rgb * material.albedo.rgb;
-    float roughness = texture(textures[2], uvCoord).r * material.roughness;
+    const vec3 albedo = sampleMaterial(material.albedoTex, uvCoord).rgb * material.albedo.rgb;
+    float roughness = sampleMaterial(material.roughnessTex, uvCoord).r * material.roughness;
     roughness *= roughness;
-    const float metallic = texture(textures[3], uvCoord).r * material.metallic;
-    const float ao = texture(textures[4], uvCoord).r;
-    const vec3 emission = texture(textures[5], uvCoord).rgb;
+    const float metallic = sampleMaterial(material.metallicTex, uvCoord).r * material.metallic;
+    const float ao = sampleMaterial(material.occlusionTex, uvCoord).r;
+    const vec3 emission = sampleMaterial(material.emissiveTex, uvCoord).rgb;
 
     // BRDF diffuse (view-independent).
     const vec3 F0 = mix(vec3(0.04), albedo, metallic);

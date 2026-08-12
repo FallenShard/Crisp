@@ -6,8 +6,9 @@
 #include <Crisp/ShaderUtils/ShaderCompiler.hpp>
 
 namespace crisp {
-PipelineCache::PipelineCache(AssetPaths assetPaths)
-    : m_assetPaths(std::move(assetPaths)) {}
+PipelineCache::PipelineCache(AssetPaths assetPaths, const VkDescriptorSetLayout bindlessDescriptorSetLayout)
+    : m_assetPaths(std::move(assetPaths))
+    , m_bindlessDescriptorSetLayout(bindlessDescriptorSetLayout) {}
 
 VulkanPipeline* PipelineCache::loadPipeline(
     const std::string& id,
@@ -29,7 +30,8 @@ VulkanPipeline* PipelineCache::loadPipeline(
         m_assetPaths.spvShaderDir,
         shaderCache,
         device,
-        storedPipelineInfo.rasterizationPassDescriptor);
+        storedPipelineInfo.rasterizationPassDescriptor,
+        m_bindlessDescriptorSetLayout);
 
     auto& pipeline = m_pipelines.emplace(id, pipelineResult.unwrap()).first->second;
 
@@ -51,7 +53,12 @@ void PipelineCache::recreatePipelines(ShaderCache& shaderCache, const VulkanDevi
         CRISP_CHECK(exists(pipelineAbsolutePath), "Path {} doesn't exist!", pipelineAbsolutePath.string());
 
         auto pipelineResult = createPipelineFromFile(
-            pipelineAbsolutePath, m_assetPaths.spvShaderDir, shaderCache, device, info.rasterizationPassDescriptor);
+            pipelineAbsolutePath,
+            m_assetPaths.spvShaderDir,
+            shaderCache,
+            device,
+            info.rasterizationPassDescriptor,
+            m_bindlessDescriptorSetLayout);
 
         auto pipeline = pipelineResult.unwrap();
         m_pipelines[id]->swapAll(*pipeline);

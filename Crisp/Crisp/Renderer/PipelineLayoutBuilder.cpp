@@ -50,10 +50,32 @@ PipelineLayoutBuilder& PipelineLayoutBuilder::addPushConstant(
     return *this;
 }
 
+PipelineLayoutBuilder& PipelineLayoutBuilder::useExternalDescriptorSet(
+    const uint32_t setIndex, const VkDescriptorSetLayout setLayout) {
+    if (m_externalSetLayouts.size() <= setIndex) {
+        m_externalSetLayouts.resize(static_cast<std::size_t>(setIndex) + 1, VK_NULL_HANDLE);
+    }
+    if (m_metadata.descriptorSetLayoutBindings.size() <= setIndex) {
+        defineDescriptorSet(setIndex, false, {});
+    }
+
+    m_externalSetLayouts[setIndex] = setLayout;
+
+    // Dropping the reflected bindings keeps the set out of the descriptor pool sizing: its set is owned and
+    // allocated by the registry, so this layout must never try to allocate one.
+    m_metadata.descriptorSetLayoutBindings[setIndex].clear();
+    return *this;
+}
+
 std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLayoutHandles(VkDevice device) const {
     std::vector<VkDescriptorSetLayout> setLayouts(m_metadata.descriptorSetLayoutBindings.size(), VK_NULL_HANDLE);
 
     for (uint32_t i = 0; i < setLayouts.size(); i++) {
+        if (i < m_externalSetLayouts.size() && m_externalSetLayouts[i] != VK_NULL_HANDLE) {
+            setLayouts[i] = m_externalSetLayouts[i];
+            continue;
+        }
+
         VkDescriptorSetLayoutCreateInfo createInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
         createInfo.bindingCount = static_cast<uint32_t>(m_metadata.descriptorSetLayoutBindings[i].size());
         createInfo.pBindings = m_metadata.descriptorSetLayoutBindings[i].data();
@@ -82,7 +104,7 @@ std::vector<VkDescriptorSetLayout> PipelineLayoutBuilder::createDescriptorSetLay
 
 std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(
     const VulkanDevice& device, const uint32_t numCopies, const VkDescriptorPoolCreateFlags flags) const {
-    return std::make_unique<VulkanPipelineLayout>(
+    auto layout = std::make_unique<VulkanPipelineLayout>(
         device,
         createDescriptorSetLayoutHandles(device.getHandle()),
         getDescriptorSetLayoutBindings(),
@@ -94,6 +116,13 @@ std::unique_ptr<VulkanPipelineLayout> PipelineLayoutBuilder::create(
             m_metadata.descriptorSetLayoutBindings,
             computeCopiesPerSet(m_setBuffered, numCopies, device.getResourceDeallocator().getFramesInFlight()),
             flags | addBindlessFlag(m_setBindless)));
+
+    for (uint32_t i = 0; i < m_externalSetLayouts.size(); ++i) {
+        if (m_externalSetLayouts[i] != VK_NULL_HANDLE) {
+            layout->markSetLayoutExternal(i);
+        }
+    }
+    return layout;
 }
 
 std::vector<std::vector<VkDescriptorSetLayoutBinding>> PipelineLayoutBuilder::getDescriptorSetLayoutBindings() const {
@@ -148,8 +177,20 @@ void PipelineLayoutBuilder::setDescriptorDynamic(
 
 void PipelineLayoutBuilder::setDescriptorBindless(
     const uint32_t setIndex, const uint32_t binding, const uint32_t maxDescriptorCount) {
+    auto& setBindings = m_metadata.descriptorSetLayoutBindings.at(setIndex);
+
+    // Fatal rather than a check: the indices come from the pipeline JSON, so a binding the shader no longer
+    // declares is stale asset data, and indexing past the reflected bindings would corrupt memory silently.
+    if (binding >= setBindings.size()) {
+        CRISP_FATAL(
+            "Pipeline JSON marks set {} binding {} as bindless, but the shader declares {} binding(s) in that set.",
+            setIndex,
+            binding,
+            setBindings.size());
+    }
+
     m_setBindless.at(setIndex) = true;
-    m_metadata.descriptorSetLayoutBindings[setIndex][binding].descriptorCount = maxDescriptorCount;
+    setBindings[binding].descriptorCount = maxDescriptorCount;
     m_bindlessBindings.at(setIndex).push_back(binding);
 }
 

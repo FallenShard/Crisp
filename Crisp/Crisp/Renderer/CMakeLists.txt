@@ -113,6 +113,7 @@ add_cpp_static_library(
     "PipelineCache.hpp"
 )
 target_link_libraries(CrispRenderer
+    PUBLIC Crisp::BindlessImageRegistry
     PUBLIC Crisp::BitFlags
     PUBLIC Crisp::Vulkan
     PUBLIC Crisp::ImageIo

@@ -26,13 +26,25 @@ inline constexpr std::array<std::string_view, kPbrMapTypeCount> kPbrMapNames = {
     "emissive",
 };
 
+// Mirrors the Material block in Shaders/pbr.frag.glsl.
+// 0 is the registry's fallback, so an unauthored map samples the checkerboard.
 struct PbrParams {
     glm::vec4 albedo{1.0f, 1.0f, 1.0f, 1.0f};
     glm::vec2 uvScale{1.0f, 1.0f};
     float metallic{1.0f};
     float roughness{1.0f};
     float aoStrength{1.0f};
+
+    uint32_t samplerIndex{0};
+    uint32_t albedoTex{0};
+    uint32_t normalTex{0};
+    uint32_t roughnessTex{0};
+    uint32_t metallicTex{0};
+    uint32_t occlusionTex{0};
+    uint32_t emissiveTex{0};
 };
+
+static_assert(sizeof(PbrParams) == 64);
 
 struct PbrImageKeyCreator {
     std::string name;
