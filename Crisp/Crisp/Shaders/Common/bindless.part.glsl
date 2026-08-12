@@ -7,8 +7,8 @@
 // The including shader must request GL_EXT_nonuniform_qualifier itself: an #extension directive is only valid
 // before any non-preprocessor token, which an include cannot guarantee.
 //
-// BINDLESS_SET is 3 while the tree still owns sets 0-2. The end state is set 0; see docs/renderer-roadmap.md.
-#define BINDLESS_SET 3
+// Bindless-capable passes reserve set 0 for this table. Their pipeline-local sets begin at set 1.
+#define BINDLESS_SET 0
 
 layout(set = BINDLESS_SET, binding = 0) uniform texture2D gTextures2D[];
 layout(set = BINDLESS_SET, binding = 2) uniform sampler gSamplers[];

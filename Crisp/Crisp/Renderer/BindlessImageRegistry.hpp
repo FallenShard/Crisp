@@ -107,9 +107,9 @@ public:
     // Slot 0 of each image array is the fallback and is never handed out.
     static constexpr uint32_t kDefaultSlot{0};
 
-    // Transitional home for the table while the tree still owns sets 0-2. The end state is set 0, bound once
-    // per command buffer; until every pipeline layout agrees on set 0, it is bound per draw instead.
-    static constexpr uint32_t kGlobalSetIndex{3};
+    // Bindless-capable passes reserve set 0 for the registry and bind it once before recording their draws.
+    // Pipeline-local descriptor sets in those passes begin at set 1.
+    static constexpr uint32_t kGlobalSetIndex{0};
 
     BindlessImageRegistry(
         const VulkanDevice& device,

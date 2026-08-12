@@ -163,10 +163,9 @@ Material* createPbrMaterial(
     const TransformBuffer& transformBuffer) {
     auto& imageCache = resourceContext.imageCache;
 
-    // Sets 0-2 only: set 3 is the bindless table, owned and allocated by the registry.
-    auto* material = resourceContext.createMaterial(
-        fmt::format("pbr-{}", materialId), "pbr", 0, BindlessImageRegistry::kGlobalSetIndex);
-    material->writeDescriptor(2, 0, transformBuffer.getDescriptorInfo());
+    // Sets 2-3 are material-local. Set 0 is the pass-bound bindless table and set 1 is pass-owned.
+    auto* material = resourceContext.createMaterial(fmt::format("pbr-{}", materialId), "pbr", 2, 2);
+    material->writeDescriptor(3, 0, transformBuffer.getDescriptorInfo());
 
     // The handles have to be in params before it is copied into the uniform buffer below.
     PbrParams params{pbrMaterial.params};
@@ -186,10 +185,7 @@ Material* createPbrMaterial(
 
     const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
     material->writeDescriptor(
-        1,
-        0,
-        *resourceContext.createRingBufferFromStruct(
-            paramsBufferKey, params, VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT));
+        2, 0, *resourceContext.createRingBufferFromStruct(paramsBufferKey, params, VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT));
 
     return material;
 }
@@ -201,15 +197,15 @@ void configureForwardLightingPassMaterial(
     const rg::RenderGraph& rg) {
     const auto& imageCache = resourceContext.imageCache;
     const auto& envLight = *lightSystem.getEnvironmentLight();
-    material.writeDescriptor(0, 0, *resourceContext.getRingBuffer("camera"));
-    material.writeDescriptor(0, 1, *lightSystem.getCascadedDirectionalLightBuffer());
-    material.writeDescriptor(0, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(0, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
-    material.writeDescriptor(0, 5, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(0, 6, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
+    material.writeDescriptor(1, 0, *resourceContext.getRingBuffer("camera"));
+    material.writeDescriptor(1, 1, *lightSystem.getCascadedDirectionalLightBuffer());
+    material.writeDescriptor(1, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
+    material.writeDescriptor(1, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
+    material.writeDescriptor(1, 5, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
+    material.writeDescriptor(1, 6, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
     for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
         const auto& shadowMapView{rg.getImageView(kCsmPasses[i], 0)};
-        material.writeBindlessDescriptor(0, 4, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
+        material.writeBindlessDescriptor(1, 4, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
     }
 }
 

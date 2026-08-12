@@ -5,10 +5,10 @@
         { "locations": [ 1, 2, 3 ], "inputRate": "vertex" }
     ],
     "descriptorSets"     : [
-        { "buffered": false                                                },
-        { "buffered": false                                                },
-        { "buffered": false, "dynamicBuffers": [ 0 ]                       },
-        {                                             "layout": "bindless" }
+        { "layout": "bindless"                                             },
+        {                       "buffered": false                          },
+        {                       "buffered": false                          },
+        {                       "buffered": false, "dynamicBuffers": [ 0 ] }
     ],
     "depthStencil"       : { "reverseDepth": true },
     "multisample"        : { "sampleCount": 4 }

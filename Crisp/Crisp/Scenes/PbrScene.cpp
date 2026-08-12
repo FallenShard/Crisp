@@ -48,18 +48,6 @@ void executeDrawCommand(
         commandEncoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.dynamicBufferOffsets));
     }
 
-    // Transitional: the table sits above the sets this tree already owns, so it cannot be bound once per command
-    // buffer - a material bind with a layout that differs at a lower set disturbs it. Bound per draw until the
-    // promote-to-set-0 change lands.
-    const auto& pipelineLayout = *command.pipeline->getPipelineLayout();
-    if (pipelineLayout.getDescriptorSetLayoutCount() > BindlessImageRegistry::kGlobalSetIndex) {
-        renderer.getBindlessImageRegistry().bind(
-            commandEncoder,
-            pipelineLayout.getHandle(),
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            BindlessImageRegistry::kGlobalSetIndex);
-    }
-
     command.geometry->bindVertexBuffers(commandEncoder, command.firstBuffer, command.bufferCount);
     command.drawFunc(commandEncoder, command.geometryView);
 }
@@ -98,10 +86,29 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
             }
             createDrawCommand(drawCommands, *renderNode, kForwardLightingPass);
         }
-        createDrawCommand(drawCommands, m_skybox->getRenderNode(), kForwardLightingPass);
-
+        const auto& pbrPipelineLayout = *m_forwardPassMaterial->getPipeline()->getPipelineLayout();
+        auto& bindlessRegistry = m_renderer->getBindlessImageRegistry();
+        CRISP_CHECK_EQ(
+            pbrPipelineLayout.getDescriptorSetLayout(BindlessImageRegistry::kGlobalSetIndex),
+            bindlessRegistry.getSetLayout(),
+            "The forward PBR pipeline must expose the global bindless layout at set 0.");
+        bindlessRegistry.bind(
+            ctx.commandEncoder,
+            pbrPipelineLayout.getHandle(),
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            BindlessImageRegistry::kGlobalSetIndex);
         ctx.commandEncoder.bindDescriptorSets(m_forwardPassMaterial->getDescriptorSetBinding());
         for (const auto& drawCommand : drawCommands) {
+            CRISP_CHECK_EQ(
+                drawCommand.pipeline->getPipelineLayout(),
+                &pbrPipelineLayout,
+                "Every draw in the bindless PBR batch must use its pipeline layout; draw special pipelines afterward.");
+            executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
+        }
+
+        std::vector<DrawCommand> specialDrawCommands{};
+        createDrawCommand(specialDrawCommands, m_skybox->getRenderNode(), kForwardLightingPass);
+        for (const auto& drawCommand : specialDrawCommands) {
             executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
         }
 
@@ -315,7 +322,7 @@ void PbrScene::createCommonTextures() {
     imageCache.addImage("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
 
     m_forwardPassMaterial =
-        std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 0, 1);
+        std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 1, 1);
     configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
 }
 
@@ -351,7 +358,6 @@ void PbrScene::createSceneObject(const std::filesystem::path&) {
     //         sceneObject.pass(kForwardLightingPass).material =
     //             createPbrMaterial(entityName, renderObject.material, *m_resourceContext, *m_transformBuffer);
     //         sceneObject.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
-    //         sceneObject.pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
 
     //         for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
     //             auto& subpass = sceneObject.pass(kCsmPasses[c]);
@@ -402,7 +408,6 @@ void PbrScene::createSceneObject(const std::filesystem::path&) {
     sceneObject.pass(kForwardLightingPass).material =
         createPbrMaterial(entityName, material, *m_resourceContext, *m_transformBuffer);
     sceneObject.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
-    sceneObject.pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
 
     for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
         auto& subpass = sceneObject.pass(kCsmPasses[c]);
@@ -458,7 +463,6 @@ void PbrScene::createPlane() {
     floor.pass(kForwardLightingPass).material =
         createPbrMaterial(kNodeName, material, *m_resourceContext, *m_transformBuffer);
     floor.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
-    floor.pass(kForwardLightingPass).material->setBindRange(1, 2, 0, 1);
 
     CRISP_CHECK(
         floor.pass(kForwardLightingPass)

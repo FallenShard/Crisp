@@ -62,6 +62,10 @@ public:
         m_descriptorSetLayouts.at(setIndex).isExternal = true;
     }
 
+    bool isDescriptorSetLayoutExternal(const uint32_t setIndex) const {
+        return m_descriptorSetLayouts.at(setIndex).isExternal;
+    }
+
     const std::vector<VkDescriptorSetLayoutBinding>& getDescriptorSetLayoutBindings(uint32_t setIndex) const {
         return m_descriptorSetLayouts.at(setIndex).bindings;
     }

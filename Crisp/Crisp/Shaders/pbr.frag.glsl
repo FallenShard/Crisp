@@ -33,20 +33,20 @@ struct LightDescriptor
 };
 
 // View-specific parameters.
-layout(set = 0, binding = 0) uniform View {
+layout(set = 1, binding = 0) uniform View {
     ViewParameters view;
 };
-layout(set = 0, binding = 1) uniform CascadedLight {
+layout(set = 1, binding = 1) uniform CascadedLight {
     LightDescriptor cascadedLight[4];
 };
-layout(set = 0, binding = 2) uniform samplerCube diffuseIrradianceMap;
-layout(set = 0, binding = 3) uniform samplerCube specularReflectanceMap;
-layout(set = 0, binding = 4) uniform sampler2D cascadedShadowMaps[4];
-layout(set = 0, binding = 5) uniform sampler2D brdfLut;
-layout(set = 0, binding = 6) uniform sampler2D sheenLut;
+layout(set = 1, binding = 2) uniform samplerCube diffuseIrradianceMap;
+layout(set = 1, binding = 3) uniform samplerCube specularReflectanceMap;
+layout(set = 1, binding = 4) uniform sampler2D cascadedShadowMaps[4];
+layout(set = 1, binding = 5) uniform sampler2D brdfLut;
+layout(set = 1, binding = 6) uniform sampler2D sheenLut;
 
 // Material-specific parameters. Must match PbrParams in Materials/PbrMaterial.hpp.
-layout(set = 1, binding = 0) uniform Material
+layout(set = 2, binding = 0) uniform Material
 {
     vec4 albedo;
     vec2 uvScale;
@@ -266,13 +266,13 @@ vec3 sheenLogic()
 //     float padding;
 // };
 
-// layout(set = 1, binding = 6) uniform ManyLights
+// layout(set = 2, binding = 6) uniform ManyLights
 // {
 //     ManyLightDescriptor lights[1024];
 // } many;
 
-// layout(set = 1, binding = 7, rg32ui) uniform readonly uimage2D lightGrid;
-// layout(set = 1, binding = 8) buffer LightIndexList
+// layout(set = 2, binding = 7, rg32ui) uniform readonly uimage2D lightGrid;
+// layout(set = 2, binding = 8) buffer LightIndexList
 // {
 //     uint lightIndexList[];
 // };

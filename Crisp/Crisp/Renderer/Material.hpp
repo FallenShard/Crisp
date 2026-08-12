@@ -63,15 +63,7 @@ public:
     }
 
     VkDescriptorSet getDescriptorSet(const uint32_t setIndex) const {
-        CRISP_CHECK_GE_LT(setIndex, 0, m_sets.size());
-        return m_sets[setIndex];
-    }
-
-    void setBindRange(uint32_t firstSet, uint32_t setCount, uint32_t firstDynamicOffset, uint32_t dynamicOffsetCount) {
-        m_firstSet = firstSet;
-        m_setCount = setCount;
-        m_firstDynamicOffset = firstDynamicOffset;
-        m_dynamicOffsetCount = dynamicOffsetCount;
+        return getOwnedDescriptorSet(setIndex);
     }
 
     uint32_t getDynamicDescriptorCount() const {
@@ -79,12 +71,13 @@ public:
     }
 
 private:
+    VkDescriptorSet getOwnedDescriptorSet(uint32_t setIndex) const;
+
     std::vector<VkDescriptorSet> m_sets;
     std::vector<uint32_t> m_dynamicOffsets;
 
     uint32_t m_firstSet{0};
     uint32_t m_setCount{0};
-    uint32_t m_firstDynamicOffset{0};
     uint32_t m_dynamicOffsetCount{0};
 
     VulkanDevice* m_device;
