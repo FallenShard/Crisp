@@ -13,6 +13,8 @@ add_cpp_static_library(
     CrispMaterialUtils
     "PbrMaterialUtils.hpp"
     "PbrMaterialUtils.cpp"
+    "PbrMaterialTable.hpp"
+    "PbrMaterialTable.cpp"
 )
 target_link_libraries(
     CrispMaterialUtils

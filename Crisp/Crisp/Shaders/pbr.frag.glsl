@@ -1,6 +1,7 @@
 #version 450 core
 
 #extension GL_GOOGLE_include_directive: require
+#extension GL_EXT_buffer_reference: require
 #extension GL_EXT_nonuniform_qualifier: require
 
 #define PI 3.1415926535897932384626433832795
@@ -46,8 +47,7 @@ layout(set = 1, binding = 5) uniform sampler2D brdfLut;
 layout(set = 1, binding = 6) uniform sampler2D sheenLut;
 
 // Material-specific parameters. Must match PbrParams in Materials/PbrMaterial.hpp.
-layout(set = 2, binding = 0) uniform Material
-{
+struct PbrMaterialParameters {
     vec4 albedo;
     vec2 uvScale;
     float metallic;
@@ -61,10 +61,21 @@ layout(set = 2, binding = 0) uniform Material
     uint metallicTex;
     uint occlusionTex;
     uint emissiveTex;
-} material;
+};
 
-// The indices come from a UBO bound per draw, so they are dynamically uniform and skip nonuniformEXT.
-vec4 sampleMaterial(const uint textureIndex, const vec2 uv) {
+layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer PbrMaterialTable {
+    PbrMaterialParameters materials[];
+};
+
+layout(push_constant) uniform DrawParameters {
+    PbrMaterialTable materialTable;
+    uint materialIndex;
+    uint padding;
+} drawParameters;
+
+// The indices come from one material selected by push constants, so they are dynamically uniform and skip
+// nonuniformEXT.
+vec4 sampleMaterial(const PbrMaterialParameters material, const uint textureIndex, const vec2 uv) {
     return texture(sampler2D(gTextures2D[textureIndex], gSamplers[material.samplerIndex]), uv);
 }
 
@@ -135,7 +146,7 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
     return kD * diffuse * ao + specular;
 }
 
-vec3 decodeNormal(in vec2 uv) {
+vec3 decodeNormal(const PbrMaterialParameters material, in vec2 uv) {
     vec3 normal  = normalize(eyeNormal);
     // Have to check this because without UVs, computed tangents will be NaN.
     if (any(isnan(eyeTangent)))
@@ -147,7 +158,7 @@ vec3 decodeNormal(in vec2 uv) {
     vec3 bitangent = normalize(eyeBitangent);
     mat3 TBN = mat3(tangent, bitangent, normal);
 
-    vec3 n = sampleMaterial(material.normalTex, uv).xyz;
+    vec3 n = sampleMaterial(material, material.normalTex, uv).xyz;
     return normalize(TBN * normalize(n * 2.0f - 1.0f));
 }
 
@@ -287,10 +298,12 @@ vec3 sheenLogic()
 }
 
 void main() {
+    const PbrMaterialParameters material =
+        drawParameters.materialTable.materials[drawParameters.materialIndex];
     const vec2 uvCoord = inTexCoord * material.uvScale;
     
     // Basic shading geometry.
-    const vec3 eyeN = decodeNormal(uvCoord);
+    const vec3 eyeN = decodeNormal(material, uvCoord);
     const vec3 eyeV = normalize(-eyePosition);
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
 
@@ -300,12 +313,12 @@ void main() {
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
     // Material properties.
-    const vec3 albedo = sampleMaterial(material.albedoTex, uvCoord).rgb * material.albedo.rgb;
-    float roughness = sampleMaterial(material.roughnessTex, uvCoord).r * material.roughness;
+    const vec3 albedo = sampleMaterial(material, material.albedoTex, uvCoord).rgb * material.albedo.rgb;
+    float roughness = sampleMaterial(material, material.roughnessTex, uvCoord).r * material.roughness;
     roughness *= roughness;
-    const float metallic = sampleMaterial(material.metallicTex, uvCoord).r * material.metallic;
-    const float ao = sampleMaterial(material.occlusionTex, uvCoord).r;
-    const vec3 emission = sampleMaterial(material.emissiveTex, uvCoord).rgb;
+    const float metallic = sampleMaterial(material, material.metallicTex, uvCoord).r * material.metallic;
+    const float ao = sampleMaterial(material, material.occlusionTex, uvCoord).r;
+    const vec3 emission = sampleMaterial(material, material.emissiveTex, uvCoord).rgb;
 
     // BRDF diffuse (view-independent).
     const vec3 F0 = mix(vec3(0.04), albedo, metallic);

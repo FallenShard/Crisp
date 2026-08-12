@@ -1,7 +1,9 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <string>
+#include <type_traits>
 
 #include <Crisp/Core/Format.hpp>
 #include <Crisp/Image/Image.hpp>
@@ -45,6 +47,11 @@ struct PbrParams {
 };
 
 static_assert(sizeof(PbrParams) == 64);
+static_assert(std::is_standard_layout_v<PbrParams>);
+static_assert(offsetof(PbrParams, uvScale) == 16);
+static_assert(offsetof(PbrParams, aoStrength) == 32);
+static_assert(offsetof(PbrParams, samplerIndex) == 36);
+static_assert(offsetof(PbrParams, emissiveTex) == 60);
 
 struct PbrImageKeyCreator {
     std::string name;

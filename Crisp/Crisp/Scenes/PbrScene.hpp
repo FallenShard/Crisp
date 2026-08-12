@@ -47,6 +47,8 @@ private:
     FlatStringHashMap<std::unique_ptr<RenderNode>> m_renderNodes;
 
     std::unique_ptr<Material> m_forwardPassMaterial;
+    std::unique_ptr<Material> m_pbrDrawMaterial;
+    std::unique_ptr<PbrMaterialTable> m_pbrMaterialTable;
 
     PbrParams m_uniformMaterialParams;
     std::unique_ptr<Skybox> m_skybox;

@@ -156,18 +156,7 @@ std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::fi
     return createVulkanImage(renderer, exr.pixelData.size() * sizeof(float), exr.pixelData.data(), createInfo);
 }
 
-Material* createPbrMaterial(
-    const std::string_view materialId,
-    const PbrMaterial& pbrMaterial,
-    ResourceContext& resourceContext,
-    const TransformBuffer& transformBuffer) {
-    auto& imageCache = resourceContext.imageCache;
-
-    // Sets 2-3 are material-local. Set 0 is the pass-bound bindless table and set 1 is pass-owned.
-    auto* material = resourceContext.createMaterial(fmt::format("pbr-{}", materialId), "pbr", 2, 2);
-    material->writeDescriptor(3, 0, transformBuffer.getDescriptorInfo());
-
-    // The handles have to be in params before it is copied into the uniform buffer below.
+PbrParams createGpuPbrParams(const PbrMaterial& pbrMaterial, const ImageCache& imageCache) {
     PbrParams params{pbrMaterial.params};
     params.samplerIndex = imageCache.getSamplerIndex("linearRepeat");
 
@@ -183,11 +172,7 @@ Material* createPbrMaterial(
     params.occlusionTex = textureSlot(4);
     params.emissiveTex = textureSlot(5);
 
-    const std::string paramsBufferKey{fmt::format("{}-params", materialId)};
-    material->writeDescriptor(
-        2, 0, *resourceContext.createRingBufferFromStruct(paramsBufferKey, params, VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT));
-
-    return material;
+    return params;
 }
 
 void configureForwardLightingPassMaterial(

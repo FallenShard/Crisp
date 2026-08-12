@@ -169,7 +169,8 @@ void PbrScene::update(const UpdateParams& updateParams) {
 void PbrScene::render(const FrameContext& frameContext) {
     CRISP_TRACE_VK_SCOPE("PbrScene::render", frameContext.commandEncoder);
 
-    frameContext.commandEncoder.insertBarrier((kVertexUniformRead | kFragmentUniformRead) >> kTransferWrite);
+    frameContext.commandEncoder.insertBarrier(
+        (kVertexUniformRead | kFragmentUniformRead | kFragmentRead) >> kTransferWrite);
 
     const auto& camParams = m_cameraController->getCameraParameters();
     m_lightSystem->update(m_cameraController->getCamera(), frameContext.virtualFrameIndex);
@@ -183,8 +184,10 @@ void PbrScene::render(const FrameContext& frameContext) {
 
     m_transformBuffer->updateStagingBuffer(frameContext.virtualFrameIndex);
     m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder);
+    m_pbrMaterialTable->updateDeviceBuffer(*frameContext.stagingBelt, frameContext.commandEncoder);
 
-    frameContext.commandEncoder.insertBarrier(kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead));
+    frameContext.commandEncoder.insertBarrier(
+        kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead | kFragmentRead));
 
     m_renderGraph->execute(frameContext);
 }
@@ -324,6 +327,11 @@ void PbrScene::createCommonTextures() {
     m_forwardPassMaterial =
         std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 1, 1);
     configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
+
+    m_pbrMaterialTable = std::make_unique<PbrMaterialTable>(m_renderer->getDevice(), kMaximumObjectCount);
+    m_pbrDrawMaterial =
+        std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 2, 1);
+    m_pbrDrawMaterial->writeDescriptor(2, 0, m_transformBuffer->getDescriptorInfo());
 }
 
 void PbrScene::setEnvironmentMap(const std::string& envMapName) {
@@ -355,9 +363,12 @@ void PbrScene::createSceneObject(const std::filesystem::path&) {
     //         auto& sceneObject = createRenderNode(entityName);
     //         sceneObject.geometry = &geometry;
     //         sceneObject.transformPack->M = renderObject.transform;
-    //         sceneObject.pass(kForwardLightingPass).material =
-    //             createPbrMaterial(entityName, renderObject.material, *m_resourceContext, *m_transformBuffer);
-    //         sceneObject.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
+    //         auto& forwardPass = sceneObject.pass(kForwardLightingPass);
+    //         forwardPass.material = m_pbrDrawMaterial.get();
+    //         forwardPass.transformBufferDynamicIndex = 0;
+    //         const auto materialHandle =
+    //             m_pbrMaterialTable->add(createGpuPbrParams(renderObject.material, m_resourceContext->imageCache));
+    //         forwardPass.setPushConstants(m_pbrMaterialTable->createDrawParameters(materialHandle));
 
     //         for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
     //             auto& subpass = sceneObject.pass(kCsmPasses[c]);
@@ -405,9 +416,11 @@ void PbrScene::createSceneObject(const std::filesystem::path&) {
         glm::translate(glm::vec3(5.0f, kFloorHeight, 0.0f)) * glm::scale(glm::vec3(1.0f)) *
         glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
     sceneObject.transformPack->M = translation;
-    sceneObject.pass(kForwardLightingPass).material =
-        createPbrMaterial(entityName, material, *m_resourceContext, *m_transformBuffer);
-    sceneObject.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
+    auto& forwardPass = sceneObject.pass(kForwardLightingPass);
+    forwardPass.material = m_pbrDrawMaterial.get();
+    forwardPass.transformBufferDynamicIndex = 0;
+    const auto materialHandle = m_pbrMaterialTable->add(createGpuPbrParams(material, m_resourceContext->imageCache));
+    forwardPass.setPushConstants(m_pbrMaterialTable->createDrawParameters(materialHandle));
 
     for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
         auto& subpass = sceneObject.pass(kCsmPasses[c]);
@@ -460,9 +473,11 @@ void PbrScene::createPlane() {
     auto& floor = createRenderNode(kNodeName);
     floor.transformPack->M = glm::translate(glm::vec3(0.0f, kFloorHeight, 0.0f));
     floor.geometry = &m_resourceContext->getGeometry(kNodeName);
-    floor.pass(kForwardLightingPass).material =
-        createPbrMaterial(kNodeName, material, *m_resourceContext, *m_transformBuffer);
-    floor.pass(kForwardLightingPass).transformBufferDynamicIndex = 0;
+    auto& forwardPass = floor.pass(kForwardLightingPass);
+    forwardPass.material = m_pbrDrawMaterial.get();
+    forwardPass.transformBufferDynamicIndex = 0;
+    const auto materialHandle = m_pbrMaterialTable->add(createGpuPbrParams(material, m_resourceContext->imageCache));
+    forwardPass.setPushConstants(m_pbrMaterialTable->createDrawParameters(materialHandle));
 
     CRISP_CHECK(
         floor.pass(kForwardLightingPass)

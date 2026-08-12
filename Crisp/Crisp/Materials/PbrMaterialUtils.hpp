@@ -4,6 +4,7 @@
 
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Materials/PbrMaterial.hpp>
+#include <Crisp/Materials/PbrMaterialTable.hpp>
 #include <Crisp/Renderer/ImageCache.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -16,11 +17,7 @@ void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& i
 
 std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir);
 
-Material* createPbrMaterial(
-    std::string_view materialId,
-    const PbrMaterial& pbrMaterial,
-    ResourceContext& resourceContext,
-    const TransformBuffer& transformBuffer);
+PbrParams createGpuPbrParams(const PbrMaterial& pbrMaterial, const ImageCache& imageCache);
 
 void configureForwardLightingPassMaterial(
     Material& material,
