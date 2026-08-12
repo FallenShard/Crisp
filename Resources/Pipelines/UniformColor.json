@@ -1,0 +1,10 @@
+{
+    "shaders": { "vert": "unif-col.vert", "frag": "unif-col.frag" },
+    "vertexInputBindings": [
+        { "formats": [ "vec3" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec3" ] ],
+    "descriptorSets": [
+        { "buffered": false, "dynamicBuffers": [ 0 ] }
+    ]
+}

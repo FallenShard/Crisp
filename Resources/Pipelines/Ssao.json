@@ -1,0 +1,12 @@
+{
+    "shaders": { "vert": "fullscreen-quad.vert", "frag": "ssao.frag" },
+    "vertexInputBindings": [
+        { "formats": [ "vec2" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec2" ] ],
+    "descriptorSets": [
+        { "buffered": false, "dynamicBuffers": [ 1 ] }
+    ],
+    "rasterization": { "cullMode": "back" },
+    "blend": { "enabled": true }
+}

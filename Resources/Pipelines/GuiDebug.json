@@ -1,0 +1,13 @@
+{
+    "shaders": {
+        "vert": "gui-quad-debug-col.vert",
+        "frag": "gui-quad-debug-col.frag"
+    },
+    "vertexInputBindings": [
+        { "formats": [ "vec2" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec2" ] ],
+    "inputAssembly": { "primitiveTopology": "lineList" },
+    "rasterization": { "cullMode": "back" },
+    "blend": { "enabled": true }
+}

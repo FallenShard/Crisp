@@ -1,0 +1,11 @@
+{
+    "shaders": {
+        "vert": "convolve-diffuse.vert",
+        "frag": "convolve-diffuse.frag"
+    },
+    "vertexInputBindings": [
+        { "formats": [ "vec3" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec3" ] ],
+    "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] }
+}

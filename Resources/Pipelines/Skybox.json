@@ -1,0 +1,12 @@
+{
+    "shaders": { "vert": "skybox.vert", "frag": "skybox.frag" },
+    "vertexInputBindings": [
+        { "formats": [ "vec3" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec3" ] ],
+    "descriptorSets": [
+        { "buffered": false, "dynamicBuffers": [ 0 ] }
+    ],
+    "rasterization": { "cullMode": "front" },
+    "depthStencil": { "reverseDepth": true }
+}

@@ -1,0 +1,11 @@
+{
+    "shaders": { "vert": "fullscreen-quad.vert", "frag": "sky-view-lut.frag" },
+    "vertexInputBindings": [
+        { "formats": [ "vec2" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec2" ] ],
+    "descriptorSets": [
+        { "buffered": false, "dynamicBuffers": [ 0 ] }
+    ],
+    "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] }
+}

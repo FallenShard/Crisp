@@ -1,0 +1,16 @@
+{
+    "shaders": {
+        "vert": "fullscreen-quad.vert",
+        "frag": "sky-ray-march.frag"
+    },
+    "vertexInputBindings": [
+        { "formats": [ "vec2" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec2" ] ],
+    "descriptorSets": [
+        { "buffered": false, "dynamicBuffers": [ 0 ] },
+        { "buffered": true                           }
+    ],
+    "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] },
+    "blend": { "enabled": true, "src": "one", "dst": "zero" }
+}

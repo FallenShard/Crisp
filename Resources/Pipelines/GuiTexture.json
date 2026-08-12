@@ -1,0 +1,13 @@
+{
+    "shaders": { "vert": "gui-quad-tex.vert", "frag": "gui-quad-tex.frag" },
+    "vertexInputBindings": [
+        { "formats": [ "vec2" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec2" ] ],
+    "descriptorSets": [
+        { "buffered": true, "dynamicBuffers": [ 0, 1 ] },
+        { "buffered": true, "dynamicBuffers": [ 1    ] }
+    ],
+    "rasterization": { "cullMode": "back" },
+    "blend": { "enabled": true }
+}

@@ -270,8 +270,10 @@ __pycache__/
 # Cake - Uncomment if you are using it
 # tools/
 
-# Ignore all resources
-Resources/
+# Pipeline descriptions are renderer source; other resources remain external assets.
+Resources/*
+!Resources/Pipelines/
+!Resources/Pipelines/*.json
 *.exr
 
 # Ignore binary and intermediate folders

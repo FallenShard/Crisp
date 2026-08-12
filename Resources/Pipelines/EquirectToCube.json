@@ -1,0 +1,11 @@
+{
+    "shaders": {
+        "vert": "equirect-to-cube.vert",
+        "frag": "equirect-to-cube.frag"
+    },
+    "vertexInputBindings": [
+        { "formats": [ "vec3" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec3" ] ],
+    "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] }
+}

@@ -1,0 +1,12 @@
+{
+    "shaders": { "vert": "shadow-map.vert", "frag": "shadow-map.frag" },
+    "vertexInputBindings": [
+        { "formats": [ "vec3" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec3" ] ],
+    "descriptorSets": [
+        { "buffered": false, "dynamicBuffers": [ 0 ] }
+    ],
+    "rasterization": { "cullMode": "front" },
+    "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] }
+}

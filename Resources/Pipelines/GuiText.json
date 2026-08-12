@@ -1,0 +1,13 @@
+{
+    "shaders": { "vert": "gui-text.vert", "frag": "gui-text.frag" },
+    "vertexInputBindings": [
+        { "formats": [ "vec4" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec4" ] ],
+    "descriptorSets": [
+        { "buffered": false, "dynamicBuffers": [ 0, 1 ] },
+        { "buffered": false                             }
+    ],
+    "rasterization": { "cullMode": "back" },
+    "blend": { "enabled": true }
+}

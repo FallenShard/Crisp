@@ -1,0 +1,10 @@
+{
+    "shaders": { "vert": "fullscreen-quad.vert", "frag": "GammaCorrect.frag" },
+    "vertexInputBindings": [
+        { "formats": [ "vec2" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec2" ] ],
+    "descriptorSets": [ { "buffered": true } ],
+    "rasterization": { "cullMode": "back" },
+    "blend": { "enabled": true }
+}

@@ -1,0 +1,17 @@
+{
+    "shaders": {
+        "vert": "sky-camera-volumes.vert",
+        "geom": "sky-camera-volumes.geom",
+        "frag": "sky-camera-volumes.frag"
+    },
+    "vertexInputBindings": [
+        { "formats": [ "vec2" ], "inputRate": "vertex" }
+    ],
+    "vertexAttributes": [ [ "vec2" ] ],
+    "descriptorSets": [
+        { "buffered": false, "dynamicBuffers": [ 0 ] },
+        { "buffered": true                           }
+    ],
+    "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] },
+    "blend": { "enabled": true, "src": "one", "dst": "zero" }
+}
