@@ -8,6 +8,7 @@
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Renderer/VulkanPipelineIo.hpp>
 #include <Crisp/ShaderUtils/ShaderCompiler.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 
 namespace crisp {
 namespace {
@@ -91,7 +92,12 @@ Renderer::Renderer(
     m_bindlessImageRegistry = std::make_unique<BindlessImageRegistry>(
         *m_device, *m_physicalDevice, BindlessImageRegistryConfig{.sampledImageCapacity = 1024});
     m_fallbackImage = createBindlessFallbackImage(*this);
+    m_fallbackStorageImage = createStorageImage(*m_device, 1, 1, 1, VK_FORMAT_R8G8B8A8_UNORM);
+    submitAndWait(m_device->getGeneralQueue(), [this](const VulkanCommandEncoder& encoder) {
+        encoder.transitionLayout(*m_fallbackStorageImage, VK_IMAGE_LAYOUT_GENERAL, kNullStage >> kAllStages);
+    });
     m_bindlessImageRegistry->setDefaultSampledImage(m_fallbackImage->getView());
+    m_bindlessImageRegistry->setDefaultStorageImage(m_fallbackStorageImage->getView());
     m_bindlessImageRegistry->flush();
 
     m_fullScreenGeometry = createFullScreenGeometry(*this);

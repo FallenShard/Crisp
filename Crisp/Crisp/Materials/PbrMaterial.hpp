@@ -28,7 +28,7 @@ inline constexpr std::array<std::string_view, kPbrMapTypeCount> kPbrMapNames = {
     "emissive",
 };
 
-// Mirrors the Material block in Shaders/pbr.frag.glsl.
+// Mirrors PbrMaterialParameters in Shaders/pbr.frag.glsl.
 // 0 is the registry's fallback, so an unauthored map samples the checkerboard.
 struct PbrParams {
     glm::vec4 albedo{1.0f, 1.0f, 1.0f, 1.0f};

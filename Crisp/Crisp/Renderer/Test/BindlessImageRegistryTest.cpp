@@ -65,6 +65,18 @@ TEST_F(BindlessImageRegistryTest, DefaultFillCoversEverySlot) {
     EXPECT_EQ(registry.getPendingWriteCount(), 0);
 }
 
+TEST_F(BindlessImageRegistryTest, DefaultStorageFillCoversEverySlot) {
+    BindlessImageRegistry registry(*device_, *physicalDevice_, kSmallConfig);
+    const auto image = createStorageImage(*device_);
+    const auto view = createView(*device_, *image, VK_IMAGE_VIEW_TYPE_2D);
+
+    registry.setDefaultStorageImage(*view);
+
+    EXPECT_EQ(registry.getPendingWriteCount(), kSmallConfig.storageImageCapacity);
+    registry.flush();
+    EXPECT_EQ(registry.getPendingWriteCount(), 0);
+}
+
 TEST_F(BindlessImageRegistryTest, HandsOutAscendingIndicesSkippingTheDefaultSlot) {
     BindlessImageRegistry registry(*device_, *physicalDevice_, kSmallConfig);
     const auto image = createSampledImage(*device_);

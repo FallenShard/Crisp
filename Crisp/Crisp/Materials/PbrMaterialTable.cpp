@@ -10,8 +10,8 @@ PbrMaterialTable::PbrMaterialTable(VulkanDevice& device, const uint32_t capacity
           std::make_unique<VulkanBuffer>(
               device,
               capacity * sizeof(PbrParams),
-              VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT |
-                  VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT,
+              VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
+                  VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT,
               BufferMemoryType::GpuOnly)) {
     CRISP_CHECK_GT(capacity, 0);
     CRISP_CHECK_NE(getDeviceAddress(), 0);

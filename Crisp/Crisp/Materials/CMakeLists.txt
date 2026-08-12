@@ -21,3 +21,13 @@ target_link_libraries(
     PUBLIC Crisp::Material
     PUBLIC Crisp::Renderer
 )
+
+add_cpp_test(
+    CrispPbrMaterialTableTest
+    "Test/PbrMaterialTableTest.cpp"
+)
+target_link_libraries(
+    CrispPbrMaterialTableTest
+    PRIVATE Crisp::MaterialUtils
+    PRIVATE Crisp::VulkanTestUtils
+)

@@ -156,6 +156,7 @@ private:
     std::unique_ptr<VulkanStagingBelt> m_stagingBelt;
     std::unique_ptr<BindlessImageRegistry> m_bindlessImageRegistry;
     std::unique_ptr<VulkanImage> m_fallbackImage;
+    std::unique_ptr<VulkanImage> m_fallbackStorageImage;
     std::vector<std::unique_ptr<VulkanTracingContext>> m_gpuTracingContexts;
 };
 
