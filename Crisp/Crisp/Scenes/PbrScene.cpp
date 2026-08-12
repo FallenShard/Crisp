@@ -374,7 +374,8 @@ void PbrScene::createSceneObject(const std::filesystem::path&) {
 
     const std::string entityName = fmt::format("shaderBall");
 
-    auto& geometry = m_resourceContext->addGeometry(entityName, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
+    auto& geometry = m_resourceContext->addGeometry(
+        entityName, createGeometry(*m_renderer, mesh, kPbrVertexFormat, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
 
     meshMaterial->writeDescriptor(0, 3, geometry.getVertexBuffer(0)->createDescriptorInfo());
     meshMaterial->writeDescriptor(0, 4, m_resourceContext->getRingBuffer("camera")->getDescriptorInfo());

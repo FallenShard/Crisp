@@ -571,6 +571,22 @@ void addMeshShadingFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequ
                     featureChain.meshShaderFeatures.meshShader = VK_TRUE;
                 },
             .setFunc = [](VulkanDeviceFeatures& features) { features.meshShading = true; },
+            .prerequisites =
+                {
+                    VulkanDeviceFeatureRequest{
+                        .symbolicName = "Storage buffer 8-bit access",
+                        .minApiVersion = VK_API_VERSION_1_2,
+                        .isSupportedFunc =
+                            [](const VulkanPhysicalDevice& physicalDevice) {
+                                return physicalDevice.queryFeatures<VkPhysicalDeviceVulkan12Features>()
+                                           .storageBuffer8BitAccess == VK_TRUE;
+                            },
+                        .linkFunc =
+                            [](VulkanDeviceFeatureChain& featureChain) {
+                                featureChain.link(featureChain.features12).storageBuffer8BitAccess = VK_TRUE;
+                            },
+                    },
+                },
         });
 }
 
