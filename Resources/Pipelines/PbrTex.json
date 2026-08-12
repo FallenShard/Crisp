@@ -1,16 +1,16 @@
 {
-    "shaders": { "vert": "pbr.vert", "frag": "pbr.frag" },
+    "shaders"            : { "vert": "pbr.vert", "frag": "pbr.frag" },
     "vertexInputBindings": [
         { "formats": [ "vec3"                 ], "inputRate": "vertex" },
         { "formats": [ "vec3", "vec2", "vec4" ], "inputRate": "vertex" }
     ],
-    "vertexAttributes": [ [ "vec3" ], [ "vec3", "vec2", "vec4" ] ],
-    "descriptorSets": [
-        { "buffered": false                                                  },
-        { "buffered": false                                                  },
-        { "buffered": false,                         "dynamicBuffers": [ 0 ] },
-        { "buffered": false, "external": true                                }
+    "vertexAttributes"   : [ [ "vec3" ], [ "vec3", "vec2", "vec4" ] ],
+    "descriptorSets"     : [
+        { "buffered": false                                                },
+        { "buffered": false                                                },
+        { "buffered": false, "dynamicBuffers": [ 0 ]                       },
+        {                                             "layout": "bindless" }
     ],
-    "depthStencil": { "reverseDepth": true },
-    "multisample": { "sampleCount": 4 }
+    "depthStencil"       : { "reverseDepth": true },
+    "multisample"        : { "sampleCount": 4 }
 }

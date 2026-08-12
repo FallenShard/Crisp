@@ -241,11 +241,34 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
     PipelineLayoutBuilder& layoutBuilder,
     const VkDescriptorSetLayout bindlessDescriptorSetLayout) {
     for (int32_t i = 0; i < static_cast<int32_t>(json.size()); ++i) {
-        CRISP_CHECK(json[i].is_object());
-        CRISP_CHECK(hasField<JsonType::Boolean>(json[i], "buffered"));
-        layoutBuilder.setDescriptorSetBuffering(i, json[i]["buffered"].get<bool>());
+        const auto& setJson = json[i];
+        if (!setJson.is_object()) {
+            return resultError("Descriptor set {} metadata must be an object.", i);
+        }
+        if (static_cast<std::size_t>(i) >= layoutBuilder.getDescriptorSetLayoutCount()) {
+            return resultError(
+                "Descriptor set {} is configured, but shader reflection found only {} set(s).",
+                i,
+                layoutBuilder.getDescriptorSetLayoutCount());
+        }
 
-        if (hasField<JsonType::Boolean>(json[i], "external") && json[i]["external"].get<bool>()) {
+        for (const auto& [key, _] : setJson.items()) {
+            if (key != "buffered" && key != "layout" && key != "bindless" && key != "dynamicBuffers") {
+                return resultError("Descriptor set {} contains unknown field '{}'.", i, key);
+            }
+        }
+
+        if (setJson.contains("layout")) {
+            if (!setJson["layout"].is_string()) {
+                return resultError("Descriptor set {} field 'layout' must be a string.", i);
+            }
+            if (setJson.size() != 1) {
+                return resultError("Descriptor set {} with a shared layout cannot declare other metadata.", i);
+            }
+            const auto& layoutName = setJson["layout"].get_ref<const std::string&>();
+            if (layoutName != "bindless") {
+                return resultError("Descriptor set {} references unknown shared layout '{}'.", i, layoutName);
+            }
             if (bindlessDescriptorSetLayout == VK_NULL_HANDLE) {
                 return resultError("Descriptor set {} is bindless, but no bindless layout was provided.", i);
             }
@@ -253,16 +276,35 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
             continue;
         }
 
-        if (hasField<JsonType::Array>(json[i], "bindless")) {
-            CRISP_CHECK_EQ(json[i]["bindless"].size(), 2);
-            const auto& arr = json[i]["bindless"];
+        if (!hasField<JsonType::Boolean>(setJson, "buffered")) {
+            return resultError("Descriptor set {} field 'buffered' must be a boolean.", i);
+        }
+        layoutBuilder.setDescriptorSetBuffering(i, setJson["buffered"].get<bool>());
+
+        if (setJson.contains("bindless")) {
+            if (!setJson["bindless"].is_array() || setJson["bindless"].size() != 2 ||
+                !setJson["bindless"][0].is_number_unsigned() || !setJson["bindless"][1].is_number_unsigned()) {
+                return resultError(
+                    "Descriptor set {} field 'bindless' must be [binding, descriptorCount] using unsigned integers.",
+                    i);
+            }
+            const auto& arr = setJson["bindless"];
+            if (arr[1].get<uint32_t>() == 0) {
+                return resultError("Descriptor set {} bindless descriptor count must be greater than zero.", i);
+            }
             layoutBuilder.setDescriptorBindless(i, arr[0].get<uint32_t>(), arr[1].get<uint32_t>());
         }
 
-        if (hasField<JsonType::Array>(json[i], "dynamicBuffers")) {
-            for (int32_t j = 0; j < static_cast<int32_t>(json[i]["dynamicBuffers"].size()); ++j) {
-                CRISP_CHECK(json[i]["dynamicBuffers"][j].is_number_unsigned());
-                layoutBuilder.setDescriptorDynamic(i, json[i]["dynamicBuffers"][j].get<int32_t>(), true);
+        if (setJson.contains("dynamicBuffers")) {
+            if (!setJson["dynamicBuffers"].is_array()) {
+                return resultError("Descriptor set {} field 'dynamicBuffers' must be an array.", i);
+            }
+            for (const auto& binding : setJson["dynamicBuffers"]) {
+                if (!binding.is_number_unsigned()) {
+                    return resultError(
+                        "Descriptor set {} field 'dynamicBuffers' must contain only unsigned integers.", i);
+                }
+                layoutBuilder.setDescriptorDynamic(i, binding.get<uint32_t>(), true);
             }
         }
     }
@@ -337,8 +379,13 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     }
 
     PipelineLayoutBuilder layoutBuilder(std::move(shaderMetadata));
-    if (hasField<JsonType::Array>(pipelineJson, "descriptorSets")) {
-        readDescriptorSetMetadata(pipelineJson["descriptorSets"], layoutBuilder, bindlessDescriptorSetLayout).unwrap();
+    if (pipelineJson.contains("descriptorSets")) {
+        if (!pipelineJson["descriptorSets"].is_array()) {
+            return resultError("Pipeline field 'descriptorSets' must be an array.");
+        }
+        CRISP_TRY(
+            readDescriptorSetMetadata(pipelineJson["descriptorSets"], layoutBuilder, bindlessDescriptorSetLayout),
+            "Invalid descriptor set metadata");
     }
 
     return builder.create(device, layoutBuilder.create(device), rasterizationPassDescriptor);
