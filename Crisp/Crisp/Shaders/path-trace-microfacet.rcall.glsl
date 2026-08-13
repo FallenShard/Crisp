@@ -1,16 +1,15 @@
 #version 460 core
+#extension GL_EXT_buffer_reference : require
 #extension GL_EXT_ray_tracing : require
+#extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
 #include "Common/path-trace-payload.part.glsl"
 #include "Common/math-constants.part.glsl"
 #include "Common/warp.part.glsl"
+#include "Common/path-trace-scene.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
-
-layout(set = 1, binding = 3) buffer BrdfParams {
-    BrdfParameters brdfParams[];
-};
 
 vec3 ggxSampleNormal(in vec2 unitSample, in float alpha) {
     const float tanTheta2 = alpha * alpha * unitSample.y / (1.0f - unitSample.y);
@@ -133,8 +132,8 @@ vec3 eval(in vec3 wi, in vec3 wo, in vec3 kd, in float ks, in float extIor, in f
 
 void main()
 {
-    const float ks = brdfParams[brdf.materialId].ks;
-    const float alpha = brdfParams[brdf.materialId].microfacetAlpha;
+    const float ks = scene.materials.data[brdf.materialId].ks;
+    const float alpha = scene.materials.data[brdf.materialId].microfacetAlpha;
 
     vec2 unitSample = brdf.unitSample;
 
@@ -160,9 +159,9 @@ void main()
     brdf.f = eval(
         brdf.wi,
         brdf.wo,
-        brdfParams[brdf.materialId].kd,
+        scene.materials.data[brdf.materialId].kd,
         ks,
-        brdfParams[brdf.materialId].extIor,
-        brdfParams[brdf.materialId].intIor,
+        scene.materials.data[brdf.materialId].extIor,
+        scene.materials.data[brdf.materialId].intIor,
         alpha) / brdf.pdf;
 }

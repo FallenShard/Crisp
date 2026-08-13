@@ -114,7 +114,16 @@ void PipelineLayoutMetadata::merge(const PipelineLayoutMetadata& rhs) {
         }
     }
 
-    pushConstants.insert(pushConstants.end(), rhs.pushConstants.begin(), rhs.pushConstants.end());
+    for (const auto& rhsRange : rhs.pushConstants) {
+        const auto matchingRange = std::ranges::find_if(pushConstants, [&rhsRange](const VkPushConstantRange& range) {
+            return range.offset == rhsRange.offset && range.size == rhsRange.size;
+        });
+        if (matchingRange == pushConstants.end()) {
+            pushConstants.push_back(rhsRange);
+        } else {
+            matchingRange->stageFlags |= rhsRange.stageFlags;
+        }
+    }
 }
 
 Result<std::vector<char>> readSpirvFile(const std::filesystem::path& filePath) {

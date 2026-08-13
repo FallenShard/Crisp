@@ -1,4 +1,5 @@
 #version 460 core
+#extension GL_EXT_buffer_reference : require
 #extension GL_EXT_ray_tracing : require
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
@@ -14,14 +15,14 @@ const int kRussianRouletteCutoff = 3;
 const int kPayloadIndex = 0;
 layout(location = kPayloadIndex) rayPayloadEXT HitInfo hitInfo;
 
-layout(set = 0, binding = 0) uniform accelerationStructureEXT sceneBvh;
-layout(set = 0, binding = 1, rgba32f) uniform image2D image;
+layout(set = 1, binding = 0) uniform accelerationStructureEXT sceneBvh;
+layout(set = 1, binding = 1, rgba32f) uniform image2D image;
 
-layout(set = 0, binding = 2) uniform View {
+layout(set = 1, binding = 2) uniform View {
     ViewParameters view;
 };
 
-layout(set = 0, binding = 3) uniform IntegratorParams {
+layout(set = 1, binding = 3) uniform IntegratorParams {
     int maxBounces;
     int sampleCount;
     int frameIdx;
@@ -30,36 +31,8 @@ layout(set = 0, binding = 3) uniform IntegratorParams {
     int samplingMode;
 } integrator;
 
-layout(set = 1, binding = 0, scalar) buffer Vertices {
-    vec3 data[];
-} vertices;
-
-layout(set = 1, binding = 6, scalar) buffer Normals {
-    vec3 data[];
-} normals;
-
-layout(set = 1, binding = 1, scalar) buffer Indices {
-    uvec3 data[];
-} triangles;
-
+#include "Common/path-trace-scene.part.glsl"
 #include "Common/path-trace-vertex-pull.part.glsl"
-
-layout(set = 1, binding = 2, scalar) buffer InstanceProps {
-    InstanceProperties instanceProps[];
-};
-
-layout(set = 1, binding = 4, std430) buffer Lights {
-    LightParameters lights[];
-};
-
-struct AliasTableElement {
-    float tau;
-    uint j;
-};
-
-layout(set = 1, binding = 5, std430) buffer AliasTables {
-    AliasTableElement elements[];
-} aliasTable;
 
 void traceRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
     hitInfo.rngSeed = seed;
@@ -85,28 +58,28 @@ void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample) {
 }
 
 float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out vec3 normal) {
-    const uint aliasTableOffset = instanceProps[meshId].aliasTableOffset;
-    const uint triCount = aliasTable.elements[aliasTableOffset].j;
+    const uint aliasTableOffset = scene.instances.data[meshId].aliasTableOffset;
+    const uint triCount = scene.aliasTable.data[aliasTableOffset].j;
     
     const uint elemIdx = 1 + rndRange(seed, triCount); // Add 1 to skip the header entry.
     const float rndVal = rndFloat(seed);
 
     uint sampledTriIdx = elemIdx - 1;
-    if (rndVal > aliasTable.elements[aliasTableOffset + elemIdx].tau) {
-        sampledTriIdx = aliasTable.elements[aliasTableOffset + elemIdx].j;
+    if (rndVal > scene.aliasTable.data[aliasTableOffset + elemIdx].tau) {
+        sampledTriIdx = scene.aliasTable.data[aliasTableOffset + elemIdx].j;
     }
 
     const float r1 = rndFloat(seed);
     const float r2 = rndFloat(seed);
     const vec3 bary = squareToUniformTriangle(vec2(r1, r2));
 
-    const uint triangleOffset = instanceProps[meshId].indexOffset;
-    const uvec3 sampledTriangle = triangles.data[triangleOffset + sampledTriIdx];
+    const uint triangleOffset = scene.instances.data[meshId].indexOffset;
+    const uvec3 sampledTriangle = scene.triangles.data[triangleOffset + sampledTriIdx];
 
     position = interpolatePosition(sampledTriangle, bary);
     normal = interpolateNormal(sampledTriangle, bary);
 
-    return aliasTable.elements[aliasTableOffset].tau;
+    return scene.aliasTable.data[aliasTableOffset].tau;
 }
 
 vec3 sampleAreaLight(inout uint seed, in uint meshId, in vec3 radiance, in vec3 refPoint, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
@@ -133,15 +106,22 @@ vec3 sampleUniformLight(inout uint seed, in vec3 refPoint, out vec3 shadowRayDir
     const uint lightId = rndRange(seed, integrator.lightCount);
     const float uniformPdf = 1.0f / float(integrator.lightCount);
     
-    const vec3 radiance = sampleAreaLight(seed, lights[lightId].meshId, lights[lightId].radiance, refPoint, shadowRayDir, shadowRayLen, lightPdf);
+    const vec3 radiance = sampleAreaLight(
+        seed,
+        scene.lights.data[lightId].meshId,
+        scene.lights.data[lightId].radiance,
+        refPoint,
+        shadowRayDir,
+        shadowRayLen,
+        lightPdf);
     lightPdf *= uniformPdf;
     return radiance / uniformPdf;
 }
 
 float getLightPdf(in int lightId, in vec3 hitVector, in vec3 hitNormal) {
-    const int meshId = lights[lightId].meshId;
-    const uint aliasTableOffset = instanceProps[meshId].aliasTableOffset;
-    const float shapePdf = aliasTable.elements[aliasTableOffset].tau;
+    const int meshId = scene.lights.data[lightId].meshId;
+    const uint aliasTableOffset = scene.instances.data[meshId].aliasTableOffset;
+    const float shapePdf = scene.aliasTable.data[aliasTableOffset].tau;
 
     const float squaredDist = dot(hitVector, hitVector);
 

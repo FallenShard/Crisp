@@ -73,11 +73,12 @@ public:
     }
 
     template <typename T>
-    VulkanBuffer* createStorageBuffer(const std::string& id, const std::vector<T>& data) {
+    VulkanBuffer* createStorageBuffer(
+        const std::string& id, const std::vector<T>& data, const VkBufferUsageFlags2 extraUsage = 0) {
         auto buffer = std::make_unique<VulkanBuffer>(
             m_renderer->getDevice(),
             data.size() * sizeof(T),
-            VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+            VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | extraUsage,
             BufferMemoryType::GpuOnly);
         auto* ptr = addBuffer(id, std::move(buffer));
         auto& device = m_renderer->getDevice();

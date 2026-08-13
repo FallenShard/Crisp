@@ -8,6 +8,7 @@
 #include <Crisp/Renderer/RayTracingPipelineBuilder.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Scenes/RayTracingSceneData.hpp>
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
@@ -55,6 +56,7 @@ private:
     };
 
     SceneDescription m_sceneDesc;
+    RayTracingSceneAddresses m_sceneAddresses;
 
     IntegratorParameters m_integratorParams;
 

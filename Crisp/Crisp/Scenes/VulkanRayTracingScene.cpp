@@ -1,6 +1,7 @@
 
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Gui/ImGuiCameraUtils.hpp>
 #include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/Image/Io/Exr.hpp>
@@ -37,7 +38,10 @@ void append(AliasTable& globalAliasTable, const TriangleMesh& mesh) {
 }
 
 std::unique_ptr<VulkanBuffer> createAliasTableBuffer(Renderer& renderer, const AliasTable& aliasTable) {
-    auto buffer = createStorageBuffer(renderer.getDevice(), aliasTable.size() * sizeof(AliasTable::value_type));
+    auto buffer = createStorageBuffer(
+        renderer.getDevice(),
+        aliasTable.size() * sizeof(AliasTable::value_type),
+        VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
     fillDeviceBuffer(renderer, buffer.get(), aliasTable);
     return buffer;
 }
@@ -78,8 +82,10 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
 
     m_sceneDesc.brdfs.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
 
-    m_brdfParamsBuffer = m_resourceContext->createStorageBuffer("brdfParams", m_sceneDesc.brdfs);
-    m_lightParamsBuffer = m_resourceContext->createStorageBuffer("lightParams", m_sceneDesc.lights);
+    m_brdfParamsBuffer = m_resourceContext->createStorageBuffer(
+        "brdfParams", m_sceneDesc.brdfs, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
+    m_lightParamsBuffer = m_resourceContext->createStorageBuffer(
+        "lightParams", m_sceneDesc.lights, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
 
     AliasTable aliasTable{};
     TriangleMesh sceneMesh{};
@@ -121,7 +127,22 @@ VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window,
     m_topLevelAccelStructure->setDebugName(m_renderer->getDevice(), "Path Tracer TLAS");
     m_aliasTableBuffer = m_resourceContext->addBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
 
-    m_instancePropsBuffer = m_resourceContext->createStorageBuffer("instanceProps", m_sceneDesc.props);
+    m_instancePropsBuffer = m_resourceContext->createStorageBuffer(
+        "instanceProps", m_sceneDesc.props, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
+
+    m_sceneAddresses = {
+        .vertices = sceneGeometry.getVertexBuffer()->getDeviceAddress(),
+        .normals = sceneGeometry.getVertexBuffer(1)->getDeviceAddress(),
+        .triangles = sceneGeometry.getIndexBuffer()->getDeviceAddress(),
+        .instances = m_instancePropsBuffer->getDeviceAddress(),
+        .materials = m_brdfParamsBuffer->getDeviceAddress(),
+        .lights = m_lightParamsBuffer->getDeviceAddress(),
+        .aliasTable = m_aliasTableBuffer->getDeviceAddress(),
+    };
+    CRISP_CHECK_LE(
+        sizeof(m_sceneAddresses),
+        m_renderer->getPhysicalDevice().getLimits().maxPushConstantsSize,
+        "Ray-tracing scene addresses exceed the device push-constant limit.");
 
     m_renderer->enqueueResourceUpdate([this](const VulkanCommandEncoder& encoder) {
         std::vector<VulkanAccelerationStructure*> blases;
@@ -200,7 +221,20 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     frameContext.commandEncoder.transitionLayout(
         *m_rayTracedImage, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> kRayTracingStorageWrite);
     frameContext.commandEncoder.bindPipeline(*m_pipeline);
+    const auto& pipelineLayout = *m_pipeline->getPipelineLayout();
+    auto& bindlessRegistry = m_renderer->getBindlessImageRegistry();
+    CRISP_CHECK_EQ(
+        pipelineLayout.getDescriptorSetLayout(BindlessImageRegistry::kGlobalSetIndex),
+        bindlessRegistry.getSetLayout(),
+        "The ray-tracing pipeline must expose the global bindless layout at set 0.");
+    bindlessRegistry.bind(
+        frameContext.commandEncoder,
+        pipelineLayout.getHandle(),
+        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+        BindlessImageRegistry::kGlobalSetIndex);
     frameContext.commandEncoder.bindDescriptorSets(m_material->getDescriptorSetBinding());
+    frameContext.commandEncoder.setPushConstants(
+        pipelineLayout, std::as_bytes(std::span{&m_sceneAddresses, 1}));
 
     const auto extent = m_renderer->getSwapChainExtent();
     frameContext.commandEncoder.traceRays(m_shaderBindingTable.bindings, extent);
@@ -283,6 +317,8 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
         shaderSpvPaths.emplace_back(m_renderer->getAssetPaths().getShaderSpvPath(name.first));
     }
     PipelineLayoutBuilder builder{reflectPipelineLayoutFromSpirv(shaderSpvPaths).unwrap()};
+    builder.useExternalDescriptorSet(
+        BindlessImageRegistry::kGlobalSetIndex, m_renderer->getBindlessImageRegistry().getSetLayout());
     auto pipelineLayout = builder.create(m_renderer->getDevice());
 
     RayTracingPipelineBuilder pipelineBuilder(*m_renderer);
@@ -302,20 +338,10 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
 }
 
 void VulkanRayTracingScene::updateDescriptorSets() {
-    m_material->writeDescriptor(0, 0, m_topLevelAccelStructure->getDescriptorInfo());
-    m_material->writeDescriptor(0, 1, m_rayTracedImage->getView().getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    m_material->writeDescriptor(0, 2, *m_cameraBuffer);
-    m_material->writeDescriptor(0, 3, *m_integratorBuffer);
-    m_material->writeDescriptor(
-        1, 0, m_resourceContext->getGeometry("scene-geometry").getVertexBuffer()->createDescriptorInfo());
-    m_material->writeDescriptor(
-        1, 1, m_resourceContext->getGeometry("scene-geometry").getIndexBuffer()->createDescriptorInfo());
-    m_material->writeDescriptor(
-        1, 6, m_resourceContext->getGeometry("scene-geometry").getVertexBuffer(1)->createDescriptorInfo());
-    m_material->writeDescriptor(1, 2, *m_instancePropsBuffer);
-    m_material->writeDescriptor(1, 3, *m_brdfParamsBuffer);
-    m_material->writeDescriptor(1, 4, *m_lightParamsBuffer);
-    m_material->writeDescriptor(1, 5, *m_aliasTableBuffer);
+    m_material->writeDescriptor(1, 0, m_topLevelAccelStructure->getDescriptorInfo());
+    m_material->writeDescriptor(1, 1, m_rayTracedImage->getView().getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+    m_material->writeDescriptor(1, 2, *m_cameraBuffer);
+    m_material->writeDescriptor(1, 3, *m_integratorBuffer);
     m_renderer->getDevice().flushDescriptorUpdates();
 }
 

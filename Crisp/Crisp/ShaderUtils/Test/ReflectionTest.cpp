@@ -53,6 +53,24 @@ TEST(ReflectionTest, ComputeShader) {
             Field(&VkPushConstantRange::stageFlags, VK_SHADER_STAGE_COMPUTE_BIT))));
 }
 
+TEST(ReflectionTest, MergeCoalescesMatchingPushConstantRanges) {
+    PipelineLayoutMetadata lhs{};
+    lhs.pushConstants.push_back({VK_SHADER_STAGE_RAYGEN_BIT_KHR, 0, 56});
+
+    PipelineLayoutMetadata rhs{};
+    rhs.pushConstants.push_back({VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, 0, 56});
+    lhs.merge(rhs);
+
+    EXPECT_THAT(
+        lhs.pushConstants,
+        ElementsAre(AllOf(
+            Field(&VkPushConstantRange::offset, 0),
+            Field(&VkPushConstantRange::size, 56),
+            Field(
+                &VkPushConstantRange::stageFlags,
+                VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR))));
+}
+
 TEST(ReflectionTest, SpirvReflect) {
     SpvReflectShaderModule module;
     const auto spirv = readSpirvFile(getSpirvShaderPath("reflection.comp")).unwrap();

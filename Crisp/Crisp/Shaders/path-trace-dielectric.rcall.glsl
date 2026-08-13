@@ -1,16 +1,14 @@
 #version 460 core
+#extension GL_EXT_buffer_reference : require
 #extension GL_EXT_ray_tracing : require
+#extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
 #include "Common/path-trace-payload.part.glsl"
 #include "Common/math-constants.part.glsl"
+#include "Common/path-trace-scene.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
-
-layout(set = 1, binding = 3) buffer BrdfParams
-{
-    BrdfParameters brdfParams[];
-};
 
 float fresnelDielectric(float cosThetaI, float extIOR, float intIOR, inout float cosThetaT)
 {
@@ -45,8 +43,8 @@ float fresnelDielectric(float cosThetaI, float extIOR, float intIOR, inout float
 
 void main()
 {
-    const float intIOR = brdfParams[brdf.materialId].intIor;
-    const float extIOR = brdfParams[brdf.materialId].extIor;
+    const float intIOR = scene.materials.data[brdf.materialId].intIor;
+    const float extIOR = scene.materials.data[brdf.materialId].extIor;
     const float etaRatio = intIOR / extIOR;
     const float cosThetaI = dot(brdf.normal, brdf.wi);
     const vec3 localNormal = cosThetaI < 0.0f ? -brdf.normal : brdf.normal;

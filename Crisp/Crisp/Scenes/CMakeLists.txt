@@ -96,6 +96,7 @@ add_cpp_static_library(CrispVulkanRayTracingScene
     "VulkanRayTracingScene.hpp"
     "RayTracingSceneParser.cpp"
     "RayTracingSceneParser.hpp"
+    "RayTracingSceneData.hpp"
 )
 target_link_libraries(CrispVulkanRayTracingScene
     PUBLIC Crisp::Scene
