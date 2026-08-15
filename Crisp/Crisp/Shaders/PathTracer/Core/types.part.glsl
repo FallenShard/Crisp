@@ -13,6 +13,17 @@ const int kBrdfMicrofacet = 3;
 const uint kBrdfOperationSample = 0;
 const uint kBrdfOperationEvaluate = 1;
 
+// Fixed layout of the sample vector. Every bounce restarts the sampler cursor at
+// kDimBounceBase + bounce * kDimsPerBounce, so a path that skips light sampling on a delta bounce
+// or has not reached the Russian-roulette cutoff still consumes the same dimensions as one that
+// does. A free-running cursor would let neighbouring pixels disagree on what dimension d means.
+const uint kDimPixelFilter = 0u; // 2 dimensions.
+const uint kDimBounceBase = 2u;
+const uint kDimsPerBounce = 8u;
+const uint kDimBsdf = 0u;            // 2 dimensions, relative to the bounce base.
+const uint kDimLight = 2u;           // 5 dimensions.
+const uint kDimRussianRoulette = 7u; // 1 dimension.
+
 // This structure is used to communicate hit information across path tracing shaders.
 struct HitInfo {
     vec3 position; // Out.
@@ -25,12 +36,12 @@ struct HitInfo {
     int lightId; // Out.
 
     vec3 sampleWeight; // Out, sampled f / pdf.
-    uint rngSeed;      // In/out.
+    uint materialId;   // Out.
 
     vec3 normal;         // Out.
     uint sampleLobeType; // Out.
 
-    uint materialId; // Out.
+    vec2 bsdfSample; // In, the unit-square sample the hit shader hands to the BSDF.
 };
 
 // This structure is used to communicate BRDF sampling across hit and callable shaders.

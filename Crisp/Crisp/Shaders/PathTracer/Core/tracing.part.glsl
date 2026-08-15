@@ -1,10 +1,14 @@
 #ifndef CRISP_PATH_TRACER_TRACING_GLSL
 #define CRISP_PATH_TRACER_TRACING_GLSL
 
-void traceRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
-    hitInfo.rngSeed = seed;
+// The BSDF sample is drawn here rather than in the hit shader so the sampler stays entirely in the
+// ray generation shader and the payload carries no RNG state. Drawing it up front also costs the
+// same dimensions whether or not the ray hits, which is what keeps paths aligned.
+void traceRay(
+    inout Sampler rng, in uint bounceDimBase, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
+    setDimension(rng, bounceDimBase + kDimBsdf);
+    hitInfo.bsdfSample = next2D(rng);
     traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, rayOrigin, tMin, rayDirection, tMax, kPayloadIndex);
-    seed = hitInfo.rngSeed;
 }
 
 bool traceShadowRay(in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {

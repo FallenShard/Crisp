@@ -15,25 +15,44 @@ uvec3 pcg3d(uvec3 v) {
     return v;
 }
 
-// From the original paper "PCG: A Family of Simple Fast Space-Efficient Statistically Good Algorithms for Random Number Generation", 2014.
-// https://www.cs.hmc.edu/tr/hmc-cs-2014-0905.pdf
-uint pcg(inout uint state) {
-    state = state * 747796405u + 2891336453u;
-    const uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-    return (word >> 22u) ^ word;
+float uintToUnitFloat(uint u) {
+    return float(u >> 8) * (1.0 / 16777216.0);
 }
 
-uint seedRng(uvec2 pixel, uint frameIdx) {
-    return pcg3d(uvec3(pixel, frameIdx)).x;
+struct Sampler {
+    uint seed;      // Per-pixel decorrelation.
+    uint sampleIdx; // frameIdx * sampleCount + i, unique per accumulated sample.
+    uint dimension; // Cursor into the sample vector, reset per bounce rather than free-running.
+};
+
+Sampler createSampler(uvec2 pixel, uint sampleIdx) {
+    Sampler s;
+    s.seed = pcg3d(uvec3(pixel, 0u)).x;
+    s.sampleIdx = sampleIdx;
+    s.dimension = 0u;
+    return s;
 }
 
-float rndFloat(inout uint seed) {
-    return float(pcg(seed) >> 8) * (1.0 / 16777216.0);
+// Paths of different lengths must not drift against each other, so callers restart the cursor at a
+// fixed base per bounce instead of letting it run on. See the kDim* constants in Core/types.
+void setDimension(inout Sampler s, uint dimension) {
+    s.dimension = dimension;
 }
 
-uint rndRange(inout uint seed, uint upper) {
-    const float f = rndFloat(seed);
-    return clamp(uint(f * float(upper)), 0, upper - 1);
+float next1D(inout Sampler s) {
+    return uintToUnitFloat(pcg3d(uvec3(s.seed, s.sampleIdx, s.dimension++)).x);
+}
+
+// pcg3d's outputs are independent, so one hash covers a 2D draw. The cursor still advances by two,
+// keeping the dimension budget identical to a backend that resolves each dimension separately.
+vec2 next2D(inout Sampler s) {
+    const uvec3 h = pcg3d(uvec3(s.seed, s.sampleIdx, s.dimension));
+    s.dimension += 2u;
+    return vec2(uintToUnitFloat(h.x), uintToUnitFloat(h.y));
+}
+
+uint nextRange(inout Sampler s, uint upper) {
+    return min(uint(next1D(s) * float(upper)), upper - 1u);
 }
 
 #endif // CRISP_RNG_GLSL

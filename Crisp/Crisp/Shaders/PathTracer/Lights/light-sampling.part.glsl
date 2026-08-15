@@ -1,21 +1,19 @@
 #ifndef CRISP_PATH_TRACER_LIGHT_SAMPLING_GLSL
 #define CRISP_PATH_TRACER_LIGHT_SAMPLING_GLSL
 
-float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out vec3 normal) {
+float sampleSurfaceCoord(inout Sampler rng, in uint meshId, out vec3 position, out vec3 normal) {
     const uint aliasTableOffset = scene.instances.data[meshId].aliasTableOffset;
     const uint triCount = scene.aliasTable.data[aliasTableOffset].j;
 
-    const uint elemIdx = 1 + rndRange(seed, triCount); // Add 1 to skip the header entry.
-    const float rndVal = rndFloat(seed);
+    const uint elemIdx = 1 + nextRange(rng, triCount); // Add 1 to skip the header entry.
+    const float rndVal = next1D(rng);
 
     uint sampledTriIdx = elemIdx - 1;
     if (rndVal > scene.aliasTable.data[aliasTableOffset + elemIdx].tau) {
         sampledTriIdx = scene.aliasTable.data[aliasTableOffset + elemIdx].j;
     }
 
-    const float r1 = rndFloat(seed);
-    const float r2 = rndFloat(seed);
-    const vec3 bary = squareToUniformTriangle(vec2(r1, r2));
+    const vec3 bary = squareToUniformTriangle(next2D(rng));
 
     const uint triangleOffset = scene.instances.data[meshId].indexOffset;
     const uvec3 sampledTriangle = scene.triangles.data[triangleOffset + sampledTriIdx];
@@ -27,7 +25,7 @@ float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out
 }
 
 vec3 sampleAreaLight(
-    inout uint seed,
+    inout Sampler rng,
     in uint meshId,
     in vec3 radiance,
     in vec3 refPoint,
@@ -38,7 +36,7 @@ vec3 sampleAreaLight(
 
     vec3 samplePos;
     vec3 sampleNormal;
-    const float shapePdf = sampleSurfaceCoord(seed, meshId, samplePos, sampleNormal);
+    const float shapePdf = sampleSurfaceCoord(rng, meshId, samplePos, sampleNormal);
 
     shadowRayDir = samplePos - refPoint;
 
@@ -60,12 +58,12 @@ vec3 sampleAreaLight(
 }
 
 vec3 sampleUniformLight(
-    inout uint seed, in vec3 refPoint, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
-    const uint lightId = rndRange(seed, integrator.lightCount);
+    inout Sampler rng, in vec3 refPoint, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
+    const uint lightId = nextRange(rng, integrator.lightCount);
     const float uniformPdf = 1.0f / float(integrator.lightCount);
 
     const vec3 radiance = sampleAreaLight(
-        seed,
+        rng,
         scene.lights.data[lightId].meshId,
         scene.lights.data[lightId].radiance,
         refPoint,

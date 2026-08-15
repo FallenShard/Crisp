@@ -6,7 +6,6 @@
 
 #include "PathTracer/Core/types.part.glsl"
 #include "Common/math-constants.part.glsl"
-#include "Common/rng.part.glsl"
 #include "Common/warp.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
@@ -52,9 +51,7 @@ void main() {
     bsdf.materialId = props.materialId;
     bsdf.operation = kBrdfOperationSample;
 
-    const float r1 = rndFloat(hitInfo.rngSeed);
-    const float r2 = rndFloat(hitInfo.rngSeed);
-    bsdf.unitSample = vec2(r1, r2);
+    bsdf.unitSample = hitInfo.bsdfSample;
 
     const int brdfType = scene.materials.data[props.materialId].type;
     executeCallableEXT(brdfType, /*location(bsdf)=*/0);
