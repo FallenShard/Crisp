@@ -1,6 +1,8 @@
 #include <Crisp/Io/FileUtils.hpp>
 
+#include <cstdint>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <system_error>
 
@@ -58,23 +60,45 @@ Result<std::vector<char>> readBinaryFile(const std::filesystem::path& filePath) 
         return resultError("Failed to open binary file: {}!", filePath.string());
     }
 
-    const auto fileSize = file.tellg();
-    std::vector<char> buffer(fileSize);
+    const auto fileSizeOffset = static_cast<std::streamoff>(file.tellg());
+    if (fileSizeOffset < 0) {
+        return resultError("Failed to determine the size of binary file: {}!", filePath.string());
+    }
 
-    file.seekg(0);
-    file.read(buffer.data(), fileSize);
+    const auto fileSize = static_cast<std::uintmax_t>(fileSizeOffset);
+    if (fileSize > std::numeric_limits<std::size_t>::max() ||
+        fileSize > static_cast<std::uintmax_t>(std::numeric_limits<std::streamsize>::max())) {
+        return resultError("Binary file is too large to read: {}!", filePath.string());
+    }
+
+    std::vector<char> buffer(static_cast<std::size_t>(fileSize));
+
+    file.seekg(0, std::ios::beg);
+    if (!file) {
+        return resultError("Failed to seek to the beginning of binary file: {}!", filePath.string());
+    }
+    if (!buffer.empty() && !file.read(buffer.data(), static_cast<std::streamsize>(buffer.size()))) {
+        return resultError("Failed to read binary file: {}!", filePath.string());
+    }
 
     return buffer;
 }
 
-Result<> writeBinaryFile(const std::filesystem::path& filePath, const std::span<const char> data) {
+Result<> writeBinaryFile(const std::filesystem::path& filePath, const std::span<const std::byte> data) {
+    if (data.size() > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max())) {
+        return resultError("Binary data is too large to write to {}!", filePath.string());
+    }
+
     std::ofstream file(filePath, std::ios::binary);
 
     if (!file.is_open()) {
         return resultError("Failed to open binary file: {}!", filePath.string());
     }
 
-    file.write(data.data(), static_cast<std::streamsize>(data.size()));
+    file.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size())); // NOLINT
+    if (!file) {
+        return resultError("Failed to write binary file: {}!", filePath.string());
+    }
 
     return kResultSuccess;
 }

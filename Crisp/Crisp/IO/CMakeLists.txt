@@ -9,6 +9,16 @@ target_link_libraries(
     PUBLIC Crisp::Format
 )
 
+add_cpp_test(
+    CrispFileUtilsTest
+    "Test/FileUtilsTest.cpp"
+)
+target_link_libraries(
+    CrispFileUtilsTest
+    PRIVATE Crisp::FileUtils
+    PRIVATE Crisp::UniqueTemporaryFile
+)
+
 add_cpp_header_library(
     CrispJsonUtils
     "JsonUtils.hpp"
