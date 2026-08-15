@@ -4,7 +4,7 @@
 float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out vec3 normal) {
     const uint aliasTableOffset = scene.instances.data[meshId].aliasTableOffset;
     const uint triCount = scene.aliasTable.data[aliasTableOffset].j;
-    
+
     const uint elemIdx = 1 + rndRange(seed, triCount); // Add 1 to skip the header entry.
     const float rndVal = rndFloat(seed);
 
@@ -26,13 +26,20 @@ float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out
     return scene.aliasTable.data[aliasTableOffset].tau;
 }
 
-vec3 sampleAreaLight(inout uint seed, in uint meshId, in vec3 radiance, in vec3 refPoint, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
+vec3 sampleAreaLight(
+    inout uint seed,
+    in uint meshId,
+    in vec3 radiance,
+    in vec3 refPoint,
+    out vec3 shadowRayDir,
+    out float shadowRayLen,
+    out float lightPdf) {
     lightPdf = 0.0f;
 
     vec3 samplePos;
     vec3 sampleNormal;
     const float shapePdf = sampleSurfaceCoord(seed, meshId, samplePos, sampleNormal);
-    
+
     shadowRayDir = samplePos - refPoint;
 
     const float squaredDist = dot(shadowRayDir, shadowRayDir);
@@ -52,10 +59,11 @@ vec3 sampleAreaLight(inout uint seed, in uint meshId, in vec3 radiance, in vec3 
     return radiance / lightPdf;
 }
 
-vec3 sampleUniformLight(inout uint seed, in vec3 refPoint, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
+vec3 sampleUniformLight(
+    inout uint seed, in vec3 refPoint, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
     const uint lightId = rndRange(seed, integrator.lightCount);
     const float uniformPdf = 1.0f / float(integrator.lightCount);
-    
+
     const vec3 radiance = sampleAreaLight(
         seed,
         scene.lights.data[lightId].meshId,

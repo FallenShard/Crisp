@@ -1,8 +1,8 @@
 #version 450 core
 
-#extension GL_GOOGLE_include_directive: require
-#extension GL_EXT_buffer_reference: require
-#extension GL_EXT_nonuniform_qualifier: require
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_nonuniform_qualifier : require
 
 #define PI 3.1415926535897932384626433832795
 
@@ -22,8 +22,7 @@ layout(location = 5) in vec3 worldPos;
 
 layout(location = 0) out vec4 fragColor;
 
-struct LightDescriptor
-{
+struct LightDescriptor {
     mat4 V;
     mat4 P;
     mat4 VP;
@@ -71,14 +70,14 @@ layout(push_constant) uniform DrawParameters {
     PbrMaterialTable materialTable;
     uint materialIndex;
     uint padding;
-} drawParameters;
+}
+drawParameters;
 
 // The indices come from one material selected by push constants, so they are dynamically uniform and skip
 // nonuniformEXT.
 vec4 sampleMaterial(const PbrMaterialParameters material, const uint textureIndex, const vec2 uv) {
     return texture(sampler2D(gTextures2D[textureIndex], gSamplers[material.samplerIndex]), uv);
 }
-
 
 vec3 evalDirectionalLightRadiance(out vec3 eyeL) {
     eyeL = normalize((view.V * cascadedLight[0].direction).xyz);
@@ -88,24 +87,27 @@ vec3 evalDirectionalLightRadiance(out vec3 eyeL) {
 // ----- Cascaded Shadow Mapping
 bool isInCascade(in vec3 worldPos, in mat4 lightVP) {
     const vec4 lightSpacePos = lightVP * vec4(worldPos, 1.0f);
-    return all(greaterThan(lightSpacePos.xyz, NdcMin * lightSpacePos.w)) && all(lessThan(lightSpacePos.xyz, NdcMax * lightSpacePos.w));
+    return all(greaterThan(lightSpacePos.xyz, NdcMin * lightSpacePos.w)) &&
+           all(lessThan(lightSpacePos.xyz, NdcMax * lightSpacePos.w));
 }
 
 // Check-in-bounds based
 float evalCascadedShadow(vec3 worldPos, float bias) {
     int cascadeIndex = 3;
-    if (isInCascade(worldPos, cascadedLight[0].VP))
-       cascadeIndex = 0;
-    else if (isInCascade(worldPos, cascadedLight[1].VP))
-       cascadeIndex = 1;
-    else if (isInCascade(worldPos, cascadedLight[2].VP))
-       cascadeIndex = 2;
+    if (isInCascade(worldPos, cascadedLight[0].VP)) {
+        cascadeIndex = 0;
+    } else if (isInCascade(worldPos, cascadedLight[1].VP)) {
+        cascadeIndex = 1;
+    } else if (isInCascade(worldPos, cascadedLight[2].VP)) {
+        cascadeIndex = 2;
+    }
 
     vec4 lightSpacePos = cascadedLight[cascadeIndex].VP * vec4(worldPos, 1.0f);
     vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 
-    if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax)))
+    if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax))) {
         return 1.0f;
+    }
 
     vec3 texCoord = vec3(ndcPos.xy * 0.5f + 0.5f, cascadeIndex);
 
@@ -115,11 +117,9 @@ float evalCascadedShadow(vec3 worldPos, float bias) {
     const int pcfRadius = 2;
     const float numSamples = (2 * pcfRadius + 1) * (2 * pcfRadius + 1);
 
-    float amount  = 0.0f;
-    for (int i = -pcfRadius; i <= pcfRadius; i++)
-    {
-        for (int j = -pcfRadius; j <= pcfRadius; j++)
-        {
+    float amount = 0.0f;
+    for (int i = -pcfRadius; i <= pcfRadius; i++) {
+        for (int j = -pcfRadius; j <= pcfRadius; j++) {
             vec2 tc = texCoord.xy + vec2(i, j) * texelSize;
             float shadowMapDepth = texture(cascadedShadowMaps[cascadeIndex], tc).r;
             amount += shadowMapDepth < (lightSpacePos.z - bias) / lightSpacePos.w ? 0.0f : 1.0f;
@@ -133,11 +133,11 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
     const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
     const vec3 irradiance = texture(diffuseIrradianceMap, worldN).rgb;
     const vec3 diffuse = irradiance * albedo;
-    
+
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
     const vec3 eyeR = reflect(-eyeV, eyeN);
     const vec3 worldR = (view.invV * vec4(eyeR, 0.0f)).rgb;
-   
+
     const float MaxReflectionLod = 8.0f;
     const vec3 prefilter = textureLod(specularReflectanceMap, worldR, roughness * MaxReflectionLod).rgb;
     const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
@@ -147,13 +147,12 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
 }
 
 vec3 decodeNormal(const PbrMaterialParameters material, in vec2 uv) {
-    vec3 normal  = normalize(eyeNormal);
+    vec3 normal = normalize(eyeNormal);
     // Have to check this because without UVs, computed tangents will be NaN.
-    if (any(isnan(eyeTangent)))
-    {
+    if (any(isnan(eyeTangent))) {
         return normal;
     }
-    
+
     vec3 tangent = normalize(eyeTangent);
     vec3 bitangent = normalize(eyeBitangent);
     mat3 TBN = mat3(tangent, bitangent, normal);
@@ -162,8 +161,7 @@ vec3 decodeNormal(const PbrMaterialParameters material, in vec2 uv) {
     return normalize(TBN * normalize(n * 2.0f - 1.0f));
 }
 
-vec3 sheenLogic()
-{
+vec3 sheenLogic() {
     /*
     // Basic shading geometry
     const vec3 eyeN = normalize(eyeNormal);
@@ -220,8 +218,8 @@ vec3 sheenLogic()
     const float sheenRoughness = 0.5f;
     const float alphaSheen = sheenRoughness * sheenRoughness;
     const vec3 sheenColor = vec3(1, 1, 0);
-    const vec3 sheen = sheenColor * sheenD(NdotH, alphaSheen) * sheenG(LdotH, VdotH, NdotV, NdotL, alphaSheen) * invDenomFactor;
-    const float sheenScale = sheenScale(sheenColor, NdotV, NdotL, alphaSheen, sheenLut);
+    const vec3 sheen = sheenColor * sheenD(NdotH, alphaSheen) * sheenG(LdotH, VdotH, NdotV, NdotL, alphaSheen) *
+invDenomFactor; const float sheenScale = sheenScale(sheenColor, NdotV, NdotL, alphaSheen, sheenLut);
 
     const vec3 Li = ((diffuse + specularity) * sheenScale + sheen) * Le * NdotL;
 
@@ -298,10 +296,9 @@ vec3 sheenLogic()
 }
 
 void main() {
-    const PbrMaterialParameters material =
-        drawParameters.materialTable.materials[drawParameters.materialIndex];
+    const PbrMaterialParameters material = drawParameters.materialTable.materials[drawParameters.materialIndex];
     const vec2 uvCoord = inTexCoord * material.uvScale;
-    
+
     // Basic shading geometry.
     const vec3 eyeN = decodeNormal(material, uvCoord);
     const vec3 eyeV = normalize(-eyePosition);

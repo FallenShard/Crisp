@@ -17,7 +17,6 @@ void main() {
     }
 
     brdf.lobeType = kLobeTypeDiffuse;
-    brdf.f = evaluateLambertian(
-        scene.materials.data[brdf.materialId].albedo, brdf.wi, brdf.wo);
+    brdf.f = evaluateLambertian(scene.materials.data[brdf.materialId].albedo, brdf.wi, brdf.wo);
     brdf.pdf = lambertianPdf(brdf.wi, brdf.wo);
 }

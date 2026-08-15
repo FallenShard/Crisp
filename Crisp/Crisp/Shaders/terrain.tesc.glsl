@@ -1,13 +1,12 @@
 #version 450 core
 
-#extension GL_GOOGLE_include_directive: require
+#extension GL_GOOGLE_include_directive : require
 
 #include "Common/view.part.glsl"
 
 layout(vertices = 4) out;
 
-layout(set = 0, binding = 0) uniform Transforms
-{
+layout(set = 0, binding = 0) uniform Transforms {
     mat4 MVP;
     mat4 MV;
     mat4 M;
@@ -18,14 +17,12 @@ layout(set = 0, binding = 2) uniform View {
     ViewParameters view;
 };
 
-layout(push_constant) uniform PushConstants
-{
+layout(push_constant) uniform PushConstants {
     layout(offset = 0) float worldScale;
     layout(offset = 4) float triangleSize;
 };
 
-float calculateTess(vec4 p1, vec4 p2, float diameter)
-{
+float calculateTess(vec4 p1, vec4 p2, float diameter) {
     vec4 center = 0.5f * (p1 + p2);
     vec4 eyeCenter = MV * center;
     vec4 eyeSurfPt = eyeCenter;
@@ -51,8 +48,7 @@ float calculateTess(vec4 p1, vec4 p2, float diameter)
     return clamp(d / triangleSize, 1.0f, 32.0f);
 }
 
-void main()
-{
+void main() {
     float s1 = abs(gl_in[0].gl_Position.x - gl_in[3].gl_Position.x);
     float s2 = abs(gl_in[0].gl_Position.x - gl_in[1].gl_Position.x);
     float sideLen = max(s1, s2);

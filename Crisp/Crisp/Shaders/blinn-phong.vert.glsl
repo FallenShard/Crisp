@@ -7,16 +7,14 @@ layout(location = 0) out vec3 eyePos;
 layout(location = 1) out vec3 eyeNormal;
 layout(location = 2) out vec3 worldPos;
 
-layout(set = 0, binding = 0) uniform Transforms
-{
+layout(set = 0, binding = 0) uniform Transforms {
     mat4 MVP;
     mat4 MV;
     mat4 M;
     mat4 N;
 };
 
-void main()
-{
+void main() {
     worldPos = (M * vec4(position, 1.0f)).xyz;
     eyePos = (MV * vec4(position, 1.0f)).xyz;
     eyeNormal = (MV * vec4(normal, 0.0f)).xyz;

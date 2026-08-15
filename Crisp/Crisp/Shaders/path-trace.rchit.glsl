@@ -35,14 +35,14 @@ void main() {
     const uvec3 hitTriangle = scene.triangles.data[props.indexOffset + gl_PrimitiveID];
 
     const vec3 baryCoord = vec3(1.0 - barycentric.x - barycentric.y, barycentric.x, barycentric.y);
-    const vec3 normal   = interpolateNormal(hitTriangle, baryCoord);
+    const vec3 normal = interpolateNormal(hitTriangle, baryCoord);
     const vec3 position = interpolatePosition(hitTriangle, baryCoord);
 
     // Record the hit info for the calling shader.
     hitInfo.position = position;
     hitInfo.tHit = gl_HitTEXT;
     hitInfo.normal = normal;
-    
+
     // Determine sampled BRDF and the new path direction.
 
     const mat3 worldTransform = createCoordinateFrame(normal);
@@ -64,7 +64,7 @@ void main() {
     hitInfo.sampleLobeType = bsdf.lobeType;
     hitInfo.materialId = props.materialId;
 
-    // Account for any lights hit.    
+    // Account for any lights hit.
     hitInfo.Le = vec3(0.0f);
     hitInfo.lightId = -1;
     if (props.lightId != -1) {

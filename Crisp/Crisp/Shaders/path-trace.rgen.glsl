@@ -30,24 +30,17 @@ layout(set = 1, binding = 3) uniform IntegratorParams {
     int lightCount;
     int shapeCount;
     int samplingMode;
-} integrator;
+}
+integrator;
 
 #include "PathTracer/Core/scene.part.glsl"
 #include "PathTracer/Core/intersection.part.glsl"
 #include "PathTracer/BSDFs/bsdf-eval.part.glsl"
 
-BrdfEval evaluateBrdfWorldSpace(
-    vec3 normal,
-    vec3 wi,
-    vec3 wo,
-    uint materialId)
-{
+BrdfEval evaluateBrdfWorldSpace(vec3 normal, vec3 wi, vec3 wo, uint materialId) {
     const mat3 coordinateFrame = createCoordinateFrame(normal);
     const mat3 worldToLocal = transpose(coordinateFrame);
-    return evaluateBrdf(
-        scene.materials.data[materialId],
-        worldToLocal * wi,
-        worldToLocal * wo);
+    return evaluateBrdf(scene.materials.data[materialId], worldToLocal * wi, worldToLocal * wo);
 }
 
 #include "PathTracer/Core/tracing.part.glsl"
@@ -87,8 +80,7 @@ vec3 computeRadianceDirectLighting(inout uint seed) {
     const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-            const BrdfEval lightDirectionBrdf =
-                evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
+            const BrdfEval lightDirectionBrdf = evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
             L += radiance * lightDirectionBrdf.f;
         }
     }
@@ -112,7 +104,7 @@ vec3 computeRadianceMis(inout uint seed) {
     vec4 rayDirection;
     sampleRay(rayOrigin, rayDirection, pixelSample);
     const float tMin = 1e-4;
-    const float tMax = view.nearFar[1]; 
+    const float tMax = view.nearFar[1];
 
     // Accumulated radiance L for this path.
     vec3 L = vec3(0.0f);
@@ -151,8 +143,7 @@ vec3 computeRadianceMis(inout uint seed) {
     const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-            const BrdfEval lightDirectionBrdf =
-                evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
+            const BrdfEval lightDirectionBrdf = evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
             L += radiance * lightDirectionBrdf.f * powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
         }
     }
@@ -191,8 +182,7 @@ vec3 computeRadianceMisPt(inout uint seed) {
         if (hitInfo.lightId != -1) {
             float misWeight = 1.0f;
             if (bounceCount > 0 && !prevWasDelta) {
-                const float lightPdf =
-                    getLightPdf(hitInfo.lightId, hitInfo.position - prevPosition, hitInfo.normal);
+                const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - prevPosition, hitInfo.normal);
                 misWeight = powerHeuristic(prevSamplePdf, lightPdf);
             }
             L += throughput * hitInfo.Le * misWeight;
@@ -219,10 +209,8 @@ vec3 computeRadianceMisPt(inout uint seed) {
             const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
             if (lightPdf > 0.0f) {
                 if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-                    const BrdfEval lightDirectionBrdf =
-                        evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
-                    L += throughput * radiance * lightDirectionBrdf.f *
-                        powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
+                    const BrdfEval lightDirectionBrdf = evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
+                    L += throughput * radiance * lightDirectionBrdf.f * powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
                 }
             }
         }
@@ -235,7 +223,7 @@ vec3 computeRadianceMisPt(inout uint seed) {
         prevWasDelta = isDelta;
 
         // Setup the next ray.
-        rayOrigin.xyz    = p;
+        rayOrigin.xyz = p;
         rayDirection.xyz = rayDir;
 
         if (++bounceCount > kRussianRouletteCutoff) { // Cut the path tracing with Russian roulette.
@@ -256,7 +244,7 @@ vec3 computeRadiance(inout uint seed) {
     // Sample a point on the screen and transform it into a ray.
     const vec2 subpixelSample = vec2(rndFloat(seed), rndFloat(seed));
     const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
-    
+
     vec4 rayOrigin;
     vec4 rayDirection;
     sampleRay(rayOrigin, rayDirection, pixelSample);
@@ -281,7 +269,7 @@ vec3 computeRadiance(inout uint seed) {
             throughput *= hitInfo.sampleWeight; // equal to f(wi) * cos(wo) / pdf(wo).
 
             // Setup the next ray.
-            rayOrigin.xyz    = hitInfo.position;
+            rayOrigin.xyz = hitInfo.position;
             rayDirection.xyz = hitInfo.sampleDirection;
         } else { // The ray missed, evaluate environment lighting and exit the loop.
             // L += throughput * texture(environmentMap, rayDirection);
@@ -324,9 +312,9 @@ void main() {
     L /= sampleCount;
 
     if (integrator.frameIdx > 0) {
-       const float t = 1.0f / (integrator.frameIdx + 1);
-       const vec3 prevVal = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
-       L = mix(prevVal, L, t);
+        const float t = 1.0f / (integrator.frameIdx + 1);
+        const vec3 prevVal = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
+        L = mix(prevVal, L, t);
     }
 
     imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(L, 1.0));

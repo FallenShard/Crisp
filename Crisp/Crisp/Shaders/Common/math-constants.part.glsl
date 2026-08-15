@@ -32,5 +32,4 @@ mat3 createCoordinateFrame(in vec3 normal) {
 //     v2 = cross(v3, v1);
 // }
 
-
 #endif // CRISP_MATH_CONSTANTS_GLSL

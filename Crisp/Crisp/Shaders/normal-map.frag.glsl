@@ -13,8 +13,7 @@ layout(location = 5) in vec3 eyeBitangent;
 
 layout(location = 0) out vec4 finalColor;
 
-layout(set = 0, binding = 0) uniform TransformPack
-{
+layout(set = 0, binding = 0) uniform TransformPack {
     mat4 MVP;
     mat4 MV;
     mat4 M;
@@ -25,13 +24,13 @@ layout(set = 0, binding = 1) uniform View {
     ViewParameters view;
 };
 
-//layout(set = 1, binding = 1) uniform sampler2D vsm;
+// layout(set = 1, binding = 1) uniform sampler2D vsm;
 
 layout(set = 1, binding = 0) uniform sampler2D normalMap;
 layout(set = 1, binding = 1) uniform sampler2D diffuseMap;
 layout(set = 1, binding = 2) uniform sampler2D specularMap;
 //
-//layout(set = 2, binding = 0) uniform Light
+// layout(set = 2, binding = 0) uniform Light
 //{
 //    mat4 VP;
 //    mat4 V;
@@ -40,16 +39,16 @@ layout(set = 1, binding = 2) uniform sampler2D specularMap;
 //    vec3 spectrum;
 //} light;
 //
-//layout(set = 2, binding = 1) uniform sampler2D shadowMap;
+// layout(set = 2, binding = 1) uniform sampler2D shadowMap;
 
-#define PI         3.14159265358979323846
-#define InvPI      0.31830988618379067154
-#define InvTwoPI   0.15915494309189533577
-#define InvFourPI  0.07957747154594766788
-#define SqrtTwo    1.41421356237309504880
+#define PI 3.14159265358979323846
+#define InvPI 0.31830988618379067154
+#define InvTwoPI 0.15915494309189533577
+#define InvFourPI 0.07957747154594766788
+#define SqrtTwo 1.41421356237309504880
 #define InvSqrtTwo 0.70710678118654752440
 const vec4 lightPos = vec4(5.0f, 5.0f, 5.0f, 1.0f);
-//const vec4 lightDir = vec4(normalize(vec3(0.0f, 0.0f, 5.0f)), 0.0f);
+// const vec4 lightDir = vec4(normalize(vec3(0.0f, 0.0f, 5.0f)), 0.0f);
 const vec4 lightDir = vec4(normalize(vec3(1.0f, 1.0f, 1.0f)), 0.0f);
 
 const vec3 ndcMin = vec3(-1.0f, -1.0f, 0.0f);
@@ -58,41 +57,41 @@ const vec3 ndcMax = vec3(+1.0f, +1.0f, 1.0f);
 const vec4 splitNear = vec4(0.1f, 10.0f, 30.0f, 70.0f);
 const vec4 splitFar = vec4(10.0f, 30.0f, 70.0f, 150.0f);
 
-//float getShadowCoeff()
+// float getShadowCoeff()
 //{
-//   vec4 lightSpacePos = light.VP * vec4(worldPos, 1.0f);
-//   vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
+//    vec4 lightSpacePos = light.VP * vec4(worldPos, 1.0f);
+//    vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 //
-//   if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
-//       return 1.0f;
-//
-//   vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
-//   float shadowMapDepth = texture(shadowMap, texCoord).r;
-//
-//   return shadowMapDepth < ndcPos.z ? 0.0f : 1.0f;
-//}
-
-//float getVSMCoeff() {
-//    vec4 lightViewPos = pushConst.LV * vec4(worldPos, 1.0f);
-//    float lightViewDist = -lightViewPos.z;
-//
-//    vec4 clipPos = pushConst.LP * lightViewPos;
-//    vec3 ndcPos = clipPos.xyz / clipPos.w;
 //    if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
-//        return 0.2f;
-//
-//    vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
-//    vec2 moments = texture(vsm, texCoord).rg;
-//
-//    if (lightViewDist <= moments.x)
 //        return 1.0f;
 //
-//    float variance = moments.y - moments.x * moments.x;
-//    variance = max(variance, 0.002);
-//    float t = lightViewDist - moments.x;
-//    float p = variance / (variance + t * t);
-//    return p * 0.8f + 0.2f;
-//}
+//    vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
+//    float shadowMapDepth = texture(shadowMap, texCoord).r;
+//
+//    return shadowMapDepth < ndcPos.z ? 0.0f : 1.0f;
+// }
+
+// float getVSMCoeff() {
+//     vec4 lightViewPos = pushConst.LV * vec4(worldPos, 1.0f);
+//     float lightViewDist = -lightViewPos.z;
+//
+//     vec4 clipPos = pushConst.LP * lightViewPos;
+//     vec3 ndcPos = clipPos.xyz / clipPos.w;
+//     if (any(lessThan(ndcPos, ndcMin)) || any(greaterThan(ndcPos, ndcMax)))
+//         return 0.2f;
+//
+//     vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
+//     vec2 moments = texture(vsm, texCoord).rg;
+//
+//     if (lightViewDist <= moments.x)
+//         return 1.0f;
+//
+//     float variance = moments.y - moments.x * moments.x;
+//     variance = max(variance, 0.002);
+//     float t = lightViewDist - moments.x;
+//     float p = variance / (variance + t * t);
+//     return p * 0.8f + 0.2f;
+// }
 
 // vec3 shadowEstimate(vec3 worldPos, float bias, in sampler2D sMap, in mat4 lvp)
 // {
@@ -105,7 +104,6 @@ const vec4 splitFar = vec4(10.0f, 30.0f, 70.0f, 150.0f);
 //     // weight = vec4(eyeDist > splitNear) * vec4(eyeDist < splitFar);
 
 //     // lsPos = lsPos0 * weight.x + lsPos1 * weight.y + lsPos2 * weight.z + lsPos3 * weight.w;
-
 
 //     vec3 projPos = lsPos.xyz / lsPos.w;
 
@@ -175,29 +173,28 @@ const vec4 splitFar = vec4(10.0f, 30.0f, 70.0f, 150.0f);
 //         return vec3(0.15, 0.15, 0.75) * InvPI;
 // }
 
-//vec3 Li(out vec3 wi)
+// vec3 Li(out vec3 wi)
 //{
-//    if (light.position.w == 0.0f)
-//    {
-//        wi = -vec3(V * light.position);
-//        return light.spectrum;
-//    }
-//    else
-//    {
-//        wi = vec3(V * light.position) - eyePos;
-//        float dist2 = dot(wi, wi);
-//        return light.spectrum * InvFourPI / dist2;
-//    }
-//}
+//     if (light.position.w == 0.0f)
+//     {
+//         wi = -vec3(V * light.position);
+//         return light.spectrum;
+//     }
+//     else
+//     {
+//         wi = vec3(V * light.position) - eyePos;
+//         float dist2 = dot(wi, wi);
+//         return light.spectrum * InvFourPI / dist2;
+//     }
+// }
 
-void main()
-{
-    vec3 normal  = normalize(eyeNormal);
+void main() {
+    vec3 normal = normalize(eyeNormal);
     vec3 tangent = normalize(eyeTangent);
     vec3 bitangent = normalize(eyeBitangent);
 
     // Gram-Schmidt reorthogonalization
-    tangent   = normalize(tangent   - normal * dot(tangent, normal));
+    tangent = normalize(tangent - normal * dot(tangent, normal));
     bitangent = normalize(bitangent - normal * dot(bitangent, normal) - tangent * dot(bitangent, tangent));
     mat3 TBN = mat3(tangent, bitangent, normal);
 

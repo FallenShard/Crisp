@@ -35,12 +35,6 @@ void main() {
     }
 
     brdf.f = evaluateMicrofacet(
-        material.kd,
-        material.ks,
-        material.extIor,
-        material.intIor,
-        material.microfacetAlpha,
-        brdf.wi,
-        brdf.wo);
+        material.kd, material.ks, material.extIor, material.intIor, material.microfacetAlpha, brdf.wi, brdf.wo);
     brdf.pdf = microfacetPdf(brdf.wi, brdf.wo, material.ks, material.microfacetAlpha);
 }

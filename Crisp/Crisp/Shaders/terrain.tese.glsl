@@ -2,8 +2,7 @@
 
 layout(quads, fractional_even_spacing, cw) in;
 
-layout(set = 0, binding = 0) uniform Transforms
-{
+layout(set = 0, binding = 0) uniform Transforms {
     mat4 MVP;
     mat4 MV;
     mat4 M;
@@ -14,8 +13,7 @@ layout(location = 0) out vec3 color;
 
 layout(set = 0, binding = 1) uniform sampler2D heightMap;
 
-void main()
-{
+void main() {
     vec4 a = mix(gl_in[0].gl_Position, gl_in[1].gl_Position, gl_TessCoord.x);
     vec4 b = mix(gl_in[3].gl_Position, gl_in[2].gl_Position, gl_TessCoord.x);
     vec4 position = mix(a, b, gl_TessCoord.y);

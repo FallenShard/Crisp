@@ -13,8 +13,7 @@ layout(set = 0, binding = 1, rg32f) uniform writeonly image2D packedHeightDispXI
 layout(set = 0, binding = 2, rg32f) uniform writeonly image2D packedDispZNormalXImg;
 layout(set = 0, binding = 3, rg32f) uniform writeonly image2D normalZImg;
 
-layout(push_constant) uniform PushConstant
-{
+layout(push_constant) uniform PushConstant {
     int N;
     int M;
     float Lx;
@@ -33,14 +32,11 @@ layout(push_constant) uniform PushConstant
 
 const float g = 9.81;
 
-vec2 complexMul(vec2 z1, vec2 z2)
-{
-    return vec2(z1[0] * z2[0] - z1[1] * z2[1],
-                z1[0] * z2[1] + z1[1] * z2[0]);
+vec2 complexMul(vec2 z1, vec2 z2) {
+    return vec2(z1[0] * z2[0] - z1[1] * z2[1], z1[0] * z2[1] + z1[1] * z2[0]);
 }
 
-float calculatePhillipsSpectrum(const vec2 k)
-{
+float calculatePhillipsSpectrum(const vec2 k) {
     const float kLen2 = dot(k, k) + 0.000001f;
     const vec2 kDir = kLen2 == 0.0f ? vec2(0.0f) : k / sqrt(kLen2);
 
@@ -53,8 +49,7 @@ float calculatePhillipsSpectrum(const vec2 k)
     return A * expTerm * (kDotW * kDotW) * tail;
 }
 
-void main()
-{
+void main() {
     const ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
     const ivec2 idx = gid - ivec2(N, M) / 2;
     const vec2 k = vec2(idx) * 2.0f * PI / vec2(Lx, Lz);
@@ -72,8 +67,7 @@ void main()
 
     const float sqrtFactor = sqrt(2.0f) * 0.5f * amplitudeScale;
     const vec2 h0 = imageLoad(initialSpectrumImg, gid).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(k));
-    const vec2 h0MinusK =
-        imageLoad(initialSpectrumImg, mirrorGid).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(-k));
+    const vec2 h0MinusK = imageLoad(initialSpectrumImg, mirrorGid).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(-k));
     const vec2 h0Conj = vec2(h0MinusK.x, -h0MinusK.y);
 
     // The dispersion relation.

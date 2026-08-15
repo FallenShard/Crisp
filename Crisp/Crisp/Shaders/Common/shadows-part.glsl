@@ -3,13 +3,13 @@ const vec3 NdcMin = vec3(-1.0f, -1.0f, 0.0f);
 const vec3 NdcMax = vec3(+1.0f, +1.0f, 1.0f);
 
 // ----- Standard Shadow Mapping
-float getShadowCoeff(float bias, mat4 lightVP)
-{
+float getShadowCoeff(float bias, mat4 lightVP) {
     vec4 lightSpacePos = lightVP * vec4(worldPos, 1.0f);
     vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 
-    if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax)))
+    if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax))) {
         return 0.0f;
+    }
 
     vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
 
@@ -21,13 +21,13 @@ float getShadowCoeff(float bias, mat4 lightVP)
 }
 
 // ----- Percentage Closer Filtering
-float getPcfShadowCoeff(float bias, mat4 lightVP, int pcfRadius)
-{
+float getPcfShadowCoeff(float bias, mat4 lightVP, int pcfRadius) {
     vec4 lightSpacePos = lightVP * vec4(worldPos, 1.0f);
     vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 
-    if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax)))
+    if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax))) {
         return 0.0f;
+    }
 
     vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
 
@@ -36,11 +36,9 @@ float getPcfShadowCoeff(float bias, mat4 lightVP, int pcfRadius)
 
     const float numSamples = (2 * pcfRadius + 1) * (2 * pcfRadius + 1);
 
-    float amount  = 0.0f;
-    for (int i = -pcfRadius; i <= pcfRadius; i++)
-    {
-        for (int j = -pcfRadius; j <= pcfRadius; j++)
-        {
+    float amount = 0.0f;
+    for (int i = -pcfRadius; i <= pcfRadius; i++) {
+        for (int j = -pcfRadius; j <= pcfRadius; j++) {
             vec2 tc = texCoord + vec2(i, j) * texelSize;
             float shadowMapDepth = texture(pointShadowMap, tc).r;
             amount += shadowMapDepth < (lightSpacePos.z - bias) / lightSpacePos.w ? 0.0f : 1.0f;
@@ -51,8 +49,7 @@ float getPcfShadowCoeff(float bias, mat4 lightVP, int pcfRadius)
 }
 
 // ----- Cascaded Shadow Mapping
-bool isInCascade(vec3 worldPos, mat4 lightVP)
-{
+bool isInCascade(vec3 worldPos, mat4 lightVP) {
     vec4 lightSpacePos = lightVP * vec4(worldPos, 1.0f);
     vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 
@@ -60,22 +57,16 @@ bool isInCascade(vec3 worldPos, mat4 lightVP)
 }
 
 // Check-in-bounds based
-float getCsmShadowCoeffDebug(float cosTheta, out vec3 color)
-{
+float getCsmShadowCoeffDebug(float cosTheta, out vec3 color) {
     color = vec3(0.0f, 0.0f, 1.0f);
     int cascadeIndex = 3;
-    if (isInCascade(0))
-    {
+    if (isInCascade(0)) {
         color = vec3(1.0f, 0.0f, 0.0f);
         cascadeIndex = 0;
-    }
-    else if (isInCascade(1))
-    {
+    } else if (isInCascade(1)) {
         color = vec3(1.0f, 1.0f, 0.0f);
         cascadeIndex = 1;
-    }
-    else if (isInCascade(2))
-    {
+    } else if (isInCascade(2)) {
         color = vec3(0.0f, 1.0f, 0.0f);
         cascadeIndex = 2;
     }
@@ -87,16 +78,14 @@ float getCsmShadowCoeffDebug(float cosTheta, out vec3 color)
     return getShadowCoeff(bias, lightTransforms.VP[cascadeIndex], cascadeIndex);
 }
 
-
-
 // ----- Variance Shadow Mapping
-vec3 getVsmCoeff(vec3 worldPos, mat4 lightVP, float bias)
-{
+vec3 getVsmCoeff(vec3 worldPos, mat4 lightVP, float bias) {
     vec4 lightSpacePos = lightVP * vec4(worldPos, 1.0f);
     vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 
-    if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax)))
+    if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax))) {
         return vec3(0.0f);
+    }
 
     vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
 
@@ -105,10 +94,8 @@ vec3 getVsmCoeff(vec3 worldPos, mat4 lightVP, float bias)
 
     int pcfRadius = 5;
     vec2 moments = vec2(0.0f);
-    for (int i = -pcfRadius; i <= pcfRadius; i++)
-    {
-        for (int j = -pcfRadius; j <= pcfRadius; j++)
-        {
+    for (int i = -pcfRadius; i <= pcfRadius; i++) {
+        for (int j = -pcfRadius; j <= pcfRadius; j++) {
             vec2 tc = texCoord + vec2(i, j) * texelSize;
             moments += texture(pointShadowMap, tc).rg;
         }
@@ -126,6 +113,6 @@ vec3 getVsmCoeff(vec3 worldPos, mat4 lightVP, float bias)
     float mD = fragDepth - moments.x;
     float mD_2 = mD * mD;
     float p = variance / (variance + mD_2);
-    float lit = max( p, float(fragDepth <= moments.x) );
+    float lit = max(p, float(fragDepth <= moments.x));
     return vec3(lit);
 }

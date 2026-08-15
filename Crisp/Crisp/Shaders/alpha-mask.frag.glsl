@@ -19,9 +19,8 @@ layout(location = 0) out vec4 outColor;
 layout(set = 1, binding = 0) uniform sampler2D tex;
 layout(set = 1, binding = 1) uniform sampler2D normalMap;
 
-vec3 decodeNormal(in vec2 uv)
-{
-    vec3 normal  = normalize(eyeNormal);
+vec3 decodeNormal(in vec2 uv) {
+    vec3 normal = normalize(eyeNormal);
     vec3 tangent = normalize(eyeTangent);
     vec3 bitangent = normalize(eyeBitangent);
     mat3 TBN = mat3(tangent, bitangent, normal);
@@ -32,8 +31,7 @@ vec3 decodeNormal(in vec2 uv)
 }
 
 // ----- Lights and Shadows -----
-struct LightDescriptor
-{
+struct LightDescriptor {
     mat4 V;
     mat4 P;
     mat4 VP;
@@ -44,11 +42,9 @@ struct LightDescriptor
 };
 
 // ----- Directional Light -----
-layout(set = 1, binding = 2) uniform CascadedLight
-{
+layout(set = 1, binding = 2) uniform CascadedLight {
     LightDescriptor cascadedLight[4];
 };
-
 
 // ----- Camera -----
 layout(set = 1, binding = 3) uniform View {
@@ -58,70 +54,63 @@ layout(set = 1, binding = 3) uniform View {
 // ----- Camera -----
 layout(set = 1, binding = 4) uniform sampler2DArray cascadedShadowMapArray;
 
-vec3 evalDirectionalLightRadiance(out vec3 eyeL)
-{
+vec3 evalDirectionalLightRadiance(out vec3 eyeL) {
     eyeL = normalize((view.V * cascadedLight[0].direction).xyz);
     return cascadedLight[0].spectrum.rgb;
 }
 
 // ----- Environment Lighting -----
-layout (set = 2, binding = 0) uniform samplerCube irrMap;
-layout (set = 2, binding = 1) uniform samplerCube refMap;
-layout (set = 2, binding = 2) uniform sampler2D brdfLut;
+layout(set = 2, binding = 0) uniform samplerCube irrMap;
+layout(set = 2, binding = 1) uniform samplerCube refMap;
+layout(set = 2, binding = 2) uniform sampler2D brdfLut;
 
-vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao)
-{
-   const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
-   const vec3 irradiance = texture(irrMap, worldN).rgb;
-   const vec3 diffuse = irradiance * albedo;
+vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao) {
+    const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
+    const vec3 irradiance = texture(irrMap, worldN).rgb;
+    const vec3 diffuse = irradiance * albedo;
 
-   const float NdotV = max(dot(eyeN, eyeV), 0.0f);
-   const vec3 eyeR = reflect(-eyeV, eyeN);
-   const vec3 worldR = (view.invV * vec4(eyeR, 0.0f)).rgb;
+    const float NdotV = max(dot(eyeN, eyeV), 0.0f);
+    const vec3 eyeR = reflect(-eyeV, eyeN);
+    const vec3 worldR = (view.invV * vec4(eyeR, 0.0f)).rgb;
 
-   const float MaxReflectionLod = 4.0f;
-   const vec3 prefilter = textureLod(refMap, worldR, roughness * MaxReflectionLod).rgb;
-   const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
-   const vec3 specular = prefilter * (F * brdf.x + brdf.y);
+    const float MaxReflectionLod = 4.0f;
+    const vec3 prefilter = textureLod(refMap, worldR, roughness * MaxReflectionLod).rgb;
+    const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
+    const vec3 specular = prefilter * (F * brdf.x + brdf.y);
 
-   return (kD * diffuse + specular) * ao;
+    return (kD * diffuse + specular) * ao;
 }
 
 // -----
-float distributionGGX(vec3 N, vec3 H, float roughness)
-{
-    float a      = roughness * roughness;
-    float a2     = a * a;
-    float NdotH  = max(dot(N, H), 0.0f);
+float distributionGGX(vec3 N, vec3 H, float roughness) {
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0f);
     float NdotH2 = NdotH * NdotH;
 
-    float denom  = NdotH2 * (a2 - 1.0f) + 1.0f;
-    denom        = PI * denom * denom;
+    float denom = NdotH2 * (a2 - 1.0f) + 1.0f;
+    denom = PI * denom * denom;
 
     return a2 / denom;
 }
 
-float geometrySchlickGGX(float NdotVec, float roughness)
-{
+float geometrySchlickGGX(float NdotVec, float roughness) {
     float r = roughness + 1.0f;
     float k = r * r / 8.0f;
     float denom = NdotVec * (1.0f - k) + k;
     return NdotVec / denom;
 }
 
-float geometrySmith(float NdotV, float NdotL, float roughness)
-{
+float geometrySmith(float NdotV, float NdotL, float roughness) {
     return geometrySchlickGGX(NdotV, roughness) * geometrySchlickGGX(NdotL, roughness);
 }
 
-vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
-{
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
     return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);
 }
 
 // ----- Cascaded Shadow Mapping
-bool isInCascade(vec3 worldPos, mat4 lightVP)
-{
+bool isInCascade(vec3 worldPos, mat4 lightVP) {
     vec4 lightSpacePos = lightVP * vec4(worldPos, 1.0f);
     vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 
@@ -129,21 +118,22 @@ bool isInCascade(vec3 worldPos, mat4 lightVP)
 }
 
 // Check-in-bounds based
-float evalCascadedShadow(vec3 worldPos, float bias)
-{
+float evalCascadedShadow(vec3 worldPos, float bias) {
     int cascadeIndex = 3;
-    if (isInCascade(worldPos, cascadedLight[0].VP))
-       cascadeIndex = 0;
-    else if (isInCascade(worldPos, cascadedLight[1].VP))
-       cascadeIndex = 1;
-    else if (isInCascade(worldPos, cascadedLight[2].VP))
-       cascadeIndex = 2;
+    if (isInCascade(worldPos, cascadedLight[0].VP)) {
+        cascadeIndex = 0;
+    } else if (isInCascade(worldPos, cascadedLight[1].VP)) {
+        cascadeIndex = 1;
+    } else if (isInCascade(worldPos, cascadedLight[2].VP)) {
+        cascadeIndex = 2;
+    }
 
     vec4 lightSpacePos = cascadedLight[cascadeIndex].VP * vec4(worldPos, 1.0f);
     vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 
-    if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax)))
+    if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax))) {
         return 1.0f;
+    }
 
     vec3 texCoord = vec3(ndcPos.xy * 0.5f + 0.5f, cascadeIndex);
 
@@ -153,11 +143,9 @@ float evalCascadedShadow(vec3 worldPos, float bias)
     const int pcfRadius = 3;
     const float numSamples = (2 * pcfRadius + 1) * (2 * pcfRadius + 1);
 
-    float amount  = 0.0f;
-    for (int i = -pcfRadius; i <= pcfRadius; i++)
-    {
-        for (int j = -pcfRadius; j <= pcfRadius; j++)
-        {
+    float amount = 0.0f;
+    for (int i = -pcfRadius; i <= pcfRadius; i++) {
+        for (int j = -pcfRadius; j <= pcfRadius; j++) {
             vec2 tc = texCoord.xy + vec2(i, j) * texelSize;
             float shadowMapDepth = texture(cascadedShadowMapArray, vec3(tc, cascadeIndex)).r;
             amount += shadowMapDepth < (lightSpacePos.z - bias) / lightSpacePos.w ? 0.0f : 1.0f;
@@ -167,8 +155,7 @@ float evalCascadedShadow(vec3 worldPos, float bias)
     return amount / numSamples;
 }
 
-void main()
-{
+void main() {
     const vec3 eyeN = decodeNormal(outTexCoord);
     const vec3 eyeV = normalize(-eyePosition);
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
@@ -198,6 +185,6 @@ void main()
     const vec3 Li = (diffuse + specularity) * Le * NdotL;
 
     vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, ao);
-    
+
     outColor = vec4(Lenv + shadowCoeff * Li, 1.0f);
 }

@@ -2,8 +2,8 @@
 #define CRISP_PATH_TRACER_TYPES_GLSL
 
 const int kLobeTypeDiffuse = 1 << 0;
-const int kLobeTypeDelta   = 1 << 1;
-const int kLobeTypeGlossy  = 1 << 2;
+const int kLobeTypeDelta = 1 << 1;
+const int kLobeTypeGlossy = 1 << 2;
 
 const int kBrdfLambertian = 0;
 const int kBrdfDielectric = 1;
@@ -15,40 +15,40 @@ const uint kBrdfOperationEvaluate = 1;
 
 // This structure is used to communicate hit information across path tracing shaders.
 struct HitInfo {
-    vec3 position;         // Out.
-    float tHit;            // Out.
+    vec3 position; // Out.
+    float tHit;    // Out.
 
-    vec3 sampleDirection;  // Out.
-    float samplePdf;       // Out.
+    vec3 sampleDirection; // Out.
+    float samplePdf;      // Out.
 
-    vec3 Le;               // Out.
-    int lightId;           // Out.
+    vec3 Le;     // Out.
+    int lightId; // Out.
 
-    vec3 sampleWeight;     // Out, sampled f / pdf.
-    uint rngSeed;          // In/out.
+    vec3 sampleWeight; // Out, sampled f / pdf.
+    uint rngSeed;      // In/out.
 
-    vec3 normal;           // Out.
-    uint sampleLobeType;   // Out.
+    vec3 normal;         // Out.
+    uint sampleLobeType; // Out.
 
-    uint materialId;       // Out.
+    uint materialId; // Out.
 };
 
 // This structure is used to communicate BRDF sampling across hit and callable shaders.
 struct BrdfSample {
-    vec2 unitSample;      // In.
-    vec2 pad0;            // Unused.
+    vec2 unitSample; // In.
+    vec2 pad0;       // Unused.
 
-    vec3 normal;          // In, local space.
-    uint materialId;      // In.
+    vec3 normal;     // In, local space.
+    uint materialId; // In.
 
-    vec3 wi;              // In, local space.
-    uint operation;       // In, sample or evaluate.
+    vec3 wi;        // In, local space.
+    uint operation; // In, sample or evaluate.
 
-    vec3 f;               // Out, eval(wi, wo) * abs(dot(n, wo)).
-    float pdf;            // Out.
+    vec3 f;    // Out, eval(wi, wo) * abs(dot(n, wo)).
+    float pdf; // Out.
 
-    vec3 wo;              // In for evaluation, out for sampling; local space.
-    uint lobeType;        // Out, diffuse or specular.
+    vec3 wo;       // In for evaluation, out for sampling; local space.
+    uint lobeType; // Out, diffuse or specular.
 };
 
 struct InstanceProperties {
@@ -82,7 +82,7 @@ struct BrdfParameters {
 };
 
 struct BrdfEval {
-    vec3 f;    // eval(wi, wo) * abs(dot(n, wo)).
+    vec3 f; // eval(wi, wo) * abs(dot(n, wo)).
     float pdf;
 };
 

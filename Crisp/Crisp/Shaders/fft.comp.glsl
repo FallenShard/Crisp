@@ -5,21 +5,18 @@ layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 layout(set = 0, binding = 0, rg32f) uniform readonly image2D srcImg;
 layout(set = 0, binding = 1, rg32f) uniform writeonly image2D dstImg;
 
-layout(push_constant) uniform PushConstant
-{
-    layout(offset = 0)  int passId;
-    layout(offset = 4)  float t;
+layout(push_constant) uniform PushConstant {
+    layout(offset = 0) int passId;
+    layout(offset = 4) float t;
 };
 
 #define PI 3.1415926535897932384626433832795
 
-vec2 compMul(vec2 z, vec2 w)
-{
+vec2 compMul(vec2 z, vec2 w) {
     return vec2(z[0] * w[0] - z[1] * w[1], z[0] * w[1] + z[1] * w[0]);
 }
 
-void main()
-{
+void main() {
     // if (gl_GlobalInvocationID.y >= 256 || gl_GlobalInvocationID.x >= 256)
     //     return;
 
@@ -32,8 +29,8 @@ void main()
 
     // float offset = 0.0f;// sin(wt);
 
-    //vec4 data = imageLoad(srcImg, coords);
-    //imageStore(dstImg, coords, data + vec4(offset));
+    // vec4 data = imageLoad(srcImg, coords);
+    // imageStore(dstImg, coords, data + vec4(offset));
 
     // int p = passId - 1;
 
@@ -44,7 +41,7 @@ void main()
     // int j = k % (1 << p);
     // int leftIdx = k / (1 << p);
     // leftIdx = m * leftIdx + j;
-    // int rightIdx = leftIdx + m / 2; 
+    // int rightIdx = leftIdx + m / 2;
 
     // vec2 ww = vec2(1.0f, 0.0f);
     // ww[0] = +cos(2.0f * PI / m * j);

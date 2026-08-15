@@ -30,8 +30,7 @@ vec3 tonemapReinhard(const vec3 color, const float whitePoint) {
 // saturation rolloff, which is what lets a bright sky read as bright rather than clipping to white.
 //
 // Written transposed against the published matrices: GLSL constructors take columns, HLSL braces take rows.
-const mat3 kAcesInput =
-    mat3(0.59719f, 0.07600f, 0.02840f, 0.35458f, 0.90834f, 0.13383f, 0.04823f, 0.01566f, 0.83777f);
+const mat3 kAcesInput = mat3(0.59719f, 0.07600f, 0.02840f, 0.35458f, 0.90834f, 0.13383f, 0.04823f, 0.01566f, 0.83777f);
 
 const mat3 kAcesOutput =
     mat3(1.60475f, -0.10208f, -0.00327f, -0.53108f, 1.10813f, -0.07276f, -0.07367f, -0.00605f, 1.07602f);

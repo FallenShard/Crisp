@@ -163,7 +163,7 @@ void main() {
 
     // Must match the final ray march, or the two disagree below the horizon once the fast sky path takes over.
     const bool ground = atmosphere.renderGround != 0;
-    const vec3 L = integrateScatteredRadiance(
-        worldPos, worldDir, sunDir, atmosphere, sampleCountIni, variableSampleCount, ground);
+    const vec3 L =
+        integrateScatteredRadiance(worldPos, worldDir, sunDir, atmosphere, sampleCountIni, variableSampleCount, ground);
     finalColor = vec4(L, 1.0f);
 }

@@ -3,8 +3,7 @@
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 
-layout(set = 0, binding = 0) uniform TransformPack
-{
+layout(set = 0, binding = 0) uniform TransformPack {
     mat4 MVP;
     mat4 MV;
     mat4 M;
@@ -15,8 +14,7 @@ layout(set = 0, binding = 1) uniform sampler2D packedHeightDispXMap;
 layout(set = 0, binding = 2) uniform sampler2D packedDispZNormalXMap;
 layout(set = 0, binding = 3) uniform sampler2D normalZMap;
 
-layout(push_constant) uniform PushConstant
-{
+layout(push_constant) uniform PushConstant {
     layout(offset = 0) float patchWorldSize;
     layout(offset = 4) int instancesPerSide;
 };
@@ -24,7 +22,6 @@ layout(push_constant) uniform PushConstant
 layout(location = 0) out vec3 eyePosition;
 layout(location = 1) out vec3 eyeNormal;
 layout(location = 2) out vec3 worldNormal;
-
 
 const float g = 9.81;
 
@@ -45,8 +42,7 @@ float getDz(int i, int j, float factor) {
     return texelFetch(packedDispZNormalXMap, ivec2(i, j), 0).r * factor;
 }
 
-void main()
-{
+void main() {
     uint patchRow = gl_InstanceIndex / uint(instancesPerSide);
     uint patchCol = gl_InstanceIndex % uint(instancesPerSide);
     float centerOffset = (float(instancesPerSide) - 1.0f) * 0.5f;
@@ -56,5 +52,5 @@ void main()
     worldNormal = normal;
 
     eyePosition = (MV * vec4(position + offset, 1.0f)).xyz;
-    gl_Position  = MVP * vec4(position + offset, 1.0f);
+    gl_Position = MVP * vec4(position + offset, 1.0f);
 }

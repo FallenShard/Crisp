@@ -1,48 +1,41 @@
 #version 450 core
 
-layout(set = 0, binding = 0) buffer PrevPositions
-{
+layout(set = 0, binding = 0) buffer PrevPositions {
     vec4 prevPositions[];
 };
 
-layout(set = 0, binding = 1) buffer Positions
-{
+layout(set = 0, binding = 1) buffer Positions {
     vec4 positions[];
 };
 
-layout(set = 0, binding = 2) buffer Velocities
-{
+layout(set = 0, binding = 2) buffer Velocities {
     vec4 velocities[];
 };
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
-layout(push_constant) uniform PushConstant
-{
-    layout(offset = 0)  uvec3 dim;
-    layout(offset = 12) uint  numCells;
-    layout(offset = 16) vec3  spaceSize;
+layout(push_constant) uniform PushConstant {
+    layout(offset = 0) uvec3 dim;
+    layout(offset = 12) uint numCells;
+    layout(offset = 16) vec3 spaceSize;
     layout(offset = 28) float cellSize;
     layout(offset = 32) float timeDelta;
     layout(offset = 36) uint numParticles;
-} pushConst;
+}
+pushConst;
 
-
-uint getGlobalIndex()
-{
+uint getGlobalIndex() {
     uvec3 dim = gl_WorkGroupSize * gl_NumWorkGroups;
-    return gl_GlobalInvocationID.z * dim.x * dim.y +
-           gl_GlobalInvocationID.y * dim.x +
-           gl_GlobalInvocationID.x;
+    return gl_GlobalInvocationID.z * dim.x * dim.y + gl_GlobalInvocationID.y * dim.x + gl_GlobalInvocationID.x;
 }
 
 const float particleRadius = 0.01f;
 
-void main()
-{
+void main() {
     uint threadIdx = getGlobalIndex();
-    if (threadIdx >= pushConst.numParticles)
+    if (threadIdx >= pushConst.numParticles) {
         return;
+    }
 
     // vec3 fluidSpace = pushConst.spaceSize;
 

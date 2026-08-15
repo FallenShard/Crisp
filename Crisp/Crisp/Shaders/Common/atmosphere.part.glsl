@@ -247,9 +247,8 @@ vec3 sampleTransmittanceLut(
 vec3 sampleMultipleScattering(
     const sampler2D lut, const AtmosphereParams atmosphere, const float viewHeight, const float viewZenithCosAngle) {
     vec2 uv = clamp(
-        vec2(
-            viewZenithCosAngle * 0.5f + 0.5f,
-            (viewHeight - atmosphere.bottomRadius) / (atmosphere.topRadius - atmosphere.bottomRadius)),
+        vec2(viewZenithCosAngle * 0.5f + 0.5f,
+             (viewHeight - atmosphere.bottomRadius) / (atmosphere.topRadius - atmosphere.bottomRadius)),
         vec2(0.0f),
         vec2(1.0f));
     uv = vec2(

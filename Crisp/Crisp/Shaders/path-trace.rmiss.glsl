@@ -6,8 +6,7 @@
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
 
-void main()
-{
+void main() {
     hitInfo.tHit = -1;
     hitInfo.lightId = -1;
 }

@@ -17,13 +17,12 @@ layout(set = 0, binding = 0) uniform View {
 layout(location = 0) out vec3 worldPos;
 layout(location = 1) out vec3 eyePos;
 
-void main()
-{
-    mat4 M   = mat4(col0, col1, col2, col3);
-    mat4 MV  = view.V * M;
+void main() {
+    mat4 M = mat4(col0, col1, col2, col3);
+    mat4 MV = view.V * M;
     mat4 MVP = view.P * MV;
 
-    worldPos  = (M * vec4(position, 1.0f)).xyz;
-    eyePos    = (MV * vec4(position, 1.0f)).xyz;
-    gl_Position  = MVP * vec4(position, 1.0f);
+    worldPos = (M * vec4(position, 1.0f)).xyz;
+    eyePos = (MV * vec4(position, 1.0f)).xyz;
+    gl_Position = MVP * vec4(position, 1.0f);
 }

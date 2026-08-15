@@ -13,21 +13,19 @@ layout(location = 3) out vec3 eyeTangent;
 layout(location = 4) out vec3 eyeBitangent;
 layout(location = 5) out vec2 outTexCoord;
 
-layout(set = 0, binding = 0) uniform Transforms
-{
+layout(set = 0, binding = 0) uniform Transforms {
     mat4 MVP;
     mat4 MV;
     mat4 M;
     mat4 N;
 };
 
-void main()
-{
+void main() {
     outTexCoord = texCoord;
-    eyeNormal     = normalize((N * vec4(normal, 0.0f)).xyz);
-    eyeTangent   = normalize((N * vec4(tangent, 0.0f)).xyz);
+    eyeNormal = normalize((N * vec4(normal, 0.0f)).xyz);
+    eyeTangent = normalize((N * vec4(tangent, 0.0f)).xyz);
     eyeBitangent = normalize((N * vec4(bitangent, 0.0f)).xyz);
-    eyePosition   = (MV * vec4(position, 1.0f)).xyz;
+    eyePosition = (MV * vec4(position, 1.0f)).xyz;
     worldPosition = (M * vec4(position, 1.0f)).xyz;
 
     gl_Position = MVP * vec4(position, 1.0f);

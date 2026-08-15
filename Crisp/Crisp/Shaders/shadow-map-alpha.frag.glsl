@@ -4,9 +4,9 @@ layout(location = 0) in vec2 outTexCoord;
 
 layout(set = 1, binding = 0) uniform sampler2D tex;
 
-void main()
-{
+void main() {
     vec4 colorSample = texture(tex, outTexCoord).rgba;
-    if (colorSample.a < 0.1)
+    if (colorSample.a < 0.1) {
         discard;
+    }
 }

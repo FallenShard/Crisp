@@ -17,14 +17,13 @@ layout(set = 1, binding = 0) uniform View {
     ViewParameters view;
 };
 
-layout (set = 1, binding = 1) uniform samplerCube irrMap;
-layout (set = 1, binding = 2) uniform samplerCube refMap;
-layout (set = 1, binding = 3) uniform sampler2D brdfLut;
+layout(set = 1, binding = 1) uniform samplerCube irrMap;
+layout(set = 1, binding = 2) uniform samplerCube refMap;
+layout(set = 1, binding = 3) uniform sampler2D brdfLut;
 
 const float kMaxReflectionLod = 4.0f;
 
-vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 albedo, float roughness, out vec3 reflection)
-{
+vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 albedo, float roughness, out vec3 reflection) {
     const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
     const vec3 irradiance = texture(irrMap, worldN).rgb;
     const vec3 ambient = irradiance * albedo * 0.5f;
@@ -36,8 +35,7 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 albedo, float roughness, out 
     return ambient;
 }
 
-void main()
-{
+void main() {
     const vec3 eyeN = normalize(eyeNormal);
     const vec3 eyeV = normalize(-eyePosition);
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);

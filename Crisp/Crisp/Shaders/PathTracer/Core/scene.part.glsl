@@ -43,6 +43,7 @@ layout(push_constant, scalar) uniform RayTracingSceneAddresses {
     PathTraceMaterials materials;
     PathTraceLights lights;
     PathTraceAliasTable aliasTable;
-} scene;
+}
+scene;
 
 #endif // CRISP_PATH_TRACER_SCENE_GLSL

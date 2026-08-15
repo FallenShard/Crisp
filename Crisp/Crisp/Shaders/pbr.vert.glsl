@@ -21,11 +21,11 @@ layout(set = 2, binding = 0) uniform Transforms {
 
 void main() {
     gl_Position = MVP * vec4(position, 1.0f);
-    eyeNormal    = normalize((N * vec4(normal, 0.0f)).xyz);
-    eyeTangent   = normalize((N * vec4(tangent.xyz, 0.0f)).xyz);
+    eyeNormal = normalize((N * vec4(normal, 0.0f)).xyz);
+    eyeTangent = normalize((N * vec4(tangent.xyz, 0.0f)).xyz);
     eyeBitangent = normalize((N * vec4(tangent.w * cross(normal, tangent.xyz), 0.0f)).xyz);
-    eyePosition  = (MV * vec4(position, 1.0f)).xyz;
+    eyePosition = (MV * vec4(position, 1.0f)).xyz;
 
-    outTexCoord  = texCoord;
-    worldPos     = vec3(M * vec4(position, 1.0f));
+    outTexCoord = texCoord;
+    worldPos = vec3(M * vec4(position, 1.0f));
 }

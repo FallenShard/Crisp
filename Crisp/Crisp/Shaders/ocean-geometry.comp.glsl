@@ -2,13 +2,11 @@
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
-layout(set = 0, binding = 0) buffer Positions
-{
+layout(set = 0, binding = 0) buffer Positions {
     float positions[];
 };
 
-layout (set = 0, binding = 1) buffer Normals
-{
+layout(set = 0, binding = 1) buffer Normals {
     float normals[];
 };
 
@@ -18,8 +16,7 @@ layout (set = 0, binding = 1) buffer Normals
 layout(set = 0, binding = 2) uniform sampler2D packedHeightDispXMap;
 layout(set = 0, binding = 3) uniform sampler2D packedDispZNormalXMap;
 
-layout(push_constant) uniform PushConstant
-{
+layout(push_constant) uniform PushConstant {
     int N;
     float patchWorldSize;
     float choppiness;
@@ -47,9 +44,7 @@ float getDz(int i, int j, float factor) {
 // A positive scale converges on troughs instead of crests. All components share one sign factor.
 vec3 getDisplacement(int i, int j) {
     const float factor = getFactor(i, j);
-    return vec3(-choppiness * getDx(i, j, factor),
-                getHeight(i, j, factor),
-                -choppiness * getDz(i, j, factor));
+    return vec3(-choppiness * getDx(i, j, factor), getHeight(i, j, factor), -choppiness * getDz(i, j, factor));
 }
 
 // Not a plain heightmap gradient: there is displacement in X and Z too. Index i runs +X, j runs
@@ -82,8 +77,7 @@ void writeNormal(int linIdx, vec3 newNormal) {
     normals[3 * linIdx + 2] = newNormal[2];
 }
 
-void main()
-{
+void main() {
     // There are N + 1 vertices in X and Z axis.
     const ivec2 idx = ivec2(gl_GlobalInvocationID.xy);
     if (idx.x > N || idx.y > N) {

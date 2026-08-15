@@ -11,8 +11,7 @@
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 
-void main()
-{
+void main() {
     brdf.lobeType = kLobeTypeDelta;
     if (brdf.operation == kBrdfOperationEvaluate) {
         brdf.wo = vec3(0.0f);
@@ -26,19 +25,16 @@ void main()
     const float etaRatio = intIOR / extIOR;
     const float cosThetaI = dot(brdf.normal, brdf.wi);
     const vec3 localNormal = cosThetaI < 0.0f ? -brdf.normal : brdf.normal;
-    const float eta        = cosThetaI < 0.0f ? etaRatio : 1.0f / etaRatio;
-    const float cosine     = cosThetaI < 0.0f ? etaRatio * cosThetaI : -cosThetaI;
+    const float eta = cosThetaI < 0.0f ? etaRatio : 1.0f / etaRatio;
+    const float cosine = cosThetaI < 0.0f ? etaRatio * cosThetaI : -cosThetaI;
     float cosThetaT = 0.0f;
     const float fresnel = fresnelDielectric(cosThetaI, extIOR, intIOR, cosThetaT);
 
-    if (brdf.unitSample[0] <= fresnel)
-    {
+    if (brdf.unitSample[0] <= fresnel) {
         brdf.wo = reflect(-brdf.wi, localNormal);
         brdf.pdf = fresnel;
         brdf.f = vec3(fresnel);
-    }
-    else
-    {
+    } else {
         brdf.wo = refract(-brdf.wi, localNormal, eta);
         brdf.pdf = 1.0f - fresnel;
         brdf.f = vec3(brdf.pdf * eta * eta);

@@ -1,12 +1,7 @@
 #ifndef CRISP_DIELECTRIC_GLSL
 #define CRISP_DIELECTRIC_GLSL
 
-float fresnelDielectric(
-    float cosThetaI,
-    float extIor,
-    float intIor,
-    out float cosThetaT)
-{
+float fresnelDielectric(float cosThetaI, float extIor, float intIor, out float cosThetaT) {
     float etaI = extIor;
     float etaT = intIor;
 
@@ -31,10 +26,8 @@ float fresnelDielectric(
 
     cosThetaT = sqrt(1.0f - sinThetaTSquared);
 
-    const float rs = (etaI * cosThetaI - etaT * cosThetaT) /
-        (etaI * cosThetaI + etaT * cosThetaT);
-    const float rp = (etaT * cosThetaI - etaI * cosThetaT) /
-        (etaT * cosThetaI + etaI * cosThetaT);
+    const float rs = (etaI * cosThetaI - etaT * cosThetaT) / (etaI * cosThetaI + etaT * cosThetaT);
+    const float rp = (etaT * cosThetaI - etaI * cosThetaT) / (etaT * cosThetaI + etaI * cosThetaT);
     return (rs * rs + rp * rp) * 0.5f;
 }
 

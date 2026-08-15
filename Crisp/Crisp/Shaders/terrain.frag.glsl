@@ -4,8 +4,7 @@ layout(location = 0) in vec3 color;
 
 layout(location = 0) out vec4 finalColor;
 
-layout(set = 0, binding = 0) uniform Transforms
-{
+layout(set = 0, binding = 0) uniform Transforms {
     mat4 MVP;
     mat4 MV;
     mat4 M;
@@ -14,8 +13,7 @@ layout(set = 0, binding = 0) uniform Transforms
 
 layout(set = 0, binding = 1) uniform sampler2D heightMap;
 
-void main()
-{
+void main() {
     float offset = 1.0f / textureSize(heightMap, 0).x;
     const vec3 off = vec3(-offset, 0, offset);
 
