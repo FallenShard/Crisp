@@ -54,12 +54,6 @@ Result<int> extractConstReference() {
     return value;
 }
 
-Result<int> extractMutableReference() {
-    CRISP_TRY(auto& value, Result<int>{41});
-    ++value;
-    return value;
-}
-
 Result<int> extractPointer() {
     int source = 42;
     CRISP_TRY(auto* value, Result<int*>{&source});
@@ -117,7 +111,6 @@ TEST(ResultTest, TryExtractsSuccessfulValue) {
 TEST(ResultTest, TrySupportsAutoDeclarationVariants) {
     EXPECT_THAT(extractConstValue(), HasValue(42));
     EXPECT_THAT(extractConstReference(), HasValue(42));
-    EXPECT_THAT(extractMutableReference(), HasValue(42));
     EXPECT_THAT(extractPointer(), HasValue(42));
     EXPECT_THAT(extractConstPointer(), HasValue(42));
 }

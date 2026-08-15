@@ -2,7 +2,7 @@
 
 #include <expected>
 #include <source_location>
-#include <type_traits>
+#include <utility>
 
 #include <Crisp/Core/Logger.hpp>
 
@@ -146,15 +146,6 @@ std::unexpected<std::string> resultErrorImpl(detail::LocationFormatString&& form
     return std::unexpected<std::string>(std::move(formatString.str));
 }
 
-template <typename BindingProbe, typename T>
-decltype(auto) extractForDeclaration(Result<T>& result) {
-    if constexpr (std::is_invocable_v<BindingProbe, T&&>) {
-        return std::move(result).extract();
-    } else {
-        return *result;
-    }
-}
-
 inline Result<> tryResult(const std::source_location&, Result<>&& result) {
     return std::move(result);
 }
@@ -223,8 +214,7 @@ Result<> tryResult(
     if (!CRISP_DETAIL_UNIQUE_NAME(crispTryResult)) {                                                                   \
         CRISP_DETAIL_RETURN_ERROR(CRISP_DETAIL_UNIQUE_NAME(crispTryResult) __VA_OPT__(, ) __VA_ARGS__);                \
     }                                                                                                                  \
-    lhs = detail::extractForDeclaration<decltype([]([[maybe_unused]] lhs) {})>(                                        \
-        CRISP_DETAIL_UNIQUE_NAME(crispTryResult)) // NOLINT
+    lhs = std::move(CRISP_DETAIL_UNIQUE_NAME(crispTryResult)).extract() // NOLINT
 
 #define CRISP_DETAIL_TRY_EXPRESSION(first, ...)                                                                        \
     do {                                                                                                               \
