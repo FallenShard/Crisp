@@ -11,10 +11,19 @@
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 
-void main()
-{
-    brdf.wo = squareToCosineHemisphere(brdf.unitSample);
-    brdf.pdf = squareToCosineHemispherePdf(brdf.wo);
-    brdf.f = scene.materials.data[brdf.materialId].albedo;
+void main() {
+    if (brdf.operation == kBrdfOperationSample) {
+        brdf.wo = squareToCosineHemisphere(brdf.unitSample);
+    }
+
     brdf.lobeType = kLobeTypeDiffuse;
+
+    if (brdf.wi.z <= 0.0f || brdf.wo.z <= 0.0f) {
+        brdf.pdf = 0.0f;
+        brdf.f = vec3(0.0f);
+        return;
+    }
+
+    brdf.pdf = squareToCosineHemispherePdf(brdf.wo);
+    brdf.f = scene.materials.data[brdf.materialId].albedo * InvPI * brdf.wo.z;
 }

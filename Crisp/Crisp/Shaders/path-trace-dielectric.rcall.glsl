@@ -43,6 +43,14 @@ float fresnelDielectric(float cosThetaI, float extIOR, float intIOR, inout float
 
 void main()
 {
+    brdf.lobeType = kLobeTypeDelta;
+    if (brdf.operation == kBrdfOperationEvaluate) {
+        brdf.wo = vec3(0.0f);
+        brdf.pdf = 0.0f;
+        brdf.f = vec3(0.0f);
+        return;
+    }
+
     const float intIOR = scene.materials.data[brdf.materialId].intIor;
     const float extIOR = scene.materials.data[brdf.materialId].extIor;
     const float etaRatio = intIOR / extIOR;
@@ -53,17 +61,16 @@ void main()
     float cosThetaT = 0.0f;
     const float fresnel = fresnelDielectric(cosThetaI, extIOR, intIOR, cosThetaT);
 
-    brdf.lobeType = kLobeTypeDelta;
     if (brdf.unitSample[0] <= fresnel)
     {
         brdf.wo = reflect(-brdf.wi, localNormal);
         brdf.pdf = fresnel;
-        brdf.f = vec3(1.0f);
+        brdf.f = vec3(fresnel);
     }
     else
     {
         brdf.wo = refract(-brdf.wi, localNormal, eta);
         brdf.pdf = 1.0f - fresnel;
-        brdf.f = vec3(eta * eta);
+        brdf.f = vec3(brdf.pdf * eta * eta);
     }
 }

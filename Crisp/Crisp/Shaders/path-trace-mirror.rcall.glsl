@@ -6,10 +6,16 @@
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 
-void main()
-{
+void main() {
+    brdf.lobeType = kLobeTypeDelta;
+    if (brdf.operation == kBrdfOperationEvaluate) {
+        brdf.wo = vec3(0.0f);
+        brdf.pdf = 0.0f;
+        brdf.f = vec3(0.0f);
+        return;
+    }
+
     brdf.wo = reflect(-brdf.wi, brdf.normal);
     brdf.pdf = 1.0f;
     brdf.f = vec3(1.0f);
-    brdf.lobeType = kLobeTypeDelta;
 }

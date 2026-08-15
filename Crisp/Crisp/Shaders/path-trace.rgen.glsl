@@ -14,6 +14,7 @@ const int kRussianRouletteCutoff = 3;
 
 const int kPayloadIndex = 0;
 layout(location = kPayloadIndex) rayPayloadEXT HitInfo hitInfo;
+layout(location = 0) callableDataEXT BrdfSample bsdf;
 
 layout(set = 1, binding = 0) uniform accelerationStructureEXT sceneBvh;
 layout(set = 1, binding = 1, rgba32f) uniform image2D image;
@@ -33,6 +34,25 @@ layout(set = 1, binding = 3) uniform IntegratorParams {
 
 #include "Common/path-trace-scene.part.glsl"
 #include "Common/path-trace-vertex-pull.part.glsl"
+
+void evaluateBrdf(
+    in vec3 normal,
+    in vec3 wi,
+    in vec3 wo,
+    in uint materialId,
+    out vec3 f,
+    out float pdf) {
+    const mat3 coordinateFrame = createCoordinateFrame(normal);
+    bsdf.normal = transpose(coordinateFrame) * normal;
+    bsdf.wi = transpose(coordinateFrame) * wi;
+    bsdf.wo = transpose(coordinateFrame) * wo;
+    bsdf.materialId = materialId;
+    bsdf.operation = kBrdfOperationEvaluate;
+
+    executeCallableEXT(scene.materials.data[materialId].type, /*location(bsdf)=*/0);
+    f = bsdf.f;
+    pdf = bsdf.pdf;
+}
 
 void traceRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
     hitInfo.rngSeed = seed;
@@ -83,6 +103,8 @@ float sampleSurfaceCoord(inout uint seed, in uint meshId, out vec3 position, out
 }
 
 vec3 sampleAreaLight(inout uint seed, in uint meshId, in vec3 radiance, in vec3 refPoint, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
+    lightPdf = 0.0f;
+
     vec3 samplePos;
     vec3 sampleNormal;
     const float shapePdf = sampleSurfaceCoord(seed, meshId, samplePos, sampleNormal);
@@ -91,6 +113,10 @@ vec3 sampleAreaLight(inout uint seed, in uint meshId, in vec3 radiance, in vec3 
 
     const float squaredDist = dot(shadowRayDir, shadowRayDir);
     shadowRayLen = sqrt(squaredDist);
+    if (shadowRayLen <= 0.0f) {
+        shadowRayDir = vec3(0.0f);
+        return vec3(0.0f);
+    }
     shadowRayDir /= shadowRayLen;
 
     const float cosThetaO = dot(sampleNormal, -shadowRayDir);
@@ -124,9 +150,13 @@ float getLightPdf(in int lightId, in vec3 hitVector, in vec3 hitNormal) {
     const float shapePdf = scene.aliasTable.data[aliasTableOffset].tau;
 
     const float squaredDist = dot(hitVector, hitVector);
+    const float cosTheta = dot(hitNormal, -normalize(hitVector));
+    if (cosTheta <= 0.0f) {
+        return 0.0f;
+    }
 
     const float uniformPdf = 1.0f / float(integrator.lightCount);
-    return uniformPdf * shapePdf * squaredDist / dot(hitNormal, -normalize(hitVector));
+    return uniformPdf * shapePdf * squaredDist / cosTheta;
 }
 
 vec3 computeRadianceDirectLighting(inout uint seed) {
@@ -145,8 +175,7 @@ vec3 computeRadianceDirectLighting(inout uint seed) {
 
     traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
 
-    if (hitInfo.tHit == -1.0)
-    {
+    if (hitInfo.tHit == -1.0) {
         return L;
     }
 
@@ -154,27 +183,32 @@ vec3 computeRadianceDirectLighting(inout uint seed) {
 
     const vec3 p = hitInfo.position;
     const vec3 n = hitInfo.normal;
-    const vec3 f = hitInfo.bsdfEval;
+    const vec3 wi = -rayDirection.xyz;
+    const uint materialId = hitInfo.materialId;
 
     vec3 shadowRayDir;
     float shadowRayLen;
     float lightPdf;
     const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
-    traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
+    if (lightPdf > 0.0f) {
+        traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
 
-    if (hitInfo.tHit <= 0)
-    {
-        const vec3 brdfEval = f * InvPI * dot(n, shadowRayDir);
-        L += radiance * brdfEval;
+        if (hitInfo.tHit <= 0) {
+            vec3 lightDirectionBrdf;
+            float lightDirectionBrdfPdf;
+            evaluateBrdf(n, wi, shadowRayDir, materialId, lightDirectionBrdf, lightDirectionBrdfPdf);
+            L += radiance * lightDirectionBrdf;
+        }
     }
 
     return L;
 }
 
 float powerHeuristic(const float fPdf, const float gPdf) {
-    const float fPdf2 = fPdf * fPdf;
-    const float gPdf2 = gPdf * gPdf;
-    return fPdf2 / (fPdf2 + gPdf2);
+    const float fPdfSq = fPdf * fPdf;
+    const float gPdfSq = gPdf * gPdf;
+    const float denominator = fPdfSq + gPdfSq;
+    return denominator > 0.0f ? fPdfSq / denominator : 0.0f;
 }
 
 vec3 computeRadianceMis(inout uint seed) {
@@ -201,16 +235,18 @@ vec3 computeRadianceMis(inout uint seed) {
 
     const vec3 p = hitInfo.position;
     const vec3 n = hitInfo.normal;
-    const vec3 f = hitInfo.bsdfEval;
+    const vec3 sampleWeight = hitInfo.sampleWeight;
+    const vec3 wi = -rayDirection.xyz;
+    const uint materialId = hitInfo.materialId;
 
     // BRDF sampling.
     {
-        const float brdfPdf = hitInfo.samplePdf;
+        const float samplePdf = hitInfo.samplePdf;
         traceRay(seed, p, tMin, hitInfo.sampleDirection, tMax);
 
         if (hitInfo.lightId != -1) {
             const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
-            L += f * hitInfo.Le * powerHeuristic(brdfPdf, lightPdf);
+            L += sampleWeight * hitInfo.Le * powerHeuristic(samplePdf, lightPdf);
         }
     }
 
@@ -219,13 +255,15 @@ vec3 computeRadianceMis(inout uint seed) {
     float shadowRayLen;
     float lightPdf;
     const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
-    traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
+    if (lightPdf > 0.0f) {
+        traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
 
-    if (hitInfo.tHit <= 0) // The shadow ray has missed.
-    {
-        const float brdfPdf = InvPI * dot(n, shadowRayDir);
-        const vec3 brdfEval = f * brdfPdf;
-        L += radiance * brdfEval * powerHeuristic(lightPdf, brdfPdf);
+        if (hitInfo.tHit <= 0) { // The shadow ray has missed.
+            vec3 lightDirectionBrdf;
+            float lightDirectionBrdfPdf;
+            evaluateBrdf(n, wi, shadowRayDir, materialId, lightDirectionBrdf, lightDirectionBrdfPdf);
+            L += radiance * lightDirectionBrdf * powerHeuristic(lightPdf, lightDirectionBrdfPdf);
+        }
     }
 
     return L;
@@ -266,9 +304,11 @@ vec3 computeRadianceMisPt(inout uint seed) {
 
         const vec3 p = hitInfo.position;
         const vec3 n = hitInfo.normal;
-        const vec3 f = hitInfo.bsdfEval;
-        const float brdfPdf = hitInfo.samplePdf;
+        const vec3 sampleWeight = hitInfo.sampleWeight;
+        const float samplePdf = hitInfo.samplePdf;
         const vec3 rayDir = hitInfo.sampleDirection;
+        const vec3 wi = -rayDirection.xyz;
+        const uint materialId = hitInfo.materialId;
         specularBounce = hitInfo.sampleLobeType == kLobeTypeDelta;
 
         // If the bounce wasn't a delta bounce (glass/mirror), do light sampling.
@@ -277,11 +317,16 @@ vec3 computeRadianceMisPt(inout uint seed) {
             float shadowRayLen;
             float lightPdf;
             const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
-            traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
+            if (lightPdf > 0.0f) {
+                traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
 
-            if (hitInfo.tHit <= 0) { // The shadow ray has missed.
-                const float brdfPdf = InvPI * dot(n, shadowRayDir); // This is only correct for Diffuse BRDFs.
-                L += throughput * f * radiance * brdfPdf * powerHeuristic(lightPdf, brdfPdf);
+                if (hitInfo.tHit <= 0) { // The shadow ray has missed.
+                    vec3 lightDirectionBrdf;
+                    float lightDirectionBrdfPdf;
+                    evaluateBrdf(n, wi, shadowRayDir, materialId, lightDirectionBrdf, lightDirectionBrdfPdf);
+                    L += throughput * radiance * lightDirectionBrdf *
+                        powerHeuristic(lightPdf, lightDirectionBrdfPdf);
+                }
             }
         }
 
@@ -291,12 +336,12 @@ vec3 computeRadianceMisPt(inout uint seed) {
 
             if (hitInfo.lightId != -1) {
                 const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
-                L += throughput * f * hitInfo.Le * powerHeuristic(brdfPdf, lightPdf);
+                L += throughput * sampleWeight * hitInfo.Le * powerHeuristic(samplePdf, lightPdf);
             }
         }
 
         // Adjust throughput for the hit surface.
-        throughput *= f; // equal to f(wi) * cos(wo) / pdf(wo).
+        throughput *= sampleWeight;
 
         // Setup the next ray.
         rayOrigin.xyz    = p;
@@ -343,7 +388,7 @@ vec3 computeRadiance(inout uint seed) {
             L += throughput * hitInfo.Le;
 
             // Adjust throughput for the hit surface.
-            throughput *= hitInfo.bsdfEval; // equal to f(wi) * cos(wo) / pdf(wo).
+            throughput *= hitInfo.sampleWeight; // equal to f(wi) * cos(wo) / pdf(wo).
 
             // Setup the next ray.
             rayOrigin.xyz    = hitInfo.position;
@@ -371,6 +416,11 @@ void main() {
     uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, integrator.frameIdx);
 
     vec3 L = vec3(0.0f);
+    if (integrator.lightCount <= 0) {
+        imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(L, 1.0));
+        return;
+    }
+
     const uint sampleCount = integrator.sampleCount;
     for (uint i = 0; i < sampleCount; ++i) {
         if (integrator.samplingMode == 0) {

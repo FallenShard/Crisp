@@ -17,7 +17,11 @@
 namespace crisp {
 class VulkanRayTracingScene : public Scene {
 public:
-    VulkanRayTracingScene(Renderer* renderer, Window* window, std::filesystem::path outputDir);
+    VulkanRayTracingScene(
+        Renderer* renderer,
+        Window* window,
+        std::filesystem::path outputDir,
+        const nlohmann::json& args);
 
     void resize(int width, int height) override;
     void update(const UpdateParams& updateParams) override;
@@ -40,6 +44,9 @@ private:
     std::unique_ptr<VulkanImage> m_rayTracedImage;
     AsyncReadback m_screenshot;
     bool m_screenshotRequested{false};
+    bool m_closeAfterScreenshot{false};
+    int32_t m_captureAfterSamples{0};
+    std::filesystem::path m_screenshotFilename{"screenshot.exr"};
 
     std::unique_ptr<VulkanPipeline> m_pipeline;
     std::unique_ptr<Material> m_material;

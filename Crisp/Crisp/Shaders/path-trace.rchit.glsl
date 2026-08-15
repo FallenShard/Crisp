@@ -57,6 +57,7 @@ void main() {
     bsdf.normal = toLocal(normal, worldTransform);
     bsdf.wi = toLocal(-gl_WorldRayDirectionEXT, worldTransform);
     bsdf.materialId = props.materialId;
+    bsdf.operation = kBrdfOperationSample;
 
     const float r1 = rndFloat(hitInfo.rngSeed);
     const float r2 = rndFloat(hitInfo.rngSeed);
@@ -66,8 +67,9 @@ void main() {
     executeCallableEXT(brdfType, /*location(bsdf)=*/0);
     hitInfo.sampleDirection = toWorld(bsdf.wo, worldTransform);
     hitInfo.samplePdf = bsdf.pdf;
-    hitInfo.bsdfEval = bsdf.f;
+    hitInfo.sampleWeight = bsdf.pdf > 0.0f ? bsdf.f / bsdf.pdf : vec3(0.0f);
     hitInfo.sampleLobeType = bsdf.lobeType;
+    hitInfo.materialId = props.materialId;
 
     // Account for any lights hit.    
     hitInfo.Le = vec3(0.0f);

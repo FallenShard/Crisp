@@ -62,7 +62,7 @@ std::unique_ptr<Scene> createScene(
     //     return std::make_unique<NormalMappingScene>(renderer, window);
     // }
     if (name == kSceneNames[7]) {
-        return std::make_unique<VulkanRayTracingScene>(renderer, window, outputDir);
+        return std::make_unique<VulkanRayTracingScene>(renderer, window, outputDir, args);
     }
     if (name == kSceneNames[8]) {
         return std::make_unique<OceanScene>(renderer, window);

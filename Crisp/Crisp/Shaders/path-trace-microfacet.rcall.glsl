@@ -61,8 +61,7 @@ float ggxG(in vec3 wi, in vec3 wo, in vec3 m, in float alpha) {
     return ggxSmithBeckmann(wi, m, alpha) * ggxSmithBeckmann(wo, m, alpha);
 }
 
-float ggxPdf(in vec3 microfacetNormal, in float alpha)
-{
+float ggxPdf(in vec3 microfacetNormal, in float alpha) {
     return ggxD(microfacetNormal, alpha) * abs(microfacetNormal.z);
 }
 
@@ -108,8 +107,7 @@ float fresnelDielectric(float cosThetaI, float extIOR, float intIOR, inout float
     return (Rs * Rs + Rp * Rp) / 2.0f;
 }
 
-vec3 eval(in vec3 wi, in vec3 wo, in vec3 kd, in float ks, in float extIor, in float intIor, in float alpha)
-{
+vec3 eval(in vec3 wi, in vec3 wo, in vec3 kd, in float ks, in float extIor, in float intIor, in float alpha) {
     const float cosThetaI = wi.z;
     const float cosThetaO = wo.z;
     if (cosThetaI < 0.0f || cosThetaO < 0.0f) {
@@ -130,28 +128,31 @@ vec3 eval(in vec3 wi, in vec3 wo, in vec3 kd, in float ks, in float extIor, in f
     return diffuse * cosThetaO + specular / (4.0f * cosThetaI);
 }
 
-void main()
-{
+void main() {
     const float ks = scene.materials.data[brdf.materialId].ks;
     const float alpha = scene.materials.data[brdf.materialId].microfacetAlpha;
 
-    vec2 unitSample = brdf.unitSample;
+    if (brdf.operation == kBrdfOperationSample) {
+        vec2 unitSample = brdf.unitSample;
 
-    if (unitSample.x < ks) {
-        unitSample.x /= ks; // Reuse the sample here.
-        const vec3 microfacetNormal = ggxSampleNormal(unitSample, alpha);
-        brdf.wo = 2.0f * dot(microfacetNormal, brdf.wi) * microfacetNormal - brdf.wi; // Reflect.
-        brdf.lobeType = kLobeTypeGlossy;
+        if (unitSample.x < ks) {
+            unitSample.x /= ks; // Reuse the sample here.
+            const vec3 microfacetNormal = ggxSampleNormal(unitSample, alpha);
+            brdf.wo = 2.0f * dot(microfacetNormal, brdf.wi) * microfacetNormal - brdf.wi; // Reflect.
+            brdf.lobeType = kLobeTypeGlossy;
+        } else {
+            unitSample.x = (unitSample.x - ks) / (1.0 - ks); // Reuse the sample here.
+            brdf.wo = squareToCosineHemisphere(unitSample);
+            brdf.lobeType = kLobeTypeDiffuse;
+        }
     } else {
-        unitSample.x = (unitSample.x - ks) / (1.0 - ks); // Reuse the sample here.
-        brdf.wo = squareToCosineHemisphere(unitSample);
-        brdf.lobeType = kLobeTypeDiffuse;
+        brdf.lobeType = kLobeTypeGlossy | kLobeTypeDiffuse;
     }
 
     // Handle edge case if we are pointing into the surface due to bad microfacet sample reflection.
-    if (brdf.wo.z < 0.0f) {
-        brdf.f = vec3(0.0f);
+    if (brdf.wi.z <= 0.0f || brdf.wo.z <= 0.0f) {
         brdf.pdf = 0.0f;
+        brdf.f = vec3(0.0f);
         return;
     }
 
@@ -163,5 +164,5 @@ void main()
         ks,
         scene.materials.data[brdf.materialId].extIor,
         scene.materials.data[brdf.materialId].intIor,
-        alpha) / brdf.pdf;
+        alpha);
 }

@@ -62,10 +62,19 @@ void setCameraParameters(FreeCameraController& cameraController, const nlohmann:
 
 } // namespace
 
-VulkanRayTracingScene::VulkanRayTracingScene(Renderer* renderer, Window* window, std::filesystem::path outputDir)
+VulkanRayTracingScene::VulkanRayTracingScene(
+    Renderer* renderer,
+    Window* window,
+    std::filesystem::path outputDir,
+    const nlohmann::json& args)
     : Scene(renderer, window)
     , m_outputDir(std::move(outputDir)) {
     setupInput();
+
+    m_integratorParams.sampleCount = std::max(1, args.value("samplesPerFrame", 1));
+    m_captureAfterSamples = std::max(0, args.value("captureAfterSamples", 0));
+    m_closeAfterScreenshot = args.value("closeAfterCapture", false);
+    m_screenshotFilename = args.value("captureFilename", std::string{"screenshot.exr"});
 
     const auto json =
         loadJsonFromFile(renderer->getAssetPaths().resourceDir / "VesperScenes/Nori-PA-4/cbox-mats.json").unwrap();
@@ -243,10 +252,24 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
     m_integratorParams.frameIdx++;
 
+    const int64_t accumulatedSamples =
+        static_cast<int64_t>(m_integratorParams.frameIdx) * m_integratorParams.sampleCount;
+    if (m_captureAfterSamples > 0 && accumulatedSamples >= m_captureAfterSamples) {
+        m_screenshotRequested = true;
+        m_captureAfterSamples = 0;
+    }
+
     if (const auto pixelData = m_screenshot.tryRead<float>(frameContext.completedValue)) {
-        saveExr(m_outputDir / "screenshot.exr", *pixelData, m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight())
+        saveExr(
+            m_outputDir / m_screenshotFilename,
+            *pixelData,
+            m_rayTracedImage->getWidth(),
+            m_rayTracedImage->getHeight())
             .unwrap();
         m_screenshot.reset();
+        if (m_closeAfterScreenshot) {
+            m_window->close();
+        }
     }
 }
 
@@ -350,6 +373,7 @@ void VulkanRayTracingScene::setupInput() {
         switch (key) {
         case Key::F5:
             m_resourceContext->recreatePipelines();
+            m_integratorParams.frameIdx = 0;
             break;
         default: {
         }
