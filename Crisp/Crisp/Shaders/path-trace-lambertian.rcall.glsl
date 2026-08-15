@@ -6,24 +6,18 @@
 
 #include "Common/path-trace-payload.part.glsl"
 #include "Common/math-constants.part.glsl"
-#include "Common/warp.part.glsl"
 #include "Common/path-trace-scene.part.glsl"
+#include "Brdf/lambertian.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 
 void main() {
     if (brdf.operation == kBrdfOperationSample) {
-        brdf.wo = squareToCosineHemisphere(brdf.unitSample);
+        brdf.wo = sampleLambertian(brdf.unitSample);
     }
 
     brdf.lobeType = kLobeTypeDiffuse;
-
-    if (brdf.wi.z <= 0.0f || brdf.wo.z <= 0.0f) {
-        brdf.pdf = 0.0f;
-        brdf.f = vec3(0.0f);
-        return;
-    }
-
-    brdf.pdf = squareToCosineHemispherePdf(brdf.wo);
-    brdf.f = scene.materials.data[brdf.materialId].albedo * InvPI * brdf.wo.z;
+    brdf.f = evaluateLambertian(
+        scene.materials.data[brdf.materialId].albedo, brdf.wi, brdf.wo);
+    brdf.pdf = lambertianPdf(brdf.wi, brdf.wo);
 }

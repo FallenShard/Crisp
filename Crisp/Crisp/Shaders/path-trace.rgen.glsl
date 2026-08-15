@@ -15,7 +15,6 @@ const int kRussianRouletteCutoff = 3;
 
 const int kPayloadIndex = 0;
 layout(location = kPayloadIndex) rayPayloadEXT HitInfo hitInfo;
-layout(location = 0) callableDataEXT BrdfSample bsdf;
 
 layout(set = 1, binding = 0) uniform accelerationStructureEXT sceneBvh;
 layout(set = 1, binding = 1, rgba32f) uniform image2D image;
@@ -35,24 +34,20 @@ layout(set = 1, binding = 3) uniform IntegratorParams {
 
 #include "Common/path-trace-scene.part.glsl"
 #include "Common/path-trace-vertex-pull.part.glsl"
+#include "Integrators/brdf-eval.part.glsl"
 
-void evaluateBrdf(
-    in vec3 normal,
-    in vec3 wi,
-    in vec3 wo,
-    in uint materialId,
-    out vec3 f,
-    out float pdf) {
+BrdfEval evaluateBrdfWorldSpace(
+    vec3 normal,
+    vec3 wi,
+    vec3 wo,
+    uint materialId)
+{
     const mat3 coordinateFrame = createCoordinateFrame(normal);
-    bsdf.normal = transpose(coordinateFrame) * normal;
-    bsdf.wi = transpose(coordinateFrame) * wi;
-    bsdf.wo = transpose(coordinateFrame) * wo;
-    bsdf.materialId = materialId;
-    bsdf.operation = kBrdfOperationEvaluate;
-
-    executeCallableEXT(scene.materials.data[materialId].type, /*location(bsdf)=*/0);
-    f = bsdf.f;
-    pdf = bsdf.pdf;
+    const mat3 worldToLocal = transpose(coordinateFrame);
+    return evaluateBrdf(
+        scene.materials.data[materialId],
+        worldToLocal * wi,
+        worldToLocal * wo);
 }
 
 void traceRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
@@ -202,10 +197,9 @@ vec3 computeRadianceDirectLighting(inout uint seed) {
     const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-            vec3 lightDirectionBrdf;
-            float lightDirectionBrdfPdf;
-            evaluateBrdf(n, wi, shadowRayDir, materialId, lightDirectionBrdf, lightDirectionBrdfPdf);
-            L += radiance * lightDirectionBrdf;
+            const BrdfEval lightDirectionBrdf =
+                evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
+            L += radiance * lightDirectionBrdf.f;
         }
     }
 
@@ -267,10 +261,9 @@ vec3 computeRadianceMis(inout uint seed) {
     const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-            vec3 lightDirectionBrdf;
-            float lightDirectionBrdfPdf;
-            evaluateBrdf(n, wi, shadowRayDir, materialId, lightDirectionBrdf, lightDirectionBrdfPdf);
-            L += radiance * lightDirectionBrdf * powerHeuristic(lightPdf, lightDirectionBrdfPdf);
+            const BrdfEval lightDirectionBrdf =
+                evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
+            L += radiance * lightDirectionBrdf.f * powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
         }
     }
 
@@ -336,11 +329,10 @@ vec3 computeRadianceMisPt(inout uint seed) {
             const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
             if (lightPdf > 0.0f) {
                 if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-                    vec3 lightDirectionBrdf;
-                    float lightDirectionBrdfPdf;
-                    evaluateBrdf(n, wi, shadowRayDir, materialId, lightDirectionBrdf, lightDirectionBrdfPdf);
-                    L += throughput * radiance * lightDirectionBrdf *
-                        powerHeuristic(lightPdf, lightDirectionBrdfPdf);
+                    const BrdfEval lightDirectionBrdf =
+                        evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
+                    L += throughput * radiance * lightDirectionBrdf.f *
+                        powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
                 }
             }
         }

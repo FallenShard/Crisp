@@ -5,6 +5,11 @@ const int kLobeTypeDiffuse = 1 << 0;
 const int kLobeTypeDelta   = 1 << 1;
 const int kLobeTypeGlossy  = 1 << 2;
 
+const int kBrdfLambertian = 0;
+const int kBrdfDielectric = 1;
+const int kBrdfMirror = 2;
+const int kBrdfMicrofacet = 3;
+
 const uint kBrdfOperationSample = 0;
 const uint kBrdfOperationEvaluate = 1;
 
@@ -74,6 +79,11 @@ struct BrdfParameters {
 
     vec3 complexIorK;
     float pad1;
+};
+
+struct BrdfEval {
+    vec3 f;    // eval(wi, wo) * abs(dot(n, wo)).
+    float pdf;
 };
 
 struct LightParameters {
