@@ -232,8 +232,7 @@ Result<bool> shaderNeedsRecompilation(
     const std::filesystem::path& outputPath,
     ShaderTimestampCache& timestampCache,
     std::mutex& timestampCacheMutex) {
-    CRISP_TRY(
-        const auto outputModifiedTime, getCachedLastWriteTime(outputPath, timestampCache, timestampCacheMutex));
+    CRISP_TRY(const auto outputModifiedTime, getCachedLastWriteTime(outputPath, timestampCache, timestampCacheMutex));
     if (!outputModifiedTime) {
         return true; // Output file doesn't exist, so we need to recompile.
     }
@@ -312,9 +311,7 @@ enum class ShaderCompilationOutcome : uint8_t {
 };
 
 Result<ShaderCompilationOutcome> executeShaderCompilationTask(
-    const ShaderCompilationTask& task,
-    ShaderTimestampCache& timestampCache,
-    std::mutex& timestampCacheMutex) {
+    const ShaderCompilationTask& task, ShaderTimestampCache& timestampCache, std::mutex& timestampCacheMutex) {
     CRISP_TRY(
         const auto shouldRecompile,
         shaderNeedsRecompilation(task.inputPath, task.outputPath, timestampCache, timestampCacheMutex),
@@ -328,10 +325,7 @@ Result<ShaderCompilationOutcome> executeShaderCompilationTask(
     CRISP_TRY(compileShader(task.inputPath, task.outputPath, task.shaderType));
     const auto compilationDuration =
         std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - compilationStartTime);
-    CRISP_LOGI(
-        "Compiled | {:<48} | {:>9.2f} ms",
-        task.inputPath.filename().string(),
-        compilationDuration.count());
+    CRISP_LOGI("Compiled | {:<48} | {:>9.2f} ms", task.inputPath.filename().string(), compilationDuration.count());
     return ShaderCompilationOutcome::Recompiled;
 }
 } // namespace
@@ -432,11 +426,24 @@ Result<ShaderCompilationStats> recompileShaderDir(
     std::vector<ShaderCompilationTask> tasks;
     FlatHashSet<std::filesystem::path> scheduledOutputPaths;
     for (const auto& inputEntry : std::filesystem::recursive_directory_iterator(inputDir)) {
+        const std::filesystem::path& inputPath = inputEntry.path();
+        const auto relativePath = inputPath.lexically_relative(inputDir);
+        if (relativePath.empty() || relativePath.is_absolute() || *relativePath.begin() == "..") {
+            return resultError(
+                "Failed to determine the path of {} relative to {}", inputPath.string(), inputDir.string());
+        }
+
         if (inputEntry.is_directory()) {
+            const auto outputDirectory = (outputDir / relativePath).lexically_normal();
+            std::error_code directoryError;
+            std::filesystem::create_directories(outputDirectory, directoryError);
+            if (directoryError) {
+                return resultError(
+                    "Failed to create output directory {}: {}", outputDirectory.string(), directoryError.message());
+            }
             continue;
         }
 
-        const std::filesystem::path& inputPath = inputEntry.path();
         if (inputPath.string().ends_with("part.glsl")) {
             continue;
         }
@@ -454,16 +461,19 @@ Result<ShaderCompilationStats> recompileShaderDir(
             continue;
         }
 
-        const auto outputPath = outputDir / inputPath.filename().replace_extension("spv");
+        auto relativeOutputPath = relativePath;
+        relativeOutputPath.replace_extension("spv");
+        const auto outputPath = (outputDir / relativeOutputPath).lexically_normal();
         if (!scheduledOutputPaths.emplace(outputPath).second) {
             return resultError("Multiple shader sources produce the same output path: {}", outputPath.string());
         }
 
-        tasks.push_back(ShaderCompilationTask{
-            .inputPath = inputPath,
-            .outputPath = outputPath,
-            .shaderType = shaderType,
-        });
+        tasks.push_back(
+            ShaderCompilationTask{
+                .inputPath = inputPath,
+                .outputPath = outputPath,
+                .shaderType = shaderType,
+            });
     }
 
     ShaderTimestampCache timestampCache;
