@@ -1,5 +1,5 @@
-#ifndef CRISP_ATMOSPHERE_GLSL_H
-#define CRISP_ATMOSPHERE_GLSL_H
+#ifndef CRISP_ATMOSPHERE_GLSL
+#define CRISP_ATMOSPHERE_GLSL
 
 struct AtmosphereParams {
     mat4 VP;
@@ -331,4 +331,4 @@ float computeRayleighPhaseFunction(float cosTheta) {
     return 3.0f / (16.0f * PI) * (1.0f + cosTheta * cosTheta);
 }
 
-#endif // CRISP_ATMOSPHERE_GLSL_H
+#endif // CRISP_ATMOSPHERE_GLSL

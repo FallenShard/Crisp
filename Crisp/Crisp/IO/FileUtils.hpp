@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -8,6 +9,8 @@
 #include <Crisp/Core/Result.hpp>
 
 namespace crisp {
+Result<std::optional<std::filesystem::file_time_type>> getLastWriteTime(const std::filesystem::path& path);
+
 std::vector<std::string> enumerateDirectories(const std::filesystem::path& directoryPath);
 Result<std::string> fileToString(const std::filesystem::path& filePath);
 Result<> stringToFile(const std::filesystem::path& outputFilePath, const std::string& str);

@@ -43,6 +43,7 @@ add_cpp_static_library(CrispShaderCompiler
 )
 target_link_libraries(CrispShaderCompiler
     PUBLIC Crisp::Result
+    PRIVATE Crisp::FileUtils
     PRIVATE Crisp::HashMap
     PRIVATE Crisp::ShaderType
     PUBLIC Crisp::VulkanHeader

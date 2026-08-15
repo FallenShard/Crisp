@@ -1,5 +1,5 @@
-#ifndef BINDLESS_PART_GLSL
-#define BINDLESS_PART_GLSL
+#ifndef CRISP_BINDLESS_GLSL
+#define CRISP_BINDLESS_GLSL
 
 // The global bindless table. Must match BindlessImageRegistry: the set index, the binding numbers, and the fact
 // that several view types share binding 0 because they are all VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE.
@@ -20,4 +20,4 @@ vec4 sampleBindless(const uint textureIndex, const uint samplerIndex, const vec2
     return texture(sampler2D(gTextures2D[nonuniformEXT(textureIndex)], gSamplers[nonuniformEXT(samplerIndex)]), uv);
 }
 
-#endif
+#endif // CRISP_BINDLESS_GLSL

@@ -1,5 +1,5 @@
-#ifndef CRISP_TONEMAP_GLSL_H
-#define CRISP_TONEMAP_GLSL_H
+#ifndef CRISP_TONEMAP_GLSL
+#define CRISP_TONEMAP_GLSL
 
 struct TonemapParams {
     float exposure;
@@ -90,4 +90,4 @@ vec3 applyTonemap(const vec3 radiance, const TonemapParams params) {
     }
 }
 
-#endif // CRISP_TONEMAP_GLSL_H
+#endif // CRISP_TONEMAP_GLSL

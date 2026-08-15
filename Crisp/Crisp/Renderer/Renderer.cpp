@@ -47,7 +47,7 @@ Renderer::Renderer(
     , m_assetPaths(std::move(assetPaths))
     , m_defaultViewport()
     , m_defaultScissor() {
-    recompileShaderDir(m_assetPaths.shaderSourceDir, m_assetPaths.spvShaderDir);
+    recompileShaderDir(m_assetPaths.shaderSourceDir, m_assetPaths.spvShaderDir).unwrap();
 
     // Create fundamental objects for the API
     m_instance = std::make_unique<VulkanInstance>(
@@ -197,8 +197,9 @@ void Renderer::resize(int /*width*/, int /*height*/) {
 }
 
 void Renderer::enqueueResourceUpdate(const std::function<void(const VulkanCommandEncoder&)>& resourceUpdate) {
-    m_device->postResourceUpdate(
-        [resourceUpdate](const VkCommandBuffer cmdBuffer) { resourceUpdate(VulkanCommandEncoder(cmdBuffer)); });
+    m_device->postResourceUpdate([resourceUpdate](const VkCommandBuffer cmdBuffer) {
+        resourceUpdate(VulkanCommandEncoder(cmdBuffer));
+    });
 }
 
 void Renderer::enqueueDefaultPassDrawCommand(std::function<void(VkCommandBuffer)> drawAction) {

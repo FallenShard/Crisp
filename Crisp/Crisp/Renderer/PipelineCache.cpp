@@ -46,7 +46,7 @@ VulkanPipeline* PipelineCache::getPipeline(const std::string& key) const {
 }
 
 void PipelineCache::recreatePipelines(ShaderCache& shaderCache, const VulkanDevice& device) {
-    recompileShaderDir(m_assetPaths.shaderSourceDir, m_assetPaths.spvShaderDir);
+    recompileShaderDir(m_assetPaths.shaderSourceDir, m_assetPaths.spvShaderDir).unwrap();
 
     for (auto& [id, info] : m_pipelineInfos) {
         const std::filesystem::path pipelineAbsolutePath{m_assetPaths.getPipelineConfigPath(info.filename)};

@@ -1,3 +1,5 @@
+#ifndef CRISP_SHEEN_GLSL
+#define CRISP_SHEEN_GLSL
 
 
 float sheenD(float NdotH, float alpha)
@@ -44,3 +46,5 @@ float sheenScale(vec3 sheenColor, float NdotV, float NdotL, float alpha, in samp
     const float sheenMax = max(max(sheenColor.r, sheenColor.g), sheenColor.b);
     return min(1.0f - sheenMax * E_NdotV, 1.0f - sheenMax * E_NdotL);
 }
+
+#endif // CRISP_SHEEN_GLSL

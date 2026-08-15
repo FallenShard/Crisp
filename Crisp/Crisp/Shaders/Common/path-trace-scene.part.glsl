@@ -1,5 +1,5 @@
-#ifndef PATH_TRACE_SCENE_PART_GLSL
-#define PATH_TRACE_SCENE_PART_GLSL
+#ifndef CRISP_PATH_TRACE_SCENE_GLSL
+#define CRISP_PATH_TRACE_SCENE_GLSL
 
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceVertices {
     vec3 data[];
@@ -45,4 +45,4 @@ layout(push_constant, scalar) uniform RayTracingSceneAddresses {
     PathTraceAliasTable aliasTable;
 } scene;
 
-#endif
+#endif // CRISP_PATH_TRACE_SCENE_GLSL

@@ -1,5 +1,5 @@
-#ifndef WARP_PART_GLSL
-#define WARP_PART_GLSL
+#ifndef CRISP_WARP_GLSL
+#define CRISP_WARP_GLSL
 
 vec3 squareToCosineHemisphere(vec2 unitSample)
 {
@@ -53,4 +53,4 @@ vec3 squareToUniformTriangle(const vec2 unitSample) {
     return vec3(u, v, 1.0f - u - v);
 }
 
-#endif
+#endif // CRISP_WARP_GLSL

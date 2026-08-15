@@ -1,3 +1,5 @@
+#ifndef CRISP_LIGHTS_GLSL
+#define CRISP_LIGHTS_GLSL
 
 // General structure, different types will use different fields
 struct Light
@@ -85,3 +87,5 @@ vec3 computeEnvLightRadiance(
 
     return (kD * diffuse + specular) * ao;
 }
+
+#endif // CRISP_LIGHTS_GLSL

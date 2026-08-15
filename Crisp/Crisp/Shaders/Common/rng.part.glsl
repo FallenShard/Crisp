@@ -1,5 +1,5 @@
-#ifndef RNG_PART_GLSL
-#define RNG_PART_GLSL
+#ifndef CRISP_RNG_GLSL
+#define CRISP_RNG_GLSL
 
 // From https://redirect.cs.umbc.edu/~olano/papers/GPUTEA.pdf.
 uint tea(uint val0, uint val1)
@@ -62,4 +62,4 @@ uint rndRange(inout uint seed, uint upper)
 //     return uintBitsToFloat(s >> 9) - 1.0f;
 // }
 
-#endif
+#endif // CRISP_RNG_GLSL

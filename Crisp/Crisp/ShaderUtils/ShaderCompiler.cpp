@@ -1,14 +1,17 @@
 #include <Crisp/ShaderUtils/ShaderCompiler.hpp>
 
-#include <Crisp/ShaderUtils/ShaderType.hpp>
+#include <array>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
+#include <optional>
+#include <string_view>
+#include <system_error>
 
 #include <Crisp/Core/HashMap.hpp>
-#include <Crisp/Io/FileUtils.hpp>
-
 #include <Crisp/Core/Logger.hpp>
-
-#include <array>
-#include <fstream>
+#include <Crisp/Io/FileUtils.hpp>
+#include <Crisp/ShaderUtils/ShaderType.hpp>
 
 namespace crisp {
 namespace {
@@ -19,13 +22,105 @@ const FlatStringHashMap<std::string> kGlslangToSlangStageMap = {
     {},
 };
 
-auto logger = spdlog::stderr_color_mt("ShaderCompiler");
+CRISP_MAKE_LOGGER_MT("ShaderCompiler");
+
+using ShaderTimestamp = std::optional<std::filesystem::file_time_type>;
+using ShaderTimestampCache = FlatHashMap<std::filesystem::path, Result<ShaderTimestamp>>;
+
+Result<ShaderTimestamp> getCachedLastWriteTime(const std::filesystem::path& path, ShaderTimestampCache& timestampCache) {
+    const auto normalizedPath = std::filesystem::absolute(path).lexically_normal();
+    if (const auto iter = timestampCache.find(normalizedPath); iter != timestampCache.end()) {
+        return iter->second;
+    }
+
+    CRISP_TRY(const auto cachedTimestamp, getLastWriteTime(normalizedPath));
+    return timestampCache.emplace(normalizedPath, cachedTimestamp).first->second;
+}
+
+std::optional<std::filesystem::path> parseRelativeInclude(const std::string_view line) {
+    constexpr std::string_view kIncludeKeyword{"include"};
+
+    auto cursor = line.find_first_not_of(" \t");
+    if (cursor == std::string_view::npos || line[cursor] != '#') {
+        return std::nullopt;
+    }
+    cursor = line.find_first_not_of(" \t", cursor + 1);
+    if (cursor == std::string_view::npos || !line.substr(cursor).starts_with(kIncludeKeyword)) {
+        return std::nullopt;
+    }
+    cursor += kIncludeKeyword.size();
+    if (cursor < line.size() && line[cursor] != ' ' && line[cursor] != '\t' && line[cursor] != '"') {
+        return std::nullopt;
+    }
+
+    const auto openingQuote = line.find('"', cursor);
+    if (openingQuote == std::string_view::npos) {
+        return std::nullopt;
+    }
+    const auto closingQuote = line.find('"', openingQuote + 1);
+    if (closingQuote == std::string_view::npos) {
+        return std::nullopt;
+    }
+
+    std::filesystem::path includePath{line.substr(openingQuote + 1, closingQuote - openingQuote - 1)};
+    if (includePath.empty() || includePath.has_root_path()) {
+        return std::nullopt;
+    }
+    return includePath;
+}
+
+bool collectShaderSources(const std::filesystem::path& sourcePath, FlatHashSet<std::filesystem::path>& dependencies) {
+    const auto normalizedPath = std::filesystem::absolute(sourcePath).lexically_normal();
+    if (dependencies.contains(normalizedPath)) {
+        return true;
+    }
+    dependencies.insert(normalizedPath);
+
+    std::ifstream source(normalizedPath);
+    if (!source) {
+        return false;
+    }
+
+    bool allDependenciesExist = true;
+    std::string line;
+    while (std::getline(source, line)) {
+        if (const auto includePath = parseRelativeInclude(line)) {
+            const auto dependencyPath = (normalizedPath.parent_path() / *includePath).lexically_normal();
+            allDependenciesExist &= collectShaderSources(dependencyPath, dependencies);
+        }
+    }
+    return allDependenciesExist;
+}
+
+Result<bool> shaderNeedsRecompilation(
+    const std::filesystem::path& inputPath,
+    const std::filesystem::path& outputPath,
+    ShaderTimestampCache& timestampCache) {
+    CRISP_TRY(const auto outputModifiedTime, getCachedLastWriteTime(outputPath, timestampCache));
+    if (!outputModifiedTime) {
+        return true; // Output file doesn't exist, so we need to recompile.
+    }
+
+    FlatHashSet<std::filesystem::path> shaderSources;
+    if (!collectShaderSources(inputPath, shaderSources)) {
+        return true; // One of the input files doesn't exist, so we need to recompile/report error.
+    }
+
+    for (const auto& shaderSource : shaderSources) {
+        CRISP_TRY(const auto sourceModifiedTime, getCachedLastWriteTime(shaderSource, timestampCache));
+        if (!sourceModifiedTime || *sourceModifiedTime > *outputModifiedTime) {
+            return true;
+        }
+    }
+
+    return false;
+}
 } // namespace
 
-void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesystem::path& outputDir) {
+Result<ShaderCompilationStats> recompileShaderDir(
+    const std::filesystem::path& inputDir, const std::filesystem::path& outputDir) {
     if (!std::filesystem::exists(inputDir)) {
-        CRISP_LOGE("Specified input directory {} doesn't exist!", inputDir.string());
-        return;
+        return resultError("Specified shader input directory {} doesn't exist!", inputDir.string());
     }
 
     CRISP_LOGD("Processing and compiling shaders from: {}", inputDir.string());
@@ -33,13 +128,12 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
 
     if (!std::filesystem::exists(outputDir)) {
         if (!std::filesystem::create_directories(outputDir)) {
-            CRISP_LOGE("Failed to create output directory {}", outputDir.string());
-            return;
+            return resultError("Failed to create output directory {}", outputDir.string());
         }
     }
 
-    uint32_t shadersSkipped{0};
-    uint32_t shadersRecompiled{0};
+    ShaderCompilationStats stats;
+    ShaderTimestampCache timestampCache;
     std::array<char, 4096> lineBuffer; // NOLINT
     for (const auto& inputEntry : std::filesystem::recursive_directory_iterator(inputDir)) {
         if (inputEntry.is_directory()) {
@@ -67,126 +161,80 @@ void recompileShaderDir(const std::filesystem::path& inputDir, const std::filesy
 
         // Output file is shader-name.<stage>.spv
         const std::filesystem::path outputPath = outputDir / inputPath.filename().replace_extension("spv");
-
-        auto maybeGlslSource{preprocessGlslSource(inputPath)};
-        if (!maybeGlslSource.hasValue()) {
-            CRISP_LOGE(maybeGlslSource.getError());
-            continue;
-        }
-        const auto glslSource{std::move(maybeGlslSource).unwrap()};
-        const std::filesystem::file_time_type outputModifiedTs =
-            std::filesystem::exists(outputPath)
-                ? std::filesystem::last_write_time(outputPath)
-                : std::filesystem::file_time_type{};
-        if (glslSource.lastModifiedRecursive > outputModifiedTs) {
+        CRISP_TRY(
+            const auto shouldRecompile,
+            shaderNeedsRecompilation(inputPath, outputPath, timestampCache),
+            "Failed to query timestamps for shader {}",
+            inputPath.string());
+        if (shouldRecompile) {
             const std::filesystem::path tempOutputPath = outputDir / "temp.spv";
-            const std::filesystem::path tempInputPath = inputDir / fmt::format("temp{}", inputPath.extension().string());
+            const std::filesystem::path absoluteInputPath = std::filesystem::absolute(inputPath).lexically_normal();
 
             CRISP_LOGI("Compiling {}", inputPath.filename().string());
-
-            stringToFile(tempInputPath, glslSource.sourceCode).unwrap();
 
             const std::string command =
                 inputPath.extension() == ".glsl"
                     ? fmt::format(
-                          "glslangValidator.exe --target-env vulkan1.3 -o {} -S {} {}",
+                          R"(glslangValidator.exe --target-env vulkan1.3 -o "{}" -S {} "{}")",
                           tempOutputPath.string(),
                           shaderType,
-                          tempInputPath.string())
+                          absoluteInputPath.string())
                     : fmt::format(
-                          "slangc.exe -o {} -stage {} {}",
+                          R"(slangc.exe -o "{}" -stage {} "{}")",
                           tempOutputPath.string(),
                           kGlslangToSlangStageMap.find(shaderType)->second,
-                          tempInputPath.string());
+                          absoluteInputPath.string());
 
             // Open a subprocess to compile this shader
             FILE* pipe = _popen(command.c_str(), "rt");
             if (!pipe) {
-                CRISP_LOGE("Failed to open the pipe for {}", command);
-                _pclose(pipe);
-                continue;
+                return resultError("Failed to launch shader compiler command: {}", command);
             }
 
             // Read the pipe, typically the subprocess stdout
             lineBuffer.fill(0);
-            uint32_t errorCount{0};
+            bool compilerReportedError{false};
             while (fgets(lineBuffer.data(), static_cast<int>(lineBuffer.size()), pipe)) {
                 const std::string_view view(lineBuffer.data(), std::strlen(lineBuffer.data()));
-                if (view.substr(0, 5) == "ERROR") {
+                if (view.starts_with("ERROR")) {
                     CRISP_LOGE("{}", view);
-                    ++errorCount;
-                } else if (view.substr(0, 7) == "WARNING") {
+                    compilerReportedError = true;
+                } else if (view.starts_with("WARNING")) {
                     CRISP_LOGW("{}", view);
                 }
             }
-            if (errorCount > 0) {
-                std::filesystem::remove(tempInputPath);
-                CRISP_LOGF("Encountered errors while compiling: {}", inputPath.stem().string());
+
+            const bool pipeReadFailed = ferror(pipe) != 0;
+            const int returnCode = _pclose(pipe);
+            if (pipeReadFailed) {
+                std::error_code ignoredError;
+                std::filesystem::remove(tempOutputPath, ignoredError);
+                return resultError("Failed to read compiler output for shader {}", inputPath.string());
             }
-
-            // Close the pipe and overwrite the output spv on success
-            if (feof(pipe)) {
-                const int retVal = _pclose(pipe);
-                if (retVal == 0) {
-                    // On success, we remove the older version of the compiled shader and rename the temp file
-                    // appropriately
-                    if (std::filesystem::exists(outputPath)) {
-                        std::filesystem::remove(outputPath);
-                    }
-
-                    std::filesystem::rename(tempOutputPath, outputPath);
-                } else {
-                    CRISP_LOGE("Pipe process returned: {}", retVal);
-                }
-            } else {
-                CRISP_LOGE("Failed to read the pipe to the end.");
-            }
-
-            std::filesystem::remove(tempInputPath);
-
-            ++shadersRecompiled;
-        } else {
-            ++shadersSkipped;
-        }
-    }
-    CRISP_LOGI("{} shaders recompiled, {} shaders skipped.", shadersRecompiled, shadersSkipped);
-}
-
-Result<GlslSourceFile> preprocessGlslSource(const std::filesystem::path& inputPath) {
-    constexpr std::string_view includeDirective("#include");
-    constexpr std::size_t trimLeft = 2;  // space + \"
-    constexpr std::size_t trimRight = 1; // \"
-
-    std::stringstream preprocessed;
-
-    std::size_t lineIdx = 0;
-    std::string line;
-    std::ifstream inputFile(inputPath);
-
-    GlslSourceFile result{};
-    result.lastModifiedRecursive = std::filesystem::last_write_time(inputPath);
-    while (std::getline(inputFile, line)) {
-        if (line.starts_with(includeDirective)) {
-            const std::string relativeIncludePath = line.substr(includeDirective.size() + trimLeft);
-            const std::filesystem::path includeFilePath =
-                inputPath.parent_path() / relativeIncludePath.substr(0, relativeIncludePath.size() - trimRight);
-            if (!std::filesystem::exists(includeFilePath)) {
+            if (returnCode != 0 || compilerReportedError) {
+                std::error_code ignoredError;
+                std::filesystem::remove(tempOutputPath, ignoredError);
                 return resultError(
-                    "Invalid include path {} at line {} of {}!", relativeIncludePath, lineIdx, inputPath.string());
+                    "Failed to compile shader {} (compiler exit code {})", inputPath.string(), returnCode);
             }
-            preprocessed << fileToString(includeFilePath).unwrap() << '\n';
 
-            const auto includeWriteTime{std::filesystem::last_write_time(includeFilePath)};
-            if (includeWriteTime > result.lastModifiedRecursive) {
-                result.lastModifiedRecursive = includeWriteTime;
+            std::error_code fileError;
+            std::filesystem::remove(outputPath, fileError);
+            if (fileError) {
+                return resultError("Failed to remove old shader {}: {}", outputPath.string(), fileError.message());
             }
+            std::filesystem::rename(tempOutputPath, outputPath, fileError);
+            if (fileError) {
+                return resultError("Failed to move compiled shader to {}: {}", outputPath.string(), fileError.message());
+            }
+            ++stats.recompiledShaderCount;
         } else {
-            preprocessed << line << '\n';
+            ++stats.skippedShaderCount;
         }
-        ++lineIdx;
     }
-
-    result.sourceCode = preprocessed.str();
-    return result;
+    CRISP_LOGI(
+        "{} shaders recompiled, {} shaders skipped.", stats.recompiledShaderCount, stats.skippedShaderCount);
+    return stats;
 }
+
 } // namespace crisp

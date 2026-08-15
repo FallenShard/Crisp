@@ -1,3 +1,5 @@
+#ifndef CRISP_TRANSFORMS_GLSL
+#define CRISP_TRANSFORMS_GLSL
 
 layout(set = 0, binding = 0) uniform TransformPack
 {
@@ -6,3 +8,5 @@ layout(set = 0, binding = 0) uniform TransformPack
     mat4 M;
     mat4 N;
 };
+
+#endif // CRISP_TRANSFORMS_GLSL

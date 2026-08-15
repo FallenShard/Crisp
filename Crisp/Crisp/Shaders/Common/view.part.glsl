@@ -1,5 +1,5 @@
-#ifndef CRISP_VIEW_PART_GLSL
-#define CRISP_VIEW_PART_GLSL
+#ifndef CRISP_VIEW_GLSL
+#define CRISP_VIEW_GLSL
 
 struct ViewParameters {
     mat4 V;
@@ -10,4 +10,4 @@ struct ViewParameters {
     vec2 nearFar;
 };
 
-#endif // CRISP_VIEW_PART_GLSL
+#endif // CRISP_VIEW_GLSL

@@ -1,5 +1,5 @@
-#ifndef MICROFACET_PART_GLSL
-#define MICROFACET_PART_GLSL
+#ifndef CRISP_MICROFACET_GLSL
+#define CRISP_MICROFACET_GLSL
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
 {
@@ -64,4 +64,4 @@ float geometrySchlickGGXAniso(float LdotH, float VdotH, float NdotV, float VdotT
     return num1 * num2 / (1.0f + lambdaV + lambdaL);
 }
 
-#endif 
+#endif // CRISP_MICROFACET_GLSL

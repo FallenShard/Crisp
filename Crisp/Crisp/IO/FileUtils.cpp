@@ -2,8 +2,21 @@
 
 #include <fstream>
 #include <sstream>
+#include <system_error>
 
 namespace crisp {
+
+Result<std::optional<std::filesystem::file_time_type>> getLastWriteTime(const std::filesystem::path& path) {
+    std::error_code error;
+    const auto timestamp = std::filesystem::last_write_time(path, error);
+    if (!error) {
+        return std::optional{timestamp};
+    }
+    if (error == std::errc::no_such_file_or_directory) {
+        return std::optional<std::filesystem::file_time_type>{};
+    }
+    return resultError("Failed to query the last write time of {}: {}", path.string(), error.message());
+}
 
 std::vector<std::string> enumerateDirectories(const std::filesystem::path& directory) {
     std::vector<std::string> dirNames;
