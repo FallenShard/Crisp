@@ -1,8 +1,8 @@
 #ifndef CRISP_BRDF_EVAL_GLSL
 #define CRISP_BRDF_EVAL_GLSL
 
-#include "../Brdf/lambertian.part.glsl"
-#include "../Brdf/microfacet.part.glsl"
+#include "../../Brdf/lambertian.part.glsl"
+#include "../../Brdf/microfacet.part.glsl"
 
 BrdfEval evaluateLambertian(
     BrdfParameters material,

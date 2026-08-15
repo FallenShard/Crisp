@@ -2,7 +2,7 @@
 #extension GL_EXT_ray_tracing : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "Common/path-trace-payload.part.glsl"
+#include "../PathTracer/Core/types.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 

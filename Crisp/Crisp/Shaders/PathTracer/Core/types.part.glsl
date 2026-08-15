@@ -1,5 +1,5 @@
-#ifndef CRISP_PATH_TRACE_PAYLOAD_GLSL
-#define CRISP_PATH_TRACE_PAYLOAD_GLSL
+#ifndef CRISP_PATH_TRACER_TYPES_GLSL
+#define CRISP_PATH_TRACER_TYPES_GLSL
 
 const int kLobeTypeDiffuse = 1 << 0;
 const int kLobeTypeDelta   = 1 << 1;
@@ -95,4 +95,4 @@ struct LightParameters {
     float pad2;
 };
 
-#endif // CRISP_PATH_TRACE_PAYLOAD_GLSL
+#endif // CRISP_PATH_TRACER_TYPES_GLSL

@@ -1,5 +1,5 @@
-#ifndef CRISP_PATH_TRACE_VERTEX_PULL_GLSL
-#define CRISP_PATH_TRACE_VERTEX_PULL_GLSL
+#ifndef CRISP_PATH_TRACER_INTERSECTION_GLSL
+#define CRISP_PATH_TRACER_INTERSECTION_GLSL
 
 vec3 interpolatePosition(const uvec3 tri, const vec3 bary) {
     return scene.vertices.data[tri[0]] * bary[0]
@@ -14,4 +14,4 @@ vec3 interpolateNormal(const uvec3 tri, const vec3 bary) {
         + scene.normals.data[tri[2]] * bary[2]);
 }
 
-#endif // CRISP_PATH_TRACE_VERTEX_PULL_GLSL
+#endif // CRISP_PATH_TRACER_INTERSECTION_GLSL

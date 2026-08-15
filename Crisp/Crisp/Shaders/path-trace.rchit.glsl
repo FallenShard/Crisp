@@ -4,7 +4,7 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "Common/path-trace-payload.part.glsl"
+#include "PathTracer/Core/types.part.glsl"
 #include "Common/math-constants.part.glsl"
 #include "Common/rng.part.glsl"
 #include "Common/warp.part.glsl"
@@ -14,16 +14,9 @@ layout(location = 0) callableDataEXT BrdfSample bsdf;
 
 hitAttributeEXT vec2 barycentric;
 
-#include "Common/path-trace-scene.part.glsl"
-
-vec3 evalAreaLight(vec3 p, vec3 n, vec3 radiance) {
-    const vec3 ref = gl_WorldRayOriginEXT;
-    const vec3 wi = p - ref;
-    const float cosTheta = dot(n, normalize(-wi));
-    return cosTheta <= 0.0f ? vec3(0.0f) : radiance;
-}
-
-#include "Common/path-trace-vertex-pull.part.glsl"
+#include "PathTracer/Core/scene.part.glsl"
+#include "PathTracer/Core/intersection.part.glsl"
+#include "PathTracer/Lights/area-light.part.glsl"
 
 vec3 toLocal(const vec3 dir, const mat3 coordinateFrame) {
     return transpose(coordinateFrame) * dir;

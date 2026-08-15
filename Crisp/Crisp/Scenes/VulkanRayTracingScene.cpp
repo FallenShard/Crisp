@@ -63,10 +63,7 @@ void setCameraParameters(FreeCameraController& cameraController, const nlohmann:
 } // namespace
 
 VulkanRayTracingScene::VulkanRayTracingScene(
-    Renderer* renderer,
-    Window* window,
-    std::filesystem::path outputDir,
-    const nlohmann::json& args)
+    Renderer* renderer, Window* window, std::filesystem::path outputDir, const nlohmann::json& args)
     : Scene(renderer, window)
     , m_outputDir(std::move(outputDir)) {
     setupInput();
@@ -242,8 +239,7 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
         VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
         BindlessImageRegistry::kGlobalSetIndex);
     frameContext.commandEncoder.bindDescriptorSets(m_material->getDescriptorSetBinding());
-    frameContext.commandEncoder.setPushConstants(
-        pipelineLayout, std::as_bytes(std::span{&m_sceneAddresses, 1}));
+    frameContext.commandEncoder.setPushConstants(pipelineLayout, std::as_bytes(std::span{&m_sceneAddresses, 1}));
 
     const auto extent = m_renderer->getSwapChainExtent();
     frameContext.commandEncoder.traceRays(m_shaderBindingTable.bindings, extent);
@@ -261,10 +257,7 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
     if (const auto pixelData = m_screenshot.tryRead<float>(frameContext.completedValue)) {
         saveExr(
-            m_outputDir / m_screenshotFilename,
-            *pixelData,
-            m_rayTracedImage->getWidth(),
-            m_rayTracedImage->getHeight())
+            m_outputDir / m_screenshotFilename, *pixelData, m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight())
             .unwrap();
         m_screenshot.reset();
         if (m_closeAfterScreenshot) {
@@ -329,10 +322,10 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
         {"path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
         {"path-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
         {"path-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
-        {"path-trace-lambertian.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"path-trace-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"path-trace-mirror.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"path-trace-microfacet.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+        {"Brdf/path-trace-lambertian.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+        {"Brdf/path-trace-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+        {"Brdf/path-trace-mirror.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+        {"Brdf/path-trace-microfacet.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     };
     std::vector<std::filesystem::path> shaderSpvPaths;
     shaderSpvPaths.reserve(shaderInfos.size());

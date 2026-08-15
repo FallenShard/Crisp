@@ -4,11 +4,11 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "Common/path-trace-payload.part.glsl"
-#include "Common/math-constants.part.glsl"
-#include "Common/warp.part.glsl"
-#include "Common/path-trace-scene.part.glsl"
-#include "Brdf/microfacet.part.glsl"
+#include "../PathTracer/Core/types.part.glsl"
+#include "../Common/math-constants.part.glsl"
+#include "../Common/warp.part.glsl"
+#include "../PathTracer/Core/scene.part.glsl"
+#include "microfacet.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 
