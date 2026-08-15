@@ -291,7 +291,7 @@ vec3 computeRadiance(inout uint seed) {
 }
 
 void main() {
-    uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, integrator.frameIdx);
+    uint seed = seedRng(gl_LaunchIDEXT.xy, uint(integrator.frameIdx));
 
     vec3 L = vec3(0.0f);
     if (integrator.lightCount <= 0) {
