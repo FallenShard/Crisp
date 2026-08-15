@@ -238,6 +238,7 @@ vec3 computeRadianceMis(inout uint seed) {
     const vec3 sampleWeight = hitInfo.sampleWeight;
     const vec3 wi = -rayDirection.xyz;
     const uint materialId = hitInfo.materialId;
+    const bool deltaSample = hitInfo.sampleLobeType == kLobeTypeDelta;
 
     // BRDF sampling.
     {
@@ -246,7 +247,8 @@ vec3 computeRadianceMis(inout uint seed) {
 
         if (hitInfo.lightId != -1) {
             const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
-            L += sampleWeight * hitInfo.Le * powerHeuristic(samplePdf, lightPdf);
+            const float misWeight = deltaSample ? 1.0f : powerHeuristic(samplePdf, lightPdf);
+            L += sampleWeight * hitInfo.Le * misWeight;
         }
     }
 
@@ -288,17 +290,15 @@ vec3 computeRadianceMisPt(inout uint seed) {
     int bounceCount = 0;
     while (bounceCount < integrator.maxBounces) {
         traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
-        if (bounceCount == 0 || specularBounce) {
-            if (hitInfo.tHit >= tMin) {
-                // Accumulate any emission from the hit surface (e.g. we hit a light).
-                L += throughput * hitInfo.Le;
-            } else { // The ray missed, evaluate environment lighting and exit the loop. 
-                // L += throughput * texture(environmentMap, rayDirection);
-                break;
-            }
+        if (bounceCount == 0 && hitInfo.tHit >= tMin) {
+            // Accumulate emission visible directly from the camera. Secondary emitter hits are
+            // handled at the sampling site below, where their MIS weight is still available.
+            L += throughput * hitInfo.Le;
         }
 
         if (hitInfo.tHit < tMin) {
+            // The ray missed; evaluate environment lighting here once it is supported.
+            // L += throughput * texture(environmentMap, rayDirection);
             break;
         }
 
@@ -330,13 +330,14 @@ vec3 computeRadianceMisPt(inout uint seed) {
             }
         }
 
-        // If the light isn't a delta light (point or directional), do bsdf sampling.
+        // Trace the sampled BSDF direction to account for any emitter it reaches.
         {
             traceRay(seed, p, tMin, rayDir, tMax);
 
             if (hitInfo.lightId != -1) {
                 const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
-                L += throughput * sampleWeight * hitInfo.Le * powerHeuristic(samplePdf, lightPdf);
+                const float misWeight = specularBounce ? 1.0f : powerHeuristic(samplePdf, lightPdf);
+                L += throughput * sampleWeight * hitInfo.Le * misWeight;
             }
         }
 
