@@ -103,6 +103,8 @@ public:
     void postDescriptorWrite(const VkWriteDescriptorSet& write, const VkDescriptorBufferInfo& bufferInfo);
     void postDescriptorWrite(const VkWriteDescriptorSet& write, std::vector<VkDescriptorBufferInfo>&& bufferInfos);
     void postDescriptorWrite(const VkWriteDescriptorSet& write, const VkDescriptorImageInfo& imageInfo);
+    void postDescriptorWrite(
+        const VkWriteDescriptorSet& write, const VkWriteDescriptorSetAccelerationStructureKHR& accelInfo);
     void postDescriptorWrite(const VkWriteDescriptorSet& write);
     void flushDescriptorUpdates();
 
@@ -252,6 +254,7 @@ private:
 
     std::list<std::vector<VkDescriptorBufferInfo>> m_bufferInfos;
     std::list<VkDescriptorImageInfo> m_imageInfos;
+    std::list<VkWriteDescriptorSetAccelerationStructureKHR> m_accelerationStructureInfos;
     std::vector<VkWriteDescriptorSet> m_descriptorWrites;
 
     std::unique_ptr<VulkanResourceDeallocator> m_resourceDeallocator;

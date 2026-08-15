@@ -203,6 +203,13 @@ void VulkanDevice::postDescriptorWrite(const VkWriteDescriptorSet& write, const 
     m_descriptorWrites.back().pImageInfo = &m_imageInfos.back();
 }
 
+void VulkanDevice::postDescriptorWrite(
+    const VkWriteDescriptorSet& write, const VkWriteDescriptorSetAccelerationStructureKHR& accelInfo) {
+    m_accelerationStructureInfos.emplace_back(accelInfo);
+    m_descriptorWrites.emplace_back(write);
+    m_descriptorWrites.back().pNext = &m_accelerationStructureInfos.back();
+}
+
 void VulkanDevice::postDescriptorWrite(const VkWriteDescriptorSet& write) {
     m_descriptorWrites.emplace_back(write);
 }
@@ -215,6 +222,7 @@ void VulkanDevice::flushDescriptorUpdates() {
         m_descriptorWrites.clear();
         m_imageInfos.clear();
         m_bufferInfos.clear();
+        m_accelerationStructureInfos.clear();
     }
 }
 

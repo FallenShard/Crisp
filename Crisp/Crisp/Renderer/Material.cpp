@@ -161,15 +161,16 @@ void Material::writeDescriptor(const uint32_t setIndex, const uint32_t binding, 
 
 void Material::writeDescriptor(
     const uint32_t setIndex, const uint32_t binding, const VkWriteDescriptorSetAccelerationStructureKHR& asInfo) {
-    m_device->postDescriptorWrite({
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .pNext = &asInfo,
-        .dstSet = getOwnedDescriptorSet(setIndex),
-        .dstBinding = binding,
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = m_pipeline->getDescriptorType(setIndex, binding),
-    });
+    m_device->postDescriptorWrite(
+        {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = getOwnedDescriptorSet(setIndex),
+            .dstBinding = binding,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = m_pipeline->getDescriptorType(setIndex, binding),
+        },
+        asInfo);
 }
 
 void Material::setDynamicOffset(const uint32_t index, const uint32_t offset) {
