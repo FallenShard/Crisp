@@ -1,15 +1,21 @@
 #include <Crisp/ShaderUtils/ShaderCompiler.hpp>
 
+#include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <expected>
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -26,6 +32,7 @@
 namespace crisp {
 namespace {
 const FlatHashSet<std::filesystem::path> kSupportedExtensions{".glsl", ".slang"};
+constexpr std::size_t kMaxShaderCompilationThreads = 8;
 
 const FlatStringHashMap<std::string> kGlslangToSlangStageMap = {
     {"frag", "fragment"},
@@ -154,14 +161,15 @@ Result<ProcessOutput> runProcess(std::string command) {
 using ShaderTimestamp = std::optional<std::filesystem::file_time_type>;
 using ShaderTimestampCache = FlatHashMap<std::filesystem::path, Result<ShaderTimestamp>>;
 
-Result<ShaderTimestamp> getCachedLastWriteTime(const std::filesystem::path& path, ShaderTimestampCache& timestampCache) {
+Result<ShaderTimestamp> getCachedLastWriteTime(
+    const std::filesystem::path& path, ShaderTimestampCache& timestampCache, std::mutex& timestampCacheMutex) {
     const auto normalizedPath = std::filesystem::absolute(path).lexically_normal();
+    const std::scoped_lock lock(timestampCacheMutex);
     if (const auto iter = timestampCache.find(normalizedPath); iter != timestampCache.end()) {
         return iter->second;
     }
 
-    CRISP_TRY(const auto cachedTimestamp, getLastWriteTime(normalizedPath));
-    return timestampCache.emplace(normalizedPath, cachedTimestamp).first->second;
+    return timestampCache.emplace(normalizedPath, getLastWriteTime(normalizedPath)).first->second;
 }
 
 std::optional<std::filesystem::path> parseRelativeInclude(const std::string_view line) {
@@ -222,8 +230,10 @@ bool collectShaderSources(const std::filesystem::path& sourcePath, FlatHashSet<s
 Result<bool> shaderNeedsRecompilation(
     const std::filesystem::path& inputPath,
     const std::filesystem::path& outputPath,
-    ShaderTimestampCache& timestampCache) {
-    CRISP_TRY(const auto outputModifiedTime, getCachedLastWriteTime(outputPath, timestampCache));
+    ShaderTimestampCache& timestampCache,
+    std::mutex& timestampCacheMutex) {
+    CRISP_TRY(
+        const auto outputModifiedTime, getCachedLastWriteTime(outputPath, timestampCache, timestampCacheMutex));
     if (!outputModifiedTime) {
         return true; // Output file doesn't exist, so we need to recompile.
     }
@@ -234,7 +244,8 @@ Result<bool> shaderNeedsRecompilation(
     }
 
     for (const auto& shaderSource : shaderSources) {
-        CRISP_TRY(const auto sourceModifiedTime, getCachedLastWriteTime(shaderSource, timestampCache));
+        CRISP_TRY(
+            const auto sourceModifiedTime, getCachedLastWriteTime(shaderSource, timestampCache, timestampCacheMutex));
         if (!sourceModifiedTime || *sourceModifiedTime > *outputModifiedTime) {
             return true;
         }
@@ -283,11 +294,45 @@ Result<> compileSlangShader(
 
 Result<> compileShader(
     const std::filesystem::path& inputPath, const std::filesystem::path& outputPath, const std::string_view shaderType) {
-    CRISP_LOGI("Compiling {}", inputPath.filename().string());
     if (inputPath.extension() == ".glsl") {
         return compileGlslShader(inputPath, outputPath, shaderType);
     }
     return compileSlangShader(inputPath, outputPath, shaderType);
+}
+
+struct ShaderCompilationTask {
+    std::filesystem::path inputPath;
+    std::filesystem::path outputPath;
+    std::string shaderType;
+};
+
+enum class ShaderCompilationOutcome : uint8_t {
+    Recompiled,
+    Skipped,
+};
+
+Result<ShaderCompilationOutcome> executeShaderCompilationTask(
+    const ShaderCompilationTask& task,
+    ShaderTimestampCache& timestampCache,
+    std::mutex& timestampCacheMutex) {
+    CRISP_TRY(
+        const auto shouldRecompile,
+        shaderNeedsRecompilation(task.inputPath, task.outputPath, timestampCache, timestampCacheMutex),
+        "Failed to query timestamps for shader {}",
+        task.inputPath.string());
+    if (!shouldRecompile) {
+        return ShaderCompilationOutcome::Skipped;
+    }
+
+    const auto compilationStartTime = std::chrono::steady_clock::now();
+    CRISP_TRY(compileShader(task.inputPath, task.outputPath, task.shaderType));
+    const auto compilationDuration =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - compilationStartTime);
+    CRISP_LOGI(
+        "Compiled | {:<48} | {:>9.2f} ms",
+        task.inputPath.filename().string(),
+        compilationDuration.count());
+    return ShaderCompilationOutcome::Recompiled;
 }
 } // namespace
 
@@ -373,6 +418,7 @@ Result<ShaderCompilationStats> recompileShaderDir(
     if (!std::filesystem::exists(inputDir)) {
         return resultError("Specified shader input directory {} doesn't exist!", inputDir.string());
     }
+    const auto processingStartTime = std::chrono::steady_clock::now();
 
     CRISP_LOGD("Processing and compiling shaders from: {}", inputDir.string());
     CRISP_LOGD("Saving .spv modules in: {}", outputDir.string());
@@ -383,8 +429,8 @@ Result<ShaderCompilationStats> recompileShaderDir(
         }
     }
 
-    ShaderCompilationStats stats;
-    ShaderTimestampCache timestampCache;
+    std::vector<ShaderCompilationTask> tasks;
+    FlatHashSet<std::filesystem::path> scheduledOutputPaths;
     for (const auto& inputEntry : std::filesystem::recursive_directory_iterator(inputDir)) {
         if (inputEntry.is_directory()) {
             continue;
@@ -408,21 +454,79 @@ Result<ShaderCompilationStats> recompileShaderDir(
             continue;
         }
 
-        // Output file is shader-name.<stage>.spv
-        const std::filesystem::path outputPath = outputDir / inputPath.filename().replace_extension("spv");
-        CRISP_TRY(
-            const auto shouldRecompile,
-            shaderNeedsRecompilation(inputPath, outputPath, timestampCache),
-            "Failed to query timestamps for shader {}",
-            inputPath.string());
-        if (shouldRecompile) {
-            CRISP_TRY(compileShader(inputPath, outputPath, shaderType));
+        const auto outputPath = outputDir / inputPath.filename().replace_extension("spv");
+        if (!scheduledOutputPaths.emplace(outputPath).second) {
+            return resultError("Multiple shader sources produce the same output path: {}", outputPath.string());
+        }
+
+        tasks.push_back(ShaderCompilationTask{
+            .inputPath = inputPath,
+            .outputPath = outputPath,
+            .shaderType = shaderType,
+        });
+    }
+
+    ShaderTimestampCache timestampCache;
+    std::mutex timestampCacheMutex;
+    std::vector<std::optional<Result<ShaderCompilationOutcome>>> taskResults(tasks.size());
+    if (!tasks.empty()) {
+        const auto hardwareThreadCount = std::max(1u, std::thread::hardware_concurrency());
+        const auto workerCount = std::min({
+            tasks.size(),
+            static_cast<std::size_t>(hardwareThreadCount),
+            kMaxShaderCompilationThreads,
+        });
+        CRISP_LOGD("Processing {} shaders on {} compilation threads.", tasks.size(), workerCount);
+
+        std::atomic_size_t nextTaskIndex{0};
+        std::atomic_bool compilationFailed{false};
+        {
+            std::vector<std::jthread> workers;
+            workers.reserve(workerCount);
+            for (std::size_t workerIndex = 0; workerIndex < workerCount; ++workerIndex) {
+                workers.emplace_back([&] {
+                    while (!compilationFailed.load(std::memory_order_relaxed)) {
+                        const auto taskIndex = nextTaskIndex.fetch_add(1, std::memory_order_relaxed);
+                        if (taskIndex >= tasks.size()) {
+                            return;
+                        }
+
+                        auto taskResult =
+                            executeShaderCompilationTask(tasks[taskIndex], timestampCache, timestampCacheMutex);
+                        const bool succeeded = taskResult.hasValue();
+                        taskResults[taskIndex].emplace(std::move(taskResult));
+                        if (!succeeded) {
+                            compilationFailed.store(true, std::memory_order_relaxed);
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    ShaderCompilationStats stats;
+    for (auto& taskResult : taskResults) {
+        if (!taskResult) {
+            continue;
+        }
+        if (!*taskResult) {
+            return std::unexpected<std::string>(std::move(*taskResult).getError());
+        }
+
+        if (**taskResult == ShaderCompilationOutcome::Recompiled) {
             ++stats.recompiledShaderCount;
         } else {
             ++stats.skippedShaderCount;
         }
     }
-    CRISP_LOGI("{} shaders recompiled, {} shaders skipped.", stats.recompiledShaderCount, stats.skippedShaderCount);
+    const auto processingDuration =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - processingStartTime);
+    CRISP_LOGI(
+        "Processed {} shaders in {:.2f} ms: {} recompiled, {} skipped.",
+        tasks.size(),
+        processingDuration.count(),
+        stats.recompiledShaderCount,
+        stats.skippedShaderCount);
     return stats;
 }
 
