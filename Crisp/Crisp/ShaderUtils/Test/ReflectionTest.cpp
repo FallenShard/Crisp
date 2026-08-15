@@ -99,7 +99,7 @@ TEST(ReflectionTest, SpirvReflect) {
     spvReflectDestroyShaderModule(&module);
 }
 
-TEST(ReflectionTest, VertexShader) {
+TEST(ReflectionTest, VertexShaderExcludesBuiltIns) {
     const auto reflection =
         reflectVertexMetadataFromSpirvShader(
             readSpirvFile(kTestShaders.getSpirvPath("reflection.vert")).unwrap())

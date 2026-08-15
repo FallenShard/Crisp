@@ -157,12 +157,18 @@ Result<ShaderVertexInputMetadata> reflectVertexMetadataFromSpirvShader(std::span
     }
 
     ShaderVertexInputMetadata metadata{};
-    metadata.attributes.resize(module.input_variable_count);
+    metadata.attributes.reserve(module.input_variable_count);
     for (uint32_t i = 0; i < module.input_variable_count; ++i) {
         const auto& inputVariable = module.input_variables[i]; // NOLINT
-        metadata.attributes[i].name = inputVariable->name == nullptr ? "" : inputVariable->name;
-        metadata.attributes[i].format = toVulkanFormat(inputVariable->format).unwrap();
-        metadata.attributes[i].location = inputVariable->location;
+        if (inputVariable->built_in != -1) {
+            continue;
+        }
+
+        metadata.attributes.push_back({
+            .name = inputVariable->name == nullptr ? "" : inputVariable->name,
+            .format = toVulkanFormat(inputVariable->format).unwrap(),
+            .location = inputVariable->location,
+        });
     }
 
     std::ranges::sort(metadata.attributes, [](const auto& a, const auto& b) { return a.location < b.location; });

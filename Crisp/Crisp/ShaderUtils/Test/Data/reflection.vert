@@ -9,5 +9,5 @@ layout(location = 0) out vec3 vertexData;
 
 void main() {
     vertexData = normal + vec3(texCoord, 0.0) + tangent.xyz;
-    gl_Position = vec4(position, 1.0);
+    gl_Position = vec4(position + vec3(float(gl_InstanceIndex), 0.0, 0.0), 1.0);
 }
