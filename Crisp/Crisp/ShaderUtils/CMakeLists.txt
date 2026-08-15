@@ -23,10 +23,6 @@ add_cpp_test(CrispGlslUtilsTest
     "Test/LexerTest.cpp")
 target_link_libraries(CrispGlslUtilsTest PRIVATE Crisp::GlslUtils)
 
-add_cpp_test(CrispShaderCompilerTest
-    "Test/ShaderCompilerTest.cpp")
-target_link_libraries(CrispShaderCompilerTest PRIVATE Crisp::GlslUtils)
-
 add_cpp_static_library(CrispShaderType
     "ShaderType.cpp"
     "ShaderType.hpp"
@@ -48,11 +44,14 @@ target_link_libraries(CrispShaderCompiler
     PRIVATE Crisp::ShaderType
     PRIVATE Crisp::UniqueTemporaryFile
     PUBLIC Crisp::VulkanHeader
+    PRIVATE glslang::glslang
+    PRIVATE glslang::glslang-default-resource-limits
 )
-target_compile_definitions(CrispShaderCompiler
-    PRIVATE "CRISP_GLSLANG_VALIDATOR_PATH=\"$<TARGET_FILE:glslang-standalone>\""
-)
-add_dependencies(CrispShaderCompiler glslang-standalone)
+
+add_cpp_test(CrispShaderCompilerTest
+    "Test/ShaderCompilerTest.cpp")
+target_link_libraries(CrispShaderCompilerTest PRIVATE Crisp::ShaderCompiler Crisp::ShaderType)
+add_test_shader(CrispShaderCompilerTest "Test/Data/reflection.comp")
 
 add_cpp_static_library(CrispSpvReflection
     "Reflection.cpp"

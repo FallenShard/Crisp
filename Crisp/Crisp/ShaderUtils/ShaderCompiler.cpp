@@ -1,12 +1,21 @@
 #include <Crisp/ShaderUtils/ShaderCompiler.hpp>
 
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
+#include <limits>
+#include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
 #include <utility>
+#include <vector>
+
+#include <SPIRV/GlslangToSpv.h>
+#include <glslang/Public/ResourceLimits.h>
+#include <glslang/Public/ShaderLang.h>
 
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/Logger.hpp>
@@ -22,10 +31,104 @@ const FlatStringHashMap<std::string> kGlslangToSlangStageMap = {
     {"frag", "fragment"},
 };
 
+const FlatStringHashMap<EShLanguage> kGlslangStageMap = {
+    {"vert", EShLangVertex},
+    {"frag", EShLangFragment},
+    {"tesc", EShLangTessControl},
+    {"tese", EShLangTessEvaluation},
+    {"geom", EShLangGeometry},
+    {"comp", EShLangCompute},
+    {"rgen", EShLangRayGen},
+    {"rchit", EShLangClosestHit},
+    {"rahit", EShLangAnyHit},
+    {"rits", EShLangIntersect},
+    {"rmiss", EShLangMiss},
+    {"rcall", EShLangCallable},
+    {"mesh", EShLangMesh},
+    {"task", EShLangTask},
+};
+
+std::string getShaderTypeFromPath(const std::filesystem::path& shaderPath) {
+    const auto sourceExtension = shaderPath.extension();
+    const auto stageExtension =
+        sourceExtension == ".glsl" || sourceExtension == ".slang"
+            ? shaderPath.stem().extension().string()
+            : sourceExtension.string();
+    return stageExtension.starts_with('.') ? stageExtension.substr(1) : std::string{};
+}
+
 CRISP_MAKE_LOGGER_MT("ShaderCompiler");
 
-constexpr std::string_view kGlslangExecutable{CRISP_GLSLANG_VALIDATOR_PATH};
 constexpr std::string_view kSlangExecutable{"slangc"};
+
+class GlslangProcessScope {
+public:
+    GlslangProcessScope()
+        : m_isInitialized(glslang::InitializeProcess()) {}
+
+    GlslangProcessScope(const GlslangProcessScope&) = delete;
+    GlslangProcessScope& operator=(const GlslangProcessScope&) = delete;
+    GlslangProcessScope(GlslangProcessScope&&) noexcept = delete;
+    GlslangProcessScope& operator=(GlslangProcessScope&&) noexcept = delete;
+
+    ~GlslangProcessScope() {
+        if (m_isInitialized) {
+            glslang::FinalizeProcess();
+        }
+    }
+
+    bool isInitialized() const {
+        return m_isInitialized;
+    }
+
+private:
+    bool m_isInitialized;
+};
+
+class RelativeFileIncluder final : public glslang::TShader::Includer {
+public:
+    IncludeResult* includeLocal(
+        const char* headerName, const char* includerName, std::size_t /*inclusionDepth*/) override {
+        const std::filesystem::path relativePath(headerName);
+        if (relativePath.empty() || relativePath.has_root_path()) {
+            return nullptr;
+        }
+
+        const auto resolvedPath = (std::filesystem::path(includerName).parent_path() / relativePath).lexically_normal();
+        auto sourceResult = readBinaryFile(resolvedPath);
+        if (!sourceResult) {
+            return nullptr;
+        }
+
+        auto includeData = std::make_unique<IncludeData>(IncludeData{
+            .path = resolvedPath.string(),
+            .source = std::move(sourceResult).extract(),
+        });
+
+        auto result = std::make_unique<IncludeResult>(
+            includeData->path, includeData->source.data(), includeData->source.size(), includeData.get());
+        includeData.release(); // NOLINT
+        return result.release();
+    }
+
+    IncludeResult* includeSystem(
+        const char* /*headerName*/, const char* /*includerName*/, std::size_t /*inclusionDepth*/) override {
+        return nullptr;
+    }
+
+    void releaseInclude(IncludeResult* result) override {
+        if (result != nullptr) {
+            delete static_cast<IncludeData*>(result->userData);
+            delete result;
+        }
+    }
+
+private:
+    struct IncludeData {
+        std::string path;
+        std::vector<char> source;
+    };
+};
 
 struct ProcessOutput {
     int exitCode;
@@ -140,36 +243,22 @@ Result<bool> shaderNeedsRecompilation(
     return false;
 }
 
-Result<> compileShader(
+Result<> compileSlangShader(
     const std::filesystem::path& inputPath, const std::filesystem::path& outputPath, const std::string_view shaderType) {
-    const auto absoluteInputPath = std::filesystem::absolute(inputPath).lexically_normal();
-    std::string command;
-    if (inputPath.extension() == ".glsl") {
-        command = fmt::format(
-            "{} --target-env vulkan1.3 -o {} -S {} {}",
-            kGlslangExecutable,
-            quoteShellArgument(outputPath.string()),
-            quoteShellArgument(shaderType),
-            quoteShellArgument(absoluteInputPath.string()));
-    } else {
-        const auto stage = kGlslangToSlangStageMap.find(shaderType);
-        if (stage == kGlslangToSlangStageMap.end()) {
-            return resultError("Shader stage {} is not supported by the Slang compiler", shaderType);
-        }
-        command = fmt::format(
-            "{} -o {} -stage {} {}",
-            kSlangExecutable,
-            quoteShellArgument(outputPath.string()),
-            quoteShellArgument(stage->second),
-            quoteShellArgument(absoluteInputPath.string()));
+    const auto stage = kGlslangToSlangStageMap.find(shaderType);
+    if (stage == kGlslangToSlangStageMap.end()) {
+        return resultError("Shader stage {} is not supported by the Slang compiler", shaderType);
     }
 
-    CRISP_LOGI("Compiling {}", inputPath.filename().string());
+    const auto absoluteInputPath = std::filesystem::absolute(inputPath).lexically_normal();
+    const auto command = fmt::format(
+        "{} -o {} -stage {} {}",
+        kSlangExecutable,
+        quoteShellArgument(outputPath.string()),
+        quoteShellArgument(stage->second),
+        quoteShellArgument(absoluteInputPath.string()));
     CRISP_TRY(
-        const auto& processOutput,
-        runProcess(std::move(command)),
-        "Failed to run the compiler for shader {}",
-        inputPath.string());
+        const auto processOutput, runProcess(command), "Failed to run the compiler for shader {}", inputPath.string());
     if (processOutput.exitCode != 0) {
         return resultError(
             "Failed to compile shader {} (compiler exit code {}):\n{}",
@@ -191,7 +280,93 @@ Result<> compileShader(
     }
     return kResultSuccess;
 }
+
+Result<> compileShader(
+    const std::filesystem::path& inputPath, const std::filesystem::path& outputPath, const std::string_view shaderType) {
+    CRISP_LOGI("Compiling {}", inputPath.filename().string());
+    if (inputPath.extension() == ".glsl") {
+        return compileGlslShader(inputPath, outputPath, shaderType);
+    }
+    return compileSlangShader(inputPath, outputPath, shaderType);
+}
 } // namespace
+
+Result<> compileGlslShader(
+    const std::filesystem::path& inputPath, const std::filesystem::path& outputPath, const std::string_view shaderType) {
+    CRISP_TRY(const auto spirv, compileGlslShader(inputPath, shaderType));
+    return writeBinaryFile(outputPath, std::as_bytes(std::span(spirv)));
+}
+
+Result<std::vector<uint32_t>> compileGlslShader(
+    const std::filesystem::path& inputPath, const std::string_view shaderType) {
+    if (inputPath.extension() == ".slang") {
+        return resultError("Cannot compile Slang source {} with glslang", inputPath.string());
+    }
+
+    const std::string inferredShaderType = shaderType.empty() ? getShaderTypeFromPath(inputPath) : std::string{};
+    const std::string_view resolvedShaderType = shaderType.empty() ? inferredShaderType : shaderType;
+    if (!isGlslShaderExtension(resolvedShaderType)) {
+        return resultError("{} does not have a supported GLSL shader stage", inputPath.string());
+    }
+
+    static const GlslangProcessScope glslangProcess;
+    if (!glslangProcess.isInitialized()) {
+        return resultError("Failed to initialize glslang");
+    }
+
+    const auto stageIter = kGlslangStageMap.find(resolvedShaderType);
+    if (stageIter == kGlslangStageMap.end()) {
+        return resultError("Shader stage {} is not supported by glslang", resolvedShaderType);
+    }
+    const EShLanguage stage = stageIter->second;
+
+    CRISP_TRY(auto source, fileToString(inputPath));
+    if (source.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        return resultError("Shader source {} is too large for glslang", inputPath.string());
+    }
+
+    const auto absoluteInputPath = std::filesystem::absolute(inputPath).lexically_normal().string();
+    const char* sourcePointer = source.data();
+    const int sourceLength = static_cast<int>(source.size());
+    const char* sourceName = absoluteInputPath.c_str();
+
+    glslang::TShader shader(stage);
+    shader.setStringsWithLengthsAndNames(&sourcePointer, &sourceLength, &sourceName, 1);
+    shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClientVulkan, 100);
+    shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
+    shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_6);
+
+    constexpr auto kMessages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
+    RelativeFileIncluder includer;
+    if (!shader.parse(GetDefaultResources(), 450, false, kMessages, includer)) {
+        return resultError(
+            "Failed to compile shader {}:\n{}{}", inputPath.string(), shader.getInfoLog(), shader.getInfoDebugLog());
+    }
+
+    glslang::TProgram program;
+    program.addShader(&shader);
+    if (!program.link(kMessages)) {
+        return resultError(
+            "Failed to link shader {}:\n{}{}", inputPath.string(), program.getInfoLog(), program.getInfoDebugLog());
+    }
+
+    const auto* intermediate = program.getIntermediate(stage);
+    if (intermediate == nullptr) {
+        return resultError("glslang produced no intermediate representation for {}", inputPath.string());
+    }
+
+    std::vector<uint32_t> spirv;
+    spv::SpvBuildLogger buildLogger;
+    glslang::GlslangToSpv(*intermediate, spirv, &buildLogger);
+    const auto buildMessages = buildLogger.getAllMessages();
+    if (!buildMessages.empty()) {
+        CRISP_LOGD("SPIR-V generation output for {}:\n{}", inputPath.filename().string(), buildMessages);
+    }
+    if (spirv.empty()) {
+        return resultError("glslang produced an empty SPIR-V module for {}", inputPath.string());
+    }
+    return spirv;
+}
 
 Result<ShaderCompilationStats> recompileShaderDir(
     const std::filesystem::path& inputDir, const std::filesystem::path& outputDir) {
@@ -221,16 +396,15 @@ Result<ShaderCompilationStats> recompileShaderDir(
         }
 
         if (!kSupportedExtensions.contains(inputPath.extension())) {
-            CRISP_LOGW("{} has no .glsl extension!", inputPath.string());
+            CRISP_LOGW("{} has an unsupported shader source extension!", inputPath.string());
             continue;
         }
 
-        // shader-name.<stage>.glsl is the file name format
+        // shader-name.<stage>.<language> is the file name format
         // First getting the stem and then its "extension" will give us the stage name
-        const std::string shaderType = inputPath.stem().extension().string().substr(1); // Extension starts with a .,
-                                                                                        // which we skip here
+        const std::string shaderType = getShaderTypeFromPath(inputPath);
         if (!isGlslShaderExtension(shaderType)) {
-            CRISP_LOGW("{} is not a valid glsl shader type!", shaderType);
+            CRISP_LOGW("{} is not a valid shader stage!", shaderType);
             continue;
         }
 

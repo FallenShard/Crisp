@@ -3,6 +3,7 @@
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/ComputePipeline.hpp>
 #include <Crisp/Renderer/Material.hpp>
+#include <Crisp/ShaderUtils/Test/TestShaderMap.hpp>
 #include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
@@ -11,6 +12,14 @@
 namespace crisp {
 namespace {
 using OceanTest = VulkanTest;
+
+const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispOceanTest";
+const TestShaderMap kTestShaders{
+    kShaderSourceDirectory / "ocean-spectrum.comp.glsl",
+    kShaderSourceDirectory / "ocean-reverse-bits.comp.glsl",
+    kShaderSourceDirectory / "ifft-hori.comp.glsl",
+    kShaderSourceDirectory / "ifft-vert.comp.glsl",
+};
 
 TEST_F(OceanTest, PatchConstruction) {
     constexpr float kSize = 5.0;
@@ -45,7 +54,7 @@ TEST_F(OceanTest, VulkanBuffer) {
     constexpr VkDeviceSize elementCount = 25;
     constexpr VkDeviceSize size = sizeof(float) * elementCount;
     std::vector<float> data(elementCount);
-    std::iota(data.begin(), data.end(), 0.0f);
+    std::iota(data.begin(), data.end(), 0.0f); // NOLINT
 
     VulkanBuffer deviceBuffer(
         *device_,
@@ -57,7 +66,7 @@ TEST_F(OceanTest, VulkanBuffer) {
     const float* stagingPtr = stagingBuffer.getHostVisibleData<float>();
     stagingBuffer.updateFromHost(data);
     for (uint32_t i = 0; i < data.size(); ++i) {
-        EXPECT_EQ(stagingPtr[i], data[i]);
+        EXPECT_EQ(stagingPtr[i], data[i]); // NOLINT
     }
 
     VulkanBuffer downloadBuffer(
@@ -67,26 +76,20 @@ TEST_F(OceanTest, VulkanBuffer) {
         const auto& cmdEncoder = executor.cmdEncoder;
 
         cmdEncoder.copyBuffer(stagingBuffer, deviceBuffer);
-        cmdEncoder.insertBufferMemoryBarrier(
-            deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
+        cmdEncoder.insertBufferMemoryBarrier(deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
         cmdEncoder.copyBuffer(deviceBuffer, downloadBuffer);
-        cmdEncoder.insertBufferMemoryBarrier(
-            downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
+        cmdEncoder.insertBufferMemoryBarrier(downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
     }
 
     const float* ptr = downloadBuffer.getHostVisibleData<float>();
     for (uint32_t i = 0; i < elementCount; ++i) {
-        ASSERT_EQ(ptr[i], data[i]) << " not equal at index " << i;
+        ASSERT_EQ(ptr[i], data[i]) << " not equal at index " << i; // NOLINT
     }
 }
 
 constexpr int32_t kFftGridSize = 16;
 constexpr int32_t kFftLogGridSize = 4;
-
-std::filesystem::path testShaderSpv(const std::string& fileName) {
-    return std::filesystem::path{"TestData"} / "CrispOceanTest" / (fileName + ".spv");
-}
 
 std::unique_ptr<VulkanImage> createFftImage(const VulkanDevice& device, const uint32_t size) {
     VkImageCreateInfo createInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
@@ -193,17 +196,17 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
         ifftVViews.push_back(createView(device, *ifftV[i], VK_IMAGE_VIEW_TYPE_2D));
     }
 
-    auto spectrumPipeline = createComputePipeline(device, testShaderSpv("ocean-spectrum.comp.glsl"), workGroupSize);
+    auto spectrumPipeline =
+        createComputePipeline(device, kTestShaders.getSpirvPath("ocean-spectrum.comp.glsl"), workGroupSize);
     Material spectrumMaterial(spectrumPipeline.get());
     spectrumMaterial.writeDescriptor(0, 0, seedView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     spectrumMaterial.writeDescriptor(0, 1, packedHeightDispXView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    spectrumMaterial.writeDescriptor(
-        0, 2, packedDispZNormalXView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+    spectrumMaterial.writeDescriptor(0, 2, packedDispZNormalXView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     spectrumMaterial.writeDescriptor(0, 3, normalZView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-    const auto bitRevSpv = testShaderSpv("ocean-reverse-bits.comp.glsl");
-    const auto ifftHoriSpv = testShaderSpv("ifft-hori.comp.glsl");
-    const auto ifftVertSpv = testShaderSpv("ifft-vert.comp.glsl");
+    const auto& bitRevSpv = kTestShaders.getSpirvPath("ocean-reverse-bits.comp.glsl");
+    const auto& ifftHoriSpv = kTestShaders.getSpirvPath("ifft-hori.comp.glsl");
+    const auto& ifftVertSpv = kTestShaders.getSpirvPath("ifft-vert.comp.glsl");
 
     FftDispatch bitRevHDispatch =
         createImageToImageDispatch(device, bitRevSpv, workGroupSize, *normalZView, *bitRevHView);
@@ -213,8 +216,8 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
         ifftHDispatches.push_back(
             createImageToImageDispatch(device, ifftHoriSpv, workGroupSize, srcView, *ifftHViews[i]));
     }
-    FftDispatch bitRevVDispatch = createImageToImageDispatch(
-        device, bitRevSpv, workGroupSize, *ifftHViews[kFftLogGridSize - 1], *bitRevVView);
+    FftDispatch bitRevVDispatch =
+        createImageToImageDispatch(device, bitRevSpv, workGroupSize, *ifftHViews[kFftLogGridSize - 1], *bitRevVView);
     std::vector<FftDispatch> ifftVDispatches;
     for (int32_t i = 0; i < kFftLogGridSize; ++i) {
         const auto& srcView = i == 0 ? *bitRevVView : *ifftVViews[i - 1];
@@ -236,8 +239,7 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
         const auto& encoder = executor.cmdEncoder;
 
         const VkDeviceSize seedByteSize = seedSpectrum.size() * sizeof(seedSpectrum[0]);
-        VulkanBuffer seedStaging(
-            device, seedByteSize, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+        VulkanBuffer seedStaging(device, seedByteSize, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
         seedStaging.updateFromHost(seedSpectrum);
 
         const VkBufferImageCopy seedRegion{

@@ -1,4 +1,5 @@
 #include <Crisp/ShaderUtils/Reflection.hpp>
+#include <Crisp/ShaderUtils/Test/TestShaderMap.hpp>
 
 #include <gmock/gmock.h>
 #include <spirv_reflect.h>
@@ -10,12 +11,14 @@ using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::SizeIs;
 
-std::filesystem::path getSpirvShaderPath(const std::string& shaderName) {
-    return std::filesystem::path{"TestData"} / "CrispSpvReflectionTest" / (shaderName + ".spv");
-}
+const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispSpvReflectionTest";
+const TestShaderMap kTestShaders{
+    kShaderSourceDirectory / "reflection.comp",
+    kShaderSourceDirectory / "reflection.vert",
+};
 
 TEST(ReflectionTest, ComputeShader) {
-    const auto reflection = reflectPipelineLayoutFromSpirv(getSpirvShaderPath("reflection.comp")).unwrap();
+    const auto reflection = reflectPipelineLayoutFromSpirv(kTestShaders.getSpirvPath("reflection.comp")).unwrap();
     ASSERT_THAT(reflection.descriptorSetLayoutBindings, SizeIs(1));
     EXPECT_THAT(
         reflection.descriptorSetLayoutBindings[0],
@@ -73,7 +76,7 @@ TEST(ReflectionTest, MergeCoalescesMatchingPushConstantRanges) {
 
 TEST(ReflectionTest, SpirvReflect) {
     SpvReflectShaderModule module;
-    const auto spirv = readSpirvFile(getSpirvShaderPath("reflection.comp")).unwrap();
+    const auto spirv = readSpirvFile(kTestShaders.getSpirvPath("reflection.comp")).unwrap();
     SpvReflectResult result = spvReflectCreateShaderModule(spirv.size(), spirv.data(), &module);
     EXPECT_THAT(result, SPV_REFLECT_RESULT_SUCCESS);
 
@@ -98,7 +101,9 @@ TEST(ReflectionTest, SpirvReflect) {
 
 TEST(ReflectionTest, VertexShader) {
     const auto reflection =
-        reflectVertexMetadataFromSpirvShader(readSpirvFile(getSpirvShaderPath("reflection.vert")).unwrap()).unwrap();
+        reflectVertexMetadataFromSpirvShader(
+            readSpirvFile(kTestShaders.getSpirvPath("reflection.vert")).unwrap())
+            .unwrap();
     using AttribDesc = decltype(reflection)::VertexAttributeDescription;
     EXPECT_THAT(
         reflection.attributes,

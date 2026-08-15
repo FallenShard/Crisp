@@ -19,9 +19,9 @@ function(enable_default_cpp_compile_options targetName optionType)
             # Headers branching on __cplusplus (e.g. GSL's gsl::byte) otherwise differ per TU.
             target_compile_options(${targetName}
                 PRIVATE
-                    /W4 /Zc:preprocessor /Zc:__cplusplus /EHsc /utf-8
-                    $<$<CONFIG:Debug>:/JMC>
-                    $<$<CONFIG:Debug>:/Zi>)
+                /W4 /Zc:preprocessor /Zc:__cplusplus /EHsc /utf-8
+                $<$<CONFIG:Debug>:/JMC>
+                $<$<CONFIG:Debug>:/Zi>)
         else()
             target_compile_options(${targetName} PRIVATE -W -Wall)
         endif()
@@ -102,43 +102,17 @@ function(stage_test_file targetName sourceFile relativeOutputPath)
     configure_file("${sourcePath}" "${outputPath}" COPYONLY)
 endfunction()
 
-# Compiles a tracked GLSL fixture to SPIR-V in a target-specific build directory.
+# Stages a tracked GLSL fixture for in-process compilation by its test executable.
 function(add_test_shader targetName sourceFile)
     if(NOT TARGET ${targetName})
         return()
     endif()
 
-    if(NOT TARGET glslang-standalone)
-        message(FATAL_ERROR "add_test_shader requires the glslang-standalone target")
-    endif()
-
-    get_filename_component(sourcePath "${sourceFile}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
     get_filename_component(sourceName "${sourceFile}" NAME)
-    set(outputDirectory "${CMAKE_CURRENT_BINARY_DIR}/TestData/${targetName}")
-    set(outputPath "${outputDirectory}/${sourceName}.spv")
-
-    # Bare "name.<stage>" fixtures (e.g. "reflection.comp") let glslang infer the stage from its
-    # own extension. "name.<stage>.glsl" files use this repo's runtime shader-compiler convention
-    # (see ShaderCompiler.cpp), where the stage is the stem's extension instead; derive it
-    # explicitly so those source files can be compiled here too, unmodified.
-    get_filename_component(sourceLastExt "${sourceFile}" LAST_EXT)
-    if(sourceLastExt STREQUAL ".glsl")
-        get_filename_component(sourceStem "${sourceFile}" NAME_WLE)
-        get_filename_component(stage "${sourceStem}" LAST_EXT)
-    else()
-        set(stage "${sourceLastExt}")
-    endif()
-    string(SUBSTRING "${stage}" 1 -1 stage)
-
-    add_custom_command(
-        OUTPUT "${outputPath}"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${outputDirectory}"
-        COMMAND $<TARGET_FILE:glslang-standalone>
-            --target-env vulkan1.3 -S ${stage} -V "${sourcePath}" -o "${outputPath}"
-        DEPENDS "${sourcePath}" glslang-standalone
-        VERBATIM)
-    set_source_files_properties("${outputPath}" PROPERTIES GENERATED TRUE)
-    target_sources(${targetName} PRIVATE "${outputPath}")
+    stage_test_file(${targetName} "${sourceFile}" "${sourceName}")
+    target_link_libraries(
+        ${targetName}
+        PRIVATE Crisp::FileUtils Crisp::ShaderCompiler Crisp::UniqueTemporaryFile)
 endfunction()
 
 # Creates a C++ binary benchmark target. No-op when CRISP_BUILD_BENCHMARKS is OFF.

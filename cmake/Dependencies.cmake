@@ -68,34 +68,24 @@ if(CRISP_BUILD_TESTS)
     FetchContent_MakeAvailable(googletest)
 endif()
 
-if(CRISP_BUILD_TESTS)
-    FetchContent_Declare(glslang
-        GIT_REPOSITORY "https://github.com/KhronosGroup/glslang.git"
-        GIT_TAG "16.4.0"
-        GIT_SHALLOW TRUE
-        EXCLUDE_FROM_ALL
-    )
-    block()
-    set(BUILD_EXTERNAL OFF)
-    set(GLSLANG_TESTS OFF)
-    set(GLSLANG_ENABLE_INSTALL OFF)
-    set(ENABLE_GLSLANG_BINARIES ON)
-    set(ENABLE_GLSLANG_JS OFF)
-    set(ENABLE_SPIRV ON)
-    set(ENABLE_OPT OFF)
-    set(ENABLE_HLSL OFF)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_RELEASE}")
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
+FetchContent_Declare(glslang
+    GIT_REPOSITORY "https://github.com/KhronosGroup/glslang.git"
+    GIT_TAG "16.4.0"
+    GIT_SHALLOW TRUE
+    EXCLUDE_FROM_ALL
+)
+block()
+set(BUILD_EXTERNAL OFF)
+set(GLSLANG_TESTS OFF)
+set(GLSLANG_ENABLE_INSTALL OFF)
+set(ENABLE_GLSLANG_BINARIES OFF)
+set(ENABLE_GLSLANG_JS OFF)
+set(ENABLE_SPIRV ON)
+set(ENABLE_OPT OFF)
+set(ENABLE_HLSL OFF)
 
-    if(MSVC)
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
-        set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "")
-    endif()
-
-    FetchContent_MakeAvailable(glslang)
-    endblock()
-    set_target_properties(glslang-standalone PROPERTIES FOLDER "ThirdParty/Tools")
-endif()
+FetchContent_MakeAvailable(glslang)
+endblock()
 
 if(CRISP_BUILD_BENCHMARKS)
     FetchContent_Declare(benchmark
