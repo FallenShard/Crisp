@@ -38,10 +38,10 @@ VulkanPipelineCache::~VulkanPipelineCache() {
         return;
     }
 
-    size_t size = 0;
+    size_t size{0};
     vkGetPipelineCacheData(m_deallocator->getDeviceHandle(), m_handle, &size, nullptr);
 
-    std::vector<char> buffer(size);
+    std::vector<std::byte> buffer(size);
     vkGetPipelineCacheData(m_deallocator->getDeviceHandle(), m_handle, &size, buffer.data());
 
     if (size > 0) {

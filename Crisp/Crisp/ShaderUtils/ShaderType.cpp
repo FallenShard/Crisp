@@ -4,7 +4,7 @@
 
 namespace crisp {
 namespace {
-const FlatHashMap<std::string, VkShaderStageFlagBits> kShaderStageMap = {
+const FlatStringHashMap<VkShaderStageFlagBits> kShaderStageMap = {
     {"vert", VK_SHADER_STAGE_VERTEX_BIT},
     {"frag", VK_SHADER_STAGE_FRAGMENT_BIT},
     {"tesc", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT},
@@ -22,13 +22,16 @@ const FlatHashMap<std::string, VkShaderStageFlagBits> kShaderStageMap = {
 };
 } // namespace
 
-Result<VkShaderStageFlagBits> getShaderStageFromFilePath(const std::filesystem::path& glslShaderFilePath) {
-    if (glslShaderFilePath.extension() == ".glsl") {
-        // Convert "../path/to/shader.type.glsl" to type
-        return getShaderStageFromShaderType(glslShaderFilePath.stem().extension().string().substr(1));
+Result<VkShaderStageFlagBits> getShaderStageFromFilePath(const std::filesystem::path& shaderFilePath) {
+    const auto sourceExtension = shaderFilePath.extension();
+    const auto stageExtension =
+        sourceExtension == ".glsl" || sourceExtension == ".slang"
+            ? shaderFilePath.stem().extension().string()
+            : sourceExtension.string();
+    if (!stageExtension.starts_with('.')) {
+        return resultError("Shader path has no stage extension: {}", shaderFilePath.string());
     }
-    // Convert "../path/to/shader.type" to type
-    return getShaderStageFromShaderType(glslShaderFilePath.extension().string().substr(1));
+    return getShaderStageFromShaderType(stageExtension.substr(1));
 }
 
 Result<VkShaderStageFlagBits> getShaderStageFromShaderType(const std::string& shaderType) {
@@ -44,6 +47,10 @@ Result<VkShaderStageFlagBits> getShaderStageFromShaderType(const std::string& sh
 }
 
 bool isGlslShaderExtension(const std::string& extension) {
+    return kShaderStageMap.contains(extension);
+}
+
+bool isGlslShaderExtension(const std::string_view extension) {
     return kShaderStageMap.contains(extension);
 }
 } // namespace crisp
