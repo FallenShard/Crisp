@@ -1,5 +1,6 @@
 #version 460 core
 #extension GL_EXT_buffer_reference : require
+#extension GL_EXT_ray_query : require
 #extension GL_EXT_ray_tracing : require
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
@@ -60,10 +61,19 @@ void traceRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDire
     seed = hitInfo.rngSeed;
 }
 
-void traceShadowRay(inout uint seed, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
-    hitInfo.rngSeed = seed;
-    traceRayEXT(sceneBvh, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, 0, 0, 0, rayOrigin, tMin, rayDirection, tMax, kPayloadIndex);
-    seed = hitInfo.rngSeed;
+bool traceShadowRay(in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
+    rayQueryEXT rayQuery;
+    rayQueryInitializeEXT(
+        rayQuery,
+        sceneBvh,
+        gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT,
+        0xFF,
+        rayOrigin,
+        tMin,
+        rayDirection,
+        tMax);
+    rayQueryProceedEXT(rayQuery);
+    return rayQueryGetIntersectionTypeEXT(rayQuery, true) != gl_RayQueryCommittedIntersectionNoneEXT;
 }
 
 void sampleRay(out vec4 origin, out vec4 direction, in vec2 pixelSample) {
@@ -191,9 +201,7 @@ vec3 computeRadianceDirectLighting(inout uint seed) {
     float lightPdf;
     const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
     if (lightPdf > 0.0f) {
-        traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
-
-        if (hitInfo.tHit <= 0) {
+        if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
             vec3 lightDirectionBrdf;
             float lightDirectionBrdfPdf;
             evaluateBrdf(n, wi, shadowRayDir, materialId, lightDirectionBrdf, lightDirectionBrdfPdf);
@@ -258,9 +266,7 @@ vec3 computeRadianceMis(inout uint seed) {
     float lightPdf;
     const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
     if (lightPdf > 0.0f) {
-        traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
-
-        if (hitInfo.tHit <= 0) { // The shadow ray has missed.
+        if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
             vec3 lightDirectionBrdf;
             float lightDirectionBrdfPdf;
             evaluateBrdf(n, wi, shadowRayDir, materialId, lightDirectionBrdf, lightDirectionBrdfPdf);
@@ -286,19 +292,30 @@ vec3 computeRadianceMisPt(inout uint seed) {
     vec3 L = vec3(0.0f);
     vec3 throughput = vec3(1.0f);
 
-    bool specularBounce = false;
-    int bounceCount = 0;
-    while (bounceCount < integrator.maxBounces) {
-        traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
-        if (bounceCount == 0 && hitInfo.tHit >= tMin) {
-            // Accumulate emission visible directly from the camera. Secondary emitter hits are
-            // handled at the sampling site below, where their MIS weight is still available.
-            L += throughput * hitInfo.Le;
-        }
+    vec3 prevPosition = vec3(0.0f);
+    float prevSamplePdf = 0.0f;
+    bool prevWasDelta = false;
 
+    int bounceCount = 0;
+    while (true) {
+        traceRay(seed, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
         if (hitInfo.tHit < tMin) {
             // The ray missed; evaluate environment lighting here once it is supported.
             // L += throughput * texture(environmentMap, rayDirection);
+            break;
+        }
+
+        if (hitInfo.lightId != -1) {
+            float misWeight = 1.0f;
+            if (bounceCount > 0 && !prevWasDelta) {
+                const float lightPdf =
+                    getLightPdf(hitInfo.lightId, hitInfo.position - prevPosition, hitInfo.normal);
+                misWeight = powerHeuristic(prevSamplePdf, lightPdf);
+            }
+            L += throughput * hitInfo.Le * misWeight;
+        }
+
+        if (bounceCount >= integrator.maxBounces) {
             break;
         }
 
@@ -309,18 +326,16 @@ vec3 computeRadianceMisPt(inout uint seed) {
         const vec3 rayDir = hitInfo.sampleDirection;
         const vec3 wi = -rayDirection.xyz;
         const uint materialId = hitInfo.materialId;
-        specularBounce = hitInfo.sampleLobeType == kLobeTypeDelta;
+        const bool isDelta = hitInfo.sampleLobeType == kLobeTypeDelta;
 
         // If the bounce wasn't a delta bounce (glass/mirror), do light sampling.
-        if (!specularBounce) {
+        if (!isDelta) {
             vec3 shadowRayDir;
             float shadowRayLen;
             float lightPdf;
             const vec3 radiance = sampleUniformLight(seed, p, shadowRayDir, shadowRayLen, lightPdf);
             if (lightPdf > 0.0f) {
-                traceShadowRay(seed, p, 1e-5, shadowRayDir, shadowRayLen - 1e-5);
-
-                if (hitInfo.tHit <= 0) { // The shadow ray has missed.
+                if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
                     vec3 lightDirectionBrdf;
                     float lightDirectionBrdfPdf;
                     evaluateBrdf(n, wi, shadowRayDir, materialId, lightDirectionBrdf, lightDirectionBrdfPdf);
@@ -330,24 +345,16 @@ vec3 computeRadianceMisPt(inout uint seed) {
             }
         }
 
-        // Trace the sampled BSDF direction to account for any emitter it reaches.
-        {
-            traceRay(seed, p, tMin, rayDir, tMax);
-
-            if (hitInfo.lightId != -1) {
-                const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
-                const float misWeight = specularBounce ? 1.0f : powerHeuristic(samplePdf, lightPdf);
-                L += throughput * sampleWeight * hitInfo.Le * misWeight;
-            }
-        }
-
         // Adjust throughput for the hit surface.
         throughput *= sampleWeight;
+
+        prevPosition = p;
+        prevSamplePdf = samplePdf;
+        prevWasDelta = isDelta;
 
         // Setup the next ray.
         rayOrigin.xyz    = p;
         rayDirection.xyz = rayDir;
-
 
         if (++bounceCount > kRussianRouletteCutoff) { // Cut the path tracing with Russian roulette.
             const float maxCoeff = max(throughput.x, max(throughput.y, throughput.z));
