@@ -6,6 +6,7 @@
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Renderer/RayTracingPipelineBuilder.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/RayTracingSceneData.hpp>
@@ -30,7 +31,9 @@ public:
 
 private:
     std::unique_ptr<VulkanPipeline> createPipeline();
+    void buildRenderGraph();
     void updateDescriptorSets();
+    void traceRays(const FrameContext& frameContext);
 
     void setupInput();
 
@@ -41,7 +44,7 @@ private:
     std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_bottomLevelAccelStructures;
     std::unique_ptr<VulkanAccelerationStructure> m_topLevelAccelStructure;
 
-    std::unique_ptr<VulkanImage> m_rayTracedImage;
+    std::unique_ptr<rg::RenderGraph> m_renderGraph;
     AsyncReadback m_screenshot;
     bool m_screenshotRequested{false};
     bool m_closeAfterScreenshot{false};

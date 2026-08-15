@@ -9,10 +9,15 @@
 #include <Crisp/Math/AliasTable.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
 
 namespace crisp {
 namespace {
+
+struct PathTracingPassData {
+    RenderGraphResourceHandle image;
+};
 
 AliasTable createAliasTable(const TriangleMesh& mesh, bool addHeaderEntry = true) {
     std::vector<float> weights;
@@ -160,32 +165,45 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         encoder.buildAccelerationStructure(*m_topLevelAccelStructure);
     });
 
-    VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-    createInfo.flags = 0;
-    createInfo.imageType = VK_IMAGE_TYPE_2D;
-    createInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    createInfo.extent = m_renderer->getSwapChainExtent3D();
-    createInfo.mipLevels = 1;
-    createInfo.arrayLayers = 1;
-    createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    createInfo.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-    createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    m_rayTracedImage = std::make_unique<VulkanImage>(m_renderer->getDevice(), createInfo);
-    m_renderer->getDevice().setObjectName(*m_rayTracedImage, "Path Tracer Output");
-    m_renderer->getDevice().setObjectName(m_rayTracedImage->getView(), "Path Tracer Output View");
-
     m_pipeline = createPipeline();
 
     m_material = std::make_unique<Material>(m_pipeline.get());
     m_material->setDebugName("Path Tracer");
 
-    updateDescriptorSets();
-
-    m_renderer->setSceneImageView(&m_rayTracedImage->getView());
+    buildRenderGraph();
 }
 
-void VulkanRayTracingScene::resize(int /*width*/, int /*height*/) {}
+void VulkanRayTracingScene::buildRenderGraph() {
+    m_renderGraph = std::make_unique<rg::RenderGraph>();
+    m_renderGraph->addPass(
+        "path-trace",
+        [](rg::RenderGraph::Builder& builder) {
+            builder.setType(PassType::RayTracing);
+            builder.getBlackboard().insert<PathTracingPassData>().image = builder.createStorageImage(
+                {
+                    .sizePolicy = SizePolicy::SwapChainRelative,
+                    .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                    // Screenshots copy straight out of the accumulation image.
+                    .imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                },
+                "path-trace-accumulation");
+            builder.exportTexture(builder.getBlackboard().get<PathTracingPassData>().image);
+        },
+        [this](const FrameContext& frameContext) { traceRays(frameContext); });
+
+    m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    updateDescriptorSets();
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&PathTracingPassData::image>());
+}
+
+void VulkanRayTracingScene::resize(int width, int height) {
+    m_cameraController->onViewportResized(width, height);
+
+    m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    updateDescriptorSets();
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&PathTracingPassData::image>());
+    m_integratorParams.frameIdx = 0;
+}
 
 void VulkanRayTracingScene::update(const UpdateParams& updateParams) {
     if (m_cameraController->update(updateParams.dt)) {
@@ -206,45 +224,7 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> kRayTracingRead);
 
-    if (m_screenshotRequested && !m_screenshot.isPending()) {
-        frameContext.commandEncoder.transitionLayout(
-            *m_rayTracedImage, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> (kRayTracingStorageWrite | kTransferRead));
-
-        const VkDeviceSize size = m_rayTracedImage->getWidth() * m_rayTracedImage->getHeight() * 4 * sizeof(float);
-        m_screenshot.record(
-            frameContext.stagingBelt->downloadImage(
-                frameContext.commandEncoder,
-                *m_rayTracedImage,
-                {m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight(), 1u},
-                0,
-                1,
-                0,
-                size),
-            frameContext.completionValue);
-        m_screenshotRequested = false;
-    }
-
-    frameContext.commandEncoder.transitionLayout(
-        *m_rayTracedImage, VK_IMAGE_LAYOUT_GENERAL, kFragmentRead >> kRayTracingStorageWrite);
-    frameContext.commandEncoder.bindPipeline(*m_pipeline);
-    const auto& pipelineLayout = *m_pipeline->getPipelineLayout();
-    auto& bindlessRegistry = m_renderer->getBindlessImageRegistry();
-    CRISP_CHECK_EQ(
-        pipelineLayout.getDescriptorSetLayout(BindlessImageRegistry::kGlobalSetIndex),
-        bindlessRegistry.getSetLayout(),
-        "The ray-tracing pipeline must expose the global bindless layout at set 0.");
-    bindlessRegistry.bind(
-        frameContext.commandEncoder,
-        pipelineLayout.getHandle(),
-        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-        BindlessImageRegistry::kGlobalSetIndex);
-    frameContext.commandEncoder.bindDescriptorSets(m_material->getDescriptorSetBinding());
-    frameContext.commandEncoder.setPushConstants(pipelineLayout, std::as_bytes(std::span{&m_sceneAddresses, 1}));
-
-    const auto extent = m_renderer->getSwapChainExtent();
-    frameContext.commandEncoder.traceRays(m_shaderBindingTable.bindings, extent);
-    frameContext.commandEncoder.transitionLayout(
-        *m_rayTracedImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kRayTracingStorageWrite >> kFragmentRead);
+    m_renderGraph->execute(frameContext);
 
     m_integratorParams.frameIdx++;
 
@@ -256,14 +236,54 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     }
 
     if (const auto pixelData = m_screenshot.tryRead<float>(frameContext.completedValue)) {
-        saveExr(
-            m_outputDir / m_screenshotFilename, *pixelData, m_rayTracedImage->getWidth(), m_rayTracedImage->getHeight())
-            .unwrap();
+        const auto extent =
+            m_renderGraph->getImageExtent(m_renderGraph->getBlackboard().get<PathTracingPassData>().image);
+        saveExr(m_outputDir / m_screenshotFilename, *pixelData, extent.width, extent.height).unwrap();
         m_screenshot.reset();
         if (m_closeAfterScreenshot) {
             m_window->close();
         }
     }
+}
+
+void VulkanRayTracingScene::traceRays(const FrameContext& frameContext) {
+    const auto& encoder = frameContext.commandEncoder;
+    encoder.bindPipeline(*m_pipeline);
+
+    const auto& pipelineLayout = *m_pipeline->getPipelineLayout();
+    auto& bindlessRegistry = m_renderer->getBindlessImageRegistry();
+    CRISP_CHECK_EQ(
+        pipelineLayout.getDescriptorSetLayout(BindlessImageRegistry::kGlobalSetIndex),
+        bindlessRegistry.getSetLayout(),
+        "The ray-tracing pipeline must expose the global bindless layout at set 0.");
+    bindlessRegistry.bind(
+        encoder,
+        pipelineLayout.getHandle(),
+        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+        BindlessImageRegistry::kGlobalSetIndex);
+    encoder.bindDescriptorSets(m_material->getDescriptorSetBinding());
+    encoder.setPushConstants(pipelineLayout, std::as_bytes(std::span{&m_sceneAddresses, 1}));
+
+    encoder.traceRays(m_shaderBindingTable.bindings, m_renderer->getSwapChainExtent());
+
+    if (!m_screenshotRequested || m_screenshot.isPending()) {
+        return;
+    }
+
+    // Read back from inside the pass, where the image is still VK_IMAGE_LAYOUT_GENERAL. That layout
+    // is a legal transfer source, so no transition is needed and the graph's tracked layout stays
+    // valid; only the access scopes have to be ordered, including the write-after-read against the
+    // next frame's accumulation.
+    const auto& image = m_renderGraph->getImageView<&PathTracingPassData::image>().getImage();
+    encoder.insertBarrier(kRayTracingStorageWrite >> kTransferRead);
+
+    const VkDeviceSize size = static_cast<VkDeviceSize>(image.getWidth()) * image.getHeight() * 4 * sizeof(float);
+    m_screenshot.record(
+        frameContext.stagingBelt->downloadImage(encoder, image, {image.getWidth(), image.getHeight(), 1u}, 0, 1, 0, size),
+        frameContext.completionValue);
+    m_screenshotRequested = false;
+
+    encoder.insertBarrier(kTransferRead >> kRayTracingStorageWrite);
 }
 
 void VulkanRayTracingScene::drawGui() {
@@ -315,6 +335,12 @@ void VulkanRayTracingScene::drawGui() {
     ImGui::End();
 
     drawCameraUi(m_cameraController->getCamera());
+
+    ImGui::SetNextWindowSize(ImVec2(440.0f, 500.0f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Render Graph")) {
+        drawRenderGraphGui(*m_renderGraph);
+    }
+    ImGui::End();
 }
 
 std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
@@ -355,7 +381,10 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
 
 void VulkanRayTracingScene::updateDescriptorSets() {
     m_material->writeDescriptor(1, 0, m_topLevelAccelStructure->getDescriptorInfo());
-    m_material->writeDescriptor(1, 1, m_rayTracedImage->getView().getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+    m_material->writeDescriptor(
+        1,
+        1,
+        m_renderGraph->getImageView<&PathTracingPassData::image>().getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     m_material->writeDescriptor(1, 2, *m_cameraBuffer);
     m_material->writeDescriptor(1, 3, *m_integratorBuffer);
     m_renderer->getDevice().flushDescriptorUpdates();

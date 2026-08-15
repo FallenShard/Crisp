@@ -101,8 +101,7 @@ void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res) {
         {.usageType = ResourceUsageType::Texture, .stage = getSampledImageReadAccess(pass.type)});
 }
 
-void RenderGraph::Builder::readBuffer(
-    const RenderGraphResourceHandle res, const VulkanSynchronizationStage access) {
+void RenderGraph::Builder::readBuffer(const RenderGraphResourceHandle res, const VulkanSynchronizationStage access) {
     auto& resource = m_renderGraph.getResource(res);
     resource.readPasses.push_back(m_passHandle);
 
@@ -167,7 +166,7 @@ RenderGraphResourceHandle RenderGraph::Builder::createStorageImage(
         .stage = getStorageImageWriteAccess(m_renderGraph.getPass(m_passHandle).type),
     };
 
-    m_renderGraph.getImageDescription(handle).imageUsageFlags = VK_IMAGE_USAGE_STORAGE_BIT;
+    m_renderGraph.getImageDescription(handle).imageUsageFlags |= VK_IMAGE_USAGE_STORAGE_BIT;
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.outputs.push_back(handle);
