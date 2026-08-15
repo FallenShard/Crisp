@@ -69,7 +69,7 @@ struct ObjVertexHasher {
 
 FlatHashMap<std::string, WavefrontObjMaterial> loadMaterials(const std::filesystem::path& path) {
     if (!std::filesystem::exists(path)) {
-        CRISP_LOGW("OBJ material at {} does not exist!", path.string());
+        CRISP_LOGD("OBJ material at {} does not exist!", path.string());
         return {};
     }
 
