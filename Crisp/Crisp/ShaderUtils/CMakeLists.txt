@@ -46,8 +46,13 @@ target_link_libraries(CrispShaderCompiler
     PRIVATE Crisp::FileUtils
     PRIVATE Crisp::HashMap
     PRIVATE Crisp::ShaderType
+    PRIVATE Crisp::UniqueTemporaryFile
     PUBLIC Crisp::VulkanHeader
 )
+target_compile_definitions(CrispShaderCompiler
+    PRIVATE "CRISP_GLSLANG_VALIDATOR_PATH=\"$<TARGET_FILE:glslang-standalone>\""
+)
+add_dependencies(CrispShaderCompiler glslang-standalone)
 
 add_cpp_static_library(CrispSpvReflection
     "Reflection.cpp"

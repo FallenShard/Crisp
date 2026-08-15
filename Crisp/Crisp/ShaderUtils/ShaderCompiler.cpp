@@ -1,15 +1,16 @@
 #include <Crisp/ShaderUtils/ShaderCompiler.hpp>
 
-#include <array>
-#include <cstdio>
-#include <cstring>
+#include <cstdlib>
 #include <fstream>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/Logger.hpp>
+#include <Crisp/Core/UniqueTemporaryFile.hpp>
 #include <Crisp/Io/FileUtils.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
 
@@ -19,10 +20,33 @@ const FlatHashSet<std::filesystem::path> kSupportedExtensions{".glsl", ".slang"}
 
 const FlatStringHashMap<std::string> kGlslangToSlangStageMap = {
     {"frag", "fragment"},
-    {},
 };
 
 CRISP_MAKE_LOGGER_MT("ShaderCompiler");
+
+constexpr std::string_view kGlslangExecutable{CRISP_GLSLANG_VALIDATOR_PATH};
+constexpr std::string_view kSlangExecutable{"slangc"};
+
+struct ProcessOutput {
+    int exitCode;
+    std::string output;
+};
+
+std::string quoteShellArgument(const std::string_view argument) {
+    return fmt::format("\"{}\"", argument);
+}
+
+Result<ProcessOutput> runProcess(std::string command) {
+    const UniqueTemporaryFile processOutputFile("log", "shader-process-");
+    command += fmt::format(" > {} 2>&1", quoteShellArgument(processOutputFile.getPath().string()));
+
+    const int exitCode = std::system(command.c_str());
+    if (exitCode == -1) {
+        return resultError("Failed to launch process: {}", command);
+    }
+    CRISP_TRY(auto output, fileToString(processOutputFile.getPath()));
+    return ProcessOutput{.exitCode = exitCode, .output = std::move(output)};
+}
 
 using ShaderTimestamp = std::optional<std::filesystem::file_time_type>;
 using ShaderTimestampCache = FlatHashMap<std::filesystem::path, Result<ShaderTimestamp>>;
@@ -115,6 +139,58 @@ Result<bool> shaderNeedsRecompilation(
 
     return false;
 }
+
+Result<> compileShader(
+    const std::filesystem::path& inputPath, const std::filesystem::path& outputPath, const std::string_view shaderType) {
+    const auto absoluteInputPath = std::filesystem::absolute(inputPath).lexically_normal();
+    std::string command;
+    if (inputPath.extension() == ".glsl") {
+        command = fmt::format(
+            "{} --target-env vulkan1.3 -o {} -S {} {}",
+            kGlslangExecutable,
+            quoteShellArgument(outputPath.string()),
+            quoteShellArgument(shaderType),
+            quoteShellArgument(absoluteInputPath.string()));
+    } else {
+        const auto stage = kGlslangToSlangStageMap.find(shaderType);
+        if (stage == kGlslangToSlangStageMap.end()) {
+            return resultError("Shader stage {} is not supported by the Slang compiler", shaderType);
+        }
+        command = fmt::format(
+            "{} -o {} -stage {} {}",
+            kSlangExecutable,
+            quoteShellArgument(outputPath.string()),
+            quoteShellArgument(stage->second),
+            quoteShellArgument(absoluteInputPath.string()));
+    }
+
+    CRISP_LOGI("Compiling {}", inputPath.filename().string());
+    CRISP_TRY(
+        const auto& processOutput,
+        runProcess(std::move(command)),
+        "Failed to run the compiler for shader {}",
+        inputPath.string());
+    if (processOutput.exitCode != 0) {
+        return resultError(
+            "Failed to compile shader {} (compiler exit code {}):\n{}",
+            inputPath.string(),
+            processOutput.exitCode,
+            processOutput.output);
+    }
+    if (!processOutput.output.empty()) {
+        CRISP_LOGD("Compiler output for {}:\n{}", inputPath.filename().string(), processOutput.output);
+    }
+
+    std::error_code fileError;
+    const auto outputSize = std::filesystem::file_size(outputPath, fileError);
+    if (fileError || outputSize == 0) {
+        return resultError(
+            "Compiler did not produce a valid SPIR-V file for {}{}",
+            inputPath.string(),
+            fileError ? fmt::format(": {}", fileError.message()) : std::string{});
+    }
+    return kResultSuccess;
+}
 } // namespace
 
 Result<ShaderCompilationStats> recompileShaderDir(
@@ -134,7 +210,6 @@ Result<ShaderCompilationStats> recompileShaderDir(
 
     ShaderCompilationStats stats;
     ShaderTimestampCache timestampCache;
-    std::array<char, 4096> lineBuffer; // NOLINT
     for (const auto& inputEntry : std::filesystem::recursive_directory_iterator(inputDir)) {
         if (inputEntry.is_directory()) {
             continue;
@@ -167,73 +242,13 @@ Result<ShaderCompilationStats> recompileShaderDir(
             "Failed to query timestamps for shader {}",
             inputPath.string());
         if (shouldRecompile) {
-            const std::filesystem::path tempOutputPath = outputDir / "temp.spv";
-            const std::filesystem::path absoluteInputPath = std::filesystem::absolute(inputPath).lexically_normal();
-
-            CRISP_LOGI("Compiling {}", inputPath.filename().string());
-
-            const std::string command =
-                inputPath.extension() == ".glsl"
-                    ? fmt::format(
-                          R"(glslangValidator.exe --target-env vulkan1.3 -o "{}" -S {} "{}")",
-                          tempOutputPath.string(),
-                          shaderType,
-                          absoluteInputPath.string())
-                    : fmt::format(
-                          R"(slangc.exe -o "{}" -stage {} "{}")",
-                          tempOutputPath.string(),
-                          kGlslangToSlangStageMap.find(shaderType)->second,
-                          absoluteInputPath.string());
-
-            // Open a subprocess to compile this shader
-            FILE* pipe = _popen(command.c_str(), "rt");
-            if (!pipe) {
-                return resultError("Failed to launch shader compiler command: {}", command);
-            }
-
-            // Read the pipe, typically the subprocess stdout
-            lineBuffer.fill(0);
-            bool compilerReportedError{false};
-            while (fgets(lineBuffer.data(), static_cast<int>(lineBuffer.size()), pipe)) {
-                const std::string_view view(lineBuffer.data(), std::strlen(lineBuffer.data()));
-                if (view.starts_with("ERROR")) {
-                    CRISP_LOGE("{}", view);
-                    compilerReportedError = true;
-                } else if (view.starts_with("WARNING")) {
-                    CRISP_LOGW("{}", view);
-                }
-            }
-
-            const bool pipeReadFailed = ferror(pipe) != 0;
-            const int returnCode = _pclose(pipe);
-            if (pipeReadFailed) {
-                std::error_code ignoredError;
-                std::filesystem::remove(tempOutputPath, ignoredError);
-                return resultError("Failed to read compiler output for shader {}", inputPath.string());
-            }
-            if (returnCode != 0 || compilerReportedError) {
-                std::error_code ignoredError;
-                std::filesystem::remove(tempOutputPath, ignoredError);
-                return resultError(
-                    "Failed to compile shader {} (compiler exit code {})", inputPath.string(), returnCode);
-            }
-
-            std::error_code fileError;
-            std::filesystem::remove(outputPath, fileError);
-            if (fileError) {
-                return resultError("Failed to remove old shader {}: {}", outputPath.string(), fileError.message());
-            }
-            std::filesystem::rename(tempOutputPath, outputPath, fileError);
-            if (fileError) {
-                return resultError("Failed to move compiled shader to {}: {}", outputPath.string(), fileError.message());
-            }
+            CRISP_TRY(compileShader(inputPath, outputPath, shaderType));
             ++stats.recompiledShaderCount;
         } else {
             ++stats.skippedShaderCount;
         }
     }
-    CRISP_LOGI(
-        "{} shaders recompiled, {} shaders skipped.", stats.recompiledShaderCount, stats.skippedShaderCount);
+    CRISP_LOGI("{} shaders recompiled, {} shaders skipped.", stats.recompiledShaderCount, stats.skippedShaderCount);
     return stats;
 }
 
