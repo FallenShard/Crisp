@@ -87,16 +87,21 @@ function(add_cpp_test targetName)
         ${targetName}
         TEST_PREFIX ${targetName}.
         WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+    target_compile_definitions(${targetName}
+        PRIVATE CRISP_RESOURCE_DIR="${CMAKE_SOURCE_DIR}/Resources"
+        PRIVATE CRISP_SHADER_SOURCE_DIR="${CMAKE_SOURCE_DIR}/Crisp/Crisp/Shaders")
 endfunction()
 
 # Copies a tracked fixture into a target-specific directory in the build tree.
-function(stage_test_file targetName sourceFile relativeOutputPath)
+function(target_add_test_file targetName sourceFile)
     if(NOT TARGET ${targetName})
         return()
     endif()
 
     get_filename_component(sourcePath "${sourceFile}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-    set(outputPath "${CMAKE_CURRENT_BINARY_DIR}/TestData/${targetName}/${relativeOutputPath}")
+    get_filename_component(sourceName "${sourceFile}" NAME)
+    set(outputPath "${CMAKE_CURRENT_BINARY_DIR}/TestData/${targetName}/${sourceName}")
     get_filename_component(outputDirectory "${outputPath}" DIRECTORY)
     file(MAKE_DIRECTORY "${outputDirectory}")
     configure_file("${sourcePath}" "${outputPath}" COPYONLY)
@@ -108,8 +113,7 @@ function(add_test_shader targetName sourceFile)
         return()
     endif()
 
-    get_filename_component(sourceName "${sourceFile}" NAME)
-    stage_test_file(${targetName} "${sourceFile}" "${sourceName}")
+    target_add_test_file(${targetName} "${sourceFile}")
     target_link_libraries(
         ${targetName}
         PRIVATE Crisp::FileUtils Crisp::ShaderCompiler Crisp::UniqueTemporaryFile)

@@ -46,7 +46,7 @@ target_link_libraries(CrispMeshIo
 
 add_cpp_test(CrispWavefrontObjLoaderTest "Test/WavefrontObjLoaderTest.cpp")
 target_link_libraries(CrispWavefrontObjLoaderTest PRIVATE Crisp::WavefrontObjLoader)
-stage_test_file(CrispWavefrontObjLoaderTest "Test/Data/simple.obj" "simple.obj")
+target_add_test_file(CrispWavefrontObjLoaderTest "Test/Data/simple.obj")
 
 set(externalAssetConfig "${CMAKE_CURRENT_BINARY_DIR}/Generated/Crisp/Mesh/Io/ExternalAssetConfig.hpp")
 configure_file("Test/ExternalAssetConfig.hpp.in" "${externalAssetConfig}" @ONLY)
@@ -63,4 +63,4 @@ target_include_directories(CrispWavefrontObjLoaderBenchmark PRIVATE "${CMAKE_CUR
 add_cpp_test(CrispGltfLoaderTest "Test/GltfLoaderTest.cpp")
 target_link_libraries(CrispGltfLoaderTest PRIVATE Crisp::GltfLoader)
 target_include_directories(CrispGltfLoaderTest PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/Generated")
-stage_test_file(CrispGltfLoaderTest "Test/Data/Triangle.gltf" "Triangle.gltf")
+target_add_test_file(CrispGltfLoaderTest "Test/Data/Triangle.gltf")
