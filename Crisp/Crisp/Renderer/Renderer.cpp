@@ -328,12 +328,13 @@ void Renderer::record(const FrameContext& frameContext) {
 void Renderer::endFrame(const FrameContext& frameContext) {
     frameContext.commandBuffer->end();
     auto& frame = m_virtualFrames[frameContext.virtualFrameIndex];
-    frame.addSubmission(*frameContext.commandBuffer);
+    frame.addSubmission(
+        *frameContext.commandBuffer, m_swapChain->getRenderFinishedSemaphore(frameContext.swapChainImageIndex));
     frameContext.commandBuffer->setExecutionState();
 
     frame.submitToQueue(m_device->getGeneralQueue(), *m_frameTimeline);
 
-    present(frame, frameContext.swapChainImageIndex);
+    present(frameContext.swapChainImageIndex);
 
     m_drawCommands.clear();
     m_defaultPassDrawCommands.clear();
@@ -396,9 +397,9 @@ std::optional<uint32_t> Renderer::acquireSwapImageIndex(RendererFrame& frame) {
     return imageIndex;
 }
 
-void Renderer::present(RendererFrame& frame, uint32_t swapChainImageIndex) {
+void Renderer::present(const uint32_t swapChainImageIndex) {
     const VkResult result = m_device->getGeneralQueue().present(
-        frame.getRenderFinishedSemaphoreHandle(), m_swapChain->getHandle(), swapChainImageIndex);
+        m_swapChain->getRenderFinishedSemaphore(swapChainImageIndex), m_swapChain->getHandle(), swapChainImageIndex);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         recreateSwapChain();

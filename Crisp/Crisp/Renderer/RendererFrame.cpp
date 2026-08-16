@@ -6,25 +6,19 @@
 namespace crisp {
 RendererFrame::RendererFrame(const VulkanDevice& device, const int32_t logicalIndex)
     : m_imageAvailableSemaphore(device.createSemaphore())
-    , m_renderFinishedSemaphore(device.createSemaphore())
     , m_deviceHandle(device.getHandle())
     , m_logicalIndex(logicalIndex) {
     device.setObjectName(m_imageAvailableSemaphore, fmt::format("[Frame {}] Image Available Sem", m_logicalIndex));
-    device.setObjectName(m_renderFinishedSemaphore, fmt::format("[Frame {}] Render Finished Sem", m_logicalIndex));
 }
 
 RendererFrame::~RendererFrame() {
     if (m_imageAvailableSemaphore != VK_NULL_HANDLE) {
         vkDestroySemaphore(m_deviceHandle, m_imageAvailableSemaphore, nullptr);
     }
-    if (m_renderFinishedSemaphore != VK_NULL_HANDLE) {
-        vkDestroySemaphore(m_deviceHandle, m_renderFinishedSemaphore, nullptr);
-    }
 }
 
 RendererFrame::RendererFrame(RendererFrame&& other) noexcept
     : m_imageAvailableSemaphore(std::exchange(other.m_imageAvailableSemaphore, VK_NULL_HANDLE))
-    , m_renderFinishedSemaphore(std::exchange(other.m_renderFinishedSemaphore, VK_NULL_HANDLE))
     , m_deviceHandle(other.m_deviceHandle)
     , m_logicalIndex(other.m_logicalIndex)
     , m_submittedValue(other.m_submittedValue)
@@ -35,7 +29,6 @@ RendererFrame& RendererFrame::operator=(RendererFrame&& other) noexcept {
         return *this;
     }
     m_imageAvailableSemaphore = std::exchange(other.m_imageAvailableSemaphore, VK_NULL_HANDLE);
-    m_renderFinishedSemaphore = std::exchange(other.m_renderFinishedSemaphore, VK_NULL_HANDLE);
     m_deviceHandle = other.m_deviceHandle;
     m_logicalIndex = other.m_logicalIndex;
     m_submittedValue = other.m_submittedValue;
@@ -47,14 +40,14 @@ void RendererFrame::waitCompletion(const VulkanTimelineSemaphore& timeline) cons
     timeline.wait(m_submittedValue);
 }
 
-void RendererFrame::addSubmission(const VulkanCommandBuffer& cmdBuffer) {
+void RendererFrame::addSubmission(const VulkanCommandBuffer& cmdBuffer, const VkSemaphore renderFinishedSemaphore) {
     Submission submission{};
     submission.cmdBufferHandles.push_back(cmdBuffer.getHandle());
     submission.waits.push_back({m_imageAvailableSemaphore, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT});
     // Waited on by vkQueuePresentKHR, so this stays broad on purpose. Narrowing to COLOR_ATTACHMENT_OUTPUT would
     // be correct only while a render pass is the last thing to write the swapchain image - a compute or blit pass
     // writing it afterwards is not logically earlier and would need to be accounted for separately.
-    submission.signals.push_back({m_renderFinishedSemaphore, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT});
+    submission.signals.push_back({renderFinishedSemaphore, VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT});
     m_submissions.push_back(submission);
 }
 
@@ -116,10 +109,6 @@ uint64_t RendererFrame::submitToQueue(const VulkanQueue& queue, VulkanTimelineSe
 
 VkSemaphore RendererFrame::getImageAvailableSemaphoreHandle() const {
     return m_imageAvailableSemaphore;
-}
-
-VkSemaphore RendererFrame::getRenderFinishedSemaphoreHandle() const {
-    return m_renderFinishedSemaphore;
 }
 
 } // namespace crisp

@@ -108,7 +108,7 @@ public:
 
 private:
     std::optional<uint32_t> acquireSwapImageIndex(RendererFrame& virtualFrame);
-    void present(RendererFrame& virtualFrame, uint32_t swapChainImageIndex);
+    void present(uint32_t swapChainImageIndex);
 
     void recreateSwapChain();
 

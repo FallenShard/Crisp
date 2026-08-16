@@ -33,6 +33,7 @@ public:
     VkImage getImage(size_t index) const;
     VkImageLayout getImageLayout(size_t index) const;
     VkImageView getImageView(size_t index) const;
+    VkSemaphore getRenderFinishedSemaphore(size_t index) const;
     uint32_t getImageCount() const;
     void setImageLayout(size_t index, VkImageLayout layout);
 
@@ -41,6 +42,7 @@ public:
 private:
     void createSwapChain(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
     void createImageViews(const VulkanDevice& device);
+    void createRenderFinishedSemaphores(const VulkanDevice& device);
 
     static Result<VkSurfaceFormatKHR> selectSurfaceFormat(
         const std::vector<VkSurfaceFormatKHR>& availableFormats, const VkSurfaceFormatKHR& surfaceFormat);
@@ -51,6 +53,7 @@ private:
     std::vector<VkImage> m_images;
     std::vector<VkImageLayout> m_imageLayouts;
     std::vector<VkImageView> m_imageViews;
+    std::vector<VkSemaphore> m_renderFinishedSemaphores;
     VkFormat m_imageFormat;
     VkExtent2D m_extent;
     VkPresentModeKHR m_presentationMode;

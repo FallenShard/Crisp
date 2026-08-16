@@ -32,11 +32,15 @@ VulkanSwapChain::VulkanSwapChain(
     , m_presentationMode(toPresentMode(presentationMode)) {
     createSwapChain(device, physicalDevice, surface);
     createImageViews(device);
+    createRenderFinishedSemaphores(device);
 }
 
 VulkanSwapChain::~VulkanSwapChain() {
     for (auto* imageView : m_imageViews) {
         m_deallocator->deferDestruction(imageView);
+    }
+    for (auto* semaphore : m_renderFinishedSemaphores) {
+        m_deallocator->deferDestruction(semaphore);
     }
 }
 
@@ -68,6 +72,10 @@ VkImageView VulkanSwapChain::getImageView(size_t index) const {
     return m_imageViews.at(index);
 }
 
+VkSemaphore VulkanSwapChain::getRenderFinishedSemaphore(const size_t index) const {
+    return m_renderFinishedSemaphores.at(index);
+}
+
 uint32_t VulkanSwapChain::getImageCount() const {
     return static_cast<uint32_t>(m_imageViews.size());
 }
@@ -81,8 +89,12 @@ void VulkanSwapChain::recreate(
     for (auto* imageView : m_imageViews) {
         vkDestroyImageView(device.getHandle(), imageView, nullptr);
     }
+    for (auto* semaphore : m_renderFinishedSemaphores) {
+        vkDestroySemaphore(device.getHandle(), semaphore, nullptr);
+    }
     createSwapChain(device, physicalDevice, surface);
     createImageViews(device);
+    createRenderFinishedSemaphores(device);
 }
 
 void VulkanSwapChain::createSwapChain(
@@ -165,6 +177,14 @@ void VulkanSwapChain::createImageViews(const VulkanDevice& device) {
 
         VK_CHECK(vkCreateImageView(device.getHandle(), &viewInfo, nullptr, &m_imageViews[i]));
         device.setObjectName(m_imageViews[i], fmt::format("Swap Chain Image {} View", i));
+    }
+}
+
+void VulkanSwapChain::createRenderFinishedSemaphores(const VulkanDevice& device) {
+    m_renderFinishedSemaphores.resize(m_images.size(), VK_NULL_HANDLE);
+    for (uint32_t i = 0; i < m_renderFinishedSemaphores.size(); ++i) {
+        m_renderFinishedSemaphores[i] = device.createSemaphore();
+        device.setObjectName(m_renderFinishedSemaphores[i], fmt::format("[Swap Chain Image {}] Render Finished Sem", i));
     }
 }
 

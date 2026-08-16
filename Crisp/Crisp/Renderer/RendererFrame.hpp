@@ -19,15 +19,13 @@ public:
     RendererFrame& operator=(RendererFrame&&) noexcept;
 
     void waitCompletion(const VulkanTimelineSemaphore& timeline) const;
-    void addSubmission(const VulkanCommandBuffer& cmdBuffer);
+    void addSubmission(const VulkanCommandBuffer& cmdBuffer, VkSemaphore renderFinishedSemaphore);
     uint64_t submitToQueue(const VulkanQueue& queue, VulkanTimelineSemaphore& timeline);
 
     VkSemaphore getImageAvailableSemaphoreHandle() const;
-    VkSemaphore getRenderFinishedSemaphoreHandle() const;
 
 private:
     VkSemaphore m_imageAvailableSemaphore;
-    VkSemaphore m_renderFinishedSemaphore;
     VkDevice m_deviceHandle; // Non-owning.
     int32_t m_logicalIndex;
 
