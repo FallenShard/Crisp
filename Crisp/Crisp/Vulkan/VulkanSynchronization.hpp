@@ -142,6 +142,11 @@ inline constexpr VulkanSynchronizationStage kFragmentSampledRead = {
     .access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
 };
 
+inline constexpr VulkanSynchronizationStage kVertexSampledRead = {
+    .stage = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT,
+    .access = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT,
+};
+
 inline constexpr VulkanSynchronizationStage kFragmentInputRead = {
     .stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
     .access = VK_ACCESS_2_INPUT_ATTACHMENT_READ_BIT,

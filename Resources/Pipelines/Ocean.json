@@ -9,5 +9,5 @@
     ],
     "depthStencil"       : { "reverseDepth": true },
     "multisample"        : { "sampleCount": 1 },
-    "rasterization"      : { "cullMode": "none" }
+    "rasterization"      : { "cullMode": "back" }
 }

@@ -2,6 +2,7 @@
 #define CRISP_MICROFACET_GLSL
 
 #include "dielectric.part.glsl"
+#include "../Common/math-constants.part.glsl"
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0f - F0) * pow(1.0f - cosTheta, 5.0f);

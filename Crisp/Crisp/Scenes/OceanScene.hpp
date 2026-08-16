@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Geometry/TransformBuffer.hpp>
 #include <Crisp/Lights/EnvironmentLight.hpp>
@@ -44,6 +46,9 @@ private:
     std::unique_ptr<EnvironmentLight> m_envLight;
     std::unique_ptr<Skybox> m_skybox;
     OceanParameters m_oceanParams;
+    std::array<OceanCascade, kOceanCascadeCount> m_cascades;
+    std::array<OceanCascadeMoments, kOceanCascadeCount> m_unitAmplitudeMoments{};
+    std::array<OceanCascadeMoments, kOceanCascadeCount> m_cascadeMoments{};
     TonemapParameters m_tonemapParams{};
     float m_choppiness;
     float m_waterRoughness{0.08f};
@@ -51,18 +56,17 @@ private:
     float m_foamSoftness{0.1f};
     float m_foamIntensity{1.0f};
 
+    float m_slopeVarianceScale{1.0f};
+
     float m_sunAzimuthDegrees{45.0f};
     float m_sunElevationDegrees{35.0f};
     float m_sunIntensity{1.0f};
 
-    // Foam thresholds are expressed relative to it, so they survive wind and amplitude changes.
     float m_rmsWaveHeight{1.0f};
     bool m_spectrumDirty{true};
 
-    // Uniform scale on the ocean's model matrix, so a patch can be inspected as an object.
     float m_modelScale{1.0f};
 
-    // Instances per side of the tiled ocean grid, centred on the origin. 1 == a single patch.
     int32_t m_instancesPerSide{1};
 
     bool m_paused{false};

@@ -1,14 +1,17 @@
 #version 460 core
 
-#define PI 3.1415926535897932384626433832795
+#extension GL_GOOGLE_include_directive : require
+
+#include "Common/math-constants.part.glsl"
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
-layout(set = 0, binding = 0, rg32f) uniform readonly image2D initialSpectrumImg;
+// One array layer per cascade; the dispatch runs once per cascade with its own band limits.
+layout(set = 0, binding = 0, rg32f) uniform readonly image2DArray initialSpectrumImg;
 // IFFT is linear, so two real fields ride in one complex transform. normalZ is left unpaired.
-layout(set = 0, binding = 1, rg32f) uniform writeonly image2D packedHeightDispXImg;
-layout(set = 0, binding = 2, rg32f) uniform writeonly image2D packedDispZNormalXImg;
-layout(set = 0, binding = 3, rg32f) uniform writeonly image2D normalZImg;
+layout(set = 0, binding = 1, rg32f) uniform writeonly image2DArray packedHeightDispXImg;
+layout(set = 0, binding = 2, rg32f) uniform writeonly image2DArray packedDispZNormalXImg;
+layout(set = 0, binding = 3, rg32f) uniform writeonly image2DArray normalZImg;
 
 layout(push_constant) uniform PushConstant {
     int N;
@@ -24,7 +27,11 @@ layout(push_constant) uniform PushConstant {
     float smallWaves;
 
     float time;
-    float pad0;
+
+    // kMin is the previous cascade's Nyquist, so the bands neither overlap nor gap.
+    float kMin;
+    float kMax;
+    int cascade;
 };
 
 const float g = 9.81;
@@ -38,6 +45,13 @@ float calculatePhillipsSpectrum(const vec2 k) {
     if (kLen2 == 0.0f) {
         return 0.0f;
     }
+
+    // The band limit is symmetric in k, so it leaves the Hermitian pairing intact.
+    const float kLen = sqrt(kLen2);
+    if (kLen < kMin || kLen >= kMax) {
+        return 0.0f;
+    }
+
     const vec2 kDir = k * inversesqrt(kLen2);
 
     const float expTerm = exp(-1.0 / (kLen2 * Lw * Lw)) / (kLen2 * kLen2);
@@ -65,8 +79,10 @@ void main() {
     const ivec2 mirrorGid = ivec2((N - gid.x) % N, (M - gid.y) % M);
 
     const float sqrtFactor = sqrt(2.0f) * 0.5f * amplitudeScale;
-    const vec2 h0 = imageLoad(initialSpectrumImg, gid).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(k));
-    const vec2 h0MinusK = imageLoad(initialSpectrumImg, mirrorGid).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(-k));
+    const vec2 h0 =
+        imageLoad(initialSpectrumImg, ivec3(gid, cascade)).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(k));
+    const vec2 h0MinusK =
+        imageLoad(initialSpectrumImg, ivec3(mirrorGid, cascade)).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(-k));
     const vec2 h0Conj = vec2(h0MinusK.x, -h0MinusK.y);
 
     const float wk = sqrt(g * kLen);
@@ -85,7 +101,7 @@ void main() {
     const vec2 packedHeightDispX = vec2(hkt.x - dispX.y, hkt.y + dispX.x);
     const vec2 packedDispZNormalX = vec2(dispZ.x - normalX.y, dispZ.y + normalX.x);
 
-    imageStore(packedHeightDispXImg, gid, vec4(packedHeightDispX, 0.0, 0.0f));
-    imageStore(packedDispZNormalXImg, gid, vec4(packedDispZNormalX, 0.0, 0.0f));
-    imageStore(normalZImg, gid, vec4(normalZ, 0.0, 0.0f));
+    imageStore(packedHeightDispXImg, ivec3(gid, cascade), vec4(packedHeightDispX, 0.0, 0.0f));
+    imageStore(packedDispZNormalXImg, ivec3(gid, cascade), vec4(packedDispZNormalX, 0.0, 0.0f));
+    imageStore(normalZImg, ivec3(gid, cascade), vec4(normalZ, 0.0, 0.0f));
 }

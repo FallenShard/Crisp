@@ -2,32 +2,18 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define PI 3.1415926535897932384626433832795
 layout(location = 0) out vec4 finalColor;
 
 layout(location = 0) in vec3 eyePosition;
-layout(location = 1) in vec2 oceanUv;
+layout(location = 1) in vec2 oceanWorldXZ;
 
 #include "Brdf/microfacet.part.glsl"
+#include "Common/ocean-draw.part.glsl"
 #include "Common/view.part.glsl"
 
-layout(push_constant) uniform PushConstant {
-    layout(offset = 0) vec3 sunDirection;
-    layout(offset = 12) float sunIntensity;
-    layout(offset = 16) float patchWorldSize;
-    layout(offset = 20) int instancesPerSide;
-    layout(offset = 24) int gridSize;
-    layout(offset = 28) float choppiness;
-    layout(offset = 32) float waterRoughness;
-    layout(offset = 36) float foamThreshold;
-    layout(offset = 40) float foamSoftness;
-    layout(offset = 44) float foamIntensity;
-    layout(offset = 48) float invRmsWaveHeight;
-};
-
-layout(set = 0, binding = 1) uniform sampler2D packedHeightDispXMap;
-layout(set = 0, binding = 2) uniform sampler2D packedDispZNormalXMap;
-layout(set = 0, binding = 3) uniform sampler2D normalZMap;
+layout(set = 0, binding = 1) uniform sampler2DArray packedHeightDispXMap;
+layout(set = 0, binding = 2) uniform sampler2DArray packedDispZNormalXMap;
+layout(set = 0, binding = 3) uniform sampler2DArray normalZMap;
 
 layout(set = 1, binding = 0) uniform View {
     ViewParameters view;
@@ -37,7 +23,6 @@ layout(set = 1, binding = 1) uniform samplerCube irrMap;
 layout(set = 1, binding = 2) uniform samplerCube refMap;
 layout(set = 1, binding = 3) uniform sampler2D brdfLut;
 
-// Stands in for depth-resolved transmission; see docs/ocean.md item 14.
 const float kScatterFraction = 0.35f;
 
 vec3 computeEnvSpecular(vec3 eyeN, vec3 eyeV, vec3 F0, float roughness, out vec3 irradiance) {
@@ -54,31 +39,76 @@ vec3 computeEnvSpecular(vec3 eyeN, vec3 eyeV, vec3 F0, float roughness, out vec3
     return reflection * (F0 * brdf.x + brdf.y);
 }
 
-void main() {
-    const vec2 texelSize = 1.0f / vec2(textureSize(packedHeightDispXMap, 0));
-    const float invDerivativeSpan = 0.5f * float(gridSize) / patchWorldSize;
-    const float dxLeft = texture(packedHeightDispXMap, oceanUv - vec2(texelSize.x, 0.0f)).g;
-    const float dxRight = texture(packedHeightDispXMap, oceanUv + vec2(texelSize.x, 0.0f)).g;
-    const float dxBack = texture(packedHeightDispXMap, oceanUv - vec2(0.0f, texelSize.y)).g;
-    const float dxFront = texture(packedHeightDispXMap, oceanUv + vec2(0.0f, texelSize.y)).g;
-    const float dzLeft = texture(packedDispZNormalXMap, oceanUv - vec2(texelSize.x, 0.0f)).r;
-    const float dzRight = texture(packedDispZNormalXMap, oceanUv + vec2(texelSize.x, 0.0f)).r;
-    const float dzBack = texture(packedDispZNormalXMap, oceanUv - vec2(0.0f, texelSize.y)).r;
-    const float dzFront = texture(packedDispZNormalXMap, oceanUv + vec2(0.0f, texelSize.y)).r;
+struct SurfaceFields {
+    vec2 slope;
+    float waveHeight;
+    vec4 displacementGradient; // dDx/dx, dDx/dz, dDz/dx, dDz/dz.
+    float unresolvedSlopeVariance;
+};
 
-    const float dDxDx = (dxRight - dxLeft) * invDerivativeSpan;
-    const float dDxDz = (dxFront - dxBack) * invDerivativeSpan;
-    const float dDzDx = (dzRight - dzLeft) * invDerivativeSpan;
-    const float dDzDz = (dzFront - dzBack) * invDerivativeSpan;
+SurfaceFields sampleCascades(const float pixelSpacing, const float vertexSpacing) {
+    SurfaceFields fields;
+    fields.slope = vec2(0.0f);
+    fields.waveHeight = 0.0f;
+    fields.displacementGradient = vec4(0.0f);
+    fields.unresolvedSlopeVariance = 0.0f;
+
+    const float fftSize = float(textureSize(packedHeightDispXMap, 0).x);
+    const vec2 texelSize = vec2(1.0f / fftSize);
+
+    for (int c = 0; c < OCEAN_CASCADE_COUNT; ++c) {
+        const vec3 uv = oceanCascadeUv(oceanWorldXZ, cascadeSizes[c], fftSize, c);
+        const float slopeWeight = oceanBandResolveWeight(cascadeWavelengths[c], pixelSpacing);
+
+        fields.slope += slopeWeight * vec2(texture(packedDispZNormalXMap, uv).g, texture(normalZMap, uv).r);
+        // Slope the footprint swallowed is not gone: scaling the field by w scales its variance by
+        // w^2, and the missing remainder widens the specular lobe below instead.
+        fields.unresolvedSlopeVariance += (1.0f - slopeWeight * slopeWeight) * cascadeSlopeVariances[c];
+
+        // Must match the weight ocean.vert applied, or the Jacobian describes a surface that was
+        // never displaced. Uniform across the draw: it is a function of push constants alone.
+        const float dispWeight = oceanBandResolveWeight(cascadeWavelengths[c], vertexSpacing);
+        if (dispWeight <= 0.0f) {
+            continue;
+        }
+
+        fields.waveHeight += dispWeight * texture(packedHeightDispXMap, uv).r;
+
+        const float invDerivativeSpan = 0.5f * fftSize / cascadeSizes[c] * dispWeight;
+        const float dxLeft = texture(packedHeightDispXMap, uv - vec3(texelSize.x, 0.0f, 0.0f)).g;
+        const float dxRight = texture(packedHeightDispXMap, uv + vec3(texelSize.x, 0.0f, 0.0f)).g;
+        const float dxBack = texture(packedHeightDispXMap, uv - vec3(0.0f, texelSize.y, 0.0f)).g;
+        const float dxFront = texture(packedHeightDispXMap, uv + vec3(0.0f, texelSize.y, 0.0f)).g;
+        const float dzLeft = texture(packedDispZNormalXMap, uv - vec3(texelSize.x, 0.0f, 0.0f)).r;
+        const float dzRight = texture(packedDispZNormalXMap, uv + vec3(texelSize.x, 0.0f, 0.0f)).r;
+        const float dzBack = texture(packedDispZNormalXMap, uv - vec3(0.0f, texelSize.y, 0.0f)).r;
+        const float dzFront = texture(packedDispZNormalXMap, uv + vec3(0.0f, texelSize.y, 0.0f)).r;
+
+        fields.displacementGradient += invDerivativeSpan * vec4(
+            dxRight - dxLeft, dxFront - dxBack, dzRight - dzLeft, dzFront - dzBack);
+    }
+
+    return fields;
+}
+
+void main() {
+    const vec2 footprint = fwidth(oceanWorldXZ);
+    const float pixelSpacing = max(footprint.x, footprint.y);
+    const float vertexSpacing = patchWorldSize / float(gridSize);
+
+    const SurfaceFields fields = sampleCascades(pixelSpacing, vertexSpacing);
+
+    const float dDxDx = fields.displacementGradient.x;
+    const float dDxDz = fields.displacementGradient.y;
+    const float dDzDx = fields.displacementGradient.z;
+    const float dDzDz = fields.displacementGradient.w;
     const float jacobianDeterminant =
         (1.0f - choppiness * dDxDx) * (1.0f - choppiness * dDzDz) - choppiness * choppiness * dDxDz * dDzDx;
     const float compression = max(1.0f - jacobianDeterminant, 0.0f);
 
-    const vec2 slope = vec2(texture(packedDispZNormalXMap, oceanUv).g, texture(normalZMap, oceanUv).r);
-
     // Choppiness shears the tangents sideways; only the Jacobian terms carry that.
-    const vec3 dPdx = vec3(1.0f - choppiness * dDxDx, slope.x, -choppiness * dDzDx);
-    const vec3 dPdz = vec3(-choppiness * dDxDz, slope.y, 1.0f - choppiness * dDzDz);
+    const vec3 dPdx = vec3(1.0f - choppiness * dDxDx, fields.slope.x, -choppiness * dDzDx);
+    const vec3 dPdz = vec3(-choppiness * dDxDz, fields.slope.y, 1.0f - choppiness * dDzDz);
     const vec3 worldN = normalize(cross(dPdz, dPdx));
 
     const vec3 eyeN = normalize((view.V * vec4(worldN, 0.0f)).xyz);
@@ -88,18 +118,25 @@ void main() {
     const vec3 eyeL = normalize((view.V * vec4(sunDirection, 0.0f)).xyz);
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
-    const float waveHeight = texture(packedHeightDispXMap, oceanUv).r;
-    const float crestFactor = smoothstep(0.0f, 1.5f, waveHeight * invRmsWaveHeight);
+    const float crestFactor = smoothstep(0.0f, 1.5f, fields.waveHeight * invRmsWaveHeight);
     const float breakingFoam = smoothstep(foamThreshold, foamThreshold + foamSoftness, compression);
     const float foam = clamp(foamIntensity * breakingFoam * crestFactor, 0.0f, 1.0f);
 
-    const float roughness = mix(max(waterRoughness, 0.03f), 0.35f, foam);
+    const float baseRoughness = mix(max(waterRoughness, 0.03f), 0.35f, foam);
+    const float baseAlpha = baseRoughness * baseRoughness;
+    // Toksvig/LEAN for GGX: convolving the NDF with the slope distribution that fell below the
+    // footprint adds 2*sigma^2 to alpha^2. Without it the lost cascades come back as crawling
+    // aliasing rather than as a wider lobe.
+    const float alpha =
+        min(sqrt(baseAlpha * baseAlpha + 2.0f * slopeVarianceScale * fields.unresolvedSlopeVariance), 1.0f);
+    const float roughness = sqrt(alpha);
+
     const vec3 F0 = vec3(0.02f);
     const vec3 F = fresnelSchlick(NdotV, F0);
 
     const vec3 eyeH = normalize(eyeL + eyeV);
     const float NdotH = max(dot(eyeN, eyeH), 0.0f);
-    const float D = distributionGGX(NdotH, roughness * roughness); // GGX takes alpha, not perceptual roughness.
+    const float D = distributionGGX(NdotH, alpha); // GGX takes alpha, not perceptual roughness.
     const float G = geometrySmith(NdotV, NdotL, roughness);
     const vec3 sunFresnel = fresnelSchlick(max(dot(eyeV, eyeH), 0.0f), F0);
     const vec3 sunSpecular = (D * G * sunFresnel / max(4.0f * NdotV * NdotL, 0.001f)) * NdotL * sunIntensity;

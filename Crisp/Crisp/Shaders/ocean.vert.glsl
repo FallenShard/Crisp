@@ -1,5 +1,9 @@
 #version 450 core
 
+#extension GL_GOOGLE_include_directive : require
+
+#include "Common/ocean-draw.part.glsl"
+
 layout(location = 0) in vec3 position;
 
 layout(set = 0, binding = 0) uniform TransformPack {
@@ -9,22 +13,11 @@ layout(set = 0, binding = 0) uniform TransformPack {
     mat4 N;
 };
 
-layout(push_constant) uniform PushConstant {
-    layout(offset = 0) vec3 sunDirection;
-    layout(offset = 12) float sunIntensity;
-    layout(offset = 16) float patchWorldSize;
-    layout(offset = 20) int instancesPerSide;
-    layout(offset = 24) int gridSize;
-    layout(offset = 28) float choppiness;
-    layout(offset = 32) float waterRoughness;
-    layout(offset = 36) float foamThreshold;
-    layout(offset = 40) float foamSoftness;
-    layout(offset = 44) float foamIntensity;
-    layout(offset = 48) float invRmsWaveHeight;
-};
+layout(set = 0, binding = 1) uniform sampler2DArray packedHeightDispXMap;
+layout(set = 0, binding = 2) uniform sampler2DArray packedDispZNormalXMap;
 
 layout(location = 0) out vec3 eyePosition;
-layout(location = 1) out vec2 oceanUv;
+layout(location = 1) out vec2 oceanWorldXZ;
 
 void main() {
     const uint patchRow = gl_InstanceIndex / uint(instancesPerSide);
@@ -33,12 +26,30 @@ void main() {
     const vec3 offset = vec3(
         (float(patchCol) - centerOffset) * patchWorldSize, 0.0f, (float(patchRow) - centerOffset) * patchWorldSize);
 
-    const uint gridWidth = uint(gridSize + 1);
-    const uvec2 gridCoord = uvec2(uint(gl_VertexIndex) % gridWidth, uint(gl_VertexIndex) / gridWidth);
+    // Sampling by position rather than by patch-local grid index is what lets each cascade keep its
+    // own period across instances; indexing by grid coordinate would repeat all of them at
+    // patchWorldSize and undo the point of picking near-prime patch sizes.
+    const vec3 basePos = position + offset;
+    oceanWorldXZ = basePos.xz;
 
-    // Texel centres, not corners: the geometry pass displaces vertex (i, j) by texelFetch(i, j).
-    oceanUv = (vec2(gridCoord) + 0.5f) / float(gridSize);
+    const float fftSize = float(textureSize(packedHeightDispXMap, 0).x);
+    const float vertexSpacing = patchWorldSize / float(gridSize);
 
-    eyePosition = (MV * vec4(position + offset, 1.0f)).xyz;
-    gl_Position = MVP * vec4(position + offset, 1.0f);
+    vec3 displaced = basePos;
+    for (int c = 0; c < OCEAN_CASCADE_COUNT; ++c) {
+        const vec3 uv = oceanCascadeUv(oceanWorldXZ, cascadeSizes[c], fftSize, c);
+        // A band the vertex grid cannot resolve would land as per-vertex noise, not as waves.
+        const float weight = oceanBandResolveWeight(cascadeWavelengths[c], vertexSpacing);
+        if (weight <= 0.0f) {
+            continue;
+        }
+
+        const vec2 heightDispX = textureLod(packedHeightDispXMap, uv, 0.0f).rg;
+        const float dispZ = textureLod(packedDispZNormalXMap, uv, 0.0f).r;
+        // Tessendorf choppy waves; the spectrum's D(k) = -i*(k/|k|)*h~ makes the scale negative.
+        displaced += weight * vec3(-choppiness * heightDispX.g, heightDispX.r, -choppiness * dispZ);
+    }
+
+    eyePosition = (MV * vec4(displaced, 1.0f)).xyz;
+    gl_Position = MVP * vec4(displaced, 1.0f);
 }

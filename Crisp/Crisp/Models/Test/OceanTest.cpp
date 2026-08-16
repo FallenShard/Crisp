@@ -8,6 +8,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
 #include <array>
+#include <limits>
 #include <numeric>
 
 namespace crisp {
@@ -139,9 +140,15 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
     const VkExtent3D workGroupCount = computeWorkGroupCount(glm::uvec3(kFftGridSize, kFftGridSize, 1), workGroupSize);
 
     // smallWaves damps energy near Nyquist, where an off-axis wind otherwise breaks Hermitian symmetry.
-    const OceanParameters params = createOceanParameters(
-        kFftGridSize, /*patchWorldSize=*/16.0f, /*windX=*/10.0f, /*windZ=*/3.0f, /*A=*/0.01f, /*l=*/4.0f);
-    const auto seedSpectrum = createOceanSpectrum(/*seed=*/7, params);
+    const OceanParameters params =
+        createOceanParameters(kFftGridSize, /*windX=*/10.0f, /*windZ=*/3.0f, /*A=*/0.01f, /*l=*/4.0f);
+    // A single band spanning the whole grid: Hermitian symmetry is what is under test, not banding.
+    const OceanCascade cascade{
+        .patchWorldSize = 16.0f,
+        .kMin = 0.0f,
+        .kMax = std::numeric_limits<float>::max(),
+    };
+    const auto seedSpectrum = createOceanSpectrum(/*seed=*/7, params, /*cascadeCount=*/1);
 
     auto seedImage = createFftImage(device, kFftGridSize);
     auto packedHeightDispX = createFftImage(device, kFftGridSize);
@@ -150,12 +157,12 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
     auto ifftHori = createFftImage(device, kFftGridSize);
     auto ifftVert = createFftImage(device, kFftGridSize);
 
-    auto seedView = createView(device, *seedImage, VK_IMAGE_VIEW_TYPE_2D);
-    auto packedHeightDispXView = createView(device, *packedHeightDispX, VK_IMAGE_VIEW_TYPE_2D);
-    auto packedDispZNormalXView = createView(device, *packedDispZNormalX, VK_IMAGE_VIEW_TYPE_2D);
-    auto normalZView = createView(device, *normalZ, VK_IMAGE_VIEW_TYPE_2D);
-    auto ifftHoriView = createView(device, *ifftHori, VK_IMAGE_VIEW_TYPE_2D);
-    auto ifftVertView = createView(device, *ifftVert, VK_IMAGE_VIEW_TYPE_2D);
+    auto seedView = createView(device, *seedImage, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
+    auto packedHeightDispXView = createView(device, *packedHeightDispX, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
+    auto packedDispZNormalXView = createView(device, *packedDispZNormalX, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
+    auto normalZView = createView(device, *normalZ, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
+    auto ifftHoriView = createView(device, *ifftHori, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
+    auto ifftVertView = createView(device, *ifftVert, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
 
     auto spectrumPipeline =
         createComputePipeline(device, kTestShaders.getSpirvPath("ocean-spectrum.comp.glsl"), workGroupSize);
@@ -169,15 +176,13 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
     constexpr VkExtent3D kIfftWorkGroupSize{kFftGridSize / 2, 1, 1};
     const SpecializationConstantMap kHoriConstants{{kMaxNConstantId, kFftGridSize}};
     const SpecializationConstantMap kVertConstants{
-        {kMaxNConstantId, kFftGridSize},
-        {kApplyOriginShiftConstantId, VK_TRUE},
-        {kTransposedConstantId, VK_TRUE}};
+        {kMaxNConstantId, kFftGridSize}, {kApplyOriginShiftConstantId, VK_TRUE}, {kTransposedConstantId, VK_TRUE}};
 
     const auto& ifftSpv = kTestShaders.getSpirvPath("ifft.comp.glsl");
-    FftDispatch ifftHoriDispatch = createImageToImageDispatch(
-        device, ifftSpv, kIfftWorkGroupSize, *normalZView, *ifftHoriView, kHoriConstants);
-    FftDispatch ifftVertDispatch = createImageToImageDispatch(
-        device, ifftSpv, kIfftWorkGroupSize, *ifftHoriView, *ifftVertView, kVertConstants);
+    FftDispatch ifftHoriDispatch =
+        createImageToImageDispatch(device, ifftSpv, kIfftWorkGroupSize, *normalZView, *ifftHoriView, kHoriConstants);
+    FftDispatch ifftVertDispatch =
+        createImageToImageDispatch(device, ifftSpv, kIfftWorkGroupSize, *ifftHoriView, *ifftVertView, kVertConstants);
 
     device.flushDescriptorUpdates();
 
@@ -212,7 +217,10 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
 
         encoder.bindPipeline(*spectrumPipeline);
         encoder.bindDescriptorSets(spectrumMaterial.getDescriptorSetBinding());
-        encoder.setPushConstants(*spectrumPipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, params);
+        encoder.setPushConstants(
+            *spectrumPipeline->getPipelineLayout(),
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            createOceanSpectrumPushConstants(params, cascade, /*cascadeIndex=*/0));
         encoder.dispatchCompute(workGroupCount);
         encoder.insertBarrier(kComputeStorageWrite >> kComputeStorageRead);
 

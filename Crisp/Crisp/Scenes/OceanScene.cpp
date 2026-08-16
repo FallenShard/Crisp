@@ -14,24 +14,53 @@
 
 namespace crisp {
 namespace {
-constexpr int32_t N = 512;
+constexpr int32_t N = 256;
 constexpr int32_t logN = std::bit_width(static_cast<uint32_t>(N)) - 1;
 constexpr float kGravity = 9.81f;
 
-// Also the L in the spectral grid k = 2 * pi * n / L, so spectrum and geometry must agree on it.
-constexpr float kPatchWorldSize = 256.0f;
-constexpr float kCellSize = kPatchWorldSize / N;
+// Non-power-of-two ratios on purpose: prevent visible tiling. The sizes are in meters.
+constexpr std::array<float, kOceanCascadeCount> kPatchWorldSizes{503.0f, 127.0f, 31.0f};
+
+// The mesh spans the coarsest cascade; the finer two tile inside it at their own periods.
+constexpr float kMeshPatchWorldSize = kPatchWorldSizes[0];
+constexpr int32_t kMeshTessellation = 512;
+
+// The Phillips tail cutoff wants to sit just below the finest wave the cascades can represent.
+constexpr float kFinestCellSize = kPatchWorldSizes[kOceanCascadeCount - 1] / N;
 
 constexpr int32_t kMaxInstancesPerSide = 8;
 
-// 5 real fields in 3 complex FFTs; see ocean-spectrum.comp.glsl.
+// Mirrors the push constant block in Shaders/Common/ocean-draw.part.glsl.
+struct OceanPushConstants {
+    glm::vec3 sunDirection;
+    float sunIntensity;
+
+    float patchWorldSize;
+    int32_t instancesPerSide;
+    int32_t gridSize;
+    float choppiness;
+
+    float waterRoughness;
+    float foamThreshold;
+    float foamSoftness;
+    float foamIntensity;
+    float invRmsWaveHeight;
+    float slopeVarianceScale;
+    glm::vec2 pad;
+
+    glm::vec4 cascadeSizes;
+    glm::vec4 cascadeWavelengths;
+    glm::vec4 cascadeSlopeVariances;
+};
+
+static_assert(sizeof(OceanPushConstants) == 112);
+
 struct OscillationPassData {
     RenderGraphResourceHandle packedHeightDispX;
     RenderGraphResourceHandle packedDispZNormalX;
     RenderGraphResourceHandle normalZ;
 };
 
-// The transform is separable, so it runs as one pass per direction.
 template <size_t Tag>
 struct HorizontalFftPassData {
     RenderGraphResourceHandle image;
@@ -40,10 +69,6 @@ struct HorizontalFftPassData {
 template <size_t Tag>
 struct VerticalFftPassData {
     RenderGraphResourceHandle image;
-};
-
-struct GeometryPassData {
-    RenderGraphResourceHandle positions;
 };
 
 struct OceanOutputData {
@@ -74,13 +99,11 @@ struct ComputeDispatch {
 
 struct OceanPassResources {
     ComputeDispatch oscillation;
-    ComputeDispatch geometry;
     FlatStringHashMap<ComputeDispatch> ifft;
 };
 
 namespace {
 
-// Graph-owned views are bound in writeGraphDependentDescriptors(); they change on every resize.
 ComputeDispatch createOscillationPassDispatch(Renderer& renderer, const ImageCache& imageCache) {
     ComputeDispatch dispatch{};
     dispatch.workGroupSize = {16, 16, 1};
@@ -100,9 +123,9 @@ constexpr uint32_t kTransposedConstantId = 5;
 template <bool Horizontal>
 ComputeDispatch createIfftDispatch(Renderer& renderer) {
     ComputeDispatch dispatch{};
-    // N/2 threads butterfly a whole line, one workgroup per line.
+    // N/2 threads butterfly a whole line, one workgroup per line, one dispatch slice per cascade.
     dispatch.workGroupSize = {static_cast<uint32_t>(N / 2), 1, 1};
-    dispatch.dispatchSize = {1, static_cast<uint32_t>(N), 1};
+    dispatch.dispatchSize = {1, static_cast<uint32_t>(N), kOceanCascadeCount};
 
     SpecializationConstantMap specializationConstants{{kMaxNConstantId, static_cast<uint32_t>(N)}};
     if constexpr (!Horizontal) {
@@ -146,8 +169,8 @@ void writeFftDispatchDescriptors(
 
 OceanScene::OceanScene(Renderer* renderer, Window* window)
     : Scene(renderer, window)
-    // A is the Phillips constant; at 10 m/s this gives an 85 m peak wavelength and H_s ~ 2.3 m.
-    , m_oceanParams(createOceanParameters(N, kPatchWorldSize, 10.0f, 0.0f, 0.001f, kCellSize))
+    , m_oceanParams(createOceanParameters(N, 10.0f, 0.0f, 0.001f, kFinestCellSize))
+    , m_cascades(createOceanCascades(kPatchWorldSizes, N))
     , m_choppiness(1.0f) {
     setupInput();
     setupResources();
@@ -172,14 +195,14 @@ void OceanScene::setupResources() {
     m_resourceContext->createUniformRingBuffer<TonemapParameters>(kTonemapBufferId);
 
     std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {{VertexAttribute::Position}};
-    TriangleMesh mesh = createGridMesh(kPatchWorldSize, N);
-    m_resourceContext->addGeometry(
-        "ocean", createGeometry(*m_renderer, mesh, vertexFormat, VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT));
-    m_resourceContext->getGeometry("ocean").setInstanceCount(m_instancesPerSide * m_instancesPerSide);
+    TriangleMesh mesh = createGridMesh(kMeshPatchWorldSize, kMeshTessellation);
+    m_resourceContext->addGeometry("ocean", createGeometry(*m_renderer, mesh, vertexFormat))
+        .setInstanceCount(m_instancesPerSide * m_instancesPerSide);
 
     auto spectrumImage = createInitialSpectrum();
     m_resourceContext->imageCache.addImageView(
-        "randImageView", createView(m_renderer->getDevice(), *spectrumImage, VK_IMAGE_VIEW_TYPE_2D, 0, 1));
+        "randImageView",
+        createView(m_renderer->getDevice(), *spectrumImage, VK_IMAGE_VIEW_TYPE_2D_ARRAY, 0, kOceanCascadeCount));
     m_resourceContext->imageCache.addImage("randImage", std::move(spectrumImage));
 
     auto& imageCache = m_resourceContext->imageCache;
@@ -201,7 +224,7 @@ void OceanScene::setupResources() {
 void OceanScene::resetCamera() {
     constexpr float kAngularSpeed = glm::radians(90.0f);
 
-    const float patchOnScreenSize = kPatchWorldSize * m_modelScale;
+    const float patchOnScreenSize = kMeshPatchWorldSize * m_modelScale;
     const glm::vec3 direction = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
     const float distance = 1.6f * patchOnScreenSize;
     const float yaw = glm::radians(45.0f);
@@ -225,9 +248,25 @@ void OceanScene::resize(int width, int height) {
 
 void OceanScene::update(const UpdateParams& updateParams) {
     if (m_spectrumDirty) {
-        m_rmsWaveHeight = computeRmsWaveHeight(m_oceanParams);
+        // Integrated once at unit amplitude. Everything else in the spectrum -- wind, fetch, the
+        // small-wave cutoff -- changes the shape and has to come back through here.
+        OceanParameters unitAmplitudeParams{m_oceanParams};
+        unitAmplitudeParams.A = 1.0f;
+        for (uint32_t i = 0; i < kOceanCascadeCount; ++i) {
+            m_unitAmplitudeMoments[i] = computeCascadeMoments(unitAmplitudeParams, m_cascades[i]);
+        }
         m_spectrumDirty = false;
     }
+
+    float heightVariance = 0.0f;
+    for (uint32_t i = 0; i < kOceanCascadeCount; ++i) {
+        m_cascadeMoments[i] = {
+            .heightVariance = m_unitAmplitudeMoments[i].heightVariance * m_oceanParams.A,
+            .slopeVariance = m_unitAmplitudeMoments[i].slopeVariance * m_oceanParams.A,
+        };
+        heightVariance += m_cascadeMoments[i].heightVariance;
+    }
+    m_rmsWaveHeight = std::sqrt(heightVariance);
 
     m_cameraController->update(updateParams.dt);
     const auto& cameraParams = m_cameraController->getCameraParameters();
@@ -270,15 +309,26 @@ void OceanScene::drawGui() {
         m_oceanParams.Lw = m_oceanParams.windSpeed * m_oceanParams.windSpeed / kGravity;
         m_spectrumDirty = true;
     }
-    if (ImGui::SliderFloat("Amplitude", &m_oceanParams.A, 0.0f, 0.01f, "%.5f")) {
-        m_spectrumDirty = true;
-    }
-    if (ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 4.0f * kCellSize)) {
+    // Deliberately does not dirty the spectrum: the moments are linear in A, so update() rescales
+    // them instead of re-integrating 3 * N^2 samples on the main thread for every slider pixel.
+    ImGui::SliderFloat("Amplitude", &m_oceanParams.A, 0.0f, 0.01f, "%.5f");
+    if (ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 4.0f * kFinestCellSize)) {
         m_spectrumDirty = true;
     }
     ImGui::TextDisabled("RMS wave height: %.2f m", m_rmsWaveHeight); // NOLINT
+    for (uint32_t i = 0; i < kOceanCascadeCount; ++i) {
+        ImGui::TextDisabled( // NOLINT
+            "Cascade %u: %.0f m patch, %.2f-%.2f m waves, slope var %.4f",
+            i,
+            m_cascades[i].patchWorldSize,
+            2.0f * m_cascades[i].patchWorldSize / static_cast<float>(N),
+            m_cascades[i].kMin > 0.0f ? 2.0f * glm::pi<float>() / m_cascades[i].kMin
+                                      : m_cascades[i].patchWorldSize,
+            m_cascadeMoments[i].slopeVariance);
+    }
     ImGui::SliderFloat("Choppiness", &m_choppiness, 0.0f, 2.0f);
     ImGui::SliderFloat("Water Roughness", &m_waterRoughness, 0.03f, 0.35f);
+    ImGui::SliderFloat("Specular AA Strength", &m_slopeVarianceScale, 0.0f, 4.0f);
     ImGui::SliderFloat("Foam Threshold", &m_foamThreshold, 0.0f, 2.0f);
     ImGui::SliderFloat("Foam Softness", &m_foamSoftness, 0.01f, 1.0f);
     ImGui::SliderFloat("Foam Intensity", &m_foamIntensity, 0.0f, 2.0f);
@@ -308,9 +358,9 @@ void OceanScene::drawGui() {
 }
 
 std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum() {
-    const auto oceanSpectrum{createOceanSpectrum(0, m_oceanParams)};
+    const auto oceanSpectrum{createOceanSpectrum(0, m_oceanParams, kOceanCascadeCount)};
 
-    auto image = createStorageImage(m_renderer->getDevice(), 1, N, N, VK_FORMAT_R32G32_SFLOAT);
+    auto image = createStorageImage(m_renderer->getDevice(), kOceanCascadeCount, N, N, VK_FORMAT_R32G32_SFLOAT);
     const auto staging = createStagingBuffer(
         m_renderer->getDevice(), oceanSpectrum.data(), oceanSpectrum.size() * sizeof(oceanSpectrum[0]));
     m_renderer->getDevice().getGeneralQueue().submitAndWait([&staging, img = image.get()](VkCommandBuffer cmdBuffer) {
@@ -324,7 +374,7 @@ std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum() {
                     .aspectMask = img->getAspectMask(),
                     .mipLevel = 0,
                     .baseArrayLayer = 0,
-                    .layerCount = 1,
+                    .layerCount = kOceanCascadeCount,
                 },
             .imageExtent = {img->getWidth(), img->getHeight(), 1},
         };
@@ -343,23 +393,30 @@ void OceanScene::buildRenderGraph() {
         "oscillation",
         [](rg::RenderGraph::Builder& builder) {
             builder.setType(PassType::Compute);
+            constexpr RenderGraphImageDescription kCascadeImage{
+                .sizePolicy = SizePolicy::Absolute,
+                .width = N,
+                .height = N,
+                .format = VK_FORMAT_R32G32_SFLOAT,
+                .layerCount = kOceanCascadeCount,
+            };
+
             auto& data = builder.getBlackboard().get<OscillationPassData>();
-            data.packedHeightDispX = builder.createStorageImage(
-                {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-                fmt::format("{}-packed-height-dispx", "oscillation"));
-            data.packedDispZNormalX = builder.createStorageImage(
-                {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-                fmt::format("{}-packed-dispz-normalx", "oscillation"));
-            data.normalZ = builder.createStorageImage(
-                {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
-                fmt::format("{}-normal-z", "oscillation"));
+            data.packedHeightDispX =
+                builder.createStorageImage(kCascadeImage, fmt::format("{}-packed-height-dispx", "oscillation"));
+            data.packedDispZNormalX =
+                builder.createStorageImage(kCascadeImage, fmt::format("{}-packed-dispz-normalx", "oscillation"));
+            data.normalZ = builder.createStorageImage(kCascadeImage, fmt::format("{}-normal-z", "oscillation"));
         },
         [this](const FrameContext& ctx) {
             m_passResources->oscillation.bind(ctx);
-            ctx.commandEncoder.setPushConstants(
-                *m_passResources->oscillation.pipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, m_oceanParams);
-
-            ctx.commandEncoder.dispatchCompute(m_passResources->oscillation.dispatchSize);
+            for (uint32_t i = 0; i < kOceanCascadeCount; ++i) {
+                ctx.commandEncoder.setPushConstants(
+                    *m_passResources->oscillation.pipeline->getPipelineLayout(),
+                    VK_SHADER_STAGE_COMPUTE_BIT,
+                    createOceanSpectrumPushConstants(m_oceanParams, m_cascades[i], static_cast<int32_t>(i)));
+                ctx.commandEncoder.dispatchCompute(m_passResources->oscillation.dispatchSize);
+            }
         });
 
     auto addFftPasses = [this]<size_t Tag>(const RenderGraphResourceHandle image) {
@@ -376,7 +433,13 @@ void OceanScene::buildRenderGraph() {
                 builder.readStorageImage(image);
                 auto& data = builder.getBlackboard().insert<HorizontalFftPassData<Tag>>();
                 data.image = builder.createStorageImage(
-                    {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
+                    {
+                        .sizePolicy = SizePolicy::Absolute,
+                        .width = N,
+                        .height = N,
+                        .format = VK_FORMAT_R32G32_SFLOAT,
+                        .layerCount = kOceanCascadeCount,
+                    },
                     fmt::format("{}-image", horiPassName));
             },
             [this](const FrameContext& ctx) {
@@ -395,7 +458,11 @@ void OceanScene::buildRenderGraph() {
                 builder.readStorageImage(builder.getBlackboard().get<HorizontalFftPassData<Tag>>().image);
                 auto& data = builder.getBlackboard().insert<VerticalFftPassData<Tag>>();
                 data.image = builder.createStorageImage(
-                    {.sizePolicy = SizePolicy::Absolute, .width = N, .height = N, .format = VK_FORMAT_R32G32_SFLOAT},
+                    {.sizePolicy = SizePolicy::Absolute,
+                     .width = N,
+                     .height = N,
+                     .format = VK_FORMAT_R32G32_SFLOAT,
+                     .layerCount = kOceanCascadeCount},
                     fmt::format("{}-image", vertPassName));
             },
             [this](const FrameContext& ctx) {
@@ -411,45 +478,12 @@ void OceanScene::buildRenderGraph() {
     addFftPasses.operator()<2>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ);
 
     m_renderGraph->addPass(
-        "geometry",
-        [this](rg::RenderGraph::Builder& builder) {
-            builder.setType(PassType::Compute);
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image);
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image);
-
-            auto& data = builder.getBlackboard().insert<GeometryPassData>();
-            auto& geometry = m_resourceContext->getGeometry("ocean");
-            data.positions = builder.importBuffer(
-                {
-                    .formatHint = VK_FORMAT_R32G32B32_SFLOAT,
-                    .size = geometry.getVertexBuffer(0)->getSize(),
-                    .usageFlags = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
-                    .externalBuffer = geometry.getVertexBuffer(0)->getHandle(),
-                },
-                "ocean-positions");
-        },
-        [this](const FrameContext& ctx) {
-            struct GeometryUpdateParams {
-                int32_t patchSize;
-                float patchWorldSize;
-                float choppiness;
-            };
-
-            m_passResources->geometry.bind(ctx);
-            ctx.commandEncoder.setPushConstants(
-                *m_passResources->geometry.pipeline->getPipelineLayout(),
-                VK_SHADER_STAGE_COMPUTE_BIT,
-                GeometryUpdateParams{N, kPatchWorldSize, m_choppiness});
-            ctx.commandEncoder.dispatchCompute(m_passResources->geometry.dispatchSize);
-        });
-
-    m_renderGraph->addPass(
         kForwardLightingPass,
         [](rg::RenderGraph::Builder& builder) {
-            builder.readBuffer(builder.getBlackboard().get<GeometryPassData>().positions, kVertexRead);
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image);
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image);
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<2>>().image);
+            constexpr auto kOceanMapRead = kVertexSampledRead | kFragmentSampledRead;
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image, kOceanMapRead);
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image, kOceanMapRead);
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<2>>().image, kOceanMapRead);
             auto& data = builder.getBlackboard().insert<OceanOutputData>();
             data.hdrImage = builder.createAttachment(
                 {
@@ -469,20 +503,14 @@ void OceanScene::buildRenderGraph() {
                 VkClearValue{.depthStencil{0.0f, 0}});
         },
         [this](const FrameContext& ctx) {
-            // Mirrors the push constant block in ocean.{vert,frag}.glsl.
-            struct OceanPushConstants {
-                glm::vec3 sunDirection;
-                float sunIntensity;
-                float patchWorldSize;
-                int32_t instancesPerSide;
-                int32_t gridSize;
-                float choppiness;
-                float waterRoughness;
-                float foamThreshold;
-                float foamSoftness;
-                float foamIntensity;
-                float invRmsWaveHeight;
-            };
+            glm::vec4 cascadeSizes{0.0f};
+            glm::vec4 cascadeWavelengths{0.0f};
+            glm::vec4 cascadeSlopeVariances{0.0f};
+            for (uint32_t i = 0; i < kOceanCascadeCount; ++i) {
+                cascadeSizes[static_cast<int32_t>(i)] = m_cascades[i].patchWorldSize;
+                cascadeWavelengths[static_cast<int32_t>(i)] = computeBandWavelength(m_cascades[i]);
+                cascadeSlopeVariances[static_cast<int32_t>(i)] = m_cascadeMoments[i].slopeVariance;
+            }
 
             auto& geometry = m_resourceContext->getGeometry("ocean");
             ctx.commandEncoder.bindPipeline(*m_oceanPipeline);
@@ -492,17 +520,22 @@ void OceanScene::buildRenderGraph() {
                 *m_oceanPipeline->getPipelineLayout(),
                 VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                 OceanPushConstants{
-                    computeSunDirection(m_sunAzimuthDegrees, m_sunElevationDegrees),
-                    m_sunIntensity,
-                    kPatchWorldSize,
-                    m_instancesPerSide,
-                    N,
-                    m_choppiness,
-                    m_waterRoughness,
-                    m_foamThreshold,
-                    m_foamSoftness,
-                    m_foamIntensity,
-                    1.0f / std::max(m_rmsWaveHeight, 1e-4f)});
+                    .sunDirection = computeSunDirection(m_sunAzimuthDegrees, m_sunElevationDegrees),
+                    .sunIntensity = m_sunIntensity,
+                    .patchWorldSize = kMeshPatchWorldSize,
+                    .instancesPerSide = m_instancesPerSide,
+                    .gridSize = kMeshTessellation,
+                    .choppiness = m_choppiness,
+                    .waterRoughness = m_waterRoughness,
+                    .foamThreshold = m_foamThreshold,
+                    .foamSoftness = m_foamSoftness,
+                    .foamIntensity = m_foamIntensity,
+                    .invRmsWaveHeight = 1.0f / std::max(m_rmsWaveHeight, 1e-4f),
+                    .slopeVarianceScale = m_slopeVarianceScale,
+                    .pad = {},
+                    .cascadeSizes = cascadeSizes,
+                    .cascadeWavelengths = cascadeWavelengths,
+                    .cascadeSlopeVariances = cascadeSlopeVariances});
             ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
             geometry.bindAndDraw(ctx.commandEncoder);
 
@@ -534,17 +567,6 @@ void OceanScene::buildRenderGraph() {
     createFftDispatches<0>(*m_passResources, *m_renderer);
     createFftDispatches<1>(*m_passResources, *m_renderer);
     createFftDispatches<2>(*m_passResources, *m_renderer);
-
-    auto& geometryDispatch = m_passResources->geometry;
-    geometryDispatch.workGroupSize = {16, 16, 1};
-    geometryDispatch.dispatchSize = computeWorkGroupCount(glm::uvec3(N + 1, N + 1, 1), geometryDispatch.workGroupSize);
-    geometryDispatch.pipeline = createComputePipeline(
-        m_renderer->getDevice(),
-        m_renderer->getAssetPaths().getShaderSpvPath("ocean-geometry.comp"),
-        geometryDispatch.workGroupSize);
-    geometryDispatch.material = std::make_unique<Material>(geometryDispatch.pipeline.get());
-    auto& geometry = m_resourceContext->getGeometry("ocean");
-    geometryDispatch.material->writeDescriptor(0, 0, geometry.getVertexBuffer(0)->createDescriptorInfo());
 
     m_oceanPipeline = m_resourceContext->createPipeline(
         "ocean", "Ocean.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
@@ -586,9 +608,6 @@ void OceanScene::writeGraphDependentDescriptors() {
         return m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<VerticalFftPassData<Tag>>().image);
     };
     auto& linearRepeat = m_resourceContext->imageCache.getSampler("linearRepeat");
-
-    m_passResources->geometry.material->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
-    m_passResources->geometry.material->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
 
     m_oceanMaterial->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
     m_oceanMaterial->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
