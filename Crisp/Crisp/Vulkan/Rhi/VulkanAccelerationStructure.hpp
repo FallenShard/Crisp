@@ -27,6 +27,10 @@ public:
 
     VkWriteDescriptorSetAccelerationStructureKHR getDescriptorInfo() const;
 
+    VkDeviceAddressRangeEXT getDeviceAddressRange() const {
+        return m_accelerationStructureBuffer->getDeviceAddressRange();
+    }
+
     bool isTopLevel() const {
         return m_buildInfo.type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
     }

@@ -20,7 +20,7 @@ VulkanBuffer::VulkanBuffer(
     , m_address{} {
     const VkBufferUsageFlags2CreateInfo usageInfo{
         .sType = VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO,
-        .usage = usageFlags,
+        .usage = usageFlags | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT,
     };
 
     VkBufferCreateInfo bufferInfo{
@@ -44,11 +44,11 @@ VulkanBuffer::VulkanBuffer(
 
     VK_CHECK(vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
 
-    if (usageFlags & VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT) {
-        VkBufferDeviceAddressInfo getAddressInfo = {VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO};
-        getAddressInfo.buffer = m_handle;
-        m_address = vkGetBufferDeviceAddress(device.getHandle(), &getAddressInfo);
-    }
+    const VkBufferDeviceAddressInfo getAddressInfo{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = m_handle,
+    };
+    m_address = vkGetBufferDeviceAddress(device.getHandle(), &getAddressInfo);
 }
 
 VulkanBuffer::~VulkanBuffer() {
@@ -89,6 +89,10 @@ VkDeviceSize VulkanBuffer::getSize() const {
 
 VkDeviceAddress VulkanBuffer::getDeviceAddress() const {
     return m_address;
+}
+
+VkDeviceAddressRangeEXT VulkanBuffer::getDeviceAddressRange() const {
+    return {.address = m_address, .size = m_size};
 }
 
 VkDescriptorBufferInfo VulkanBuffer::createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const {

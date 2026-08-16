@@ -30,6 +30,7 @@ public:
 
     VkDeviceSize getSize() const;
     VkDeviceAddress getDeviceAddress() const;
+    VkDeviceAddressRangeEXT getDeviceAddressRange() const;
 
     VkDescriptorBufferInfo createDescriptorInfo(VkDeviceSize offset, VkDeviceSize size) const;
     VkDescriptorBufferInfo createDescriptorInfo() const;
