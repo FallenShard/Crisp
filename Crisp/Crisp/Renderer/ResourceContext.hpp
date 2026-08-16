@@ -25,11 +25,11 @@ public:
     }
 
     template <typename T>
-    VulkanBuffer* createUniformBuffer(const std::string& id) {
+    VulkanBuffer* createUniformBuffer(const std::string& id, const VkBufferUsageFlags2 extraUsage = 0) {
         auto buffer = std::make_unique<VulkanBuffer>(
             m_renderer->getDevice(),
             sizeof(T),
-            VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
+            VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | extraUsage,
             BufferMemoryType::GpuOnly);
         return addBuffer(id, std::move(buffer));
     }
