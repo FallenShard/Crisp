@@ -1,17 +1,48 @@
-#include <Crisp/Renderer/VulkanPipelineIo.hpp>
+#include <Crisp/Vulkan/VulkanPipelineIo.hpp>
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
-#include <Crisp/Renderer/PipelineBuilder.hpp>
-#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/ShaderUtils/Reflection.hpp>
+#include <Crisp/Vulkan/PipelineBuilder.hpp>
+#include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
+#include <span>
 #include <string_view>
 
 namespace crisp {
 namespace {
 const auto logger = createLoggerMt("VulkanPipelineIo");
+
+class ScopedShaderModules {
+public:
+    explicit ScopedShaderModules(const VulkanDevice& device)
+        : m_device(device) {}
+
+    ~ScopedShaderModules() {
+        for (const auto module : m_modules) {
+            vkDestroyShaderModule(m_device.getHandle(), module, nullptr);
+        }
+    }
+
+    VkShaderModule create(const std::span<const char> code, const std::string& debugName) {
+        const VkShaderModuleCreateInfo createInfo{
+            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+            .codeSize = code.size_bytes(),
+            .pCode = reinterpret_cast<const uint32_t*>(code.data()), // NOLINT
+        };
+        VkShaderModule module{VK_NULL_HANDLE};
+        VK_FATAL(vkCreateShaderModule(m_device.getHandle(), &createInfo, nullptr, &module));
+        m_device.setObjectName(module, debugName);
+        m_modules.push_back(module);
+        return module;
+    }
+
+private:
+    const VulkanDevice& m_device;
+    std::vector<VkShaderModule> m_modules;
+};
 
 Result<FlatHashMap<VkShaderStageFlagBits, std::string>> parseShaderFiles(const nlohmann::json& json) {
     FlatHashMap<VkShaderStageFlagBits, std::string> shaderFiles;
@@ -335,7 +366,6 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
 Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     const nlohmann::json& pipelineJson,
     const std::filesystem::path& spvShaderDir,
-    ShaderCache& shaderCache,
     const VulkanDevice& device,
     const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
     const VkDescriptorSetLayout bindlessDescriptorSetLayout) {
@@ -347,10 +377,11 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     PipelineLayoutMetadata shaderMetadata{};
     ShaderVertexInputMetadata vertexInputMetadata{};
     PipelineBuilder builder{};
+    ScopedShaderModules shaderModules(device);
     for (const auto& [stageFlag, fileStem] : shaderFiles) {
         const auto absoluteSpvPath = spvShaderDir / (fileStem + ".spv");
-        builder.addShaderStage(createShaderStageInfo(stageFlag, shaderCache.getOrLoadShaderModule(absoluteSpvPath)));
         const auto spvFile = readSpirvFile(absoluteSpvPath).unwrap();
+        builder.addShaderStage(createShaderStageInfo(stageFlag, shaderModules.create(spvFile, fileStem)));
         shaderMetadata.merge(reflectPipelineLayoutFromSpirv(spvFile).unwrap());
         if (stageFlag == VK_SHADER_STAGE_VERTEX_BIT) {
             vertexInputMetadata = reflectVertexMetadataFromSpirvShader(spvFile).unwrap();
@@ -425,7 +456,6 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
 Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFileImpl(
     const std::filesystem::path& path,
     const std::filesystem::path& spvShaderDir,
-    ShaderCache& shaderCache,
     const VulkanDevice& device,
     const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
     const VkDescriptorSetLayout bindlessDescriptorSetLayout) {
@@ -433,7 +463,7 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFileImpl(
     CRISP_TRY(
         auto pipeline,
         createPipelineFromJson(
-            json, spvShaderDir, shaderCache, device, rasterizationPassDescriptor, bindlessDescriptorSetLayout),
+            json, spvShaderDir, device, rasterizationPassDescriptor, bindlessDescriptorSetLayout),
         "Failed to create pipeline from json");
     device.setObjectName(*pipeline, fmt::format("{} Pipeline", path.stem().string()));
     return pipeline;
@@ -444,12 +474,11 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFileImpl(
 Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     const std::filesystem::path& path,
     const std::filesystem::path& spvShaderDir,
-    ShaderCache& shaderCache,
     const VulkanDevice& device,
     const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
     const VkDescriptorSetLayout bindlessDescriptorSetLayout) {
     return createPipelineFromFileImpl(
-        path, spvShaderDir, shaderCache, device, rasterizationPassDescriptor, bindlessDescriptorSetLayout);
+        path, spvShaderDir, device, rasterizationPassDescriptor, bindlessDescriptorSetLayout);
 }
 
 } // namespace crisp

@@ -2,25 +2,19 @@
 
 #include <filesystem>
 #include <functional>
+#include <span>
 
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
 
 namespace crisp {
-class Renderer;
-
-std::unique_ptr<VulkanPipeline> createComputePipeline(
-    Renderer& renderer,
-    const std::string& shaderName,
-    const VkExtent3D& workGroupSize,
-    const std::function<void(PipelineLayoutBuilder&)>& builderOverride = {});
-
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     const VulkanDevice& device,
     const std::filesystem::path& spvPath,
     const VkExtent3D& workGroupSize,
-    const std::function<void(PipelineLayoutBuilder&)>& builderOverride = {});
+    const std::function<void(PipelineLayoutBuilder&)>& builderOverride = {},
+    std::span<const uint32_t> specializationConstants = {});
 
 VkExtent3D getWorkGroupSize(const VulkanPipeline& pipeline);
 

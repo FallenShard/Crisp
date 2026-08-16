@@ -8,7 +8,7 @@
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Math/AliasTable.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
-#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
+#include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
 
@@ -363,9 +363,9 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
         BindlessImageRegistry::kGlobalSetIndex, m_renderer->getBindlessImageRegistry().getSetLayout());
     auto pipelineLayout = builder.create(m_renderer->getDevice());
 
-    RayTracingPipelineBuilder pipelineBuilder(*m_renderer);
+    RayTracingPipelineBuilder pipelineBuilder(m_renderer->getDevice());
     for (auto&& [idx, info] : std::views::enumerate(shaderInfos)) {
-        pipelineBuilder.addShaderStage(info.first);
+        pipelineBuilder.addShaderStage(m_renderer->getAssetPaths().getShaderSpvPath(info.first));
         pipelineBuilder.addShaderGroup(static_cast<uint32_t>(idx), info.second);
     }
 

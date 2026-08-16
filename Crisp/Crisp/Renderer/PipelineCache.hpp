@@ -5,7 +5,6 @@
 #include <string_view>
 
 #include <Crisp/Renderer/AssetPaths.hpp>
-#include <Crisp/Renderer/ShaderCache.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
@@ -19,13 +18,12 @@ public:
     VulkanPipeline* loadPipeline(
         const std::string& id,
         std::string_view filename,
-        ShaderCache& shaderCache,
         VulkanDevice& device,
         const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
 
     VulkanPipeline* getPipeline(const std::string& key) const;
 
-    void recreatePipelines(ShaderCache& shaderCache, const VulkanDevice& device);
+    void recreatePipelines(const VulkanDevice& device);
 
     VulkanDescriptorSetAllocator* getDescriptorAllocator(VulkanPipelineLayout* pipelineLayout) {
         return m_descriptorAllocators.at(pipelineLayout).get();

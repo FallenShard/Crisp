@@ -1,7 +1,6 @@
 #include <Crisp/Scenes/FluidSimulationScene.hpp>
 
 #include <Crisp/Camera/FreeCameraController.hpp>
-#include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
 #include <Crisp/Gui/Button.hpp>
 #include <Crisp/Gui/Form.hpp>

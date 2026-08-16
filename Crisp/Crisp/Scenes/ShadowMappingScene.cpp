@@ -1,7 +1,6 @@
 #include <Crisp/Scenes/ShadowMappingScene.hpp>
 
 #include <Crisp/Camera/FreeCameraController.hpp>
-#include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
 
 #include <Crisp/Renderer/RenderPasses/CubeMapRenderPass.hpp>

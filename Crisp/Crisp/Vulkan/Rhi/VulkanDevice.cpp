@@ -95,7 +95,8 @@ VulkanDevice::VulkanDevice(
     const VulkanPhysicalDevice& physicalDevice,
     const VulkanInstance& instance,
     const int32_t virtualFrameCount)
-    : m_handle(createLogicalDeviceHandle(physicalDevice, config))
+    : m_physicalDevice(physicalDevice)
+    , m_handle(createLogicalDeviceHandle(physicalDevice, config))
     , m_config(std::move(config))
     , m_nonCoherentAtomSize(physicalDevice.getLimits().nonCoherentAtomSize)
     , m_timestampPeriod(physicalDevice.getLimits().timestampPeriod)

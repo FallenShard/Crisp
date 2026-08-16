@@ -12,7 +12,6 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/RendererFrame.hpp>
-#include <Crisp/Renderer/ShaderCache.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
@@ -64,9 +63,6 @@ public:
     VkViewport getDefaultViewport() const;
     VkRect2D getDefaultScissor() const;
 
-    VkShaderModule getShaderModule(const std::string& key) const;
-    VkShaderModule getOrLoadShaderModule(const std::string& key);
-
     void setDefaultViewport(const VulkanCommandEncoder& encoder) const;
     void setDefaultScissor(const VulkanCommandEncoder& encoder) const;
     void drawFullScreenQuad(const VulkanCommandEncoder& encoder) const;
@@ -106,14 +102,6 @@ public:
         m_mainThreadQueue.push(std::move(task));
     }
 
-    const ShaderCache& getShaderCache() const {
-        return *m_shaderCache;
-    }
-
-    ShaderCache& getShaderCache() {
-        return *m_shaderCache;
-    }
-
 private:
     std::optional<uint32_t> acquireSwapImageIndex(RendererFrame& virtualFrame);
     void present(RendererFrame& virtualFrame, uint32_t swapChainImageIndex);
@@ -133,8 +121,6 @@ private:
 
     std::vector<RendererFrame> m_virtualFrames;
     std::unique_ptr<VulkanTimelineSemaphore> m_frameTimeline;
-
-    std::unique_ptr<ShaderCache> m_shaderCache;
 
     using FunctionVector = std::vector<std::function<void(VkCommandBuffer)>>;
     FunctionVector m_drawCommands;

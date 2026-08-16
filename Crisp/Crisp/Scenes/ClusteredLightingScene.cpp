@@ -1,6 +1,5 @@
 #include <Crisp/Scenes/ClusteredLightingScene.hpp>
 
-#include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
 
 #include <Crisp/Camera/FreeCameraController.hpp>

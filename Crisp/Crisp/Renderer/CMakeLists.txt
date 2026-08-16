@@ -1,46 +1,6 @@
 add_subdirectory(RenderGraph)
 add_subdirectory(RenderPasses)
 
-add_cpp_static_library(
-    CrispShaderCache
-    "ShaderCache.hpp"
-    "ShaderCache.cpp"
-)
-target_link_libraries(
-    CrispShaderCache
-    PUBLIC Crisp::Vulkan
-    PUBLIC Crisp::HashMap
-    PUBLIC Crisp::Logger
-    PRIVATE Crisp::FileUtils
-)
-
-add_cpp_static_library(
-    CrispPipelineBuilder
-    "PipelineBuilder.cpp"
-    "PipelineBuilder.hpp"
-    "PipelineLayoutBuilder.cpp"
-    "PipelineLayoutBuilder.hpp"
-    "VulkanPipelineIo.cpp"
-    "VulkanPipelineIo.hpp"
-)
-target_link_libraries(
-    CrispPipelineBuilder
-    PUBLIC Crisp::Vulkan
-    PUBLIC nlohmann_json::nlohmann_json
-    PUBLIC Crisp::ThreadPool
-    PUBLIC Crisp::Renderer
-)
-
-add_cpp_test(
-    CrispPipelineLayoutBuilderTest
-    "Test/PipelineLayoutBuilderTest.cpp"
-)
-target_link_libraries(
-    CrispPipelineLayoutBuilderTest
-    PRIVATE Crisp::PipelineBuilder
-    PRIVATE Crisp::VulkanTestUtils
-)
-
 add_cpp_header_library(
     CrispAssetPaths
     "AssetPaths.hpp"
@@ -129,7 +89,6 @@ target_link_libraries(CrispRenderer
     PRIVATE Crisp::ApplicationEnvironment
     PRIVATE Crisp::ShaderCompiler
     PUBLIC Crisp::PipelineBuilder
-    PUBLIC Crisp::ShaderCache
     PUBLIC Crisp::VulkanRingBuffer
     PUBLIC Crisp::VulkanCommandEncoder
     PUBLIC Crisp::AssetPaths
@@ -159,11 +118,3 @@ add_cpp_test(CrispDescriptorUpdaterTest
     "Test/DescriptorUpdaterTest.cpp")
 target_link_libraries(CrispDescriptorUpdaterTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
 add_test_shader(CrispDescriptorUpdaterTest "Test/Data/bindless.frag")
-
-add_cpp_static_library(CrispRayTracingPipelineBuilder
-    "RayTracingPipelineBuilder.hpp"
-    "RayTracingPipelineBuilder.cpp"
-)
-target_link_libraries(CrispRayTracingPipelineBuilder
-    PUBLIC Crisp::Renderer
-)

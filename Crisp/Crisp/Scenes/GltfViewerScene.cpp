@@ -1,15 +1,14 @@
 #include <Crisp/Scenes/GltfViewerScene.hpp>
 
-#include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/ComputePipeline.hpp>
-#include <Crisp/Renderer/PipelineBuilder.hpp>
-#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
+#include <Crisp/Vulkan/PipelineBuilder.hpp>
+#include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
 #include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 #include <imgui.h>
@@ -22,7 +21,10 @@ constexpr uint32_t kShadowMapSize = 1024;
 
 std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const VkExtent3D& workGroupSize) {
     return createComputePipeline(
-        *renderer, "linear-blend-skinning.comp", workGroupSize, [](PipelineLayoutBuilder& builder) {
+        renderer->getDevice(),
+        renderer->getAssetPaths().getShaderSpvPath("linear-blend-skinning.comp"),
+        workGroupSize,
+        [](PipelineLayoutBuilder& builder) {
             builder.setDescriptorDynamic(0, 3, true);
         });
 }

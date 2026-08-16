@@ -159,3 +159,46 @@ target_link_libraries(
     PUBLIC Crisp::ChromeEventTracer
     PUBLIC Microsoft.GSL::GSL
 )
+
+add_cpp_static_library(
+    CrispPipelineBuilder
+    "PipelineBuilder.cpp"
+    "PipelineBuilder.hpp"
+    "PipelineLayoutBuilder.cpp"
+    "PipelineLayoutBuilder.hpp"
+    "VulkanPipelineIo.cpp"
+    "VulkanPipelineIo.hpp"
+)
+target_link_libraries(
+    CrispPipelineBuilder
+    PUBLIC Crisp::Vulkan
+    PUBLIC Crisp::Result
+    PUBLIC Crisp::SpvReflection
+    PRIVATE Crisp::Checks
+    PRIVATE Crisp::HashMap
+    PRIVATE Crisp::JsonUtils
+    PRIVATE Crisp::Logger
+)
+
+add_cpp_test(
+    CrispPipelineLayoutBuilderTest
+    "Test/PipelineLayoutBuilderTest.cpp"
+)
+target_link_libraries(
+    CrispPipelineLayoutBuilderTest
+    PRIVATE Crisp::PipelineBuilder
+    PRIVATE Crisp::VulkanTestUtils
+)
+
+add_cpp_static_library(
+    CrispRayTracingPipelineBuilder
+    "RayTracingPipelineBuilder.hpp"
+    "RayTracingPipelineBuilder.cpp"
+)
+target_link_libraries(
+    CrispRayTracingPipelineBuilder
+    PUBLIC Crisp::Vulkan
+    PRIVATE Crisp::ShaderType
+    PRIVATE Crisp::SpvReflection
+    PRIVATE Crisp::VulkanCommandEncoder
+)

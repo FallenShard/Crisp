@@ -82,6 +82,10 @@ public:
         return m_config.enabledFeatures;
     }
 
+    const VulkanPhysicalDevice& getPhysicalDevice() const {
+        return m_physicalDevice;
+    }
+
     void invalidateMappedRange(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size);
     void flushMappedRanges();
 
@@ -237,6 +241,7 @@ private:
 
     void setObjectName(uint64_t vulkanHandle, const char* name, VkObjectType objectType) const;
 
+    const VulkanPhysicalDevice& m_physicalDevice;
     VkDevice m_handle;
 
     VulkanDeviceConfiguration m_config;

@@ -1,8 +1,7 @@
 #include <Crisp/Models/Atmosphere.hpp>
 
 #include <Crisp/Geometry/Geometry.hpp>
-#include <Crisp/Renderer/PipelineBuilder.hpp>
-#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
+#include <Crisp/Renderer/ComputePipeline.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
@@ -36,50 +35,12 @@ constexpr const char* kLinearClampSamplerId = "linearClamp";
 constexpr const char* kVolumeGeometryId = "skyCameraVolumesGeometry";
 
 std::unique_ptr<VulkanPipeline> createMultiScatteringPipeline(Renderer& renderer, const VkExtent3D& workGroupSize) {
-    PipelineLayoutBuilder layoutBuilder;
-    layoutBuilder
-        .defineDescriptorSet(
-            0,
-            false,
-            {
-                {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-            })
-        .defineDescriptorSet(
-            1,
-            false,
-            {
-                {0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-                {1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT},
-            });
-
-    VulkanDevice& device = renderer.getDevice();
-    auto layout = layoutBuilder.create(device);
-
-    // The shader declares its work group size through specialization constants 0, 1 and 2.
-    const std::vector<VkSpecializationMapEntry> specEntries = {
-        {0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
-        {1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
-        {2, 2 * sizeof(uint32_t), sizeof(uint32_t)},
-    };
-
-    VkSpecializationInfo specInfo = {};
-    specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
-    specInfo.pMapEntries = specEntries.data();
-    specInfo.dataSize = sizeof(workGroupSize);
-    specInfo.pData = &workGroupSize;
-
-    VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
-    pipelineInfo.stage = createShaderStageInfo(
-        VK_SHADER_STAGE_COMPUTE_BIT, renderer.getOrLoadShaderModule("sky-multiple-scattering.comp"));
-    pipelineInfo.stage.pSpecializationInfo = &specInfo;
-    pipelineInfo.layout = layout->getHandle();
-    pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineInfo.basePipelineIndex = -1;
-    VkPipeline pipeline = VK_NULL_HANDLE;
-    vkCreateComputePipelines(device.getHandle(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
-
-    auto result = std::make_unique<VulkanPipeline>(device, pipeline, std::move(layout), VK_PIPELINE_BIND_POINT_COMPUTE);
-    result->setDebugName(device, MultipleScatteringPass);
+    auto result = createComputePipeline(
+        renderer.getDevice(),
+        renderer.getAssetPaths().getShaderSpvPath("sky-multiple-scattering.comp"),
+        workGroupSize,
+        [](PipelineLayoutBuilder& builder) { builder.setDescriptorDynamic(0, 0, true); });
+    result->setDebugName(renderer.getDevice(), MultipleScatteringPass);
     return result;
 }
 
@@ -98,7 +59,6 @@ Material* createAtmosphereMaterial(
     VulkanPipeline* pipeline = resourceContext.pipelineCache.loadPipeline(
         id,
         pipelineFilename,
-        renderer.getShaderCache(),
         renderer.getDevice(),
         renderGraph.getRasterizationPassDescriptor(passName));
     Material* material = resourceContext.createMaterial(id, pipeline);

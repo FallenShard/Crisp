@@ -24,11 +24,15 @@ void setDispatchLayout(RenderGraph::Node& computeNode, const glm::ivec3& workGro
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     Renderer* renderer, const std::string& shaderName, const int32_t dynamicBuffers, VkExtent3D workGroupSize) {
-    return createComputePipeline(*renderer, shaderName, workGroupSize, [dynamicBuffers](PipelineLayoutBuilder& builder) {
-        for (int32_t i = 0; i < dynamicBuffers; ++i) {
-            builder.setDescriptorDynamic(0, i, true);
-        }
-    });
+    return crisp::createComputePipeline(
+        renderer->getDevice(),
+        renderer->getAssetPaths().getShaderSpvPath(shaderName),
+        workGroupSize,
+        [dynamicBuffers](PipelineLayoutBuilder& builder) {
+            for (int32_t i = 0; i < dynamicBuffers; ++i) {
+                builder.setDescriptorDynamic(0, i, true);
+            }
+        });
 }
 
 void createMaterial(

@@ -1,7 +1,11 @@
 #pragma once
 
-#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 
+#include <array>
+#include <filesystem>
+#include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace crisp {
@@ -19,17 +23,24 @@ struct ShaderBindingTable {
 
 class RayTracingPipelineBuilder {
 public:
-    explicit RayTracingPipelineBuilder(Renderer& renderer);
+    explicit RayTracingPipelineBuilder(VulkanDevice& device);
+    ~RayTracingPipelineBuilder();
 
-    void addShaderStage(const std::string& shaderName);
+    RayTracingPipelineBuilder(const RayTracingPipelineBuilder&) = delete;
+    RayTracingPipelineBuilder& operator=(const RayTracingPipelineBuilder&) = delete;
+    RayTracingPipelineBuilder(RayTracingPipelineBuilder&&) = delete;
+    RayTracingPipelineBuilder& operator=(RayTracingPipelineBuilder&&) = delete;
+
+    void addShaderStage(const std::filesystem::path& spvPath);
     void addShaderGroup(uint32_t shaderStageIdx, VkRayTracingShaderGroupTypeKHR type);
 
     VkPipeline createHandle(VkPipelineLayout pipelineLayout);
     ShaderBindingTable createShaderBindingTable(VkPipeline rayTracingPipeline);
 
 private:
-    Renderer& m_renderer;
+    VulkanDevice& m_device;
 
+    std::vector<VkShaderModule> m_shaderModules;
     std::vector<VkPipelineShaderStageCreateInfo> m_stages;
     std::unordered_map<VkShaderStageFlagBits, int32_t> m_stageCounts;
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> m_groups;

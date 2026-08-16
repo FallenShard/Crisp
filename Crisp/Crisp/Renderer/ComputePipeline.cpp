@@ -3,12 +3,13 @@
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 #include <Crisp/Io/FileUtils.hpp>
-#include <Crisp/Renderer/PipelineBuilder.hpp>
-#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/PipelineBuilder.hpp>
+#include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 
 #include <Crisp/ShaderUtils/Reflection.hpp>
+
+#include <vector>
 
 namespace crisp {
 FlatHashMap<VkPipeline, VkExtent3D> workGroupSizes;
@@ -22,18 +23,26 @@ std::unique_ptr<VulkanPipeline> createComputePipelineFromModule(
     const VulkanDevice& device,
     VkShaderModule shaderModule,
     std::unique_ptr<VulkanPipelineLayout> layout,
-    const VkExtent3D& workGroupSize) {
-    const std::array<VkSpecializationMapEntry, 3> specEntries = {
-        VkSpecializationMapEntry{0, 0 * sizeof(uint32_t), sizeof(uint32_t)},
-        VkSpecializationMapEntry{1, 1 * sizeof(uint32_t), sizeof(uint32_t)},
-        VkSpecializationMapEntry{2, 2 * sizeof(uint32_t), sizeof(uint32_t)},
+    const VkExtent3D& workGroupSize,
+    const std::span<const uint32_t> specializationConstants) {
+    std::vector<uint32_t> specializationData{
+        workGroupSize.width,
+        workGroupSize.height,
+        workGroupSize.depth,
     };
+    specializationData.insert(specializationData.end(), specializationConstants.begin(), specializationConstants.end());
+
+    // IDs 0-2 are reserved by the shaders for local_size_*_id; caller-provided values follow them.
+    std::vector<VkSpecializationMapEntry> specEntries(specializationData.size());
+    for (uint32_t i = 0; i < specEntries.size(); ++i) {
+        specEntries[i] = VkSpecializationMapEntry{i, i * sizeof(uint32_t), sizeof(uint32_t)};
+    }
 
     VkSpecializationInfo specInfo = {};
     specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
     specInfo.pMapEntries = specEntries.data();
-    specInfo.dataSize = sizeof(workGroupSize);
-    specInfo.pData = &workGroupSize;
+    specInfo.dataSize = specializationData.size() * sizeof(specializationData[0]);
+    specInfo.pData = specializationData.data();
 
     VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
     pipelineInfo.stage = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, shaderModule);
@@ -50,26 +59,11 @@ std::unique_ptr<VulkanPipeline> createComputePipelineFromModule(
 } // namespace
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(
-    Renderer& renderer,
-    const std::string& shaderName,
-    const VkExtent3D& workGroupSize,
-    const std::function<void(PipelineLayoutBuilder&)>& builderOverride) {
-    const VulkanDevice& device = renderer.getDevice();
-    PipelineLayoutBuilder layoutBuilder(
-        reflectPipelineLayoutFromSpirv(renderer.getAssetPaths().spvShaderDir / (shaderName + ".spv")).unwrap());
-    if (builderOverride) {
-        builderOverride(layoutBuilder);
-    }
-    auto layout = layoutBuilder.create(device);
-    return createComputePipelineFromModule(
-        device, renderer.getOrLoadShaderModule(shaderName), std::move(layout), workGroupSize);
-}
-
-std::unique_ptr<VulkanPipeline> createComputePipeline(
     const VulkanDevice& device,
     const std::filesystem::path& spvPath,
     const VkExtent3D& workGroupSize,
-    const std::function<void(PipelineLayoutBuilder&)>& builderOverride) {
+    const std::function<void(PipelineLayoutBuilder&)>& builderOverride,
+    const std::span<const uint32_t> specializationConstants) {
     PipelineLayoutBuilder layoutBuilder(reflectPipelineLayoutFromSpirv(spvPath).unwrap());
     if (builderOverride) {
         builderOverride(layoutBuilder);
@@ -83,7 +77,8 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     VkShaderModule shaderModule{VK_NULL_HANDLE};
     VK_FATAL(vkCreateShaderModule(device.getHandle(), &moduleInfo, nullptr, &shaderModule));
 
-    auto pipeline = createComputePipelineFromModule(device, shaderModule, std::move(layout), workGroupSize);
+    auto pipeline = createComputePipelineFromModule(
+        device, shaderModule, std::move(layout), workGroupSize, specializationConstants);
     vkDestroyShaderModule(device.getHandle(), shaderModule, nullptr);
     return pipeline;
 }

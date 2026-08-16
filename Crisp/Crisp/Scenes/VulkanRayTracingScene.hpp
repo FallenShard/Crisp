@@ -5,7 +5,7 @@
 #include <Crisp/Geometry/TransformBuffer.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/Renderer/RayTracingPipelineBuilder.hpp>
+#include <Crisp/Vulkan/RayTracingPipelineBuilder.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>

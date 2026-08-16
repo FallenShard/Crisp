@@ -2,7 +2,6 @@
 
 #include <iostream>
 
-#include <Crisp/Core/Application.hpp>
 #include <Crisp/Core/Window.hpp>
 #include <Crisp/Gui/Button.hpp>
 #include <Crisp/Gui/ComboBox.hpp>

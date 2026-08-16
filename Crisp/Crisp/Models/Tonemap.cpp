@@ -43,7 +43,6 @@ void addTonemapPass(
                 VulkanPipeline* pipeline = resourceContext.pipelineCache.loadPipeline(
                     kTonemapMaterialId,
                     "Tonemap.json",
-                    renderer.getShaderCache(),
                     renderer.getDevice(),
                     renderGraph.getRasterizationPassDescriptor(kTonemapPass));
                 material = resourceContext.createMaterial(kTonemapMaterialId, pipeline);

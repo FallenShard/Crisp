@@ -6,9 +6,9 @@
 #include <Crisp/Io/FileUtils.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
-#include <Crisp/Renderer/VulkanPipelineIo.hpp>
 #include <Crisp/ShaderUtils/ShaderCompiler.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
+#include <Crisp/Vulkan/VulkanPipelineIo.hpp>
 
 namespace crisp {
 namespace {
@@ -79,7 +79,6 @@ Renderer::Renderer(
         m_virtualFrames.emplace_back(*m_device, i);
     }
 
-    m_shaderCache = std::make_unique<ShaderCache>(m_device.get());
     m_device->loadPipelineCache(m_assetPaths.outputDir / "pipeline.cache");
 
     m_workers.resize(1);
@@ -160,14 +159,6 @@ VkViewport Renderer::getDefaultViewport() const {
 
 VkRect2D Renderer::getDefaultScissor() const {
     return m_defaultScissor;
-}
-
-VkShaderModule Renderer::getShaderModule(const std::string& key) const {
-    return *m_shaderCache->getShaderModule(key);
-}
-
-VkShaderModule Renderer::getOrLoadShaderModule(const std::string& key) {
-    return m_shaderCache->getOrLoadShaderModule(m_assetPaths.getShaderSpvPath(key));
 }
 
 void Renderer::setDefaultViewport(const VulkanCommandEncoder& encoder) const {
@@ -374,7 +365,6 @@ std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
     return createPipelineFromFile(
                absolutePipelinePath,
                m_assetPaths.spvShaderDir,
-               *m_shaderCache,
                *m_device,
                rasterizationPassDescriptor,
                m_bindlessImageRegistry->getSetLayout())

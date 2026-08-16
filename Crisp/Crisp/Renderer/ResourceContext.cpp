@@ -12,8 +12,7 @@ VulkanPipeline* ResourceContext::createPipeline(
     const std::string& id,
     const std::string_view filename,
     const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
-    return pipelineCache.loadPipeline(
-        id, filename, m_renderer->getShaderCache(), m_renderer->getDevice(), rasterizationPassDescriptor);
+    return pipelineCache.loadPipeline(id, filename, m_renderer->getDevice(), rasterizationPassDescriptor);
 }
 
 Material* ResourceContext::createMaterial(std::string materialId, const std::string& pipelineId) {
@@ -46,6 +45,6 @@ Geometry& ResourceContext::getGeometry(const std::string_view id) const {
 }
 
 void ResourceContext::recreatePipelines() {
-    pipelineCache.recreatePipelines(m_renderer->getShaderCache(), m_renderer->getDevice());
+    pipelineCache.recreatePipelines(m_renderer->getDevice());
 }
 } // namespace crisp

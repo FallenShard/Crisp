@@ -1,20 +1,40 @@
-#include <Crisp/Renderer/RayTracingPipelineBuilder.hpp>
+#include <Crisp/Vulkan/RayTracingPipelineBuilder.hpp>
 
+#include <cstring>
 #include <span>
 
 #include <Crisp/ShaderUtils/Reflection.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
-RayTracingPipelineBuilder::RayTracingPipelineBuilder(Renderer& renderer)
-    : m_renderer(renderer) {}
+RayTracingPipelineBuilder::RayTracingPipelineBuilder(VulkanDevice& device)
+    : m_device(device) {}
 
-void RayTracingPipelineBuilder::addShaderStage(const std::string& shaderName) {
+RayTracingPipelineBuilder::~RayTracingPipelineBuilder() {
+    for (const auto module : m_shaderModules) {
+        vkDestroyShaderModule(m_device.getHandle(), module, nullptr);
+    }
+}
+
+void RayTracingPipelineBuilder::addShaderStage(const std::filesystem::path& spvPath) {
+    const auto shaderCode = readSpirvFile(spvPath).unwrap();
+    const VkShaderModuleCreateInfo createInfo{
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = shaderCode.size(),
+        .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data()), // NOLINT
+    };
+    VkShaderModule shaderModule{VK_NULL_HANDLE};
+    VK_FATAL(vkCreateShaderModule(m_device.getHandle(), &createInfo, nullptr, &shaderModule));
+    m_device.setObjectName(shaderModule, spvPath.stem().string());
+    m_shaderModules.push_back(shaderModule);
+
     m_stages.push_back({
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = getShaderStageFromFilePath(shaderName).unwrap(),
-        .module = m_renderer.getOrLoadShaderModule(shaderName),
+        .stage = getShaderStageFromFilePath(spvPath.stem()).unwrap(),
+        .module = shaderModule,
         .pName = "main",
     });
     m_stageCounts[m_stages.back().stage]++;
@@ -58,21 +78,21 @@ VkPipeline RayTracingPipelineBuilder::createHandle(const VkPipelineLayout pipeli
     raytracingCreateInfo.maxPipelineRayRecursionDepth = 1; // We set up iterative ray tracing in the generation shader.
     VkPipeline pipeline{VK_NULL_HANDLE};
     vkCreateRayTracingPipelinesKHR(
-        m_renderer.getDevice().getHandle(), {}, nullptr, 1, &raytracingCreateInfo, nullptr, &pipeline);
+        m_device.getHandle(), {}, nullptr, 1, &raytracingCreateInfo, nullptr, &pipeline);
     return pipeline;
 }
 
 ShaderBindingTable RayTracingPipelineBuilder::createShaderBindingTable(const VkPipeline rayTracingPipeline) {
     const VkDeviceSize baseAlignment =
-        m_renderer.getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupBaseAlignment;
+        m_device.getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupBaseAlignment;
     const auto createShaderHandleBuffer =
         [this, baseAlignment](const VkPipeline rayTracingPipeline, const uint32_t groupCount) {
             const uint32_t handleSize =
-                m_renderer.getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupHandleSize;
+                m_device.getPhysicalDevice().getRayTracingPipelineProperties().shaderGroupHandleSize;
             std::vector<uint8_t> shaderHandleBuffer(groupCount * baseAlignment); // NOLINT
 
             vkGetRayTracingShaderGroupHandlesKHR(
-                m_renderer.getDevice().getHandle(),
+                m_device.getHandle(),
                 rayTracingPipeline,
                 0,
                 groupCount,
@@ -89,14 +109,14 @@ ShaderBindingTable RayTracingPipelineBuilder::createShaderBindingTable(const VkP
     std::vector<uint8_t> shaderHandleStorage(
         createShaderHandleBuffer(rayTracingPipeline, static_cast<uint32_t>(m_groups.size())));
     auto buffer = std::make_unique<VulkanBuffer>(
-        m_renderer.getDevice(),
+        m_device,
         shaderHandleStorage.size(),
         VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_SHADER_BINDING_TABLE_BIT_KHR |
             VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT,
         BufferMemoryType::GpuOnly);
-    m_renderer.enqueueResourceUpdate(
-        [buffer = buffer.get(), handleStorage = std::move(shaderHandleStorage)](const VulkanCommandEncoder& encoder) {
-            encoder.updateBuffer(*buffer, std::as_bytes(std::span(handleStorage)));
+    m_device.postResourceUpdate(
+        [buffer = buffer.get(), handleStorage = std::move(shaderHandleStorage)](const VkCommandBuffer commandBuffer) {
+            VulkanCommandEncoder(commandBuffer).updateBuffer(*buffer, std::as_bytes(std::span(handleStorage)));
         });
 
     std::vector<VkDeviceSize> sizes{0};

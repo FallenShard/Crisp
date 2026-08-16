@@ -1,8 +1,7 @@
-#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
+#include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
-#include <Crisp/Renderer/RendererConfig.hpp>
 
 namespace crisp {
 namespace {
