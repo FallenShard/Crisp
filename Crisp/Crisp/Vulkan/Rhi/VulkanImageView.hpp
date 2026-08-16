@@ -21,8 +21,12 @@ public:
     VkDescriptorImageInfo getDescriptorInfo(
         const VulkanSampler* sampler, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) const;
 
+    const VkImageViewCreateInfo& getCreateInfo() const {
+        return m_createInfo;
+    }
+
     VkImageSubresourceRange getSubresourceRange() const {
-        return m_subresourceRange;
+        return m_createInfo.subresourceRange;
     }
 
     VulkanImage& getImage() const {
@@ -35,7 +39,7 @@ public:
 
 private:
     VulkanImage& m_image;
-    VkImageSubresourceRange m_subresourceRange;
+    VkImageViewCreateInfo m_createInfo;
 };
 
 VkImageViewType getImageViewType(VkImageType imageType, uint32_t layerCount, bool isCubemap);

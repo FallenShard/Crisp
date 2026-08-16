@@ -18,6 +18,9 @@ VulkanPipeline::VulkanPipeline(
 
 void VulkanPipeline::setDebugName(const VulkanDevice& device, const std::string_view name) const {
     device.setObjectName(*this, fmt::format("{} Pipeline", name));
+    if (!m_pipelineLayout) {
+        return;
+    }
     device.setObjectName(*m_pipelineLayout, fmt::format("{} Pipeline Layout", name));
     for (uint32_t setIndex = 0; setIndex < m_pipelineLayout->getDescriptorSetLayoutCount(); ++setIndex) {
         device.setObjectName(
@@ -32,6 +35,10 @@ VulkanDescriptorSet VulkanPipeline::allocateDescriptorSet(uint32_t setId) const 
 
 void VulkanPipeline::swapAll(VulkanPipeline& other) {
     swap(other);
-    m_pipelineLayout->swap(*other.m_pipelineLayout);
+    if (m_pipelineLayout && other.m_pipelineLayout) {
+        m_pipelineLayout->swap(*other.m_pipelineLayout);
+    } else {
+        m_pipelineLayout.swap(other.m_pipelineLayout);
+    }
 }
 } // namespace crisp
