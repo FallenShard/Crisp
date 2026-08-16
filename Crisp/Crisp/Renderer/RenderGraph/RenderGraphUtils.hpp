@@ -105,6 +105,13 @@ struct RenderGraphPhysicalBuffer {
     std::vector<uint32_t> aliasedResourceIndices;
 };
 
+// Keyed by VkBuffer rather than by resource: aliased resources share one allocation, and imported
+// buffers have no physical entry to hang this off.
+struct RenderGraphBufferAccess {
+    VulkanSynchronizationStage lastAccess{kNullStage};
+    bool lastAccessWasWrite{false};
+};
+
 struct RenderGraphImportedBuffer {
     uint32_t descriptionIndex{};
     VulkanBuffer* buffer{nullptr};

@@ -83,11 +83,15 @@ RenderGraph::Builder::Builder(RenderGraph& renderGraph, const RenderGraphPassHan
 
 void RenderGraph::Builder::exportTexture(
     const RenderGraphResourceHandle res, const VulkanSynchronizationStage externalAccess) {
-    auto& resource = m_renderGraph.getResource(res);
+    m_renderGraph.exportTexture(res, externalAccess);
+}
+
+void RenderGraph::exportTexture(const RenderGraphResourceHandle res, const VulkanSynchronizationStage externalAccess) {
+    auto& resource = getResource(res);
     CRISP_CHECK_EQ(resource.type, ResourceType::Image);
     resource.readPasses.push_back({RenderGraphPassHandle::kExternalPass});
     resource.externalAccess = externalAccess;
-    m_renderGraph.getImageDescription(res).imageUsageFlags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    getImageDescription(res).imageUsageFlags |= VK_IMAGE_USAGE_SAMPLED_BIT;
 }
 
 void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res) {
@@ -139,7 +143,7 @@ RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
     m_renderGraph.getImageDescription(handle).clearValue = clearValue;
 
     const bool isDepthAttachment = isDepthFormat(description.format);
-    m_renderGraph.getImageDescription(handle).imageUsageFlags =
+    m_renderGraph.getImageDescription(handle).imageUsageFlags |=
         isDepthAttachment ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
@@ -235,7 +239,8 @@ std::unique_ptr<VulkanImageView> RenderGraph::createViewFromResource(
     const auto& desc = getImageDescription(handle);
     auto& image = *m_physicalImages[res.physicalResourceIndex].image;
     const auto imageType = desc.depth == 1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
-    auto view = createView(device, image, getImageViewType(imageType, image.getLayerCount(), false));
+    const bool isCubeMap = desc.createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    auto view = createView(device, image, getImageViewType(imageType, image.getLayerCount(), isCubeMap));
     device.setObjectName(*view, fmt::format("RenderGraph {} Auxiliary View", res.name));
     return view;
 }
@@ -243,7 +248,31 @@ std::unique_ptr<VulkanImageView> RenderGraph::createViewFromResource(
 const VulkanImageView& RenderGraph::getResourceImageView(RenderGraphResourceHandle handle) const {
     const auto& res{getResource(handle)};
     CRISP_CHECK_EQ(res.type, ResourceType::Image);
+    if (m_cubeMapViews.contains(res.physicalResourceIndex)) {
+        return *m_cubeMapViews.at(res.physicalResourceIndex);
+    }
     return *m_imageViews.at(res.physicalResourceIndex);
+}
+
+VkBuffer RenderGraph::resolveBufferHandle(const RenderGraphResourceHandle handle) const {
+    const auto& res{getResource(handle)};
+    CRISP_CHECK_EQ(res.type, ResourceType::Buffer);
+    if (res.isExternal) {
+        const auto& description = getBufferDescription(handle);
+        CRISP_CHECK(
+            description.externalBuffer != VK_NULL_HANDLE,
+            "Render graph buffer '{}' is external, but its Vulkan buffer handle is null.",
+            res.name);
+        return description.externalBuffer;
+    }
+
+    CRISP_CHECK(
+        res.physicalResourceIndex < m_physicalBuffers.size(),
+        "Render graph buffer '{}' has invalid physical index {} (physical buffer count: {}).",
+        res.name,
+        res.physicalResourceIndex,
+        m_physicalBuffers.size());
+    return m_physicalBuffers[res.physicalResourceIndex].buffer->getHandle();
 }
 
 const RenderGraphBlackboard& RenderGraph::getBlackboard() const {
@@ -321,8 +350,19 @@ void RenderGraph::execute(const FrameContext& frameContext) {
             }
         };
 
+    const auto synchronizeBufferAccess =
+        [this, &encoder](const VkBuffer buffer, const VulkanSynchronizationStage access, const bool isWrite) {
+            auto& state = m_bufferAccesses[buffer];
+            const bool requiresBarrier = isWrite || state.lastAccessWasWrite;
+            if (requiresBarrier) {
+                encoder.insertBufferMemoryBarrier(buffer, state.lastAccess >> access);
+            }
+            state.lastAccess = isWrite || requiresBarrier ? access : state.lastAccess | access;
+            state.lastAccessWasWrite = isWrite;
+        };
+
     const auto synchronizeInputResources =
-        [this, &synchronizeImageAccess](const RenderGraphPass& pass, const FrameContext& ctx) {
+        [this, &synchronizeImageAccess, &synchronizeBufferAccess](const RenderGraphPass& pass) {
             for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
                 const auto& res = getResource(pass.inputs[inIdx]);
 
@@ -335,27 +375,7 @@ void RenderGraph::execute(const FrameContext& frameContext) {
                     synchronizeImageAccess(
                         res, newLayout, inputAccess.stage, /*isWrite=*/false, imageView.getSubresourceRange());
                 } else if (res.type == ResourceType::Buffer) {
-                    const auto scope = res.producerAccess.stage >> inputAccess.stage;
-                    if (res.isExternal) {
-                        const auto& description = getBufferDescription(pass.inputs[inIdx]);
-                        CRISP_CHECK(
-                            description.externalBuffer != VK_NULL_HANDLE,
-                            "Render graph pass '{}' reads external buffer '{}', but its Vulkan buffer handle is null.",
-                            pass.name,
-                            res.name);
-                        ctx.commandEncoder.insertBufferMemoryBarrier(description.externalBuffer, scope);
-                    } else {
-                        CRISP_CHECK(
-                            res.physicalResourceIndex < m_physicalBuffers.size(),
-                            "Render graph pass '{}' reads internal buffer '{}' with invalid physical index {} "
-                            "(physical buffer count: {}).",
-                            pass.name,
-                            res.name,
-                            res.physicalResourceIndex,
-                            m_physicalBuffers.size());
-                        const auto& physicalBuffer{m_physicalBuffers[res.physicalResourceIndex]};
-                        ctx.commandEncoder.insertBufferMemoryBarrier(*physicalBuffer.buffer, scope);
-                    }
+                    synchronizeBufferAccess(resolveBufferHandle(pass.inputs[inIdx]), inputAccess.stage, false);
                 }
             }
         };
@@ -370,7 +390,7 @@ void RenderGraph::execute(const FrameContext& frameContext) {
 
         // CRISP_LOGI("Executing pass: {}", pass.name);
         if (pass.type == PassType::Rasterizer) {
-            synchronizeInputResources(pass, frameContext);
+            synchronizeInputResources(pass);
 
             std::vector<VkRenderingAttachmentInfo> colorAttachments;
             colorAttachments.reserve(pass.colorAttachments.size());
@@ -444,21 +464,23 @@ void RenderGraph::execute(const FrameContext& frameContext) {
             pass.executeFunc(frameContext);
             encoder.endRendering();
         } else if (pass.type == PassType::Compute || pass.type == PassType::RayTracing) {
-            synchronizeInputResources(pass, frameContext);
+            synchronizeInputResources(pass);
             for (const RenderGraphResourceHandle resourceId : pass.outputs) {
                 const auto& resource = getResource(resourceId);
-                if (resource.type != ResourceType::Image) {
-                    continue;
-                }
+                if (resource.type == ResourceType::Buffer) {
+                    synchronizeBufferAccess(
+                        resolveBufferHandle(resourceId), resource.producerAccess.stage, /*isWrite=*/true);
+                } else if (resource.type == ResourceType::Image) {
 
-                CRISP_CHECK_EQ(resource.producerAccess.usageType, ResourceUsageType::Storage);
-                const auto& imageView = *m_imageViews.at(resource.physicalResourceIndex);
-                synchronizeImageAccess(
-                    resource,
-                    VK_IMAGE_LAYOUT_GENERAL,
-                    resource.producerAccess.stage,
-                    /*isWrite=*/true,
-                    imageView.getSubresourceRange());
+                    CRISP_CHECK_EQ(resource.producerAccess.usageType, ResourceUsageType::Storage);
+                    const auto& imageView = *m_imageViews.at(resource.physicalResourceIndex);
+                    synchronizeImageAccess(
+                        resource,
+                        VK_IMAGE_LAYOUT_GENERAL,
+                        resource.producerAccess.stage,
+                        /*isWrite=*/true,
+                        imageView.getSubresourceRange());
+                }
             }
             pass.executeFunc(frameContext);
         }
@@ -790,6 +812,7 @@ void RenderGraph::createPhysicalResources(
     const VulkanDevice& device, const VkExtent2D swapChainExtent, const VulkanCommandEncoder& commandEncoder) {
     CRISP_LOGD("Creating physical resources...");
     m_imageViews.clear();
+    m_cubeMapViews.clear();
     for (auto& physicalImage : m_physicalImages) {
         const auto debugName =
             createPhysicalResourceDebugName("Image", m_resources, physicalImage.aliasedResourceIndices);
@@ -829,6 +852,11 @@ void RenderGraph::createPhysicalResources(
             createPhysicalResourceDebugName("Image", m_resources, physicalImage.aliasedResourceIndices);
         device.setObjectName(*view, fmt::format("{} View", debugName));
         m_imageViews[static_cast<uint32_t>(physicalResourceIndex)] = std::move(view);
+        if (desc.createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) {
+            auto cubeMapView = createView(device, image, getImageViewType(imageType, image.getLayerCount(), true));
+            device.setObjectName(*cubeMapView, fmt::format("{} Cube Map View", debugName));
+            m_cubeMapViews[static_cast<uint32_t>(physicalResourceIndex)] = std::move(cubeMapView);
+        }
     }
 
     for (auto& res : m_physicalBuffers) {

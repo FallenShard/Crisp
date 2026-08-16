@@ -69,6 +69,9 @@ public:
         return handle;
     }
 
+    void exportTexture(
+        RenderGraphResourceHandle res, VulkanSynchronizationStage externalAccess = kFragmentSampledRead);
+
     size_t getPassCount() const;
     size_t getResourceCount() const;
 
@@ -152,6 +155,7 @@ private:
     };
 
     std::vector<ResourceTimeline> calculateResourceTimelines();
+    VkBuffer resolveBufferHandle(RenderGraphResourceHandle handle) const;
     RenderGraphResourceHandle addImageResource(const RenderGraphImageDescription& description, std::string&& name);
     RenderGraphResourceHandle addBufferResource(
         const RenderGraphBufferDescription& description, std::string&& name, bool isExternal);
@@ -220,6 +224,10 @@ private:
     std::vector<RenderGraphImportedBuffer> m_importedBuffers;
 
     FlatHashMap<uint32_t, std::unique_ptr<VulkanImageView>> m_imageViews;
+    FlatHashMap<uint32_t, std::unique_ptr<VulkanImageView>> m_cubeMapViews;
+
+    // Persists across frames so a pass writing a buffer is ordered against the previous frame's readers.
+    FlatHashMap<VkBuffer, RenderGraphBufferAccess> m_bufferAccesses;
 
     // Used to facilitate communication of pass dependencies across the codebase.
     RenderGraphBlackboard m_blackboard;
