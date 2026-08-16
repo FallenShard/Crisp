@@ -141,6 +141,67 @@ TEST(RenderGraphTest2, ExportTextureDeclaresExternalAccess) {
     EXPECT_EQ(externalAccess->access, kComputeRead.access);
 }
 
+TEST_F(RenderGraphTest, ExportedTextureIsNotAliasedWithLaterResource) {
+    rg::RenderGraph renderGraph;
+    const RenderGraphImageDescription description{
+        .sizePolicy = SizePolicy::Absolute,
+        .width = 16,
+        .height = 16,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+    };
+
+    RenderGraphResourceHandle exportedImage;
+    renderGraph.addPass(
+        "export-pass",
+        [&](rg::RenderGraph::Builder& builder) {
+            exportedImage = builder.createAttachment(description, "exported-image");
+            builder.exportTexture(exportedImage);
+        },
+        [](const FrameContext&) {});
+
+    RenderGraphResourceHandle laterImage;
+    renderGraph.addPass(
+        "later-pass",
+        [&](rg::RenderGraph::Builder& builder) { laterImage = builder.createAttachment(description, "later-image"); },
+        [](const FrameContext&) {});
+
+    renderGraph.compile(*device_, {16, 16});
+
+    EXPECT_EQ(renderGraph.getPhysicalImageCount(), 2);
+    EXPECT_NE(
+        renderGraph.getResources()[exportedImage.id].physicalResourceIndex,
+        renderGraph.getResources()[laterImage.id].physicalResourceIndex);
+}
+
+TEST_F(RenderGraphTest, ResourceNamesDoNotAffectAliasing) {
+    rg::RenderGraph renderGraph;
+    const RenderGraphImageDescription description{
+        .sizePolicy = SizePolicy::Absolute,
+        .width = 16,
+        .height = 16,
+        .format = VK_FORMAT_R8G8B8A8_UNORM,
+    };
+
+    RenderGraphResourceHandle firstImage;
+    renderGraph.addPass(
+        "first-pass",
+        [&](rg::RenderGraph::Builder& builder) { firstImage = builder.createAttachment(description, "shared-name"); },
+        [](const FrameContext&) {});
+
+    RenderGraphResourceHandle secondImage;
+    renderGraph.addPass(
+        "second-pass",
+        [&](rg::RenderGraph::Builder& builder) { secondImage = builder.createAttachment(description, "shared-name"); },
+        [](const FrameContext&) {});
+
+    renderGraph.compile(*device_, {16, 16});
+
+    EXPECT_EQ(renderGraph.getPhysicalImageCount(), 1);
+    EXPECT_EQ(
+        renderGraph.getResources()[firstImage.id].physicalResourceIndex,
+        renderGraph.getResources()[secondImage.id].physicalResourceIndex);
+}
+
 TEST(RenderGraphTest2, RasterizationPassDescriptor) {
     rg::RenderGraph renderGraph;
     const auto passHandle = renderGraph.addPass(

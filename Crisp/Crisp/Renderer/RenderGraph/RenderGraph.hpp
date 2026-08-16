@@ -150,10 +150,10 @@ public:
 private:
     struct ResourceTimeline {
         uint32_t firstWrite{~0u};
-        uint32_t lastRead{0u};
+        uint32_t lastRead{~0u};
     };
 
-    std::vector<ResourceTimeline> calculateResourceTimelines();
+    std::vector<ResourceTimeline> calculateResourceTimelines() const;
     VkBuffer resolveBufferHandle(RenderGraphResourceHandle handle) const;
     RenderGraphResourceHandle addImageResource(const RenderGraphImageDescription& description, std::string&& name);
     RenderGraphResourceHandle addBufferResource(

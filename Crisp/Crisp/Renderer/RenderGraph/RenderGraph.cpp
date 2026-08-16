@@ -633,39 +633,45 @@ void RenderGraph::resize(const VulkanDevice& device, const VkExtent2D swapChainE
     compile(device, swapChainExtent);
 }
 
-std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelines() {
-    FlatHashMap<std::string, ResourceTimeline> unversionedTimelines;
-    for (const auto& res : m_resources) {
-        unversionedTimelines[res.name] = {};
-    }
+std::vector<RenderGraph::ResourceTimeline> RenderGraph::calculateResourceTimelines() const {
+    const auto graphEnd = static_cast<uint32_t>(m_passes.size());
+    std::vector<ResourceTimeline> timelines;
+    timelines.reserve(m_resources.size());
 
-    for (auto&& [passIdx, pass] : std::views::enumerate(m_passes)) {
-        for (const auto& in : pass.inputs) {
-            auto& tl = unversionedTimelines[getResource(in).name];
-            tl.lastRead = std::max(tl.lastRead, static_cast<uint32_t>(passIdx));
+    for (const auto& resource : m_resources) {
+        CRISP_CHECK_LT(resource.producer.id, graphEnd);
+        auto& timeline = timelines.emplace_back(
+            ResourceTimeline{
+                .firstWrite = resource.producer.id,
+                .lastRead = resource.producer.id,
+            });
+
+        if (resource.externalAccess) {
+            timeline.lastRead = graphEnd;
+            continue;
         }
 
-        for (const auto& out : pass.outputs) {
-            auto& tl = unversionedTimelines[getResource(out).name];
-            tl.firstWrite = std::min(tl.firstWrite, static_cast<uint32_t>(passIdx));
+        for (const auto consumer : resource.readPasses) {
+            if (consumer.id == RenderGraphPassHandle::kExternalPass) {
+                continue;
+            }
+            CRISP_CHECK_LT(consumer.id, graphEnd);
+            timeline.lastRead = std::max(timeline.lastRead, consumer.id);
         }
     }
 
-    std::vector<ResourceTimeline> timelines(m_resources.size());
-    for (auto&& [idx, t] : std::views::enumerate(timelines)) {
-        t = unversionedTimelines[m_resources[idx].name];
-    }
-
-    for (auto&& [idx, t] : std::views::enumerate(timelines)) {
+    for (auto&& [idx, timeline] : std::views::enumerate(timelines)) {
+        const auto lastUseName =
+            timeline.lastRead == graphEnd ? std::string_view{"External"} : m_passes[timeline.lastRead].name;
         CRISP_LOGD(
-            "{}. {}-{}: W: {} ({}), R: {} ({})",
+            "{}. {}-{}: first use: {} ({}), last use: {} ({})",
             idx,
             m_resources[idx].name,
             m_resources[idx].version,
-            t.firstWrite,
-            t.firstWrite < m_passes.size() ? m_passes[t.firstWrite].name : "None",
-            t.lastRead,
-            t.lastRead == 0 ? "None" : m_passes[t.lastRead].name);
+            timeline.firstWrite,
+            m_passes[timeline.firstWrite].name,
+            timeline.lastRead,
+            lastUseName);
     }
 
     return timelines;
