@@ -52,6 +52,7 @@ Application::Application(const ApplicationEnvironment& environment)
     }
     addRayQueryFeatures(vulkanCoreParams.deviceFeatureRequests);
     addMeshShadingFeatures(vulkanCoreParams.deviceFeatureRequests);
+    addDescriptorHeapFeatures(vulkanCoreParams.deviceFeatureRequests);
 
     m_renderer = std::make_unique<Renderer>(
         std::move(vulkanCoreParams), m_window.createSurfaceCallback(), createAssetPaths(environment));
@@ -195,6 +196,18 @@ void Application::drawGui() {
     ImGui::Begin("Application Settings");
     ImGui::LabelText("Frame", "%llu", m_renderer->getCurrentFrameIndex());           // NOLINT
     ImGui::LabelText("Frame Time", "%.2f ms, %.2f FPS", m_avgFrameTimeMs, m_avgFps); // NOLINT
+
+    // The render graph only times its own passes. The swap chain pass that blits the scene image and
+    // draws this ui is recorded by the Renderer, and the wait is whatever the presentation mode
+    // costs -- under FIFO that is the vsync stall, and it dominates any gap to the frame time.
+    if (const auto presentGpuMs = m_renderer->getPresentPassGpuMs()) {
+        ImGui::LabelText("Present Pass GPU", "%.3f ms", *presentGpuMs); // NOLINT
+    } else if (!m_renderer->isGpuProfilingSupported()) {
+        ImGui::LabelText("Present Pass GPU", "unsupported"); // NOLINT
+    } else {
+        ImGui::LabelText("Present Pass GPU", "pending"); // NOLINT
+    }
+    ImGui::LabelText("Frame Wait (CPU)", "%.3f ms", m_renderer->getFrameWaitMs()); // NOLINT
 
     std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> budgets{};
     vmaGetHeapBudgets(m_renderer->getDevice().getMemoryAllocator(), budgets.data());

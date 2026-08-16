@@ -58,6 +58,8 @@ public:
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT};
     VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragmentShadingRateFeatures{
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR};
+    VkPhysicalDeviceDescriptorHeapFeaturesEXT descriptorHeapFeatures{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT};
 
     // Clears both the chain and every feature value. Device selection reuses one chain across candidates, so
     // without zeroing the values a rejected device's requests would leak into the next candidate's create info.
@@ -79,6 +81,7 @@ public:
         clear(meshShaderFeatures);
         clear(fragmentDensityMapFeatures);
         clear(fragmentShadingRateFeatures);
+        clear(descriptorHeapFeatures);
         linkedStructs.clear();
     }
 
@@ -107,6 +110,8 @@ struct VulkanPhysicalDeviceProperties {
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
     VkPhysicalDeviceMeshShaderPropertiesEXT meshShaderProperties{
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT};
+    VkPhysicalDeviceDescriptorHeapPropertiesEXT descriptorHeapProperties{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_PROPERTIES_EXT};
 
     VkPhysicalDeviceMemoryProperties2 memoryProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
 };
@@ -116,6 +121,7 @@ struct VulkanDeviceFeatures {
     bool rayQuery{false};
     bool pageableMemory{false};
     bool meshShading{false};
+    bool descriptorHeap{false};
 };
 
 namespace detail {
@@ -149,6 +155,8 @@ consteval VkStructureType getFeatureStructureType() {
         return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT;
     } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceFragmentShadingRateFeaturesKHR>) {
         return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceDescriptorHeapFeaturesEXT>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT;
     } else {
         static_assert(!sizeof(FeatureStruct), "Failed to retrieve an sType for a Vulkan feature struct!");
     }
@@ -184,6 +192,10 @@ public:
 
     const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& getRayTracingPipelineProperties() const {
         return m_capabilities->rayTracingProperties;
+    }
+
+    const VkPhysicalDeviceDescriptorHeapPropertiesEXT& getDescriptorHeapProperties() const {
+        return m_capabilities->descriptorHeapProperties;
     }
 
     const VkPhysicalDeviceMemoryProperties& getMemoryProperties() const {
@@ -271,6 +283,7 @@ struct VulkanDeviceFeatureRequest {
 std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests();
 void addPageableMemoryFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 void addRayTracingFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
+void addDescriptorHeapFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 void addRayQueryFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 void addMeshShadingFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 

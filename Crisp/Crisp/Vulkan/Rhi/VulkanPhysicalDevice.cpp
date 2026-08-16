@@ -76,6 +76,7 @@ void logResolvedFeatures(const VulkanDeviceFeatures& features) {
     CRISP_LOGI(" - Ray query:            {}", status(features.rayQuery));
     CRISP_LOGI(" - Mesh shading:         {}", status(features.meshShading));
     CRISP_LOGI(" - Pageable memory:      {}", status(features.pageableMemory));
+    CRISP_LOGI(" - Descriptor heap:      {}", status(features.descriptorHeap));
 }
 
 } // namespace
@@ -95,6 +96,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(const VkPhysicalDevice handle, const 
     append(m_capabilities->properties, m_capabilities->properties14);
     append(m_capabilities->properties, m_capabilities->rayTracingProperties);
     append(m_capabilities->properties, m_capabilities->meshShaderProperties);
+    append(m_capabilities->properties, m_capabilities->descriptorHeapProperties);
     vkGetPhysicalDeviceProperties2(m_handle, &m_capabilities->properties);
 
     vkGetPhysicalDeviceMemoryProperties2(m_handle, &m_capabilities->memoryProperties);
@@ -512,6 +514,24 @@ void addRayTracingFeatures(std::vector<VulkanDeviceFeatureRequest>& featureReque
                                 },
                             }},
                 },
+        });
+}
+
+void addDescriptorHeapFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests) {
+    featureRequests.emplace_back(
+        VulkanDeviceFeatureRequest{
+            .extensionName = VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME,
+            .isRequired = false,
+            .isSupportedFunc =
+                [](const VulkanPhysicalDevice& physicalDevice) {
+                    return physicalDevice.queryFeatures<VkPhysicalDeviceDescriptorHeapFeaturesEXT>().descriptorHeap ==
+                           VK_TRUE;
+                },
+            .linkFunc =
+                [](VulkanDeviceFeatureChain& featureChain) {
+                    featureChain.link(featureChain.descriptorHeapFeatures).descriptorHeap = VK_TRUE;
+                },
+            .setFunc = [](VulkanDeviceFeatures& features) { features.descriptorHeap = true; },
         });
 }
 
