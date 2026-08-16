@@ -26,7 +26,7 @@ public:
 
         void exportTexture(
             RenderGraphResourceHandle res, VulkanSynchronizationStage externalAccess = kFragmentSampledRead);
-        void readTexture(RenderGraphResourceHandle res);
+        void readTexture(RenderGraphResourceHandle res, std::optional<VulkanSynchronizationStage> access = {});
         void readBuffer(RenderGraphResourceHandle res, VulkanSynchronizationStage access = kFragmentRead);
         void readAttachment(RenderGraphResourceHandle res);
         void readStorageImage(RenderGraphResourceHandle res);
@@ -69,8 +69,7 @@ public:
         return handle;
     }
 
-    void exportTexture(
-        RenderGraphResourceHandle res, VulkanSynchronizationStage externalAccess = kFragmentSampledRead);
+    void exportTexture(RenderGraphResourceHandle res, VulkanSynchronizationStage externalAccess = kFragmentSampledRead);
 
     size_t getPassCount() const;
     size_t getResourceCount() const;

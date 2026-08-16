@@ -94,7 +94,8 @@ void RenderGraph::exportTexture(const RenderGraphResourceHandle res, const Vulka
     getImageDescription(res).imageUsageFlags |= VK_IMAGE_USAGE_SAMPLED_BIT;
 }
 
-void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res) {
+void RenderGraph::Builder::readTexture(
+    RenderGraphResourceHandle res, const std::optional<VulkanSynchronizationStage> access) {
     auto& resource = m_renderGraph.getResource(res);
     resource.readPasses.push_back(m_passHandle);
     m_renderGraph.getImageDescription(res).imageUsageFlags |= VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -102,7 +103,7 @@ void RenderGraph::Builder::readTexture(RenderGraphResourceHandle res) {
     auto& pass = m_renderGraph.getPass(m_passHandle);
     pass.inputs.push_back(res);
     pass.inputAccesses.push_back(
-        {.usageType = ResourceUsageType::Texture, .stage = getSampledImageReadAccess(pass.type)});
+        {.usageType = ResourceUsageType::Texture, .stage = access.value_or(getSampledImageReadAccess(pass.type))});
 }
 
 void RenderGraph::Builder::readBuffer(const RenderGraphResourceHandle res, const VulkanSynchronizationStage access) {
