@@ -2,6 +2,7 @@
 
 #include <Crisp/Core/UniqueTemporaryFile.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphIo.hpp>
+#include <Crisp/Renderer/RenderPasses/BlurPass.hpp>
 #include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSwapChain.hpp>
 
@@ -139,6 +140,36 @@ TEST(RenderGraphTest2, ExportTextureDeclaresExternalAccess) {
     ASSERT_TRUE(externalAccess);
     EXPECT_EQ(externalAccess->stage, kComputeRead.stage);
     EXPECT_EQ(externalAccess->access, kComputeRead.access);
+}
+
+TEST(RenderGraphTest2, BlurPassDeclaresInputAndOutput) {
+    rg::RenderGraph renderGraph;
+    RenderGraphResourceHandle source;
+    renderGraph.addPass(
+        "source-pass",
+        [&source](rg::RenderGraph::Builder& builder) {
+            source = builder.createAttachment({.format = VK_FORMAT_R16G16B16A16_SFLOAT}, "source-image");
+        },
+        [](const FrameContext&) {});
+
+    const auto output = addBlurPass(
+        renderGraph,
+        "blur-pass",
+        source,
+        VK_FORMAT_R16G16B16A16_SFLOAT,
+        {1920, 1080},
+        true,
+        [](const FrameContext&) {});
+
+    const rg::RenderGraph& graph = renderGraph;
+    ASSERT_EQ(graph.getPassCount(), 2);
+    ASSERT_EQ(graph.getResourceCount(), 2);
+    const auto& blurPass = graph.getPass(RenderGraphPassHandle{1});
+    ASSERT_THAT(blurPass.inputs, SizeIs(1));
+    EXPECT_EQ(blurPass.inputs[0].id, source.id);
+    EXPECT_EQ(graph.getImageDescription(output).sizePolicy, SizePolicy::SwapChainRelative);
+    EXPECT_EQ(graph.getImageDescription(output).format, VK_FORMAT_R16G16B16A16_SFLOAT);
+    EXPECT_TRUE(graph.getImageDescription(output).clearValue.has_value());
 }
 
 TEST(RenderGraphTest2, RasterizationPassDescriptor) {

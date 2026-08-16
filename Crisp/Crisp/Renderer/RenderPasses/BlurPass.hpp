@@ -1,14 +1,35 @@
 #pragma once
 
-#include <Crisp/Renderer/RenderTargetCache.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanRenderPass.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 
 namespace crisp {
-std::unique_ptr<VulkanRenderPass> createBlurPass(
-    const VulkanDevice& device,
-    RenderTargetCache& renderTargetCache,
-    VkFormat format,
-    VkExtent2D renderArea,
-    bool isSwapChainDependent,
-    std::string&& renderTargetName = "BlurMap");
+
+template <typename ExecuteFunc>
+RenderGraphResourceHandle addBlurPass(
+    rg::RenderGraph& renderGraph,
+    const std::string& passName,
+    const RenderGraphResourceHandle input,
+    const VkFormat format,
+    const VkExtent2D renderArea,
+    const bool isSwapChainDependent,
+    ExecuteFunc&& executeFunc) {
+    RenderGraphResourceHandle output;
+    renderGraph.addPass(
+        passName,
+        [input, format, renderArea, isSwapChainDependent, passName, &output](rg::RenderGraph::Builder& builder) {
+            builder.readTexture(input);
+            output = builder.createAttachment(
+                {
+                    .sizePolicy = isSwapChainDependent ? SizePolicy::SwapChainRelative : SizePolicy::Absolute,
+                    .width = renderArea.width,
+                    .height = renderArea.height,
+                    .format = format,
+                },
+                fmt::format("{}-color", passName),
+                VkClearValue{.color{{0.0f, 0.0f, 0.0f, 0.0f}}});
+        },
+        std::forward<ExecuteFunc>(executeFunc));
+    return output;
+}
+
 } // namespace crisp
