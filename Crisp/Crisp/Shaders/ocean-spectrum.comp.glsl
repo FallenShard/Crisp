@@ -37,7 +37,19 @@ layout(push_constant) uniform PushConstant {
     float kMin;
     float kMax;
     int cascade;
+
+    int spectrumModel;
+    float fetch;
+    float peakEnhancement;
+    float directionalSpread;
+    // Computed on the CPU: GLSL has no gamma function, and it only changes with the spread.
+    float directionalSpreadNormalization;
 };
+
+// Must match OceanSpectrumModel in Crisp/Models/Ocean.hpp.
+#define OCEAN_SPECTRUM_PHILLIPS 0
+#define OCEAN_SPECTRUM_PIERSON_MOSKOWITZ 1
+#define OCEAN_SPECTRUM_JONSWAP 2
 
 const float g = 9.81;
 
@@ -45,7 +57,57 @@ vec2 complexMul(vec2 z1, vec2 z2) {
     return vec2(z1[0] * z2[0] - z1[1] * z2[1], z1[0] * z2[1] + z1[1] * z2[0]);
 }
 
-float calculatePhillipsSpectrum(const vec2 k) {
+// Tessendorf's 1986 placeholder. Its cos^2 term is symmetric in k, so waves travelling against the
+// wind carry exactly as much energy as waves travelling with it.
+float phillipsDensity(const vec2 kDir, const float kLen2) {
+    const float expTerm = exp(-1.0 / (kLen2 * Lw * Lw)) / (kLen2 * kLen2);
+    const float kDotW = dot(kDir, windDirection);
+    // Squared by hand: pow(x, y) is undefined in GLSL for x < 0, and kDotW < 0 upwind.
+    return expTerm * (kDotW * kDotW);
+}
+
+// A frequency spectrum becomes a wavenumber one through the deep-water dispersion Jacobian:
+// S(k) = S(w) * (dw/dk) / k. Horvath, Empirical Directional Wave Spectra for Computer Graphics,2015.
+float dispersionJacobian(const float kLen, const float omega) {
+    return 0.5f * sqrt(g / kLen) / kLen;
+}
+
+// Fully developed sea: the peak depends on wind alone, with no fetch limit.
+float piersonMoskowitzDensity(const float kLen) {
+    const float omega = sqrt(g * kLen);
+    const float omegaPeak = 0.855f * g / max(windSpeed, 0.1f);
+    const float omega5 = omega * omega * omega * omega * omega;
+    const float shape = 0.0081f * g * g / omega5 * exp(-1.25f * pow(omegaPeak / omega, 4.0f));
+    return shape * dispersionJacobian(kLen, omega);
+}
+
+// Fetch-limited, and sharper at the peak than Pierson-Moskowitz by the gamma enhancement.
+float jonswapDensity(const float kLen) {
+    const float omega = sqrt(g * kLen);
+    const float speed = max(windSpeed, 0.1f);
+    const float dimensionlessFetch = g * max(fetch, 1.0f) / (speed * speed);
+
+    const float alpha = 0.076f * pow(dimensionlessFetch, -0.22f);
+    const float omegaPeak = 22.0f * pow(g * g / (speed * max(fetch, 1.0f)), 1.0f / 3.0f);
+
+    const float sigma = omega <= omegaPeak ? 0.07f : 0.09f;
+    const float relative = (omega - omegaPeak) / (sigma * omegaPeak);
+    const float peak = pow(peakEnhancement, exp(-0.5f * relative * relative));
+
+    const float omega5 = omega * omega * omega * omega * omega;
+    const float shape = alpha * g * g / omega5 * exp(-1.25f * pow(omegaPeak / omega, 4.0f));
+    return shape * peak * dispersionJacobian(kLen, omega);
+}
+
+// cos^2s(theta/2) is one-sided, unlike Phillips' cos^2, so waves running against the wind carry
+// almost nothing. Normalised to integrate to one over all directions, so it redistributes the
+// frequency spectrum's energy rather than adding to it.
+float directionalSpreadDensity(const vec2 kDir) {
+    const float cosHalfSquared = max(0.5f * (1.0f + dot(kDir, windDirection)), 0.0f);
+    return directionalSpreadNormalization * pow(cosHalfSquared, directionalSpread);
+}
+
+float calculateSpectrum(const vec2 k) {
     const float kLen2 = dot(k, k);
     if (kLen2 == 0.0f) {
         return 0.0f;
@@ -59,13 +121,18 @@ float calculatePhillipsSpectrum(const vec2 k) {
 
     const vec2 kDir = k * inversesqrt(kLen2);
 
-    const float expTerm = exp(-1.0 / (kLen2 * Lw * Lw)) / (kLen2 * kLen2);
-    const float kDotW = dot(kDir, windDirection);
+    float density = 0.0f;
+    if (spectrumModel == OCEAN_SPECTRUM_PIERSON_MOSKOWITZ) {
+        density = piersonMoskowitzDensity(kLen) * directionalSpreadDensity(kDir);
+    } else if (spectrumModel == OCEAN_SPECTRUM_JONSWAP) {
+        density = jonswapDensity(kLen) * directionalSpreadDensity(kDir);
+    } else {
+        density = phillipsDensity(kDir, kLen2);
+    }
 
-    const float tail = exp(-kLen2 * smallWaves * smallWaves);
-
-    // Squared by hand: pow(x, y) is undefined in GLSL for x < 0, and kDotW < 0 upwind.
-    return A * expTerm * (kDotW * kDotW) * tail;
+    // A stays a pure gain on every model, which is what lets the amplitude slider rescale the
+    // integrated moments instead of re-integrating them.
+    return A * density * exp(-kLen2 * smallWaves * smallWaves);
 }
 
 void main() {
@@ -85,9 +152,9 @@ void main() {
 
     const float sqrtFactor = sqrt(2.0f) * 0.5f * amplitudeScale;
     const vec2 h0 =
-        imageLoad(initialSpectrumImg, ivec3(gid, cascade)).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(k));
+        imageLoad(initialSpectrumImg, ivec3(gid, cascade)).xy * sqrtFactor * sqrt(calculateSpectrum(k));
     const vec2 h0MinusK =
-        imageLoad(initialSpectrumImg, ivec3(mirrorGid, cascade)).xy * sqrtFactor * sqrt(calculatePhillipsSpectrum(-k));
+        imageLoad(initialSpectrumImg, ivec3(mirrorGid, cascade)).xy * sqrtFactor * sqrt(calculateSpectrum(-k));
     const vec2 h0Conj = vec2(h0MinusK.x, -h0MinusK.y);
 
     const float wk = sqrt(g * kLen);

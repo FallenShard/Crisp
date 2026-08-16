@@ -308,9 +308,35 @@ void OceanScene::drawGui() {
         m_oceanParams.Lw = m_oceanParams.windSpeed * m_oceanParams.windSpeed / kGravity;
         m_spectrumDirty = true;
     }
+    int32_t spectrumModel = static_cast<int32_t>(m_oceanParams.spectrumModel);
+    if (ImGui::Combo(
+            "Spectrum",
+            &spectrumModel,
+            kOceanSpectrumModelNames.data(),
+            static_cast<int32_t>(kOceanSpectrumModelNames.size()))) {
+        m_oceanParams.spectrumModel = static_cast<OceanSpectrumModel>(spectrumModel);
+        // The models disagree by orders of magnitude about what a physical amplitude is, so reset the
+        // gain to something usable rather than leaving the sea flat or exploded after a swap.
+        m_oceanParams.A = kOceanSpectrumDefaultAmplitudes[static_cast<size_t>(spectrumModel)];
+        m_spectrumDirty = true;
+    }
+    if (m_oceanParams.spectrumModel != OceanSpectrumModel::Phillips) {
+        if (ImGui::SliderFloat(
+                "Fetch", &m_oceanParams.fetch, 1000.0f, 1000000.0f, "%.0f m", ImGuiSliderFlags_Logarithmic)) {
+            m_spectrumDirty = true;
+        }
+        if (ImGui::SliderFloat("Directional Spread", &m_oceanParams.directionalSpread, 0.5f, 16.0f)) {
+            m_spectrumDirty = true;
+        }
+    }
+    if (m_oceanParams.spectrumModel == OceanSpectrumModel::Jonswap) {
+        if (ImGui::SliderFloat("Peak Enhancement", &m_oceanParams.peakEnhancement, 1.0f, 7.0f)) {
+            m_spectrumDirty = true;
+        }
+    }
     // Deliberately does not dirty the spectrum: the moments are linear in A, so update() rescales
     // them instead of re-integrating 3 * N^2 samples on the main thread for every slider pixel.
-    ImGui::SliderFloat("Amplitude", &m_oceanParams.A, 0.0f, 0.01f, "%.5f");
+    ImGui::SliderFloat("Amplitude", &m_oceanParams.A, 1e-4f, 10.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
     if (ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 4.0f * kFinestCellSize)) {
         m_spectrumDirty = true;
     }
