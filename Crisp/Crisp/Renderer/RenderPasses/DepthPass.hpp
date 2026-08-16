@@ -10,6 +10,7 @@ RenderGraphResourceHandle addDepthPass(
     RenderGraphResourceHandle output;
     renderGraph.addPass(
         passName,
+        PassType::Rasterizer,
         [passName, &output](rg::RenderGraph::Builder& builder) {
             output = builder.createAttachment(
                 {

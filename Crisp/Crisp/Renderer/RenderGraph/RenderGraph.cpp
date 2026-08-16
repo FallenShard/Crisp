@@ -236,10 +236,6 @@ RenderGraphBlackboard& RenderGraph::Builder::getBlackboard() {
     return m_renderGraph.getBlackboard();
 }
 
-void RenderGraph::Builder::setType(PassType type) {
-    m_renderGraph.getPass(m_passHandle).type = type;
-}
-
 size_t RenderGraph::getPassCount() const {
     return m_passes.size();
 }

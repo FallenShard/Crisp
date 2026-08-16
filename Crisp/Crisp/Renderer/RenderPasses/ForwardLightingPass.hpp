@@ -16,6 +16,7 @@ template <typename Func>
 void addForwardLightingPass(rg::RenderGraph& renderGraph, const Func& func) {
     renderGraph.addPass(
         kForwardLightingPass,
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             const auto& csmData = builder.getBlackboard().get<CascadedShadowMapData>();
             for (const auto& shadowMap : csmData.cascades) {

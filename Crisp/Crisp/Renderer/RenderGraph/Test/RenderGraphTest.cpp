@@ -40,6 +40,7 @@ TEST(RenderGraphTest2, BasicUsage) {
     rg::RenderGraph rg;
     rg.addPass(
         "fluid-pass",
+        PassType::Compute,
         [](rg::RenderGraph::Builder& builder) {
             auto& data = builder.getBlackboard().insert<FluidSimulationData>();
             data.positionBuffer = builder.createBuffer({}, "fluid-position-buffer");
@@ -48,6 +49,7 @@ TEST(RenderGraphTest2, BasicUsage) {
 
     rg.addPass(
         "depth-pre-pass",
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             builder.readBuffer(builder.getBlackboard().get<FluidSimulationData>().positionBuffer);
 
@@ -62,8 +64,8 @@ TEST(RenderGraphTest2, BasicUsage) {
     RenderGraphResourceHandle output{};
     rg.addPass(
         "spectrum-pass",
+        PassType::Compute,
         [&output](rg::RenderGraph::Builder& builder) {
-            builder.setType(PassType::Compute);
             output = builder.createStorageImage({.format = VK_FORMAT_R32G32_SFLOAT}, "spectrum-image");
         },
         [](const FrameContext&) {});
@@ -71,8 +73,8 @@ TEST(RenderGraphTest2, BasicUsage) {
     for (uint32_t i = 0; i < 10; ++i) {
         rg.addPass(
             fmt::format("fft-pass-{}", i),
+            PassType::Compute,
             [&output, i](rg::RenderGraph::Builder& builder) {
-                builder.setType(PassType::Compute);
                 builder.readStorageImage(output);
                 output = builder.createStorageImage(
                     {.format = VK_FORMAT_R32G32_SFLOAT}, fmt::format("fft-pass-image-{}", i));
@@ -82,6 +84,7 @@ TEST(RenderGraphTest2, BasicUsage) {
 
     rg.addPass(
         "forward-pass",
+        PassType::Rasterizer,
         [&output](rg::RenderGraph::Builder& builder) {
             builder.readAttachment(builder.getBlackboard().get<DepthPrePassData>().depthImage);
             builder.readBuffer(builder.getBlackboard().get<FluidSimulationData>().positionBuffer);
@@ -94,6 +97,7 @@ TEST(RenderGraphTest2, BasicUsage) {
     RenderGraphResourceHandle modifiedHdrImage{};
     rg.addPass(
         "transparent-pass",
+        PassType::Rasterizer,
         [&modifiedHdrImage](rg::RenderGraph::Builder& builder) {
             builder.readAttachment(builder.getBlackboard().get<DepthPrePassData>().depthImage);
             modifiedHdrImage = builder.writeAttachment(builder.getBlackboard().get<ForwardLightingData>().hdrImage);
@@ -103,6 +107,7 @@ TEST(RenderGraphTest2, BasicUsage) {
     RenderGraphResourceHandle bloomImage{};
     rg.addPass(
         "bloom-pass",
+        PassType::Rasterizer,
         [modifiedHdrImage, &bloomImage](rg::RenderGraph::Builder& builder) {
             builder.readTexture(modifiedHdrImage);
             bloomImage = builder.createAttachment({.format = VK_FORMAT_R32G32B32A32_SFLOAT}, "bloom-image");
@@ -111,6 +116,7 @@ TEST(RenderGraphTest2, BasicUsage) {
 
     rg.addPass(
         "tonemapping-pass",
+        PassType::Rasterizer,
         [bloomImage](rg::RenderGraph::Builder& builder) {
             builder.readTexture(bloomImage);
             builder.createAttachment({.format = VK_FORMAT_R8G8B8A8_UNORM}, "ldr-image");
@@ -129,6 +135,7 @@ TEST(RenderGraphTest2, ExportTextureDeclaresExternalAccess) {
     RenderGraphResourceHandle image{};
     renderGraph.addPass(
         "export-pass",
+        PassType::Rasterizer,
         [&image](rg::RenderGraph::Builder& builder) {
             image = builder.createAttachment({.format = VK_FORMAT_R16G16B16A16_SFLOAT}, "exported-image");
             builder.exportTexture(image, kComputeRead);
@@ -153,6 +160,7 @@ TEST_F(RenderGraphTest, ExportedTextureIsNotAliasedWithLaterResource) {
     RenderGraphResourceHandle exportedImage;
     renderGraph.addPass(
         "export-pass",
+        PassType::Rasterizer,
         [&](rg::RenderGraph::Builder& builder) {
             exportedImage = builder.createAttachment(description, "exported-image");
             builder.exportTexture(exportedImage);
@@ -162,6 +170,7 @@ TEST_F(RenderGraphTest, ExportedTextureIsNotAliasedWithLaterResource) {
     RenderGraphResourceHandle laterImage;
     renderGraph.addPass(
         "later-pass",
+        PassType::Rasterizer,
         [&](rg::RenderGraph::Builder& builder) { laterImage = builder.createAttachment(description, "later-image"); },
         [](const FrameContext&) {});
 
@@ -185,12 +194,14 @@ TEST_F(RenderGraphTest, ResourceNamesDoNotAffectAliasing) {
     RenderGraphResourceHandle firstImage;
     renderGraph.addPass(
         "first-pass",
+        PassType::Rasterizer,
         [&](rg::RenderGraph::Builder& builder) { firstImage = builder.createAttachment(description, "shared-name"); },
         [](const FrameContext&) {});
 
     RenderGraphResourceHandle secondImage;
     renderGraph.addPass(
         "second-pass",
+        PassType::Rasterizer,
         [&](rg::RenderGraph::Builder& builder) { secondImage = builder.createAttachment(description, "shared-name"); },
         [](const FrameContext&) {});
 
@@ -206,6 +217,7 @@ TEST(RenderGraphTest2, RasterizationPassDescriptor) {
     rg::RenderGraph renderGraph;
     const auto passHandle = renderGraph.addPass(
         "raster-pass",
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             builder.createAttachment(
                 {.format = VK_FORMAT_R16G16B16A16_SFLOAT, .sampleCount = VK_SAMPLE_COUNT_4_BIT}, "hdr");
@@ -233,6 +245,7 @@ TEST_F(RenderGraphTest, BasicUsage) {
 
     rg.addPass(
         "forward-pass",
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             builder.createAttachment(
                 {
@@ -254,6 +267,7 @@ TEST_F(RenderGraphTest, BasicUsage) {
     RenderGraphResourceHandle bloomImage{};
     rg.addPass(
         "bloom-pass",
+        PassType::Rasterizer,
         [&bloomImage](rg::RenderGraph::Builder& builder) {
             const auto& forwardData = builder.getBlackboard().get<ForwardLightingData>();
             builder.readTexture(forwardData.hdrImage);

@@ -22,6 +22,7 @@ void addCascadedShadowMapPasses(rg::RenderGraph& renderGraph, const uint32_t sha
     for (uint32_t i = 0; i < kCsmPasses.size(); ++i) {
         renderGraph.addPass(
             kCsmPasses[i],
+            PassType::Rasterizer,
             [i, shadowMapSize](rg::RenderGraph::Builder& builder) {
                 auto& data =
                     i == 0 ? builder.getBlackboard().insert<CascadedShadowMapData>()

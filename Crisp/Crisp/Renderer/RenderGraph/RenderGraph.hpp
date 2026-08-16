@@ -45,21 +45,21 @@ public:
 
         RenderGraphBlackboard& getBlackboard();
 
-        void setType(PassType type);
-
     private:
         RenderGraph& m_renderGraph;
         RenderGraphPassHandle m_passHandle;
     };
 
     template <typename BuilderFunc, typename ExecuteFunc>
-    RenderGraphPassHandle addPass(std::string name, const BuilderFunc& builderFunc, ExecuteFunc&& executeFunc) {
+    RenderGraphPassHandle addPass(
+        std::string name, const PassType type, const BuilderFunc& builderFunc, ExecuteFunc&& executeFunc) {
         if (m_passMap.contains(name)) {
             CRISP_FATAL("RenderGraph already contains pass named '{}'.", name);
         }
 
         m_passes.emplace_back();
         m_passes.back().name = std::move(name);
+        m_passes.back().type = type;
         m_passes.back().executeFunc = std::forward<ExecuteFunc>(executeFunc);
         const RenderGraphPassHandle handle{static_cast<uint32_t>(m_passes.size()) - 1};
         m_passMap.emplace(m_passes.back().name, handle);

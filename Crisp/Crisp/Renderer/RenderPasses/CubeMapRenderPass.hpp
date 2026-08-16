@@ -14,6 +14,7 @@ RenderGraphResourceHandle addCubeMapPass(
     RenderGraphResourceHandle output;
     renderGraph.addPass(
         passName,
+        PassType::Rasterizer,
         [renderArea, format, passName, &output](rg::RenderGraph::Builder& builder) {
             output = builder.createAttachment(
                 {

@@ -16,6 +16,7 @@ RenderGraphResourceHandle addBlurPass(
     RenderGraphResourceHandle output;
     renderGraph.addPass(
         passName,
+        PassType::Rasterizer,
         [input, format, renderArea, isSwapChainDependent, passName, &output](rg::RenderGraph::Builder& builder) {
             builder.readTexture(input);
             output = builder.createAttachment(

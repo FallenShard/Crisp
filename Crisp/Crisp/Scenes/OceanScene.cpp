@@ -416,8 +416,8 @@ void OceanScene::buildRenderGraph() {
     m_renderGraph->getBlackboard().insert<OscillationPassData>();
     m_renderGraph->addPass(
         "oscillation",
+        PassType::Compute,
         [](rg::RenderGraph::Builder& builder) {
-            builder.setType(PassType::Compute);
             constexpr RenderGraphImageDescription kCascadeImage{
                 .sizePolicy = SizePolicy::Absolute,
                 .width = N,
@@ -452,8 +452,8 @@ void OceanScene::buildRenderGraph() {
         const std::string horiPassName{fmt::format("ifft-h-{}", Tag)};
         m_renderGraph->addPass(
             horiPassName,
+            PassType::Compute,
             [image, horiPassName](rg::RenderGraph::Builder& builder) {
-                builder.setType(PassType::Compute);
                 builder.readStorageImage(image);
                 auto& data = builder.getBlackboard().insert<HorizontalFftPassData<Tag>>();
                 data.image = builder.createStorageImage(
@@ -477,8 +477,8 @@ void OceanScene::buildRenderGraph() {
         const std::string vertPassName{fmt::format("ifft-v-{}", Tag)};
         m_renderGraph->addPass(
             vertPassName,
+            PassType::Compute,
             [vertPassName](rg::RenderGraph::Builder& builder) {
-                builder.setType(PassType::Compute);
                 builder.readStorageImage(builder.getBlackboard().get<HorizontalFftPassData<Tag>>().image);
                 auto& data = builder.getBlackboard().insert<VerticalFftPassData<Tag>>();
                 data.image = builder.createStorageImage(
@@ -502,6 +502,7 @@ void OceanScene::buildRenderGraph() {
 
     m_renderGraph->addPass(
         kForwardLightingPass,
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             constexpr auto kOceanMapRead = kVertexSampledRead | kFragmentSampledRead;
             builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image, kOceanMapRead);

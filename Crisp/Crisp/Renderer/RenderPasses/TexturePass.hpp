@@ -15,6 +15,7 @@ RenderGraphResourceHandle addTexturePass(
     RenderGraphResourceHandle output;
     renderGraph.addPass(
         passName,
+        PassType::Rasterizer,
         [renderArea, textureFormat, isSwapChainDependent, passName, &output](rg::RenderGraph::Builder& builder) {
             output = builder.createAttachment(
                 {

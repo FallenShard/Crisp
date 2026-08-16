@@ -146,6 +146,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
     m_renderGraph = std::make_unique<rg::RenderGraph>();
     m_renderGraph->addPass(
         kForwardLightingPass,
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             auto& data = builder.getBlackboard().insert<ForwardLightingData>();
             data.hdrImage = builder.createAttachment(
@@ -176,6 +177,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
 
     m_renderGraph->addPass(
         "ssao",
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             builder.readTexture(builder.getBlackboard().get<ForwardLightingData>().hdrImage);
             auto& data = builder.getBlackboard().insert<AmbientOcclusionData>();
@@ -192,6 +194,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
 
     m_renderGraph->addPass(
         "blur-h",
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             builder.readTexture(builder.getBlackboard().get<AmbientOcclusionData>().image);
             auto& data = builder.getBlackboard().insert<BlurHorizontalPassData>();
@@ -208,6 +211,7 @@ AmbientOcclusionScene::AmbientOcclusionScene(Renderer* renderer, Window* window)
 
     m_renderGraph->addPass(
         "blur-v",
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             builder.readTexture(builder.getBlackboard().get<BlurHorizontalPassData>().image);
 

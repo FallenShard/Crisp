@@ -10,6 +10,7 @@ TEST(BlurPassTest, DeclaresInternalOutput) {
     RenderGraphResourceHandle source;
     renderGraph.addPass(
         "source-pass",
+        PassType::Rasterizer,
         [&source](rg::RenderGraph::Builder& builder) {
             source = builder.createAttachment({.format = VK_FORMAT_R16G16B16A16_SFLOAT}, "source-image");
         },
@@ -35,6 +36,7 @@ TEST(BlurPassTest, AllowsCallerToExportOutput) {
     RenderGraphResourceHandle source;
     renderGraph.addPass(
         "source-pass",
+        PassType::Rasterizer,
         [&source](rg::RenderGraph::Builder& builder) {
             source = builder.createAttachment({.format = VK_FORMAT_R16G16B16A16_SFLOAT}, "source-image");
         },

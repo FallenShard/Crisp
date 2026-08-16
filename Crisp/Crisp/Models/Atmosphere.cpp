@@ -57,10 +57,7 @@ Material* createAtmosphereMaterial(
     const std::string& passName,
     const std::vector<RenderGraphResourceHandle>& sampledLuts) {
     VulkanPipeline* pipeline = resourceContext.pipelineCache.loadPipeline(
-        id,
-        pipelineFilename,
-        renderer.getDevice(),
-        renderGraph.getRasterizationPassDescriptor(passName));
+        id, pipelineFilename, renderer.getDevice(), renderGraph.getRasterizationPassDescriptor(passName));
     Material* material = resourceContext.createMaterial(id, pipeline);
     material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kAtmosphereBufferId));
 
@@ -85,6 +82,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
 
     renderGraph.addPass(
         TransmittanceLutPass,
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             auto& data = builder.getBlackboard().insert<TransmittanceLutData>();
             data.lut = builder.createAttachment(
@@ -120,8 +118,8 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
 
     renderGraph.addPass(
         MultipleScatteringPass,
+        PassType::Compute,
         [](rg::RenderGraph::Builder& builder) {
-            builder.setType(PassType::Compute);
             builder.readTexture(builder.getBlackboard().get<TransmittanceLutData>().lut);
 
             auto& data = builder.getBlackboard().insert<MultipleScatteringData>();
@@ -174,6 +172,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
 
     renderGraph.addPass(
         SkyViewLutPass,
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             builder.readTexture(builder.getBlackboard().get<TransmittanceLutData>().lut);
             builder.readTexture(builder.getBlackboard().get<MultipleScatteringData>().tex);
@@ -212,6 +211,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
 
     renderGraph.addPass(
         ViewVolumePass,
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             builder.readTexture(builder.getBlackboard().get<TransmittanceLutData>().lut);
             builder.readTexture(builder.getBlackboard().get<MultipleScatteringData>().tex);
@@ -251,6 +251,7 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
 
     renderGraph.addPass(
         RayMarchingPass,
+        PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             builder.readTexture(builder.getBlackboard().get<TransmittanceLutData>().lut);
             builder.readTexture(builder.getBlackboard().get<MultipleScatteringData>().tex);

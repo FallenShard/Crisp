@@ -21,6 +21,7 @@ LiquidPassData addLiquidPasses(
     LiquidPassData data;
     renderGraph.addPass(
         fmt::format("{}-geometry", passName),
+        PassType::Rasterizer,
         [renderArea, format, passName, &data](rg::RenderGraph::Builder& builder) {
             data.sceneColor = builder.createAttachment(
                 {
@@ -45,6 +46,7 @@ LiquidPassData addLiquidPasses(
 
     renderGraph.addPass(
         fmt::format("{}-composite", passName),
+        PassType::Rasterizer,
         [renderArea, format, passName, &data](rg::RenderGraph::Builder& builder) {
             builder.readTexture(data.sceneColor);
             data.image = builder.createAttachment(

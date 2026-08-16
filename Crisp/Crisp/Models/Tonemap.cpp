@@ -22,6 +22,7 @@ void addTonemapPass(
 
     renderGraph.addPass(
         kTonemapPass,
+        PassType::Rasterizer,
         [hdrImage, extraImageUsageFlags](rg::RenderGraph::Builder& builder) {
             builder.readTexture(hdrImage);
 

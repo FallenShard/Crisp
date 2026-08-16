@@ -177,8 +177,8 @@ void VulkanRayTracingScene::buildRenderGraph() {
     m_renderGraph = std::make_unique<rg::RenderGraph>();
     m_renderGraph->addPass(
         "path-trace",
+        PassType::RayTracing,
         [](rg::RenderGraph::Builder& builder) {
-            builder.setType(PassType::RayTracing);
             builder.getBlackboard().insert<PathTracingPassData>().image = builder.createStorageImage(
                 {
                     .sizePolicy = SizePolicy::SwapChainRelative,
