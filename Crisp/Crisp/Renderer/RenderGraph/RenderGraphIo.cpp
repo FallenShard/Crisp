@@ -65,7 +65,7 @@ Result<> toGraphViz(const rg::RenderGraph& renderGraph, const std::filesystem::p
         graphViz.addNode(vertexIdx, fmt::format("{}", node.name), "box", "deepskyblue");
 
         for (const auto& neighbor : node.inputs) {
-            graphViz.addEdge(neighbor.id, vertexIdx);
+            graphViz.addEdge(neighbor.resource.id, vertexIdx);
         }
 
         for (const auto& neighbor : node.outputs) {

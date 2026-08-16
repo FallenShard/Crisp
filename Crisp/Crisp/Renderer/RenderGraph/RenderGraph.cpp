@@ -101,9 +101,14 @@ void RenderGraph::Builder::readTexture(
     m_renderGraph.getImageDescription(res).imageUsageFlags |= VK_IMAGE_USAGE_SAMPLED_BIT;
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
-    pass.inputs.push_back(res);
-    pass.inputAccesses.push_back(
-        {.usageType = ResourceUsageType::Texture, .stage = access.value_or(getSampledImageReadAccess(pass.type))});
+    pass.inputs.push_back({
+        .resource = res,
+        .access =
+            {
+                .usageType = ResourceUsageType::Texture,
+                .stage = access.value_or(getSampledImageReadAccess(pass.type)),
+            },
+    });
 }
 
 void RenderGraph::Builder::readBuffer(const RenderGraphResourceHandle res, const VulkanSynchronizationStage access) {
@@ -111,8 +116,10 @@ void RenderGraph::Builder::readBuffer(const RenderGraphResourceHandle res, const
     resource.readPasses.push_back(m_passHandle);
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
-    pass.inputs.push_back(res);
-    pass.inputAccesses.push_back({.usageType = ResourceUsageType::Storage, .stage = access});
+    pass.inputs.push_back({
+        .resource = res,
+        .access = {.usageType = ResourceUsageType::Storage, .stage = access},
+    });
 }
 
 void RenderGraph::Builder::readAttachment(RenderGraphResourceHandle res) {
@@ -121,8 +128,10 @@ void RenderGraph::Builder::readAttachment(RenderGraphResourceHandle res) {
     m_renderGraph.getImageDescription(res).imageUsageFlags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
-    pass.inputs.push_back(res);
-    pass.inputAccesses.push_back({.usageType = ResourceUsageType::Attachment, .stage = kFragmentInputRead});
+    pass.inputs.push_back({
+        .resource = res,
+        .access = {.usageType = ResourceUsageType::Attachment, .stage = kFragmentInputRead},
+    });
 }
 
 void RenderGraph::Builder::readStorageImage(RenderGraphResourceHandle res) {
@@ -131,9 +140,14 @@ void RenderGraph::Builder::readStorageImage(RenderGraphResourceHandle res) {
     m_renderGraph.getImageDescription(res).imageUsageFlags |= VK_IMAGE_USAGE_STORAGE_BIT;
 
     auto& pass = m_renderGraph.getPass(m_passHandle);
-    pass.inputs.push_back(res);
-    pass.inputAccesses.push_back(
-        {.usageType = ResourceUsageType::Storage, .stage = getStorageImageReadAccess(pass.type)});
+    pass.inputs.push_back({
+        .resource = res,
+        .access =
+            {
+                .usageType = ResourceUsageType::Storage,
+                .stage = getStorageImageReadAccess(pass.type),
+            },
+    });
 }
 
 RenderGraphResourceHandle RenderGraph::Builder::createAttachment(
@@ -364,19 +378,19 @@ void RenderGraph::execute(const FrameContext& frameContext) {
 
     const auto synchronizeInputResources =
         [this, &synchronizeImageAccess, &synchronizeBufferAccess](const RenderGraphPass& pass) {
-            for (const auto& [inIdx, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
-                const auto& res = getResource(pass.inputs[inIdx]);
+            for (const auto& input : pass.inputs) {
+                const auto& res = getResource(input.resource);
 
                 if (res.type == ResourceType::Image) {
                     const VkImageLayout newLayout =
-                        inputAccess.usageType == ResourceUsageType::Texture
+                        input.access.usageType == ResourceUsageType::Texture
                             ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                             : VK_IMAGE_LAYOUT_GENERAL;
                     const auto& imageView = *m_imageViews.at(res.physicalResourceIndex);
                     synchronizeImageAccess(
-                        res, newLayout, inputAccess.stage, /*isWrite=*/false, imageView.getSubresourceRange());
+                        res, newLayout, input.access.stage, /*isWrite=*/false, imageView.getSubresourceRange());
                 } else if (res.type == ResourceType::Buffer) {
-                    synchronizeBufferAccess(resolveBufferHandle(pass.inputs[inIdx]), inputAccess.stage, false);
+                    synchronizeBufferAccess(resolveBufferHandle(input.resource), input.access.stage, false);
                 }
             }
         };
@@ -790,18 +804,18 @@ void RenderGraph::determineAliasedResurces() {
     }
 
     for (const auto& pass : m_passes) {
-        for (const auto& [inputIndex, inputAccess] : std::views::enumerate(pass.inputAccesses)) {
-            const auto& resource = getResource(pass.inputs[inputIndex]);
+        for (const auto& input : pass.inputs) {
+            const auto& resource = getResource(input.resource);
             if (resource.type != ResourceType::Image) {
                 continue;
             }
 
             auto& physicalImage = m_physicalImages.at(resource.physicalResourceIndex);
             auto& readAccess =
-                inputAccess.usageType == ResourceUsageType::Texture
+                input.access.usageType == ResourceUsageType::Texture
                     ? physicalImage.shaderReadAccess
                     : physicalImage.generalReadAccess;
-            readAccess = readAccess | inputAccess.stage;
+            readAccess = readAccess | input.access.stage;
         }
     }
 

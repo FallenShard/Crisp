@@ -945,22 +945,17 @@ void drawPassInspector(const GraphView& view, InspectorState& state, const uint3
         ImGui::TableSetupColumn("Stage / access", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
         for (size_t inputIndex = 0; inputIndex < pass.inputs.size(); ++inputIndex) {
+            const auto& input = pass.inputs[inputIndex];
             ImGui::PushID(static_cast<int>(inputIndex));
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
             ImGui::TextDisabled("IN");
             ImGui::TableNextColumn();
-            if (!drawResourceLink(view, state, pass.inputs[inputIndex])) {
+            if (!drawResourceLink(view, state, input.resource)) {
                 ImGui::TextDisabled("Invalid handle");
             }
             ImGui::TableNextColumn();
-            if (inputIndex < pass.inputAccesses.size()) {
-                drawAccessCell(pass.inputAccesses[inputIndex]);
-            } else {
-                ImGui::TextDisabled("--");
-                ImGui::TableNextColumn();
-                ImGui::TextDisabled("--");
-            }
+            drawAccessCell(input.access);
             ImGui::PopID();
         }
         for (size_t outputIndex = 0; outputIndex < pass.outputs.size(); ++outputIndex) {

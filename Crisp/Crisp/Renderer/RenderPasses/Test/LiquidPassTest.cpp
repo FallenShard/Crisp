@@ -22,7 +22,7 @@ TEST(LiquidPassTest, DeclaresGeometryAndCompositeResources) {
 
     const auto& liquidCompositePass = graph.getPass(RenderGraphPassHandle{1});
     ASSERT_EQ(liquidCompositePass.inputs.size(), 1);
-    EXPECT_EQ(liquidCompositePass.inputs[0].id, liquid.sceneColor.id);
+    EXPECT_EQ(liquidCompositePass.inputs[0].resource.id, liquid.sceneColor.id);
 }
 
 } // namespace

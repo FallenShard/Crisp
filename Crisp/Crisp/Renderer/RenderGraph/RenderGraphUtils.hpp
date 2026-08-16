@@ -17,13 +17,17 @@ enum class PassType : uint8_t {
     RayTracing,
 };
 
+struct RenderGraphPassInput {
+    RenderGraphResourceHandle resource;
+    ResourceAccessState access;
+};
+
 struct RenderGraphPass {
     std::string name; // Symbolic name for the render pass. Must be unique in the render graph.
     PassType type{PassType::Rasterizer};
 
     // Specified by builder during construction phase.
-    std::vector<RenderGraphResourceHandle> inputs;  // Input resources for the pass (either attached or in shader).
-    std::vector<ResourceAccessState> inputAccesses; // How the input resource is accessed in this pass.
+    std::vector<RenderGraphPassInput> inputs;
 
     std::vector<RenderGraphResourceHandle> outputs; // Outputs for the pass.
 

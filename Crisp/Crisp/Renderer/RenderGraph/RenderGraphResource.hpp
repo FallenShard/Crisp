@@ -23,8 +23,8 @@ enum class ResourceUsageType : uint8_t {
 };
 
 struct ResourceAccessState {
-    ResourceUsageType usageType;
-    VulkanSynchronizationStage stage;
+    ResourceUsageType usageType{};
+    VulkanSynchronizationStage stage{};
 };
 
 struct RenderGraphResource {

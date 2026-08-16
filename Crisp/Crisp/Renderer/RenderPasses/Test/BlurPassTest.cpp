@@ -23,7 +23,7 @@ TEST(BlurPassTest, DeclaresInternalOutput) {
     ASSERT_EQ(graph.getResourceCount(), 2);
     const auto& blurPass = graph.getPass(RenderGraphPassHandle{1});
     ASSERT_EQ(blurPass.inputs.size(), 1);
-    EXPECT_EQ(blurPass.inputs[0].id, source.id);
+    EXPECT_EQ(blurPass.inputs[0].resource.id, source.id);
     EXPECT_EQ(graph.getImageDescription(output).sizePolicy, SizePolicy::SwapChainRelative);
     EXPECT_EQ(graph.getImageDescription(output).format, VK_FORMAT_R16G16B16A16_SFLOAT);
     EXPECT_TRUE(graph.getImageDescription(output).clearValue.has_value());
