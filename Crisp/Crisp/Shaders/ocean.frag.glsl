@@ -11,9 +11,8 @@ layout(location = 1) in vec2 oceanWorldXZ;
 #include "Common/ocean-draw.part.glsl"
 #include "Common/view.part.glsl"
 
-layout(set = 0, binding = 1) uniform sampler2DArray packedHeightDispXMap;
-layout(set = 0, binding = 2) uniform sampler2DArray packedDispZNormalXMap;
-layout(set = 0, binding = 3) uniform sampler2DArray normalZMap;
+layout(set = 0, binding = 1) uniform sampler2DArray packedDisplacementMap; // height, dispX, dispZ, slopeX.
+layout(set = 0, binding = 2) uniform sampler2DArray packedJacobianMap;    // slopeZ, dDx/dx, dDz/dz, dDx/dz.
 
 layout(set = 1, binding = 0) uniform View {
     ViewParameters view;
@@ -42,7 +41,8 @@ vec3 computeEnvSpecular(vec3 eyeN, vec3 eyeV, vec3 F0, float roughness, out vec3
 struct SurfaceFields {
     vec2 slope;
     float waveHeight;
-    vec4 displacementGradient; // dDx/dx, dDx/dz, dDz/dx, dDz/dz.
+    // dDx/dx, dDz/dz, dDx/dz. The fourth Jacobian entry, dDz/dx, is the same field as the third.
+    vec3 displacementGradient;
     float unresolvedSlopeVariance;
 };
 
@@ -50,17 +50,18 @@ SurfaceFields sampleCascades(const float pixelSpacing, const float vertexSpacing
     SurfaceFields fields;
     fields.slope = vec2(0.0f);
     fields.waveHeight = 0.0f;
-    fields.displacementGradient = vec4(0.0f);
+    fields.displacementGradient = vec3(0.0f);
     fields.unresolvedSlopeVariance = 0.0f;
 
-    const float fftSize = float(textureSize(packedHeightDispXMap, 0).x);
-    const vec2 texelSize = vec2(1.0f / fftSize);
+    const float fftSize = float(textureSize(packedDisplacementMap, 0).x);
 
     for (int c = 0; c < OCEAN_CASCADE_COUNT; ++c) {
         const vec3 uv = oceanCascadeUv(oceanWorldXZ, cascadeSizes[c], fftSize, c);
         const float slopeWeight = oceanBandResolveWeight(cascadeWavelengths[c], pixelSpacing);
 
-        fields.slope += slopeWeight * vec2(texture(packedDispZNormalXMap, uv).g, texture(normalZMap, uv).r);
+        const vec4 displacement = texture(packedDisplacementMap, uv);
+        const vec4 jacobian = texture(packedJacobianMap, uv);
+        fields.slope += slopeWeight * vec2(displacement.a, jacobian.r);
         // Slope the footprint swallowed is not gone: scaling the field by w scales its variance by
         // w^2, and the missing remainder widens the specular lobe below instead.
         fields.unresolvedSlopeVariance += (1.0f - slopeWeight * slopeWeight) * cascadeSlopeVariances[c];
@@ -72,20 +73,9 @@ SurfaceFields sampleCascades(const float pixelSpacing, const float vertexSpacing
             continue;
         }
 
-        fields.waveHeight += dispWeight * texture(packedHeightDispXMap, uv).r;
-
-        const float invDerivativeSpan = 0.5f * fftSize / cascadeSizes[c] * dispWeight;
-        const float dxLeft = texture(packedHeightDispXMap, uv - vec3(texelSize.x, 0.0f, 0.0f)).g;
-        const float dxRight = texture(packedHeightDispXMap, uv + vec3(texelSize.x, 0.0f, 0.0f)).g;
-        const float dxBack = texture(packedHeightDispXMap, uv - vec3(0.0f, texelSize.y, 0.0f)).g;
-        const float dxFront = texture(packedHeightDispXMap, uv + vec3(0.0f, texelSize.y, 0.0f)).g;
-        const float dzLeft = texture(packedDispZNormalXMap, uv - vec3(texelSize.x, 0.0f, 0.0f)).r;
-        const float dzRight = texture(packedDispZNormalXMap, uv + vec3(texelSize.x, 0.0f, 0.0f)).r;
-        const float dzBack = texture(packedDispZNormalXMap, uv - vec3(0.0f, texelSize.y, 0.0f)).r;
-        const float dzFront = texture(packedDispZNormalXMap, uv + vec3(0.0f, texelSize.y, 0.0f)).r;
-
-        fields.displacementGradient += invDerivativeSpan * vec4(
-            dxRight - dxLeft, dxFront - dxBack, dzRight - dzLeft, dzFront - dzBack);
+        fields.waveHeight += dispWeight * displacement.r;
+        // Transformed from the spectrum, so no finite differences and no derivative span to scale by.
+        fields.displacementGradient += dispWeight * jacobian.gba;
     }
 
     return fields;
@@ -99,15 +89,14 @@ void main() {
     const SurfaceFields fields = sampleCascades(pixelSpacing, vertexSpacing);
 
     const float dDxDx = fields.displacementGradient.x;
-    const float dDxDz = fields.displacementGradient.y;
-    const float dDzDx = fields.displacementGradient.z;
-    const float dDzDz = fields.displacementGradient.w;
+    const float dDzDz = fields.displacementGradient.y;
+    const float dDxDz = fields.displacementGradient.z; // Also dDz/dx.
     const float jacobianDeterminant =
-        (1.0f - choppiness * dDxDx) * (1.0f - choppiness * dDzDz) - choppiness * choppiness * dDxDz * dDzDx;
+        (1.0f - choppiness * dDxDx) * (1.0f - choppiness * dDzDz) - choppiness * choppiness * dDxDz * dDxDz;
     const float compression = max(1.0f - jacobianDeterminant, 0.0f);
 
     // Choppiness shears the tangents sideways; only the Jacobian terms carry that.
-    const vec3 dPdx = vec3(1.0f - choppiness * dDxDx, fields.slope.x, -choppiness * dDzDx);
+    const vec3 dPdx = vec3(1.0f - choppiness * dDxDx, fields.slope.x, -choppiness * dDxDz);
     const vec3 dPdz = vec3(-choppiness * dDxDz, fields.slope.y, 1.0f - choppiness * dDzDz);
     const vec3 worldN = normalize(cross(dPdz, dPdx));
 

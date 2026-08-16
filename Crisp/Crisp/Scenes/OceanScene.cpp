@@ -56,9 +56,8 @@ struct OceanPushConstants {
 static_assert(sizeof(OceanPushConstants) == 112);
 
 struct OscillationPassData {
-    RenderGraphResourceHandle packedHeightDispX;
-    RenderGraphResourceHandle packedDispZNormalX;
-    RenderGraphResourceHandle normalZ;
+    RenderGraphResourceHandle packedDisplacement;
+    RenderGraphResourceHandle packedJacobian;
 };
 
 template <size_t Tag>
@@ -397,16 +396,15 @@ void OceanScene::buildRenderGraph() {
                 .sizePolicy = SizePolicy::Absolute,
                 .width = N,
                 .height = N,
-                .format = VK_FORMAT_R32G32_SFLOAT,
+                .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                 .layerCount = kOceanCascadeCount,
             };
 
             auto& data = builder.getBlackboard().get<OscillationPassData>();
-            data.packedHeightDispX =
-                builder.createStorageImage(kCascadeImage, fmt::format("{}-packed-height-dispx", "oscillation"));
-            data.packedDispZNormalX =
-                builder.createStorageImage(kCascadeImage, fmt::format("{}-packed-dispz-normalx", "oscillation"));
-            data.normalZ = builder.createStorageImage(kCascadeImage, fmt::format("{}-normal-z", "oscillation"));
+            data.packedDisplacement =
+                builder.createStorageImage(kCascadeImage, fmt::format("{}-packed-displacement", "oscillation"));
+            data.packedJacobian =
+                builder.createStorageImage(kCascadeImage, fmt::format("{}-packed-jacobian", "oscillation"));
         },
         [this](const FrameContext& ctx) {
             m_passResources->oscillation.bind(ctx);
@@ -437,7 +435,7 @@ void OceanScene::buildRenderGraph() {
                         .sizePolicy = SizePolicy::Absolute,
                         .width = N,
                         .height = N,
-                        .format = VK_FORMAT_R32G32_SFLOAT,
+                        .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                         .layerCount = kOceanCascadeCount,
                     },
                     fmt::format("{}-image", horiPassName));
@@ -461,7 +459,7 @@ void OceanScene::buildRenderGraph() {
                     {.sizePolicy = SizePolicy::Absolute,
                      .width = N,
                      .height = N,
-                     .format = VK_FORMAT_R32G32_SFLOAT,
+                     .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                      .layerCount = kOceanCascadeCount},
                     fmt::format("{}-image", vertPassName));
             },
@@ -473,9 +471,8 @@ void OceanScene::buildRenderGraph() {
                 ctx.commandEncoder.dispatchCompute(dispatch.dispatchSize);
             });
     };
-    addFftPasses.operator()<0>(m_renderGraph->getBlackboard().get<OscillationPassData>().packedHeightDispX);
-    addFftPasses.operator()<1>(m_renderGraph->getBlackboard().get<OscillationPassData>().packedDispZNormalX);
-    addFftPasses.operator()<2>(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ);
+    addFftPasses.operator()<0>(m_renderGraph->getBlackboard().get<OscillationPassData>().packedDisplacement);
+    addFftPasses.operator()<1>(m_renderGraph->getBlackboard().get<OscillationPassData>().packedJacobian);
 
     m_renderGraph->addPass(
         kForwardLightingPass,
@@ -483,7 +480,6 @@ void OceanScene::buildRenderGraph() {
             constexpr auto kOceanMapRead = kVertexSampledRead | kFragmentSampledRead;
             builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image, kOceanMapRead);
             builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image, kOceanMapRead);
-            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<2>>().image, kOceanMapRead);
             auto& data = builder.getBlackboard().insert<OceanOutputData>();
             data.hdrImage = builder.createAttachment(
                 {
@@ -566,7 +562,6 @@ void OceanScene::buildRenderGraph() {
     m_passResources->oscillation = createOscillationPassDispatch(*m_renderer, m_resourceContext->imageCache);
     createFftDispatches<0>(*m_passResources, *m_renderer);
     createFftDispatches<1>(*m_passResources, *m_renderer);
-    createFftDispatches<2>(*m_passResources, *m_renderer);
 
     m_oceanPipeline = m_resourceContext->createPipeline(
         "ocean", "Ocean.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
@@ -594,15 +589,12 @@ void OceanScene::writeGraphDependentDescriptors() {
 
     auto& oscillation = *m_passResources->oscillation.material;
     oscillation.writeDescriptor(
-        0, 1, seedView(oscillationData.packedHeightDispX).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+        0, 1, seedView(oscillationData.packedDisplacement).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     oscillation.writeDescriptor(
-        0, 2, seedView(oscillationData.packedDispZNormalX).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    oscillation.writeDescriptor(
-        0, 3, seedView(oscillationData.normalZ).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+        0, 2, seedView(oscillationData.packedJacobian).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-    writeFftDispatchDescriptors<0>(*m_passResources, *m_renderGraph, seedView(oscillationData.packedHeightDispX));
-    writeFftDispatchDescriptors<1>(*m_passResources, *m_renderGraph, seedView(oscillationData.packedDispZNormalX));
-    writeFftDispatchDescriptors<2>(*m_passResources, *m_renderGraph, seedView(oscillationData.normalZ));
+    writeFftDispatchDescriptors<0>(*m_passResources, *m_renderGraph, seedView(oscillationData.packedDisplacement));
+    writeFftDispatchDescriptors<1>(*m_passResources, *m_renderGraph, seedView(oscillationData.packedJacobian));
 
     const auto finalFftView = [this]<size_t Tag>() -> const VulkanImageView& {
         return m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<VerticalFftPassData<Tag>>().image);
@@ -611,7 +603,6 @@ void OceanScene::writeGraphDependentDescriptors() {
 
     m_oceanMaterial->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
     m_oceanMaterial->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
-    m_oceanMaterial->writeDescriptor(0, 3, finalFftView.operator()<2>(), linearRepeat);
 
     m_renderer->getDevice().flushDescriptorUpdates();
 }

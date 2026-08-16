@@ -13,8 +13,8 @@ layout(set = 0, binding = 0) uniform TransformPack {
     mat4 N;
 };
 
-layout(set = 0, binding = 1) uniform sampler2DArray packedHeightDispXMap;
-layout(set = 0, binding = 2) uniform sampler2DArray packedDispZNormalXMap;
+// rgba = height, dispX, dispZ, slopeX. One fetch covers everything the displacement needs.
+layout(set = 0, binding = 1) uniform sampler2DArray packedDisplacementMap;
 
 layout(location = 0) out vec3 eyePosition;
 layout(location = 1) out vec2 oceanWorldXZ;
@@ -32,7 +32,7 @@ void main() {
     const vec3 basePos = position + offset;
     oceanWorldXZ = basePos.xz;
 
-    const float fftSize = float(textureSize(packedHeightDispXMap, 0).x);
+    const float fftSize = float(textureSize(packedDisplacementMap, 0).x);
     const float vertexSpacing = patchWorldSize / float(gridSize);
 
     vec3 displaced = basePos;
@@ -44,10 +44,9 @@ void main() {
             continue;
         }
 
-        const vec2 heightDispX = textureLod(packedHeightDispXMap, uv, 0.0f).rg;
-        const float dispZ = textureLod(packedDispZNormalXMap, uv, 0.0f).r;
+        const vec4 displacement = textureLod(packedDisplacementMap, uv, 0.0f);
         // Tessendorf choppy waves; the spectrum's D(k) = -i*(k/|k|)*h~ makes the scale negative.
-        displaced += weight * vec3(-choppiness * heightDispX.g, heightDispX.r, -choppiness * dispZ);
+        displaced += weight * vec3(-choppiness * displacement.g, displacement.r, -choppiness * displacement.b);
     }
 
     eyePosition = (MV * vec4(displaced, 1.0f)).xyz;

@@ -8,10 +8,15 @@ layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 // One array layer per cascade; the dispatch runs once per cascade with its own band limits.
 layout(set = 0, binding = 0, rg32f) uniform readonly image2DArray initialSpectrumImg;
-// IFFT is linear, so two real fields ride in one complex transform. normalZ is left unpaired.
-layout(set = 0, binding = 1, rg32f) uniform writeonly image2DArray packedHeightDispXImg;
-layout(set = 0, binding = 2, rg32f) uniform writeonly image2DArray packedDispZNormalXImg;
-layout(set = 0, binding = 3, rg32f) uniform writeonly image2DArray normalZImg;
+// IFFT is linear, so two real fields ride in one complex transform, and an rgba texel carries two
+// independent transforms in .rg and .ba. Eight real fields -- height, two displacements, two slopes,
+// three displacement gradients -- fill two textures exactly.
+//
+// After the transform: displacement = (height, dispX, dispZ, slopeX)
+//                      jacobian     = (slopeZ, dDx/dx, dDz/dz, dDx/dz)
+// The split is chosen so ocean.vert reads height and both displacements in a single fetch.
+layout(set = 0, binding = 1, rgba32f) uniform writeonly image2DArray packedDisplacementImg;
+layout(set = 0, binding = 2, rgba32f) uniform writeonly image2DArray packedJacobianImg;
 
 layout(push_constant) uniform PushConstant {
     int N;
@@ -94,14 +99,26 @@ void main() {
     // The negative Nyquist aliases its positive twin; odd derivatives cannot stay Hermitian there.
     const vec2 dispX = gid.x == 0 ? vec2(0.0f) : complexMul(hkt, vec2(0, -k.x * invKLen));
     const vec2 dispZ = gid.y == 0 ? vec2(0.0f) : complexMul(hkt, vec2(0, -k.y * invKLen));
-    const vec2 normalX = gid.x == 0 ? vec2(0.0f) : complexMul(hkt, vec2(0, k.x));
-    const vec2 normalZ = gid.y == 0 ? vec2(0.0f) : complexMul(hkt, vec2(0, k.y));
+    const vec2 slopeX = gid.x == 0 ? vec2(0.0f) : complexMul(hkt, vec2(0, k.x));
+    const vec2 slopeZ = gid.y == 0 ? vec2(0.0f) : complexMul(hkt, vec2(0, k.y));
+
+    // Displacement gradients, exact where the fragment shader used to finite-difference eight taps.
+    // Differentiating D(k) = -i*(k/|k|)*h~ is a multiply by i*k, and the two i's cancel, so each one
+    // is a real multiple of h~. Those multipliers are even in k, so unlike the displacements above
+    // these stay Hermitian at the Nyquist rows and need no zeroing. dDx/dz and dDz/dx collapse to
+    // the same field. See docs/ocean.md item 18.
+    // Zeroed wherever the displacement they differentiate was zeroed, or they would describe the
+    // gradient of a field that is not the one being applied.
+    const vec2 jacobianXx = gid.x == 0 ? vec2(0.0f) : hkt * (k.x * k.x * invKLen);
+    const vec2 jacobianZz = gid.y == 0 ? vec2(0.0f) : hkt * (k.y * k.y * invKLen);
+    const vec2 jacobianXz = (gid.x == 0 || gid.y == 0) ? vec2(0.0f) : hkt * (k.x * k.y * invKLen);
 
     // i*B = i*(Br + i*Bi) = -Bi + i*Br.
     const vec2 packedHeightDispX = vec2(hkt.x - dispX.y, hkt.y + dispX.x);
-    const vec2 packedDispZNormalX = vec2(dispZ.x - normalX.y, dispZ.y + normalX.x);
+    const vec2 packedDispZSlopeX = vec2(dispZ.x - slopeX.y, dispZ.y + slopeX.x);
+    const vec2 packedSlopeZJacobianXx = vec2(slopeZ.x - jacobianXx.y, slopeZ.y + jacobianXx.x);
+    const vec2 packedJacobianZzXz = vec2(jacobianZz.x - jacobianXz.y, jacobianZz.y + jacobianXz.x);
 
-    imageStore(packedHeightDispXImg, ivec3(gid, cascade), vec4(packedHeightDispX, 0.0, 0.0f));
-    imageStore(packedDispZNormalXImg, ivec3(gid, cascade), vec4(packedDispZNormalX, 0.0, 0.0f));
-    imageStore(normalZImg, ivec3(gid, cascade), vec4(normalZ, 0.0, 0.0f));
+    imageStore(packedDisplacementImg, ivec3(gid, cascade), vec4(packedHeightDispX, packedDispZSlopeX));
+    imageStore(packedJacobianImg, ivec3(gid, cascade), vec4(packedSlopeZJacobianXx, packedJacobianZzXz));
 }

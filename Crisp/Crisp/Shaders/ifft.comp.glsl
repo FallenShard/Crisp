@@ -12,18 +12,23 @@ layout(constant_id = 4) const bool kApplyOriginShift = false;
 layout(constant_id = 5) const bool kTransposed = false;
 
 // Layered: one cascade per array slice, transformed by its own slice of the dispatch.
-layout(set = 0, binding = 0, rg32f) uniform readonly image2DArray srcImg;
-layout(set = 0, binding = 1, rg32f) uniform writeonly image2DArray dstImg;
+// Each texel carries two independent complex transforms, in .rg and .ba.
+layout(set = 0, binding = 0, rgba32f) uniform readonly image2DArray srcImg;
+layout(set = 0, binding = 1, rgba32f) uniform writeonly image2DArray dstImg;
 
 layout(push_constant) uniform PushConstant {
     int N;
     int logN;
 };
 
-shared vec2 data[kMaxN];
+shared vec4 data[kMaxN];
 
 vec2 compMul(vec2 z, vec2 w) {
     return vec2(z[0] * w[0] - z[1] * w[1], z[0] * w[1] + z[1] * w[0]);
+}
+
+vec4 compMulPair(vec4 z, vec2 w) {
+    return vec4(compMul(z.xy, w), compMul(z.zw, w));
 }
 
 uint reverseBits(uint k, int bitCount) {
@@ -46,8 +51,8 @@ void main() {
     const int tid = int(gl_LocalInvocationID.x);
     const int halfN = N / 2;
 
-    data[tid] = imageLoad(srcImg, texel(layer, line, int(reverseBits(uint(tid), logN)))).xy;
-    data[tid + halfN] = imageLoad(srcImg, texel(layer, line, int(reverseBits(uint(tid + halfN), logN)))).xy;
+    data[tid] = imageLoad(srcImg, texel(layer, line, int(reverseBits(uint(tid), logN))));
+    data[tid + halfN] = imageLoad(srcImg, texel(layer, line, int(reverseBits(uint(tid + halfN), logN))));
     barrier();
 
     for (int passIdx = 1; passIdx <= logN; ++passIdx) {
@@ -59,8 +64,8 @@ void main() {
 
         const float factor = p == 0 ? 1.0f / float(N) : 1.0f;
         const vec2 ww = vec2(cos(2.0f * PI / float(m) * float(j)), sin(2.0f * PI / float(m) * float(j)));
-        const vec2 t = compMul(ww, data[rightIdx] * factor);
-        const vec2 u = data[leftIdx] * factor;
+        const vec4 t = compMulPair(data[rightIdx] * factor, ww);
+        const vec4 u = data[leftIdx] * factor;
 
         data[rightIdx] = u - t;
         data[leftIdx] = u + t;
@@ -69,6 +74,6 @@ void main() {
 
     const float lowerSign = kApplyOriginShift && ((line + tid) & 1) != 0 ? -1.0f : 1.0f;
     const float upperSign = kApplyOriginShift && ((line + tid + halfN) & 1) != 0 ? -1.0f : 1.0f;
-    imageStore(dstImg, texel(layer, line, tid), vec4(data[tid] * lowerSign, 0.0, 0.0));
-    imageStore(dstImg, texel(layer, line, tid + halfN), vec4(data[tid + halfN] * upperSign, 0.0, 0.0));
+    imageStore(dstImg, texel(layer, line, tid), data[tid] * lowerSign);
+    imageStore(dstImg, texel(layer, line, tid + halfN), data[tid + halfN] * upperSign);
 }
