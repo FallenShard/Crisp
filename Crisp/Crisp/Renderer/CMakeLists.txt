@@ -1,4 +1,5 @@
 add_subdirectory(RenderGraph)
+add_subdirectory(RenderPasses)
 
 add_cpp_static_library(
     CrispShaderCache
@@ -67,7 +68,6 @@ target_link_libraries(
 
 # add_cpp_static_library(
 # CrispRenderPasses
-# "RenderPasses/BlurPass.cpp"
 # "RenderPasses/BlurPass.hpp"
 # "RenderPasses/CubeMapRenderPass.cpp"
 # "RenderPasses/CubeMapRenderPass.hpp"
