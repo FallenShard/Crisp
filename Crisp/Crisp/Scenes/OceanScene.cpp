@@ -1,13 +1,10 @@
 
 #include <Crisp/Scenes/OceanScene.hpp>
 
-#include <Crisp/Core/Application.hpp>
 #include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/ComputePipeline.hpp>
-#include <Crisp/Renderer/PipelineBuilder.hpp>
-#include <Crisp/Renderer/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphIo.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
@@ -27,17 +24,14 @@ constexpr float kCellSize = kPatchWorldSize / N;
 
 constexpr int32_t kMaxInstancesPerSide = 8;
 
-// height/dispX and dispZ/normalX are each packed into one complex FFT channel (see
-// ocean-spectrum.comp.glsl); normalZ is left unpaired. 5 logical fields, 3 FFT channels.
+// 5 real fields in 3 complex FFTs; see ocean-spectrum.comp.glsl.
 struct OscillationPassData {
     RenderGraphResourceHandle packedHeightDispX;
     RenderGraphResourceHandle packedDispZNormalX;
     RenderGraphResourceHandle normalZ;
 };
 
-// Shared-memory IFFT: one dispatch per direction folds the bit-reversal and all logN butterfly
-// stages into a single pass (a workgroup owns a whole row/column in `shared` memory), rather than
-// 1 + logN separate dispatches each round-tripping through VRAM.
+// The transform is separable, so it runs as one pass per direction.
 template <size_t Tag>
 struct HorizontalFftPassData {
     RenderGraphResourceHandle image;
@@ -50,12 +44,18 @@ struct VerticalFftPassData {
 
 struct GeometryPassData {
     RenderGraphResourceHandle positions;
-    RenderGraphResourceHandle normals;
 };
 
 struct OceanOutputData {
     RenderGraphResourceHandle hdrImage;
 };
+
+// Y-up: elevation is measured from the horizon, azimuth around +Y from +Z.
+glm::vec3 computeSunDirection(const float azimuthDegrees, const float elevationDegrees) {
+    const float azimuth = glm::radians(azimuthDegrees);
+    const float elevation = glm::radians(elevationDegrees);
+    return {std::cos(elevation) * std::sin(azimuth), std::sin(elevation), std::cos(elevation) * std::cos(azimuth)};
+}
 
 struct ComputeDispatch {
     std::unique_ptr<VulkanPipeline> pipeline;
@@ -80,59 +80,66 @@ struct OceanPassResources {
 
 namespace {
 
-ComputeDispatch createOscillationPassDispatch(
-    Renderer& renderer, const rg::RenderGraph& renderGraph, const ImageCache& imageCache) {
+// Graph-owned views are bound in writeGraphDependentDescriptors(); they change on every resize.
+ComputeDispatch createOscillationPassDispatch(Renderer& renderer, const ImageCache& imageCache) {
     ComputeDispatch dispatch{};
     dispatch.workGroupSize = {16, 16, 1};
     dispatch.dispatchSize = computeWorkGroupCount(glm::uvec3(N, N, 1), dispatch.workGroupSize);
-    dispatch.pipeline = createComputePipeline(renderer, "ocean-spectrum.comp", dispatch.workGroupSize);
+    dispatch.pipeline = createComputePipeline(
+        renderer.getDevice(), renderer.getAssetPaths().getShaderSpvPath("ocean-spectrum.comp"), dispatch.workGroupSize);
     dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
-    auto& opd = renderGraph.getBlackboard().get<OscillationPassData>();
     dispatch.material->writeDescriptor(
         0, 0, imageCache.getImageView("randImageView").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    dispatch.material->writeDescriptor(
-        0,
-        1,
-        renderGraph.getResourceImageView(opd.packedHeightDispX).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    dispatch.material->writeDescriptor(
-        0,
-        2,
-        renderGraph.getResourceImageView(opd.packedDispZNormalX).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    dispatch.material->writeDescriptor(
-        0, 3, renderGraph.getResourceImageView(opd.normalZ).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     return dispatch;
 }
 
-template <size_t Tag, bool Horizontal>
-ComputeDispatch createSharedIfftDispatch(
-    Renderer& renderer, const VulkanImageView& sourceView, const VulkanImageView& dstView) {
-    const std::string shaderName = Horizontal ? "ifft-shared-hori.comp" : "ifft-shared-vert.comp";
+constexpr uint32_t kMaxNConstantId = 3;
+constexpr uint32_t kApplyOriginShiftConstantId = 4;
+constexpr uint32_t kTransposedConstantId = 5;
 
+template <bool Horizontal>
+ComputeDispatch createIfftDispatch(Renderer& renderer) {
     ComputeDispatch dispatch{};
-    // One workgroup per row (horizontal) or column (vertical); N/2 threads butterfly the whole
-    // line in shared memory, so the dispatch is 1-wide in the direction being transformed.
+    // N/2 threads butterfly a whole line, one workgroup per line.
     dispatch.workGroupSize = {static_cast<uint32_t>(N / 2), 1, 1};
-    dispatch.dispatchSize =
-        Horizontal ? VkExtent3D{1, static_cast<uint32_t>(N), 1} : VkExtent3D{static_cast<uint32_t>(N), 1, 1};
-    dispatch.pipeline = createComputePipeline(renderer, shaderName, dispatch.workGroupSize);
+    dispatch.dispatchSize = {1, static_cast<uint32_t>(N), 1};
+
+    SpecializationConstantMap specializationConstants{{kMaxNConstantId, static_cast<uint32_t>(N)}};
+    if constexpr (!Horizontal) {
+        specializationConstants.emplace(kApplyOriginShiftConstantId, VK_TRUE);
+        specializationConstants.emplace(kTransposedConstantId, VK_TRUE);
+    }
+    dispatch.pipeline = createComputePipeline(
+        renderer.getDevice(),
+        renderer.getAssetPaths().getShaderSpvPath("ifft.comp"),
+        dispatch.workGroupSize,
+        {},
+        specializationConstants);
     dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
-    dispatch.material->writeDescriptor(0, 0, sourceView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    dispatch.material->writeDescriptor(0, 1, dstView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     return dispatch;
 }
 
 template <size_t Tag>
-void createFftDispatches(
-    OceanPassResources& passResources,
-    Renderer& renderer,
-    const rg::RenderGraph& renderGraph,
-    const VulkanImageView& srcView) {
-    passResources.ifft[fmt::format("ifft-h-{}", Tag)] = createSharedIfftDispatch<Tag, true>(
-        renderer, srcView, renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image));
-    passResources.ifft[fmt::format("ifft-v-{}", Tag)] = createSharedIfftDispatch<Tag, false>(
-        renderer,
-        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image),
-        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image));
+void createFftDispatches(OceanPassResources& passResources, Renderer& renderer) {
+    passResources.ifft[fmt::format("ifft-h-{}", Tag)] = createIfftDispatch<true>(renderer);
+    passResources.ifft[fmt::format("ifft-v-{}", Tag)] = createIfftDispatch<false>(renderer);
+}
+
+template <size_t Tag>
+void writeFftDispatchDescriptors(
+    OceanPassResources& passResources, const rg::RenderGraph& renderGraph, const VulkanImageView& srcView) {
+    const auto& horiView =
+        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<HorizontalFftPassData<Tag>>().image);
+    const auto& vertView =
+        renderGraph.getResourceImageView(renderGraph.getBlackboard().get<VerticalFftPassData<Tag>>().image);
+
+    auto& hori = passResources.ifft.at(fmt::format("ifft-h-{}", Tag));
+    hori.material->writeDescriptor(0, 0, srcView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+    hori.material->writeDescriptor(0, 1, horiView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+
+    auto& vert = passResources.ifft.at(fmt::format("ifft-v-{}", Tag));
+    vert.material->writeDescriptor(0, 0, horiView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+    vert.material->writeDescriptor(0, 1, vertView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 }
 
 } // namespace
@@ -162,9 +169,9 @@ void OceanScene::setupInput() {
 void OceanScene::setupResources() {
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_resourceContext->createUniformRingBuffer("camera", sizeof(CameraParameters));
+    m_resourceContext->createUniformRingBuffer<TonemapParameters>(kTonemapBufferId);
 
-    std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {
-        {VertexAttribute::Position}, {VertexAttribute::Normal}};
+    std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {{VertexAttribute::Position}};
     TriangleMesh mesh = createGridMesh(kPatchWorldSize, N);
     m_resourceContext->addGeometry(
         "ocean", createGeometry(*m_renderer, mesh, vertexFormat, VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT));
@@ -212,10 +219,16 @@ OceanScene::~OceanScene() {
 void OceanScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
     m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
-    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&OceanOutputData::hdrImage>());
+    writeGraphDependentDescriptors();
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&TonemapPassData::image>());
 }
 
 void OceanScene::update(const UpdateParams& updateParams) {
+    if (m_spectrumDirty) {
+        m_rmsWaveHeight = computeRmsWaveHeight(m_oceanParams);
+        m_spectrumDirty = false;
+    }
+
     m_cameraController->update(updateParams.dt);
     const auto& cameraParams = m_cameraController->getCameraParameters();
 
@@ -223,6 +236,8 @@ void OceanScene::update(const UpdateParams& updateParams) {
     m_transformBuffer->update(cameraParams.V, cameraParams.P);
     m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(
         cameraParams, updateParams.frameInFlightIdx);
+    m_resourceContext->getRingBuffer(kTonemapBufferId)
+        ->updateStagingBufferFromStruct(m_tonemapParams, updateParams.frameInFlightIdx);
     m_transformBuffer->updateStagingBuffer(updateParams.frameInFlightIdx);
     m_skybox->updateTransforms(cameraParams.V, cameraParams.P, updateParams.frameInFlightIdx);
 
@@ -234,6 +249,7 @@ void OceanScene::update(const UpdateParams& updateParams) {
 void OceanScene::render(const FrameContext& frameContext) {
     auto* cameraBuffer = m_resourceContext->getRingBuffer("camera");
     cameraBuffer->updateDeviceBuffer(frameContext.commandEncoder);
+    m_resourceContext->getRingBuffer(kTonemapBufferId)->updateDeviceBuffer(frameContext.commandEncoder);
 
     m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder);
     m_skybox->updateDeviceBuffer(frameContext.commandEncoder);
@@ -244,20 +260,37 @@ void OceanScene::render(const FrameContext& frameContext) {
 
 void OceanScene::drawGui() {
     ImGui::Begin("Ocean Parameters");
-    glm::vec2 windVelocity = m_oceanParams.windDirection * m_oceanParams.windSpeed;
-    if (ImGui::SliderFloat("Wind Speed X", &windVelocity.x, 0.001f, 100.0f)) {
-        m_oceanParams.windSpeed = glm::length(windVelocity);
-        m_oceanParams.windDirection = windVelocity / m_oceanParams.windSpeed;
-        m_oceanParams.Lw = m_oceanParams.windSpeed * m_oceanParams.windSpeed / kGravity;
+    float windDirectionDegrees = glm::degrees(std::atan2(m_oceanParams.windDirection.y, m_oceanParams.windDirection.x));
+    if (ImGui::SliderFloat("Wind Direction", &windDirectionDegrees, -180.0f, 180.0f, "%.1f deg")) {
+        const float radians = glm::radians(windDirectionDegrees);
+        m_oceanParams.windDirection = {std::cos(radians), std::sin(radians)};
+        m_spectrumDirty = true;
     }
-    if (ImGui::SliderFloat("Wind Speed Z", &windVelocity.y, 0.001f, 100.0f)) {
-        m_oceanParams.windSpeed = glm::length(windVelocity);
-        m_oceanParams.windDirection = windVelocity / m_oceanParams.windSpeed;
+    if (ImGui::SliderFloat("Wind Speed", &m_oceanParams.windSpeed, 0.1f, 40.0f, "%.1f m/s")) {
         m_oceanParams.Lw = m_oceanParams.windSpeed * m_oceanParams.windSpeed / kGravity;
+        m_spectrumDirty = true;
     }
-    ImGui::SliderFloat("Amplitude", &m_oceanParams.A, 0.0f, 0.01f, "%.5f");
-    ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 4.0f * kCellSize);
-    ImGui::SliderFloat("Choppiness", &m_choppiness, 0.0f, 5.0f);
+    if (ImGui::SliderFloat("Amplitude", &m_oceanParams.A, 0.0f, 0.01f, "%.5f")) {
+        m_spectrumDirty = true;
+    }
+    if (ImGui::SliderFloat("Small Waves", &m_oceanParams.smallWaves, 0.0f, 4.0f * kCellSize)) {
+        m_spectrumDirty = true;
+    }
+    ImGui::TextDisabled("RMS wave height: %.2f m", m_rmsWaveHeight); // NOLINT
+    ImGui::SliderFloat("Choppiness", &m_choppiness, 0.0f, 2.0f);
+    ImGui::SliderFloat("Water Roughness", &m_waterRoughness, 0.03f, 0.35f);
+    ImGui::SliderFloat("Foam Threshold", &m_foamThreshold, 0.0f, 2.0f);
+    ImGui::SliderFloat("Foam Softness", &m_foamSoftness, 0.01f, 1.0f);
+    ImGui::SliderFloat("Foam Intensity", &m_foamIntensity, 0.0f, 2.0f);
+    ImGui::SliderFloat("Sun Azimuth", &m_sunAzimuthDegrees, -180.0f, 180.0f, "%.1f deg");
+    ImGui::SliderFloat("Sun Elevation", &m_sunElevationDegrees, 0.0f, 90.0f, "%.1f deg");
+    ImGui::SliderFloat("Sun Intensity", &m_sunIntensity, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+    ImGui::Combo(
+        "Tonemap Operator",
+        &m_tonemapParams.operatorIndex,
+        kTonemapOperatorNames.data(),
+        static_cast<int32_t>(kTonemapOperatorNames.size()));
+    ImGui::SliderFloat("Exposure", &m_tonemapParams.exposure, 0.05f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
     ImGui::SliderFloat("Model Scale", &m_modelScale, 0.001f, 1.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
     if (ImGui::SliderInt("Instances Per Side", &m_instancesPerSide, 1, kMaxInstancesPerSide)) {
         m_resourceContext->getGeometry("ocean").setInstanceCount(m_instancesPerSide * m_instancesPerSide);
@@ -394,14 +427,6 @@ void OceanScene::buildRenderGraph() {
                     .externalBuffer = geometry.getVertexBuffer(0)->getHandle(),
                 },
                 "ocean-positions");
-            data.normals = builder.importBuffer(
-                {
-                    .formatHint = VK_FORMAT_R32G32B32_SFLOAT,
-                    .size = geometry.getVertexBuffer(1)->getSize(),
-                    .usageFlags = VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
-                    .externalBuffer = geometry.getVertexBuffer(1)->getHandle(),
-                },
-                "ocean-normals");
         },
         [this](const FrameContext& ctx) {
             struct GeometryUpdateParams {
@@ -422,7 +447,9 @@ void OceanScene::buildRenderGraph() {
         kForwardLightingPass,
         [](rg::RenderGraph::Builder& builder) {
             builder.readBuffer(builder.getBlackboard().get<GeometryPassData>().positions, kVertexRead);
-            builder.readBuffer(builder.getBlackboard().get<GeometryPassData>().normals, kVertexRead);
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image);
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image);
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<2>>().image);
             auto& data = builder.getBlackboard().insert<OceanOutputData>();
             data.hdrImage = builder.createAttachment(
                 {
@@ -442,9 +469,19 @@ void OceanScene::buildRenderGraph() {
                 VkClearValue{.depthStencil{0.0f, 0}});
         },
         [this](const FrameContext& ctx) {
-            struct OceanVertexPushConstants {
+            // Mirrors the push constant block in ocean.{vert,frag}.glsl.
+            struct OceanPushConstants {
+                glm::vec3 sunDirection;
+                float sunIntensity;
                 float patchWorldSize;
                 int32_t instancesPerSide;
+                int32_t gridSize;
+                float choppiness;
+                float waterRoughness;
+                float foamThreshold;
+                float foamSoftness;
+                float foamIntensity;
+                float invRmsWaveHeight;
             };
 
             auto& geometry = m_resourceContext->getGeometry("ocean");
@@ -453,8 +490,19 @@ void OceanScene::buildRenderGraph() {
             ctx.commandEncoder.setScissor(m_renderer->getDefaultScissor());
             ctx.commandEncoder.setPushConstants(
                 *m_oceanPipeline->getPipelineLayout(),
-                VK_SHADER_STAGE_VERTEX_BIT,
-                OceanVertexPushConstants{kPatchWorldSize, m_instancesPerSide});
+                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                OceanPushConstants{
+                    computeSunDirection(m_sunAzimuthDegrees, m_sunElevationDegrees),
+                    m_sunIntensity,
+                    kPatchWorldSize,
+                    m_instancesPerSide,
+                    N,
+                    m_choppiness,
+                    m_waterRoughness,
+                    m_foamThreshold,
+                    m_foamSoftness,
+                    m_foamIntensity,
+                    1.0f / std::max(m_rmsWaveHeight, 1e-4f)});
             ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
             geometry.bindAndDraw(ctx.commandEncoder);
 
@@ -465,8 +513,16 @@ void OceanScene::buildRenderGraph() {
             skyboxNode.geometry->bindAndDraw(ctx.commandEncoder);
         });
 
+    addTonemapPass(
+        *m_renderGraph,
+        *m_renderer,
+        *m_resourceContext,
+        m_renderGraph->getBlackboard().get<OceanOutputData>().hdrImage,
+        // The render test copies the tonemapped image straight out; see Scenes/Test.
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
-    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&OceanOutputData::hdrImage>());
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&TonemapPassData::image>());
 
     m_skybox = std::make_unique<Skybox>(
         m_renderer,
@@ -474,50 +530,26 @@ void OceanScene::buildRenderGraph() {
         m_envLight->getCubeMapView(),
         m_resourceContext->imageCache.getSampler("linearClamp"));
 
-    m_passResources->oscillation =
-        createOscillationPassDispatch(*m_renderer, *m_renderGraph, m_resourceContext->imageCache);
-    createFftDispatches<0>(
-        *m_passResources,
-        *m_renderer,
-        *m_renderGraph,
-        m_renderGraph->getResourceImageView(
-            m_renderGraph->getBlackboard().get<OscillationPassData>().packedHeightDispX));
-    createFftDispatches<1>(
-        *m_passResources,
-        *m_renderer,
-        *m_renderGraph,
-        m_renderGraph->getResourceImageView(
-            m_renderGraph->getBlackboard().get<OscillationPassData>().packedDispZNormalX));
-    createFftDispatches<2>(
-        *m_passResources,
-        *m_renderer,
-        *m_renderGraph,
-        m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<OscillationPassData>().normalZ));
-
-    const auto finalFftView = [this]<size_t Tag>() -> const VulkanImageView& {
-        return m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<VerticalFftPassData<Tag>>().image);
-    };
+    m_passResources->oscillation = createOscillationPassDispatch(*m_renderer, m_resourceContext->imageCache);
+    createFftDispatches<0>(*m_passResources, *m_renderer);
+    createFftDispatches<1>(*m_passResources, *m_renderer);
+    createFftDispatches<2>(*m_passResources, *m_renderer);
 
     auto& geometryDispatch = m_passResources->geometry;
     geometryDispatch.workGroupSize = {16, 16, 1};
     geometryDispatch.dispatchSize = computeWorkGroupCount(glm::uvec3(N + 1, N + 1, 1), geometryDispatch.workGroupSize);
-    geometryDispatch.pipeline =
-        createComputePipeline(*m_renderer, "ocean-geometry.comp", geometryDispatch.workGroupSize);
+    geometryDispatch.pipeline = createComputePipeline(
+        m_renderer->getDevice(),
+        m_renderer->getAssetPaths().getShaderSpvPath("ocean-geometry.comp"),
+        geometryDispatch.workGroupSize);
     geometryDispatch.material = std::make_unique<Material>(geometryDispatch.pipeline.get());
     auto& geometry = m_resourceContext->getGeometry("ocean");
     geometryDispatch.material->writeDescriptor(0, 0, geometry.getVertexBuffer(0)->createDescriptorInfo());
-    geometryDispatch.material->writeDescriptor(0, 1, geometry.getVertexBuffer(1)->createDescriptorInfo());
-    auto& linearRepeat = m_resourceContext->imageCache.getSampler("linearRepeat");
-    geometryDispatch.material->writeDescriptor(0, 2, finalFftView.operator()<0>(), linearRepeat);
-    geometryDispatch.material->writeDescriptor(0, 3, finalFftView.operator()<1>(), linearRepeat);
 
     m_oceanPipeline = m_resourceContext->createPipeline(
         "ocean", "Ocean.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
     m_oceanMaterial = m_resourceContext->createMaterial("ocean", m_oceanPipeline);
     m_oceanMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
-    m_oceanMaterial->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
-    m_oceanMaterial->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
-    m_oceanMaterial->writeDescriptor(0, 3, finalFftView.operator()<2>(), linearRepeat);
     m_oceanMaterial->writeDescriptor(1, 0, *m_resourceContext->getRingBuffer("camera"));
     m_oceanMaterial->writeDescriptor(
         1, 1, m_envLight->getDiffuseMapView(), m_resourceContext->imageCache.getSampler("linearClamp"));
@@ -528,6 +560,39 @@ void OceanScene::buildRenderGraph() {
         3,
         m_resourceContext->imageCache.getImage("brdfLut").getView(),
         m_resourceContext->imageCache.getSampler("linearClamp"));
+
+    writeGraphDependentDescriptors();
+}
+
+void OceanScene::writeGraphDependentDescriptors() {
+    const auto& oscillationData = m_renderGraph->getBlackboard().get<OscillationPassData>();
+    const auto& seedView = [this](const RenderGraphResourceHandle handle) -> const VulkanImageView& {
+        return m_renderGraph->getResourceImageView(handle);
+    };
+
+    auto& oscillation = *m_passResources->oscillation.material;
+    oscillation.writeDescriptor(
+        0, 1, seedView(oscillationData.packedHeightDispX).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+    oscillation.writeDescriptor(
+        0, 2, seedView(oscillationData.packedDispZNormalX).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+    oscillation.writeDescriptor(
+        0, 3, seedView(oscillationData.normalZ).getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+
+    writeFftDispatchDescriptors<0>(*m_passResources, *m_renderGraph, seedView(oscillationData.packedHeightDispX));
+    writeFftDispatchDescriptors<1>(*m_passResources, *m_renderGraph, seedView(oscillationData.packedDispZNormalX));
+    writeFftDispatchDescriptors<2>(*m_passResources, *m_renderGraph, seedView(oscillationData.normalZ));
+
+    const auto finalFftView = [this]<size_t Tag>() -> const VulkanImageView& {
+        return m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<VerticalFftPassData<Tag>>().image);
+    };
+    auto& linearRepeat = m_resourceContext->imageCache.getSampler("linearRepeat");
+
+    m_passResources->geometry.material->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
+    m_passResources->geometry.material->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
+
+    m_oceanMaterial->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
+    m_oceanMaterial->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
+    m_oceanMaterial->writeDescriptor(0, 3, finalFftView.operator()<2>(), linearRepeat);
 
     m_renderer->getDevice().flushDescriptorUpdates();
 }

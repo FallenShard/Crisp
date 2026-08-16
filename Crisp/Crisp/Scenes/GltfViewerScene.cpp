@@ -7,7 +7,6 @@
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
-#include <Crisp/Vulkan/PipelineBuilder.hpp>
 #include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
 #include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 

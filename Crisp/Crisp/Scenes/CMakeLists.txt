@@ -6,6 +6,7 @@ add_cpp_static_library(CrispScenes
     # "AmbientOcclusionScene.hpp"
     "AtmosphereScene.cpp"
     "AtmosphereScene.hpp"
+
     # "ClusteredLightingScene.cpp"
     # "ClusteredLightingScene.hpp"
     # "GltfViewerScene.cpp"
@@ -78,6 +79,15 @@ target_link_libraries(CrispOceanScene
     PRIVATE Crisp::MaterialUtils
     PRIVATE Crisp::ImGuiCameraUtils
 )
+add_cpp_test(CrispOceanSceneTest
+    "Test/OceanSceneRenderTest.cpp")
+target_link_libraries(CrispOceanSceneTest
+    PRIVATE Crisp::OceanScene
+    PRIVATE Crisp::Renderer
+    PRIVATE Crisp::Application
+    PRIVATE Crisp::ImageIo)
+target_add_test_file(CrispOceanSceneTest "Test/Data/ocean-reference.exr")
+
 target_link_libraries(CrispPbrScene
     PUBLIC Crisp::Scene
     PUBLIC Crisp::Camera

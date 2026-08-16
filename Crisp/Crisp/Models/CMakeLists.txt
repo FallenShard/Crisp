@@ -2,6 +2,7 @@ add_cpp_static_library(CrispModels
 
     "Atmosphere.cpp"
     "Atmosphere.hpp"
+
     # "BoxVisualizer.cpp"
     # "BoxVisualizer.hpp"
     # "FluidSimulation.hpp"
@@ -33,7 +34,7 @@ target_link_libraries(CrispOceanTest
     PRIVATE Crisp::VulkanTestUtils
     PRIVATE Crisp::Models
 )
-add_test_shader(CrispOceanTest "../Shaders/ocean-spectrum.comp.glsl")
-add_test_shader(CrispOceanTest "../Shaders/ocean-reverse-bits.comp.glsl")
-add_test_shader(CrispOceanTest "../Shaders/ifft-hori.comp.glsl")
-add_test_shader(CrispOceanTest "../Shaders/ifft-vert.comp.glsl")
+target_add_test_shader(CrispOceanTest "../Shaders/ocean-spectrum.comp.glsl")
+target_add_test_shader(CrispOceanTest "../Shaders/ifft.comp.glsl")
+target_add_test_file(
+    CrispOceanTest "../Shaders/Common/math-constants.part.glsl" "Common/math-constants.part.glsl")

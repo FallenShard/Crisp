@@ -93,22 +93,29 @@ function(add_cpp_test targetName)
         PRIVATE CRISP_SHADER_SOURCE_DIR="${CMAKE_SOURCE_DIR}/Crisp/Crisp/Shaders")
 endfunction()
 
-# Copies a tracked fixture into a target-specific directory in the build tree.
+# Copies a tracked fixture into a target-specific directory in the build tree. The optional third
+# argument places it at a relative path under that directory instead of at its own file name, which
+# a GLSL fixture's #include needs to stay resolvable.
 function(target_add_test_file targetName sourceFile)
     if(NOT TARGET ${targetName})
         return()
     endif()
 
+    set(relativeOutputPath "${ARGN}")
+
+    if(NOT relativeOutputPath)
+        get_filename_component(relativeOutputPath "${sourceFile}" NAME)
+    endif()
+
     get_filename_component(sourcePath "${sourceFile}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-    get_filename_component(sourceName "${sourceFile}" NAME)
-    set(outputPath "${CMAKE_CURRENT_BINARY_DIR}/TestData/${targetName}/${sourceName}")
+    set(outputPath "${CMAKE_CURRENT_BINARY_DIR}/TestData/${targetName}/${relativeOutputPath}")
     get_filename_component(outputDirectory "${outputPath}" DIRECTORY)
     file(MAKE_DIRECTORY "${outputDirectory}")
     configure_file("${sourcePath}" "${outputPath}" COPYONLY)
 endfunction()
 
 # Stages a tracked GLSL fixture for in-process compilation by its test executable.
-function(add_test_shader targetName sourceFile)
+function(target_add_test_shader targetName sourceFile)
     if(NOT TARGET ${targetName})
         return()
     endif()

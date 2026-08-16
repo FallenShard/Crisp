@@ -26,4 +26,7 @@ OceanParameters createOceanParameters(
     int32_t patchGridSize, float patchWorldSize, float windX, float windZ, float A, float l);
 
 std::vector<glm::vec2> createOceanSpectrum(uint32_t seed, const OceanParameters& oceanParams);
+
+// Scale for the shader's foam thresholds, so they survive wind and amplitude changes.
+float computeRmsWaveHeight(const OceanParameters& oceanParams);
 } // namespace crisp

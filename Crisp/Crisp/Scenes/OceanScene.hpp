@@ -5,6 +5,7 @@
 #include <Crisp/Lights/EnvironmentLight.hpp>
 #include <Crisp/Models/Ocean.hpp>
 #include <Crisp/Models/Skybox.hpp>
+#include <Crisp/Models/Tonemap.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/Scene.hpp>
@@ -27,6 +28,7 @@ private:
     void setupResources();
     void buildRenderGraph();
     void resetCamera();
+    void writeGraphDependentDescriptors();
 
     std::unique_ptr<VulkanImage> createInitialSpectrum();
 
@@ -42,7 +44,20 @@ private:
     std::unique_ptr<EnvironmentLight> m_envLight;
     std::unique_ptr<Skybox> m_skybox;
     OceanParameters m_oceanParams;
+    TonemapParameters m_tonemapParams{};
     float m_choppiness;
+    float m_waterRoughness{0.08f};
+    float m_foamThreshold{0.2f};
+    float m_foamSoftness{0.1f};
+    float m_foamIntensity{1.0f};
+
+    float m_sunAzimuthDegrees{45.0f};
+    float m_sunElevationDegrees{35.0f};
+    float m_sunIntensity{1.0f};
+
+    // Foam thresholds are expressed relative to it, so they survive wind and amplitude changes.
+    float m_rmsWaveHeight{1.0f};
+    bool m_spectrumDirty{true};
 
     // Uniform scale on the ocean's model matrix, so a patch can be inspected as an object.
     float m_modelScale{1.0f};

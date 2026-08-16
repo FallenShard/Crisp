@@ -24,25 +24,31 @@ std::unique_ptr<VulkanPipeline> createComputePipelineFromModule(
     VkShaderModule shaderModule,
     std::unique_ptr<VulkanPipelineLayout> layout,
     const VkExtent3D& workGroupSize,
-    const std::span<const uint32_t> specializationConstants) {
-    std::vector<uint32_t> specializationData{
-        workGroupSize.width,
-        workGroupSize.height,
-        workGroupSize.depth,
-    };
-    specializationData.insert(specializationData.end(), specializationConstants.begin(), specializationConstants.end());
+    const SpecializationConstantMap& specializationConstants) {
+    auto specConstants = specializationConstants;
+    specConstants.emplace(0, workGroupSize.width);
+    specConstants.emplace(1, workGroupSize.height);
+    specConstants.emplace(2, workGroupSize.depth);
 
-    // IDs 0-2 are reserved by the shaders for local_size_*_id; caller-provided values follow them.
-    std::vector<VkSpecializationMapEntry> specEntries(specializationData.size());
-    for (uint32_t i = 0; i < specEntries.size(); ++i) {
-        specEntries[i] = VkSpecializationMapEntry{i, i * sizeof(uint32_t), sizeof(uint32_t)};
+    std::vector<uint32_t> specData;
+    specData.reserve(specConstants.size());
+    std::vector<VkSpecializationMapEntry> specEntries;
+    specEntries.reserve(specConstants.size());
+    for (const auto& [id, value] : specConstants) {
+        specEntries.push_back(
+            VkSpecializationMapEntry{
+                .constantID = id,
+                .offset = static_cast<uint32_t>(specData.size() * sizeof(uint32_t)),
+                .size = sizeof(uint32_t),
+            });
+        specData.push_back(value);
     }
 
     VkSpecializationInfo specInfo = {};
     specInfo.mapEntryCount = static_cast<uint32_t>(specEntries.size());
     specInfo.pMapEntries = specEntries.data();
-    specInfo.dataSize = specializationData.size() * sizeof(specializationData[0]);
-    specInfo.pData = specializationData.data();
+    specInfo.dataSize = specData.size() * sizeof(specData[0]);
+    specInfo.pData = specData.data();
 
     VkComputePipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
     pipelineInfo.stage = createShaderStageInfo(VK_SHADER_STAGE_COMPUTE_BIT, shaderModule);
@@ -63,7 +69,7 @@ std::unique_ptr<VulkanPipeline> createComputePipeline(
     const std::filesystem::path& spvPath,
     const VkExtent3D& workGroupSize,
     const std::function<void(PipelineLayoutBuilder&)>& builderOverride,
-    const std::span<const uint32_t> specializationConstants) {
+    const SpecializationConstantMap& specializationConstants) {
     PipelineLayoutBuilder layoutBuilder(reflectPipelineLayoutFromSpirv(spvPath).unwrap());
     if (builderOverride) {
         builderOverride(layoutBuilder);

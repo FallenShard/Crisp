@@ -16,12 +16,13 @@ void addTonemapPass(
     rg::RenderGraph& renderGraph,
     Renderer& renderer,
     ResourceContext& resourceContext,
-    const RenderGraphResourceHandle hdrImage) {
+    const RenderGraphResourceHandle hdrImage,
+    const VkImageUsageFlags extraImageUsageFlags) {
     resourceContext.imageCache.addSampler(kTonemapSamplerId, createLinearClampSampler(renderer.getDevice()));
 
     renderGraph.addPass(
         kTonemapPass,
-        [hdrImage](rg::RenderGraph::Builder& builder) {
+        [hdrImage, extraImageUsageFlags](rg::RenderGraph::Builder& builder) {
             builder.readTexture(hdrImage);
 
             auto& data = builder.getBlackboard().insert<TonemapPassData>();
@@ -31,12 +32,17 @@ void addTonemapPass(
                     // Still floating point: the curve output is in [0, 1] but quantizing here would band before
                     // the sRGB encode gets a chance to distribute the error.
                     .format = VK_FORMAT_R16G16B16A16_SFLOAT,
+                    .imageUsageFlags = extraImageUsageFlags,
                 },
                 "tonemappedImage");
             builder.exportTexture(data.image);
         },
-        [&renderer, &resourceContext, &renderGraph, hdrImage, material = static_cast<Material*>(nullptr)](
-            const FrameContext& ctx) mutable {
+        [&renderer,
+         &resourceContext,
+         &renderGraph,
+         hdrImage,
+         material = static_cast<Material*>(nullptr),
+         boundHdrView = VkImageView{VK_NULL_HANDLE}](const FrameContext& ctx) mutable {
             // The render graph only allocates its physical images during compile(), so the material cannot be
             // built until the pass first executes.
             if (material == nullptr) {
@@ -47,11 +53,13 @@ void addTonemapPass(
                     renderGraph.getRasterizationPassDescriptor(kTonemapPass));
                 material = resourceContext.createMaterial(kTonemapMaterialId, pipeline);
                 material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kTonemapBufferId));
-                material->writeDescriptor(
-                    1,
-                    0,
-                    renderGraph.getResourceImageView(hdrImage),
-                    resourceContext.imageCache.getSampler(kTonemapSamplerId));
+            }
+
+            // A resize recompiles the graph and hands out a new view, leaving the bound one destroyed.
+            const VulkanImageView& hdrView = renderGraph.getResourceImageView(hdrImage);
+            if (hdrView.getHandle() != boundHdrView) {
+                boundHdrView = hdrView.getHandle();
+                material->writeDescriptor(1, 0, hdrView, resourceContext.imageCache.getSampler(kTonemapSamplerId));
                 renderer.getDevice().flushDescriptorUpdates();
             }
 

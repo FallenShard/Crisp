@@ -7,6 +7,7 @@
 #include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
+#include <array>
 #include <numeric>
 
 namespace crisp {
@@ -16,9 +17,7 @@ using OceanTest = VulkanTest;
 const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispOceanTest";
 const TestShaderMap kTestShaders{
     kShaderSourceDirectory / "ocean-spectrum.comp.glsl",
-    kShaderSourceDirectory / "ocean-reverse-bits.comp.glsl",
-    kShaderSourceDirectory / "ifft-hori.comp.glsl",
-    kShaderSourceDirectory / "ifft-vert.comp.glsl",
+    kShaderSourceDirectory / "ifft.comp.glsl",
 };
 
 TEST_F(OceanTest, PatchConstruction) {
@@ -33,22 +32,6 @@ TEST_F(OceanTest, PatchConstruction) {
         EXPECT_NEAR(boundingBox.getExtents().z, kSize, 1e-8);
     }
 }
-
-// TEST_F(OceanTest, PatchConstruction)
-//{
-//     constexpr int32_t N = 512;
-//     constexpr float kSize = 5.0;
-//     const std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {
-//         {VertexAttribute::Position}, {VertexAttribute::Normal}};
-//
-//     TriangleMesh mesh = createGridMesh(flatten(vertexFormat), kSize, N - 1);
-//     EXPECT_EQ(mesh.getVertexCount(), N * N);
-//
-//     const auto boundingBox = mesh.getBoundingBox();
-//     EXPECT_NEAR(boundingBox.getExtents().x, kSize, 1e-8);
-//     EXPECT_NEAR(boundingBox.getExtents().y, 0.0, 1e-8);
-//     EXPECT_NEAR(boundingBox.getExtents().z, kSize, 1e-8);
-// }
 
 TEST_F(OceanTest, VulkanBuffer) {
     constexpr VkDeviceSize elementCount = 25;
@@ -109,17 +92,16 @@ struct FftDispatch {
     std::unique_ptr<Material> material;
 };
 
-// Binds a fresh descriptor set from a fresh pipeline instance, mirroring how OceanScene.cpp wires
-// one pipeline+material pair per FFT pass rather than sharing one pipeline's descriptor pool across
-// several sets (createComputePipeline() sizes the pool for a single allocation).
+// One pipeline+material pair per pass: createComputePipeline() sizes the pool for a single set.
 FftDispatch createImageToImageDispatch(
     const VulkanDevice& device,
     const std::filesystem::path& spv,
     const VkExtent3D& workGroupSize,
     const VulkanImageView& srcView,
-    const VulkanImageView& dstView) {
+    const VulkanImageView& dstView,
+    const SpecializationConstantMap& specializationConstants = {}) {
     FftDispatch dispatch{};
-    dispatch.pipeline = createComputePipeline(device, spv, workGroupSize);
+    dispatch.pipeline = createComputePipeline(device, spv, workGroupSize, {}, specializationConstants);
     dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
     dispatch.material->writeDescriptor(0, 0, srcView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     dispatch.material->writeDescriptor(0, 1, dstView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -139,33 +121,24 @@ void runFftDispatch(
     encoder.insertBarrier(kComputeStorageWrite >> kComputeStorageRead);
 }
 
-struct BitReversalPushConstants {
-    int32_t reversalDirection; // 0 is horizontal, 1 is vertical.
-    int32_t passCount;
-};
-
 struct IfftPushConstants {
-    int32_t passIdx;
     int32_t N;
+    int32_t logN;
 };
 
-// A Hermitian-symmetric spectrum (h(-k) = conj(h(k))) must inverse-transform to a real-valued
-// signal. This runs the actual ocean-spectrum/bit-reverse/ifft compute shaders end to end on a
-// small grid and checks that the final normalZ image's imaginary channel is ~0 -- the invariant
-// the Hermitian-symmetry fix in ocean-spectrum.comp.glsl relies on, and the free correctness
-// assertion the ocean-scene plan calls for ahead of the shared-memory FFT rewrite. normalZ (rather
-// than the height/dispX channel) is checked because it's the one FFT channel ocean-spectrum.comp
-// leaves unpaired -- height and dispX are packed into one complex FFT (IFFT(A + i*B) = a(x) +
-// i*b(x)), so that channel's imaginary component is meaningful spatial data (dispX), not residue.
+// Must match the constant_id declarations in ifft.comp.glsl; 0..2 are the work group dimensions.
+constexpr uint32_t kMaxNConstantId = 3;
+constexpr uint32_t kApplyOriginShiftConstantId = 4;
+constexpr uint32_t kTransposedConstantId = 5;
+
+// A Hermitian spectrum must inverse-transform to a real signal. normalZ is checked because it is
+// the one unpaired channel: the packed ones carry real spatial data in their imaginary half.
 TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
     VulkanDevice& device = *device_;
     const VkExtent3D workGroupSize{static_cast<uint32_t>(kFftGridSize), static_cast<uint32_t>(kFftGridSize), 1};
     const VkExtent3D workGroupCount = computeWorkGroupCount(glm::uvec3(kFftGridSize, kFftGridSize, 1), workGroupSize);
 
-    // smallWaves (l) is set to 4x cell size, matching kCellSize scaling used in production
-    // (OceanScene.cpp): it damps energy near the Nyquist frequency, where a non-axis-aligned wind
-    // direction otherwise breaks the spectrum's Hermitian symmetry (see the -k negation in
-    // calculatePhillipsSpectrum() aliasing incorrectly at the Nyquist row/column).
+    // smallWaves damps energy near Nyquist, where an off-axis wind otherwise breaks Hermitian symmetry.
     const OceanParameters params = createOceanParameters(
         kFftGridSize, /*patchWorldSize=*/16.0f, /*windX=*/10.0f, /*windZ=*/3.0f, /*A=*/0.01f, /*l=*/4.0f);
     const auto seedSpectrum = createOceanSpectrum(/*seed=*/7, params);
@@ -174,27 +147,15 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
     auto packedHeightDispX = createFftImage(device, kFftGridSize);
     auto packedDispZNormalX = createFftImage(device, kFftGridSize);
     auto normalZ = createFftImage(device, kFftGridSize);
-    auto bitRevH = createFftImage(device, kFftGridSize);
-    auto bitRevV = createFftImage(device, kFftGridSize);
-    std::vector<std::unique_ptr<VulkanImage>> ifftH;
-    std::vector<std::unique_ptr<VulkanImage>> ifftV;
-    for (int32_t i = 0; i < kFftLogGridSize; ++i) {
-        ifftH.push_back(createFftImage(device, kFftGridSize));
-        ifftV.push_back(createFftImage(device, kFftGridSize));
-    }
+    auto ifftHori = createFftImage(device, kFftGridSize);
+    auto ifftVert = createFftImage(device, kFftGridSize);
 
     auto seedView = createView(device, *seedImage, VK_IMAGE_VIEW_TYPE_2D);
     auto packedHeightDispXView = createView(device, *packedHeightDispX, VK_IMAGE_VIEW_TYPE_2D);
     auto packedDispZNormalXView = createView(device, *packedDispZNormalX, VK_IMAGE_VIEW_TYPE_2D);
     auto normalZView = createView(device, *normalZ, VK_IMAGE_VIEW_TYPE_2D);
-    auto bitRevHView = createView(device, *bitRevH, VK_IMAGE_VIEW_TYPE_2D);
-    auto bitRevVView = createView(device, *bitRevV, VK_IMAGE_VIEW_TYPE_2D);
-    std::vector<std::unique_ptr<VulkanImageView>> ifftHViews;
-    std::vector<std::unique_ptr<VulkanImageView>> ifftVViews;
-    for (int32_t i = 0; i < kFftLogGridSize; ++i) {
-        ifftHViews.push_back(createView(device, *ifftH[i], VK_IMAGE_VIEW_TYPE_2D));
-        ifftVViews.push_back(createView(device, *ifftV[i], VK_IMAGE_VIEW_TYPE_2D));
-    }
+    auto ifftHoriView = createView(device, *ifftHori, VK_IMAGE_VIEW_TYPE_2D);
+    auto ifftVertView = createView(device, *ifftVert, VK_IMAGE_VIEW_TYPE_2D);
 
     auto spectrumPipeline =
         createComputePipeline(device, kTestShaders.getSpirvPath("ocean-spectrum.comp.glsl"), workGroupSize);
@@ -204,30 +165,23 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
     spectrumMaterial.writeDescriptor(0, 2, packedDispZNormalXView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     spectrumMaterial.writeDescriptor(0, 3, normalZView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-    const auto& bitRevSpv = kTestShaders.getSpirvPath("ocean-reverse-bits.comp.glsl");
-    const auto& ifftHoriSpv = kTestShaders.getSpirvPath("ifft-hori.comp.glsl");
-    const auto& ifftVertSpv = kTestShaders.getSpirvPath("ifft-vert.comp.glsl");
+    // One workgroup per line, N/2 threads each, matching how OceanScene dispatches these.
+    constexpr VkExtent3D kIfftWorkGroupSize{kFftGridSize / 2, 1, 1};
+    const SpecializationConstantMap kHoriConstants{{kMaxNConstantId, kFftGridSize}};
+    const SpecializationConstantMap kVertConstants{
+        {kMaxNConstantId, kFftGridSize},
+        {kApplyOriginShiftConstantId, VK_TRUE},
+        {kTransposedConstantId, VK_TRUE}};
 
-    FftDispatch bitRevHDispatch =
-        createImageToImageDispatch(device, bitRevSpv, workGroupSize, *normalZView, *bitRevHView);
-    std::vector<FftDispatch> ifftHDispatches;
-    for (int32_t i = 0; i < kFftLogGridSize; ++i) {
-        const auto& srcView = i == 0 ? *bitRevHView : *ifftHViews[i - 1];
-        ifftHDispatches.push_back(
-            createImageToImageDispatch(device, ifftHoriSpv, workGroupSize, srcView, *ifftHViews[i]));
-    }
-    FftDispatch bitRevVDispatch =
-        createImageToImageDispatch(device, bitRevSpv, workGroupSize, *ifftHViews[kFftLogGridSize - 1], *bitRevVView);
-    std::vector<FftDispatch> ifftVDispatches;
-    for (int32_t i = 0; i < kFftLogGridSize; ++i) {
-        const auto& srcView = i == 0 ? *bitRevVView : *ifftVViews[i - 1];
-        ifftVDispatches.push_back(
-            createImageToImageDispatch(device, ifftVertSpv, workGroupSize, srcView, *ifftVViews[i]));
-    }
+    const auto& ifftSpv = kTestShaders.getSpirvPath("ifft.comp.glsl");
+    FftDispatch ifftHoriDispatch = createImageToImageDispatch(
+        device, ifftSpv, kIfftWorkGroupSize, *normalZView, *ifftHoriView, kHoriConstants);
+    FftDispatch ifftVertDispatch = createImageToImageDispatch(
+        device, ifftSpv, kIfftWorkGroupSize, *ifftHoriView, *ifftVertView, kVertConstants);
 
     device.flushDescriptorUpdates();
 
-    VulkanImage& finalImage = *ifftV[kFftLogGridSize - 1];
+    VulkanImage& finalImage = *ifftVert;
     VulkanBuffer downloadBuffer(
         device,
         static_cast<VkDeviceSize>(kFftGridSize) * kFftGridSize * sizeof(glm::vec2),
@@ -252,12 +206,8 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
         encoder.transitionLayout(*seedImage, VK_IMAGE_LAYOUT_GENERAL, kTransferWrite >> kComputeStorageRead);
 
         for (VulkanImage* image :
-             {packedHeightDispX.get(), packedDispZNormalX.get(), normalZ.get(), bitRevH.get(), bitRevV.get()}) {
+             {packedHeightDispX.get(), packedDispZNormalX.get(), normalZ.get(), ifftHori.get(), ifftVert.get()}) {
             encoder.transitionLayout(*image, VK_IMAGE_LAYOUT_GENERAL, kNullStage >> kComputeStorageWrite);
-        }
-        for (int32_t i = 0; i < kFftLogGridSize; ++i) {
-            encoder.transitionLayout(*ifftH[i], VK_IMAGE_LAYOUT_GENERAL, kNullStage >> kComputeStorageWrite);
-            encoder.transitionLayout(*ifftV[i], VK_IMAGE_LAYOUT_GENERAL, kNullStage >> kComputeStorageWrite);
         }
 
         encoder.bindPipeline(*spectrumPipeline);
@@ -266,14 +216,10 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
         encoder.dispatchCompute(workGroupCount);
         encoder.insertBarrier(kComputeStorageWrite >> kComputeStorageRead);
 
-        runFftDispatch(encoder, bitRevHDispatch, BitReversalPushConstants{0, kFftLogGridSize}, workGroupCount);
-        for (int32_t i = 0; i < kFftLogGridSize; ++i) {
-            runFftDispatch(encoder, ifftHDispatches[i], IfftPushConstants{i + 1, kFftGridSize}, workGroupCount);
-        }
-        runFftDispatch(encoder, bitRevVDispatch, BitReversalPushConstants{1, kFftLogGridSize}, workGroupCount);
-        for (int32_t i = 0; i < kFftLogGridSize; ++i) {
-            runFftDispatch(encoder, ifftVDispatches[i], IfftPushConstants{i + 1, kFftGridSize}, workGroupCount);
-        }
+        constexpr IfftPushConstants kIfftPushConstants{kFftGridSize, kFftLogGridSize};
+        constexpr VkExtent3D kIfftDispatchSize{1, kFftGridSize, 1};
+        runFftDispatch(encoder, ifftHoriDispatch, kIfftPushConstants, kIfftDispatchSize);
+        runFftDispatch(encoder, ifftVertDispatch, kIfftPushConstants, kIfftDispatchSize);
 
         encoder.transitionLayout(
             finalImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, kComputeStorageWrite >> kTransferRead);
@@ -285,9 +231,7 @@ TEST_F(OceanTest, InverseTransformOfHermitianSpectrumIsReal) {
         encoder.copyImageToBuffer(finalImage, downloadBuffer, finalRegion);
     }
 
-    // Checked relative to the signal's own scale (driven by the wind/amplitude parameters above)
-    // rather than an absolute epsilon: float32 butterfly arithmetic accumulates roundoff
-    // proportional to the magnitude of the values being transformed, not to a fixed constant.
+    // Relative: float32 butterfly roundoff scales with the magnitude being transformed.
     const std::span<const glm::vec2> result(
         downloadBuffer.getHostVisibleData<glm::vec2>(), static_cast<size_t>(kFftGridSize) * kFftGridSize);
     float maxAbsReal = 0.0f;

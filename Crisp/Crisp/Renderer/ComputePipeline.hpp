@@ -1,20 +1,22 @@
 #pragma once
 
 #include <filesystem>
+#include <flat_map>
 #include <functional>
-#include <span>
 
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 namespace crisp {
+using SpecializationConstantMap = std::flat_map<uint32_t, uint32_t>;
+
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     const VulkanDevice& device,
     const std::filesystem::path& spvPath,
     const VkExtent3D& workGroupSize,
     const std::function<void(PipelineLayoutBuilder&)>& builderOverride = {},
-    std::span<const uint32_t> specializationConstants = {});
+    const SpecializationConstantMap& specializationConstants = {});
 
 VkExtent3D getWorkGroupSize(const VulkanPipeline& pipeline);
 

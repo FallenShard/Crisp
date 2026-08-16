@@ -1,14 +1,13 @@
 {
-    "shaders": { "vert": "ocean.vert", "frag": "ocean.frag" },
+    "shaders"            : { "vert": "ocean.vert", "frag": "ocean.frag" },
     "vertexInputBindings": [
-        { "locations": [ 0 ], "inputRate": "vertex" },
-        { "locations": [ 1 ], "inputRate": "vertex" }
+        { "locations": [ 0 ], "inputRate": "vertex" }
     ],
-    "descriptorSets": [
+    "descriptorSets"     : [
         { "buffered": false, "dynamicBuffers": [ 0 ] },
         { "buffered": false, "dynamicBuffers": [ 0 ] }
     ],
-    "depthStencil": { "reverseDepth": true },
-    "multisample": { "sampleCount": 1 },
-    "rasterization": { "cullMode": "none" }
+    "depthStencil"       : { "reverseDepth": true },
+    "multisample"        : { "sampleCount": 1 },
+    "rasterization"      : { "cullMode": "none" }
 }

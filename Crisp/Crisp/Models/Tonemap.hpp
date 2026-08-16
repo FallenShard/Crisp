@@ -50,6 +50,7 @@ void addTonemapPass(
     rg::RenderGraph& renderGraph,
     Renderer& renderer,
     ResourceContext& resourceContext,
-    RenderGraphResourceHandle hdrImage);
+    RenderGraphResourceHandle hdrImage,
+    VkImageUsageFlags extraImageUsageFlags = 0);
 
 } // namespace crisp

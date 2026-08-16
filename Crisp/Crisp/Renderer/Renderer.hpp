@@ -89,6 +89,10 @@ public:
     // The producer must leave the image in SHADER_READ_ONLY_OPTIMAL.
     void setSceneImageView(const VulkanImageView* imageView);
 
+    const VulkanImageView* getSceneImageView() const {
+        return m_sceneImageView;
+    }
+
     Geometry* getFullScreenGeometry() const;
 
     std::unique_ptr<VulkanPipeline> createPipeline(
