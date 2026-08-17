@@ -117,4 +117,6 @@ float computeBandWavelength(const OceanCascade& cascade);
 // Makes the cos^2s(theta/2) spread integrate to one over all directions, so it redistributes the
 // frequency spectrum's energy instead of adding to it.
 float computeDirectionalSpreadNormalization(float directionalSpread);
+
+std::vector<float> createTileableFoamNoise(uint32_t size, uint32_t seed, uint32_t octaves);
 } // namespace crisp

@@ -30,6 +30,12 @@ constexpr float kFinestCellSize = kPatchWorldSizes[kOceanCascadeCount - 1] / N;
 
 constexpr int32_t kMaxInstancesPerSide = 8;
 
+constexpr int32_t kFoamGridSize = 512;
+constexpr uint32_t kFoamLayerCount = 2;
+
+constexpr uint32_t kFoamNoiseSize = 256;
+constexpr uint32_t kFoamNoiseOctaves = 5;
+
 // Mirrors the push constant block in Shaders/Common/ocean-draw.part.glsl.
 struct OceanPushConstants {
     glm::vec3 sunDirection;
@@ -46,14 +52,18 @@ struct OceanPushConstants {
     float foamIntensity;
     float invRmsWaveHeight;
     float slopeVarianceScale;
-    glm::vec2 pad;
+    float foamPatchWorldSize;
+    int32_t foamLayer;
 
     glm::vec4 cascadeSizes;
     glm::vec4 cascadeWavelengths;
     glm::vec4 cascadeSlopeVariances;
+
+    float foamErosion;
+    float foamFreshness;
 };
 
-static_assert(sizeof(OceanPushConstants) == 112);
+static_assert(sizeof(OceanPushConstants) == 120);
 
 struct OscillationPassData {
     RenderGraphResourceHandle packedDisplacement;
@@ -70,9 +80,35 @@ struct VerticalFftPassData {
     RenderGraphResourceHandle image;
 };
 
+struct FoamPassData {
+    RenderGraphResourceHandle foam;
+};
+
 struct OceanOutputData {
     RenderGraphResourceHandle hdrImage;
 };
+
+// Mirrors the push constant block in ocean-foam.comp.glsl.
+struct FoamPushConstants {
+    int32_t foamGridSize;
+    float foamPatchWorldSize;
+    float vertexSpacing;
+    float choppiness;
+
+    float deltaTime;
+    float halfLife;
+    float injectionThreshold;
+    float injectionGain;
+
+    glm::vec2 driftVelocity;
+    int32_t readLayer;
+    int32_t writeLayer;
+
+    glm::vec4 cascadeSizes;
+    glm::vec4 cascadeWavelengths;
+};
+
+static_assert(sizeof(FoamPushConstants) == 80);
 
 // Y-up: elevation is measured from the horizon, azimuth around +Y from +Z.
 glm::vec3 computeSunDirection(const float azimuthDegrees, const float elevationDegrees) {
@@ -98,6 +134,7 @@ struct ComputeDispatch {
 
 struct OceanPassResources {
     ComputeDispatch oscillation;
+    ComputeDispatch foam;
     FlatStringHashMap<ComputeDispatch> ifft;
 };
 
@@ -198,6 +235,11 @@ void OceanScene::setupResources() {
     m_resourceContext->addGeometry("ocean", createGeometry(*m_renderer, mesh, vertexFormat))
         .setInstanceCount(m_instancesPerSide * m_instancesPerSide);
 
+    auto foamNoiseImage = createFoamNoise();
+    m_resourceContext->imageCache.addImageView(
+        "foamNoiseView", createView(m_renderer->getDevice(), *foamNoiseImage, VK_IMAGE_VIEW_TYPE_2D, 0, 1));
+    m_resourceContext->imageCache.addImage("foamNoise", std::move(foamNoiseImage));
+
     auto spectrumImage = createInitialSpectrum();
     m_resourceContext->imageCache.addImageView(
         "randImageView",
@@ -279,6 +321,8 @@ void OceanScene::update(const UpdateParams& updateParams) {
     m_transformBuffer->updateStagingBuffer(updateParams.frameInFlightIdx);
     m_skybox->updateTransforms(cameraParams.V, cameraParams.P, updateParams.frameInFlightIdx);
 
+    // The foam pass integrates in seconds, so a paused sim must not keep decaying it.
+    m_foamDeltaTime = m_paused ? 0.0f : updateParams.dt;
     if (!m_paused) {
         m_oceanParams.time += updateParams.dt;
     }
@@ -354,6 +398,12 @@ void OceanScene::drawGui() {
     ImGui::SliderFloat("Choppiness", &m_choppiness, 0.0f, 2.0f);
     ImGui::SliderFloat("Water Roughness", &m_waterRoughness, 0.03f, 0.35f);
     ImGui::SliderFloat("Specular AA Strength", &m_slopeVarianceScale, 0.0f, 4.0f);
+    ImGui::SliderFloat("Foam Half-Life", &m_foamHalfLife, 0.05f, 20.0f, "%.2f s", ImGuiSliderFlags_Logarithmic);
+    ImGui::SliderFloat("Foam Injection Threshold", &m_foamInjectionThreshold, 0.0f, 2.0f);
+    ImGui::SliderFloat("Foam Injection Gain", &m_foamInjectionGain, 0.0f, 8.0f);
+    ImGui::SliderFloat("Foam Drift Speed", &m_foamDriftSpeed, 0.0f, 5.0f, "%.2f m/s");
+    ImGui::SliderFloat("Foam Erosion", &m_foamErosion, 0.0f, 2.0f);
+    ImGui::SliderFloat("Foam Freshness", &m_foamFreshness, 0.05f, 4.0f);
     ImGui::SliderFloat("Foam Threshold", &m_foamThreshold, 0.0f, 2.0f);
     ImGui::SliderFloat("Foam Softness", &m_foamSoftness, 0.01f, 1.0f);
     ImGui::SliderFloat("Foam Intensity", &m_foamIntensity, 0.0f, 2.0f);
@@ -405,6 +455,34 @@ std::unique_ptr<VulkanImage> OceanScene::createInitialSpectrum() {
         };
         encoder.copyBufferToImage(*staging, *img, region);
         encoder.transitionLayout(*img, VK_IMAGE_LAYOUT_GENERAL, kTransferWrite >> kComputeStorageWrite);
+    });
+
+    return image;
+}
+
+std::unique_ptr<VulkanImage> OceanScene::createFoamNoise() {
+    const auto noise{createTileableFoamNoise(kFoamNoiseSize, /*seed=*/11, kFoamNoiseOctaves)};
+
+    auto image = createStorageImage(m_renderer->getDevice(), 1, kFoamNoiseSize, kFoamNoiseSize, VK_FORMAT_R32_SFLOAT);
+    const auto staging = createStagingBuffer(m_renderer->getDevice(), noise.data(), noise.size() * sizeof(noise[0]));
+    m_renderer->getDevice().getGeneralQueue().submitAndWait([&staging, img = image.get()](VkCommandBuffer cmdBuffer) {
+        const VulkanCommandEncoder encoder(cmdBuffer);
+        encoder.transitionLayout(*img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
+        const VkBufferImageCopy region{
+            .bufferRowLength = img->getWidth(),
+            .bufferImageHeight = img->getHeight(),
+            .imageSubresource =
+                {
+                    .aspectMask = img->getAspectMask(),
+                    .mipLevel = 0,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
+            .imageExtent = {img->getWidth(), img->getHeight(), 1},
+        };
+        encoder.copyBufferToImage(*staging, *img, region);
+        // Only ever sampled, so it can settle in its read layout here and never move again.
+        encoder.transitionLayout(*img, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentSampledRead);
     });
 
     return image;
@@ -501,12 +579,63 @@ void OceanScene::buildRenderGraph() {
     addFftPasses.operator()<1>(m_renderGraph->getBlackboard().get<OscillationPassData>().packedJacobian);
 
     m_renderGraph->addPass(
+        "foam",
+        PassType::Compute,
+        [](rg::RenderGraph::Builder& builder) {
+            builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image);
+
+            auto& data = builder.getBlackboard().insert<FoamPassData>();
+            data.foam = builder.createStorageImage(
+                {
+                    .sizePolicy = SizePolicy::Absolute,
+                    .width = kFoamGridSize,
+                    .height = kFoamGridSize,
+                    .format = VK_FORMAT_R32_SFLOAT,
+                    .layerCount = kFoamLayerCount,
+                },
+                "foam-accumulation");
+        },
+        [this](const FrameContext& ctx) {
+            glm::vec4 cascadeSizes{0.0f};
+            glm::vec4 cascadeWavelengths{0.0f};
+            for (uint32_t i = 0; i < kOceanCascadeCount; ++i) {
+                cascadeSizes[static_cast<int32_t>(i)] = m_cascades[i].patchWorldSize;
+                cascadeWavelengths[static_cast<int32_t>(i)] = computeBandWavelength(m_cascades[i]);
+            }
+
+            // Ping-pong by frame parity. Reading one layer while writing the other is what makes the
+            // drift gather safe without a second image.
+            const int32_t writeLayer = static_cast<int32_t>(ctx.frameIndex % kFoamLayerCount);
+
+            m_passResources->foam.bind(ctx);
+            ctx.commandEncoder.setPushConstants(
+                *m_passResources->foam.pipeline->getPipelineLayout(),
+                VK_SHADER_STAGE_COMPUTE_BIT,
+                FoamPushConstants{
+                    .foamGridSize = kFoamGridSize,
+                    .foamPatchWorldSize = kMeshPatchWorldSize,
+                    .vertexSpacing = kMeshPatchWorldSize / kMeshTessellation,
+                    .choppiness = m_choppiness,
+                    .deltaTime = m_foamDeltaTime,
+                    .halfLife = m_foamHalfLife,
+                    .injectionThreshold = m_foamInjectionThreshold,
+                    .injectionGain = m_foamInjectionGain,
+                    .driftVelocity = m_oceanParams.windDirection * m_foamDriftSpeed,
+                    .readLayer = 1 - writeLayer,
+                    .writeLayer = writeLayer,
+                    .cascadeSizes = cascadeSizes,
+                    .cascadeWavelengths = cascadeWavelengths});
+            ctx.commandEncoder.dispatchCompute(m_passResources->foam.dispatchSize);
+        });
+
+    m_renderGraph->addPass(
         kForwardLightingPass,
         PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
             constexpr auto kOceanMapRead = kVertexSampledRead | kFragmentSampledRead;
             builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image, kOceanMapRead);
             builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image, kOceanMapRead);
+            builder.readTexture(builder.getBlackboard().get<FoamPassData>().foam);
             auto& data = builder.getBlackboard().insert<OceanOutputData>();
             data.hdrImage = builder.createAttachment(
                 {
@@ -555,10 +684,13 @@ void OceanScene::buildRenderGraph() {
                     .foamIntensity = m_foamIntensity,
                     .invRmsWaveHeight = 1.0f / std::max(m_rmsWaveHeight, 1e-4f),
                     .slopeVarianceScale = m_slopeVarianceScale,
-                    .pad = {},
+                    .foamPatchWorldSize = kMeshPatchWorldSize,
+                    .foamLayer = static_cast<int32_t>(ctx.frameIndex % kFoamLayerCount),
                     .cascadeSizes = cascadeSizes,
                     .cascadeWavelengths = cascadeWavelengths,
-                    .cascadeSlopeVariances = cascadeSlopeVariances});
+                    .cascadeSlopeVariances = cascadeSlopeVariances,
+                    .foamErosion = m_foamErosion,
+                    .foamFreshness = m_foamFreshness});
             ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
             geometry.bindAndDraw(ctx.commandEncoder);
 
@@ -587,6 +719,16 @@ void OceanScene::buildRenderGraph() {
         m_resourceContext->imageCache.getSampler("linearClamp"));
 
     m_passResources->oscillation = createOscillationPassDispatch(*m_renderer, m_resourceContext->imageCache);
+
+    auto& foamDispatch = m_passResources->foam;
+    foamDispatch.workGroupSize = {16, 16, 1};
+    foamDispatch.dispatchSize =
+        computeWorkGroupCount(glm::uvec3(kFoamGridSize, kFoamGridSize, 1), foamDispatch.workGroupSize);
+    foamDispatch.pipeline = createComputePipeline(
+        m_renderer->getDevice(),
+        m_renderer->getAssetPaths().getShaderSpvPath("ocean-foam.comp"),
+        foamDispatch.workGroupSize);
+    foamDispatch.material = std::make_unique<Material>(foamDispatch.pipeline.get());
     createFftDispatches<0>(*m_passResources, *m_renderer);
     createFftDispatches<1>(*m_passResources, *m_renderer);
 
@@ -628,8 +770,14 @@ void OceanScene::writeGraphDependentDescriptors() {
     };
     auto& linearRepeat = m_resourceContext->imageCache.getSampler("linearRepeat");
 
+    const auto& foamView = m_renderGraph->getResourceImageView(m_renderGraph->getBlackboard().get<FoamPassData>().foam);
+    m_passResources->foam.material->writeDescriptor(0, 0, finalFftView.operator()<1>(), linearRepeat);
+    m_passResources->foam.material->writeDescriptor(0, 1, foamView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+
     m_oceanMaterial->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
     m_oceanMaterial->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
+    m_oceanMaterial->writeDescriptor(0, 3, foamView, linearRepeat);
+    m_oceanMaterial->writeDescriptor(0, 4, m_resourceContext->imageCache.getImageView("foamNoiseView"), linearRepeat);
 
     m_renderer->getDevice().flushDescriptorUpdates();
 }

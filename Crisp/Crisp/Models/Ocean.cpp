@@ -178,6 +178,54 @@ OceanCascadeMoments computeCascadeMoments(const OceanParameters& oceanParams, co
     return {.heightVariance = cellArea * heightSum, .slopeVariance = 0.5f * cellArea * slopeSum};
 }
 
+std::vector<float> createTileableFoamNoise(const uint32_t size, const uint32_t seed, const uint32_t octaves) {
+    std::mt19937 gen{seed};
+    std::uniform_real_distribution<float> distrib(0.0f, 1.0f);
+
+    std::vector<float> noise(static_cast<size_t>(size) * size, 0.0f);
+    float amplitude = 1.0f;
+    float amplitudeSum = 0.0f;
+
+    for (uint32_t octave = 0; octave < octaves; ++octave) {
+        // The lattice period doubles per octave and divides `size`, which is what keeps each octave,
+        // and therefore the sum, tileable.
+        const uint32_t period = 4u << octave;
+        std::vector<float> lattice(static_cast<size_t>(period) * period);
+        for (float& value : lattice) {
+            value = distrib(gen);
+        }
+        const auto latticeAt = [&](const uint32_t x, const uint32_t y) {
+            return lattice[static_cast<size_t>(y % period) * period + (x % period)];
+        };
+
+        const float cellSize = static_cast<float>(size) / static_cast<float>(period);
+        for (uint32_t y = 0; y < size; ++y) {
+            for (uint32_t x = 0; x < size; ++x) {
+                const float fx = static_cast<float>(x) / cellSize;
+                const float fy = static_cast<float>(y) / cellSize;
+                const auto x0 = static_cast<uint32_t>(fx);
+                const auto y0 = static_cast<uint32_t>(fy);
+                const float tx = fx - static_cast<float>(x0);
+                const float ty = fy - static_cast<float>(y0);
+                const float sx = tx * tx * (3.0f - 2.0f * tx);
+                const float sy = ty * ty * (3.0f - 2.0f * ty);
+
+                const float top = std::lerp(latticeAt(x0, y0), latticeAt(x0 + 1, y0), sx);
+                const float bottom = std::lerp(latticeAt(x0, y0 + 1), latticeAt(x0 + 1, y0 + 1), sx);
+                noise[static_cast<size_t>(y) * size + x] += amplitude * std::lerp(top, bottom, sy);
+            }
+        }
+
+        amplitudeSum += amplitude;
+        amplitude *= 0.5f;
+    }
+
+    for (float& value : noise) {
+        value /= amplitudeSum;
+    }
+    return noise;
+}
+
 float computeDirectionalSpreadNormalization(const float directionalSpread) {
     // The integral of cos^2s(theta/2) over all directions is 2*pi*C(2s,s)/4^s; through lgamma so it
     // stays finite for the large exponents a narrow spread asks for.

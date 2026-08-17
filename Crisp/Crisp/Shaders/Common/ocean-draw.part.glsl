@@ -22,12 +22,17 @@ layout(push_constant) uniform OceanPushConstant {
     layout(offset = 44) float foamIntensity;
     layout(offset = 48) float invRmsWaveHeight;
     layout(offset = 52) float slopeVarianceScale;
+    layout(offset = 56) float foamPatchWorldSize;
+    layout(offset = 60) int foamLayer;
 
     layout(offset = 64) vec4 cascadeSizes;
     // Geometric mean of each band's wavelength range, against which a sample spacing is judged.
     layout(offset = 80) vec4 cascadeWavelengths;
     // Per-axis slope variance of each band, folded into the specular lobe once the band is lost.
     layout(offset = 96) vec4 cascadeSlopeVariances;
+
+    layout(offset = 112) float foamErosion;
+    layout(offset = 116) float foamFreshness;
 };
 
 #endif // CRISP_OCEAN_DRAW_GLSL

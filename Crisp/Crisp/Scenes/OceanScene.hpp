@@ -33,6 +33,7 @@ private:
     void writeGraphDependentDescriptors();
 
     std::unique_ptr<VulkanImage> createInitialSpectrum();
+    std::unique_ptr<VulkanImage> createFoamNoise();
 
     std::unique_ptr<rg::RenderGraph> m_renderGraph;
     std::unique_ptr<OceanPassResources> m_passResources;
@@ -55,6 +56,18 @@ private:
     float m_foamThreshold{0.2f};
     float m_foamSoftness{0.1f};
     float m_foamIntensity{1.0f};
+
+    // Accumulated foam: injected where the surface folds, decayed with a half-life in seconds, and
+    // drifted by the wind. See docs/ocean.md item 11.
+    float m_foamHalfLife{2.5f};
+    float m_foamInjectionThreshold{1.0f};
+    float m_foamInjectionGain{1.5f};
+    float m_foamDriftSpeed{0.6f};
+    float m_foamDeltaTime{0.0f};
+    // Erosion tears the foam boundary; freshness makes decayed foam thin into streaks rather than
+    // dim uniformly.
+    float m_foamErosion{0.35f};
+    float m_foamFreshness{1.2f};
 
     float m_slopeVarianceScale{1.0f};
 

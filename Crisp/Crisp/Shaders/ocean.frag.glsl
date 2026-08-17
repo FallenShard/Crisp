@@ -13,6 +13,10 @@ layout(location = 1) in vec2 oceanWorldXZ;
 
 layout(set = 0, binding = 1) uniform sampler2DArray packedDisplacementMap; // height, dispX, dispZ, slopeX.
 layout(set = 0, binding = 2) uniform sampler2DArray packedJacobianMap;    // slopeZ, dDx/dx, dDz/dz, dDx/dz.
+// Accumulated whitewater in the coarsest cascade's reference space; layer selected by frame parity.
+layout(set = 0, binding = 3) uniform sampler2DArray foamMap;
+// Tileable fBm value noise, sampled at several scales to erode the foam boundary.
+layout(set = 0, binding = 4) uniform sampler2D foamNoiseMap;
 
 layout(set = 1, binding = 0) uniform View {
     ViewParameters view;
@@ -23,6 +27,16 @@ layout(set = 1, binding = 2) uniform samplerCube refMap;
 layout(set = 1, binding = 3) uniform sampler2D brdfLut;
 
 const float kScatterFraction = 0.35f;
+
+// Metres per tile, deliberately not in integer ratios so the three together have no visible period.
+const vec3 kFoamNoiseScales = vec3(1.0f / 17.3f, 1.0f / 5.1f, 1.0f / 1.7f);
+const vec3 kFoamNoiseWeights = vec3(0.5f, 0.32f, 0.18f);
+
+float sampleFoamNoise(const vec2 worldXZ) {
+    return kFoamNoiseWeights.x * texture(foamNoiseMap, worldXZ * kFoamNoiseScales.x).r +
+           kFoamNoiseWeights.y * texture(foamNoiseMap, worldXZ * kFoamNoiseScales.y).r +
+           kFoamNoiseWeights.z * texture(foamNoiseMap, worldXZ * kFoamNoiseScales.z).r;
+}
 
 vec3 computeEnvSpecular(vec3 eyeN, vec3 eyeV, vec3 F0, float roughness, out vec3 irradiance) {
     const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
@@ -108,8 +122,23 @@ void main() {
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
     const float crestFactor = smoothstep(0.0f, 1.5f, fields.waveHeight * invRmsWaveHeight);
-    const float breakingFoam = smoothstep(foamThreshold, foamThreshold + foamSoftness, compression);
-    const float foam = clamp(foamIntensity * breakingFoam * crestFactor, 0.0f, 1.0f);
+    // Foam is read from the accumulation buffer rather than from this frame's Jacobian, so it
+    // persists and decays instead of blinking with the wave that made it. The instantaneous
+    // compression still contributes, which keeps the leading edge of a break crisp.
+    const vec2 foamUv = oceanWorldXZ / foamPatchWorldSize + 0.5f;
+    const float accumulated = texture(foamMap, vec3(foamUv, float(foamLayer))).r;
+    const float foamSignal = compression + accumulated;
+
+    // Zero-mean on purpose: the noise has to eat into the boundary and bulge out of it in equal
+    // measure, tearing it into streaks and holes. Biased noise would just subtract coverage
+    // everywhere. A bare smoothstep on a smooth field can only ever give a soft blob edge.
+    const float erosion = foamErosion * (sampleFoamNoise(oceanWorldXZ) - 0.5f);
+    const float eroded = foamSignal - erosion;
+    const float coverage = smoothstep(foamThreshold, foamThreshold + foamSoftness, eroded);
+    // Fresh foam is thick and opaque. Ageing should thin it toward sparse streaks rather than dim it
+    // uniformly, so the accumulated value drives opacity as well as coverage.
+    const float freshness = clamp(accumulated * foamFreshness, 0.0f, 1.0f);
+    const float foam = clamp(foamIntensity * coverage * mix(0.45f, 1.0f, freshness), 0.0f, 1.0f);
 
     const float baseRoughness = mix(max(waterRoughness, 0.03f), 0.35f, foam);
     const float baseAlpha = baseRoughness * baseRoughness;
