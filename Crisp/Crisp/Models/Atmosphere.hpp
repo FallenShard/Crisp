@@ -128,6 +128,23 @@ struct AtmospherePassData {
     RenderGraphResourceHandle image;
 };
 
+struct TransmittanceLutData {
+    RenderGraphResourceHandle lut;
+};
+
+struct MultipleScatteringData {
+    RenderGraphResourceHandle tex;
+};
+
+struct SkyViewLutData {
+    RenderGraphResourceHandle lut;
+};
+
+struct SkyVolumeLutData {
+    RenderGraphResourceHandle lut;
+};
+
+void addAtmosphereLutPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext);
 void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext);
 
 } // namespace crisp

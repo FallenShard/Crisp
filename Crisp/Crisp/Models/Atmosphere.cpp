@@ -14,22 +14,6 @@ constexpr const char* SkyViewLutPass = "skyViewLutPass";
 constexpr const char* ViewVolumePass = "viewVolumePass";
 constexpr const char* RayMarchingPass = "rayMarchingPass";
 
-struct TransmittanceLutData {
-    RenderGraphResourceHandle lut;
-};
-
-struct MultipleScatteringData {
-    RenderGraphResourceHandle tex;
-};
-
-struct SkyViewLutData {
-    RenderGraphResourceHandle lut;
-};
-
-struct SkyVolumeLutData {
-    RenderGraphResourceHandle lut;
-};
-
 constexpr const char* kAtmosphereBufferId = "atmosphereBuffer";
 constexpr const char* kLinearClampSamplerId = "linearClamp";
 constexpr const char* kVolumeGeometryId = "skyCameraVolumesGeometry";
@@ -70,7 +54,7 @@ Material* createAtmosphereMaterial(
 }
 } // namespace
 
-void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext) {
+void addAtmosphereLutPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext) {
     resourceContext.imageCache.addSampler(kLinearClampSamplerId, createLinearClampSampler(renderer.getDevice()));
 
     // The camera volume is filled one layer per instance; the geometry shader routes each instance to its slice
@@ -248,6 +232,10 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
             ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
             resourceContext.getGeometry(kVolumeGeometryId).bindAndDraw(ctx.commandEncoder);
         });
+}
+
+void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext) {
+    addAtmosphereLutPasses(renderGraph, renderer, resourceContext);
 
     renderGraph.addPass(
         RayMarchingPass,
