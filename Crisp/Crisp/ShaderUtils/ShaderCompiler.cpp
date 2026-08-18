@@ -372,7 +372,7 @@ Result<std::vector<uint32_t>> compileGlslShader(
     glslang::TShader shader(stage);
     shader.setStringsWithLengthsAndNames(&sourcePointer, &sourceLength, &sourceName, 1);
     shader.setEnvInput(glslang::EShSourceGlsl, stage, glslang::EShClientVulkan, 100);
-    shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
+    shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_4);
     shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_6);
 
     constexpr auto kMessages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
