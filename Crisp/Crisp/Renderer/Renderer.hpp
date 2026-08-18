@@ -10,6 +10,7 @@
 #include <Crisp/Renderer/BindlessImageRegistry.hpp>
 #include <Crisp/Renderer/FrameContext.hpp>
 #include <Crisp/Renderer/Material.hpp>
+#include <Crisp/Renderer/PassProfiler.hpp>
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/RendererFrame.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
@@ -106,11 +107,17 @@ public:
         m_mainThreadQueue.push(std::move(task));
     }
 
+    std::optional<double> getPresentPassGpuMs() const;
+    bool isGpuProfilingSupported() const;
+    double getFrameWaitMs() const;
+
 private:
     std::optional<uint32_t> acquireSwapImageIndex(RendererFrame& virtualFrame);
     void present(uint32_t swapChainImageIndex);
 
     void recreateSwapChain();
+
+    double m_frameWaitMs{0.0};
 
     uint64_t m_currentFrameIndex;
     AssetPaths m_assetPaths;
@@ -148,6 +155,8 @@ private:
     std::unique_ptr<VulkanImage> m_fallbackImage;
     std::unique_ptr<VulkanImage> m_fallbackStorageImage;
     std::vector<std::unique_ptr<VulkanTracingContext>> m_gpuTracingContexts;
+
+    PassProfiler m_presentPassProfiler;
 };
 
 void fillDeviceBuffer(

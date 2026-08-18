@@ -45,6 +45,17 @@ target_link_libraries(
 # "RenderPasses/TexturePass.hpp"
 # )
 add_cpp_static_library(
+    CrispPassProfiler
+    "PassProfiler.cpp"
+    "PassProfiler.hpp"
+)
+target_link_libraries(
+    CrispPassProfiler
+    PUBLIC Crisp::VulkanCommandEncoder
+    PRIVATE Crisp::Format
+)
+
+add_cpp_static_library(
     CrispRenderer
     "BufferUpdatePolicy.hpp"
     "ComputePipeline.cpp"
@@ -74,6 +85,7 @@ add_cpp_static_library(
 )
 target_link_libraries(CrispRenderer
     PUBLIC Crisp::BindlessImageRegistry
+    PUBLIC Crisp::PassProfiler
     PUBLIC Crisp::BitFlags
     PUBLIC Crisp::Vulkan
     PUBLIC Crisp::ImageIo

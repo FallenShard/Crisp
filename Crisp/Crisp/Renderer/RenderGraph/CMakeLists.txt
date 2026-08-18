@@ -9,6 +9,7 @@ add_cpp_static_library(CrispRenderGraph
 )
 target_link_libraries(CrispRenderGraph
     PUBLIC Crisp::Vulkan
+    PUBLIC Crisp::PassProfiler
     PRIVATE Crisp::Renderer
 )
 

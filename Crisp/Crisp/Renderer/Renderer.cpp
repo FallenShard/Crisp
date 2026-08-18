@@ -2,6 +2,7 @@
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/ChromeEventTracer.hpp>
+#include <Crisp/Core/Timer.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Io/FileUtils.hpp>
 #include <Crisp/Renderer/Material.hpp>
@@ -87,6 +88,8 @@ Renderer::Renderer(
     }
 
     m_stagingBelt = std::make_unique<VulkanStagingBelt>(*m_device, 16 * 1024 * 1024);
+
+    m_presentPassProfiler.initialize(*m_device, 1, "Present Pass");
 
     m_bindlessImageRegistry = std::make_unique<BindlessImageRegistry>(
         *m_device, *m_physicalDevice, BindlessImageRegistryConfig{.sampledImageCapacity = 1024});
@@ -209,13 +212,29 @@ VulkanStagingBelt& Renderer::getStagingBelt() {
     return *m_stagingBelt;
 }
 
+std::optional<double> Renderer::getPresentPassGpuMs() const {
+    return m_presentPassProfiler.getTotalTimingMs();
+}
+
+bool Renderer::isGpuProfilingSupported() const {
+    return m_presentPassProfiler.isSupported();
+}
+
+double Renderer::getFrameWaitMs() const {
+    return m_frameWaitMs;
+}
+
 std::optional<FrameContext> Renderer::beginFrame() {
+    m_frameWaitMs = 0.0;
+
     const uint32_t virtualFrameIndex = getCurrentVirtualFrameIndex();
     // Obtain a frame that we can safely draw into
     auto& frame = m_virtualFrames[virtualFrameIndex];
     {
         CRISP_TRACE_SCOPE("frame_wait");
+        const Timer<std::chrono::duration<double, std::milli>> waitTimer;
         frame.waitCompletion(*m_frameTimeline);
+        m_frameWaitMs += waitTimer.getElapsedTime();
     }
     const uint64_t completedValue = m_frameTimeline->getCompletedValue();
     // This frame's submission signals one past what is currently scheduled.
@@ -239,7 +258,9 @@ std::optional<FrameContext> Renderer::beginFrame() {
     m_device->flushDescriptorUpdates();
     m_bindlessImageRegistry->flush();
 
+    const Timer<std::chrono::duration<double, std::milli>> acquireTimer;
     const std::optional<uint32_t> swapChainImageIndex = acquireSwapImageIndex(frame);
+    m_frameWaitMs += acquireTimer.getElapsedTime();
     if (!swapChainImageIndex.has_value()) {
         CRISP_LOGE("Failed to acquire swap chain image!");
         return std::nullopt;
@@ -264,6 +285,9 @@ std::optional<FrameContext> Renderer::beginFrame() {
 void Renderer::record(const FrameContext& frameContext) {
     const auto& encoder{frameContext.commandEncoder};
     const auto cmdBuffer = encoder.getHandle();
+
+    m_presentPassProfiler.beginFrame(frameContext.virtualFrameIndex);
+    m_presentPassProfiler.beginPass(encoder, 0);
 
     encoder.insertBarrier(kTransferWrite >> (kComputeRead | kVertexRead | kFragmentRead));
 
@@ -323,6 +347,9 @@ void Renderer::record(const FrameContext& frameContext) {
         kColorWrite >> kNullStage,
         swapChainImageRange);
     m_swapChain->setImageLayout(frameContext.swapChainImageIndex, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+    m_presentPassProfiler.endPass(encoder, 0);
+    m_presentPassProfiler.endFrame();
 }
 
 void Renderer::endFrame(const FrameContext& frameContext) {
@@ -334,7 +361,9 @@ void Renderer::endFrame(const FrameContext& frameContext) {
 
     frame.submitToQueue(m_device->getGeneralQueue(), *m_frameTimeline);
 
+    const Timer<std::chrono::duration<double, std::milli>> presentTimer;
     present(frameContext.swapChainImageIndex);
+    m_frameWaitMs += presentTimer.getElapsedTime();
 
     m_drawCommands.clear();
     m_defaultPassDrawCommands.clear();

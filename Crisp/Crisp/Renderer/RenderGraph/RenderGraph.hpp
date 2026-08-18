@@ -3,12 +3,12 @@
 #include <span>
 
 #include <Crisp/Core/Result.hpp>
+#include <Crisp/Renderer/PassProfiler.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphBlackboard.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphUtils.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanTimestampQueryPool.hpp>
 
 namespace crisp::rg {
 namespace detail {
@@ -116,15 +116,15 @@ public:
     const VulkanImageView& getImageView(const std::string& name, uint32_t attachmentIndex) const;
 
     std::span<const std::optional<double>> getGpuPassTimingsMs() const {
-        return m_passProfiler.passTimingsMs;
+        return m_passProfiler.getPassTimingsMs();
     }
 
     std::optional<double> getGpuFrameTimingMs() const {
-        return m_passProfiler.graphTimingMs;
+        return m_passProfiler.getTotalTimingMs();
     }
 
     bool isGpuProfilingSupported() const {
-        return m_passProfiler.queryCount > 0;
+        return m_passProfiler.isSupported();
     }
 
     const RenderGraphImageDescription& getImageDescription(const RenderGraphResourceHandle handle) const {
@@ -183,29 +183,6 @@ private:
     void determineAliasedResurces();
     void createPhysicalResources(
         const VulkanDevice& device, VkExtent2D swapChainExtent, const VulkanCommandEncoder& commandEncoder);
-
-    struct PassProfiler {
-        struct Frame {
-            std::unique_ptr<VulkanTimestampQueryPool> queryPool;
-            std::vector<uint64_t> timestamps;
-            bool pending{false};
-        };
-
-        const VulkanDevice* device{nullptr};
-        std::vector<Frame> frames;
-        std::vector<std::optional<double>> passTimingsMs;
-        std::optional<double> graphTimingMs;
-        uint32_t queryCount{0};
-
-        void initialize(const VulkanDevice& vulkanDevice, size_t passCount);
-        Frame* beginFrame(uint32_t virtualFrameIndex);
-
-        void endFrame(Frame* frame) const { // NOLINT
-            if (frame) {
-                frame->pending = true;
-            }
-        }
-    };
 
     // The list of resources used by the render graph.
     std::vector<RenderGraphResource> m_resources;
