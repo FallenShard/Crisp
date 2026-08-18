@@ -67,3 +67,4 @@ add_cpp_test(CrispSpvReflectionTest
 target_link_libraries(CrispSpvReflectionTest PRIVATE Crisp::SpvReflection)
 target_add_test_shader(CrispSpvReflectionTest "Test/Data/reflection.comp")
 target_add_test_shader(CrispSpvReflectionTest "Test/Data/reflection.vert")
+target_add_test_shader(CrispSpvReflectionTest "Test/Data/heap-untyped.comp")

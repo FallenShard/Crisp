@@ -1,5 +1,6 @@
 #version 460 core
 #extension GL_EXT_buffer_reference : require
+#extension GL_EXT_descriptor_heap : require
 #extension GL_EXT_ray_query : require
 #extension GL_EXT_ray_tracing : require
 #extension GL_EXT_scalar_block_layout : require
@@ -16,14 +17,20 @@ const int kRussianRouletteCutoff = 3;
 const int kPayloadIndex = 0;
 layout(location = kPayloadIndex) rayPayloadEXT HitInfo hitInfo;
 
+const uint kImageSlot = 1;
+const uint kViewSlot = 2;
+const uint kIntegratorSlot = 3;
+
+// This doesn't work yet in a descriptor_heap: TODO: investigate.
 layout(set = 1, binding = 0) uniform accelerationStructureEXT sceneBvh;
-layout(set = 1, binding = 1, rgba32f) uniform image2D image;
+layout(descriptor_heap, descriptor_stride = 64, rgba32f) uniform image2D heapStorageImages[];
 
-layout(set = 1, binding = 2) uniform View {
-    ViewParameters view;
-};
+layout(descriptor_heap, descriptor_stride = 64) uniform View {
+    ViewParameters params;
+}
+heapViews[];
 
-layout(set = 1, binding = 3) uniform IntegratorParams {
+layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
     int maxBounces;
     int sampleCount;
     int frameIdx;
@@ -31,7 +38,11 @@ layout(set = 1, binding = 3) uniform IntegratorParams {
     int shapeCount;
     int samplingMode;
 }
-integrator;
+heapIntegrators[];
+
+#define image heapStorageImages[kImageSlot]
+#define view heapViews[kViewSlot].params
+#define integrator heapIntegrators[kIntegratorSlot]
 
 #include "PathTracer/Core/scene.part.glsl"
 #include "PathTracer/Core/intersection.part.glsl"

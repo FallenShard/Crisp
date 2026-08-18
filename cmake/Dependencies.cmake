@@ -180,7 +180,7 @@ FetchContent_MakeAvailable(VulkanMemoryAllocator)
 
 FetchContent_Declare(SPIRV-Reflect
     GIT_REPOSITORY "https://github.com/KhronosGroup/SPIRV-Reflect.git"
-    GIT_TAG "vulkan-sdk-1.4.350.1"
+    GIT_TAG "vulkan-sdk-1.4.357.0"
     GIT_SHALLOW TRUE
 )
 set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)

@@ -39,4 +39,5 @@ Result<ShaderVertexInputMetadata> reflectVertexMetadataFromSpirvShader(std::span
 Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirv(std::span<const char> spirvShader);
 Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirv(const std::filesystem::path& filePath);
 Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirv(std::span<const std::filesystem::path> filePaths);
+
 } // namespace crisp

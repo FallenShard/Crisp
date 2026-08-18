@@ -53,6 +53,7 @@ Application::Application(const ApplicationEnvironment& environment)
     addRayQueryFeatures(vulkanCoreParams.deviceFeatureRequests);
     addMeshShadingFeatures(vulkanCoreParams.deviceFeatureRequests);
     addDescriptorHeapFeatures(vulkanCoreParams.deviceFeatureRequests);
+    addShaderUntypedPointersFeatures(vulkanCoreParams.deviceFeatureRequests);
 
     m_renderer = std::make_unique<Renderer>(
         std::move(vulkanCoreParams), m_window.createSurfaceCallback(), createAssetPaths(environment));

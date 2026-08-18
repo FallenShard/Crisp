@@ -8,9 +8,10 @@
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Math/AliasTable.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
-#include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
+#include <Crisp/ShaderUtils/Reflection.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 
 namespace crisp {
 namespace {
@@ -64,6 +65,14 @@ void setCameraParameters(FreeCameraController& cameraController, const nlohmann:
     cameraController.setPosition(parseVec3(camera["position"]));
     cameraController.setFovY(camera["fovY"].get<float>());
 }
+
+// Must match the heap array subscripts in Shaders/path-trace.rgen.glsl. The BVH slot is reached through a
+// (set, binding) mapping rather than a subscript, so its number is private to this file.
+constexpr uint32_t kBvhSlot = 0;
+constexpr uint32_t kImageSlot = 1;
+constexpr uint32_t kViewSlot = 2;
+constexpr uint32_t kIntegratorSlot = 3;
+constexpr uint32_t kHeapSlotCount = 4;
 
 } // namespace
 
@@ -152,8 +161,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     };
     CRISP_CHECK_LE(
         sizeof(m_sceneAddresses),
-        m_renderer->getPhysicalDevice().getLimits().maxPushConstantsSize,
-        "Ray-tracing scene addresses exceed the device push-constant limit.");
+        m_renderer->getPhysicalDevice().getDescriptorHeapProperties().maxPushDataSize,
+        "Ray-tracing scene addresses exceed the descriptor-heap push-data limit.");
 
     m_renderer->enqueueResourceUpdate([this](const VulkanCommandEncoder& encoder) {
         std::vector<VulkanAccelerationStructure*> blases;
@@ -165,10 +174,9 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         encoder.buildAccelerationStructure(*m_topLevelAccelStructure);
     });
 
+    m_descriptorHeap = std::make_unique<VulkanDescriptorHeap>(
+        m_renderer->getDevice(), kHeapSlotCount, "Path Tracer Resource Descriptor Heap");
     m_pipeline = createPipeline();
-
-    m_material = std::make_unique<Material>(m_pipeline.get());
-    m_material->setDebugName("Path Tracer");
 
     buildRenderGraph();
 }
@@ -192,7 +200,7 @@ void VulkanRayTracingScene::buildRenderGraph() {
         [this](const FrameContext& frameContext) { traceRays(frameContext); });
 
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
-    updateDescriptorSets();
+    updateDescriptorHeap();
     m_renderer->setSceneImageView(&m_renderGraph->getImageView<&PathTracingPassData::image>());
 }
 
@@ -200,7 +208,7 @@ void VulkanRayTracingScene::resize(int width, int height) {
     m_cameraController->onViewportResized(width, height);
 
     m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
-    updateDescriptorSets();
+    updateDescriptorHeap();
     m_renderer->setSceneImageView(&m_renderGraph->getImageView<&PathTracingPassData::image>());
     m_integratorParams.frameIdx = 0;
 }
@@ -248,21 +256,19 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
 void VulkanRayTracingScene::traceRays(const FrameContext& frameContext) {
     const auto& encoder = frameContext.commandEncoder;
+    m_descriptorHeap->uploadIfPending(encoder, *frameContext.stagingBelt, kRayTracingResourceHeapRead);
     encoder.bindPipeline(*m_pipeline);
-
-    const auto& pipelineLayout = *m_pipeline->getPipelineLayout();
-    auto& bindlessRegistry = m_renderer->getBindlessImageRegistry();
-    CRISP_CHECK_EQ(
-        pipelineLayout.getDescriptorSetLayout(BindlessImageRegistry::kGlobalSetIndex),
-        bindlessRegistry.getSetLayout(),
-        "The ray-tracing pipeline must expose the global bindless layout at set 0.");
-    bindlessRegistry.bind(
-        encoder,
-        pipelineLayout.getHandle(),
-        VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-        BindlessImageRegistry::kGlobalSetIndex);
-    encoder.bindDescriptorSets(m_material->getDescriptorSetBinding());
-    encoder.setPushConstants(pipelineLayout, std::as_bytes(std::span{&m_sceneAddresses, 1}));
+    m_descriptorHeap->bind(encoder);
+    const VkPushDataInfoEXT pushDataInfo{
+        .sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT,
+        .offset = 0,
+        .data =
+            {
+                .address = &m_sceneAddresses,
+                .size = sizeof(m_sceneAddresses),
+            },
+    };
+    vkCmdPushDataEXT(encoder.getHandle(), &pushDataInfo);
 
     encoder.traceRays(m_shaderBindingTable.bindings, m_renderer->getSwapChainExtent());
 
@@ -353,41 +359,32 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
         {"Brdf/path-trace-mirror.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
         {"Brdf/path-trace-microfacet.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     };
-    std::vector<std::filesystem::path> shaderSpvPaths;
-    shaderSpvPaths.reserve(shaderInfos.size());
-    for (const auto& name : shaderInfos) {
-        shaderSpvPaths.emplace_back(m_renderer->getAssetPaths().getShaderSpvPath(name.first));
-    }
-    PipelineLayoutBuilder builder{reflectPipelineLayoutFromSpirv(shaderSpvPaths).unwrap()};
-    builder.useExternalDescriptorSet(
-        BindlessImageRegistry::kGlobalSetIndex, m_renderer->getBindlessImageRegistry().getSetLayout());
-    auto pipelineLayout = builder.create(m_renderer->getDevice());
-
     RayTracingPipelineBuilder pipelineBuilder(m_renderer->getDevice());
     for (auto&& [idx, info] : std::views::enumerate(shaderInfos)) {
         pipelineBuilder.addShaderStage(m_renderer->getAssetPaths().getShaderSpvPath(info.first));
         pipelineBuilder.addShaderGroup(static_cast<uint32_t>(idx), info.second);
     }
 
-    const VkPipeline pipeline{pipelineBuilder.createHandle(pipelineLayout->getHandle())};
+    const VkDescriptorSetAndBindingMappingEXT bvhMapping{
+        m_descriptorHeap->makeMapping(kBvhSlot, 1, 0, VK_SPIRV_RESOURCE_TYPE_ACCELERATION_STRUCTURE_BIT_EXT)};
+    pipelineBuilder.setDescriptorHeapMappings(0, {&bvhMapping, 1});
+
+    const VkPipeline pipeline{pipelineBuilder.createDescriptorHeapHandle()};
     m_shaderBindingTable = pipelineBuilder.createShaderBindingTable(pipeline);
     m_renderer->getDevice().setObjectName(*m_shaderBindingTable.buffer, "Path Tracer Shader Binding Table");
 
     auto result = std::make_unique<VulkanPipeline>(
-        m_renderer->getDevice(), pipeline, std::move(pipelineLayout), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
+        m_renderer->getDevice(), pipeline, nullptr, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
     result->setDebugName(m_renderer->getDevice(), "Path Tracer");
     return result;
 }
 
-void VulkanRayTracingScene::updateDescriptorSets() {
-    m_material->writeDescriptor(1, 0, m_topLevelAccelStructure->getDescriptorInfo());
-    m_material->writeDescriptor(
-        1,
-        1,
-        m_renderGraph->getImageView<&PathTracingPassData::image>().getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-    m_material->writeDescriptor(1, 2, *m_cameraBuffer);
-    m_material->writeDescriptor(1, 3, *m_integratorBuffer);
-    m_renderer->getDevice().flushDescriptorUpdates();
+void VulkanRayTracingScene::updateDescriptorHeap() {
+    m_descriptorHeap->writeAccelerationStructure(kBvhSlot, *m_topLevelAccelStructure);
+    m_descriptorHeap->writeStorageImage(
+        kImageSlot, m_renderGraph->getImageView<&PathTracingPassData::image>(), VK_IMAGE_LAYOUT_GENERAL);
+    m_descriptorHeap->writeUniformBuffer(kViewSlot, *m_cameraBuffer);
+    m_descriptorHeap->writeUniformBuffer(kIntegratorSlot, *m_integratorBuffer);
 }
 
 void VulkanRayTracingScene::setupInput() {

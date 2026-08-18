@@ -31,6 +31,10 @@ public:
         return m_accelerationStructureBuffer->getDeviceAddressRange();
     }
 
+    VkDeviceAddress getDeviceAddress() const {
+        return m_address;
+    }
+
     bool isTopLevel() const {
         return m_buildInfo.type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
     }

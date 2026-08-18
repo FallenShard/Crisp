@@ -119,5 +119,7 @@ target_link_libraries(CrispVulkanRayTracingScene
     PRIVATE Crisp::RenderGraph
     PRIVATE Crisp::RenderGraphGui
     PRIVATE Crisp::ImGuiCameraUtils
+    PRIVATE Crisp::SpvReflection
+    PUBLIC Crisp::VulkanDescriptorHeap
     PUBLIC Crisp::RayTracingPipelineBuilder
 )

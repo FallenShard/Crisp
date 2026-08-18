@@ -1,9 +1,10 @@
 #include <Crisp/ShaderUtils/Reflection.hpp>
 
-#include <spirv_reflect.h>
-
+#include <algorithm>
 #include <fstream>
 #include <ranges>
+
+#include <spirv_reflect.h>
 
 namespace crisp {
 namespace {

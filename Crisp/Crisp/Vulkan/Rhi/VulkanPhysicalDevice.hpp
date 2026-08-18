@@ -60,6 +60,8 @@ public:
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR};
     VkPhysicalDeviceDescriptorHeapFeaturesEXT descriptorHeapFeatures{
         VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT};
+    VkPhysicalDeviceShaderUntypedPointersFeaturesKHR shaderUntypedPointersFeatures{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNTYPED_POINTERS_FEATURES_KHR};
 
     // Clears both the chain and every feature value. Device selection reuses one chain across candidates, so
     // without zeroing the values a rejected device's requests would leak into the next candidate's create info.
@@ -82,6 +84,7 @@ public:
         clear(fragmentDensityMapFeatures);
         clear(fragmentShadingRateFeatures);
         clear(descriptorHeapFeatures);
+        clear(shaderUntypedPointersFeatures);
         linkedStructs.clear();
     }
 
@@ -122,6 +125,7 @@ struct VulkanDeviceFeatures {
     bool pageableMemory{false};
     bool meshShading{false};
     bool descriptorHeap{false};
+    bool shaderUntypedPointers{false};
 };
 
 namespace detail {
@@ -157,6 +161,8 @@ consteval VkStructureType getFeatureStructureType() {
         return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
     } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceDescriptorHeapFeaturesEXT>) {
         return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT;
+    } else if constexpr (std::is_same_v<FeatureStruct, VkPhysicalDeviceShaderUntypedPointersFeaturesKHR>) {
+        return VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNTYPED_POINTERS_FEATURES_KHR;
     } else {
         static_assert(!sizeof(FeatureStruct), "Failed to retrieve an sType for a Vulkan feature struct!");
     }
@@ -284,6 +290,7 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests();
 void addPageableMemoryFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 void addRayTracingFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 void addDescriptorHeapFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
+void addShaderUntypedPointersFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 void addRayQueryFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 void addMeshShadingFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests);
 

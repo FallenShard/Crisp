@@ -75,6 +75,22 @@ target_link_libraries(
 )
 
 add_cpp_static_library(
+    CrispVulkanDescriptorHeap
+    "VulkanDescriptorHeap.cpp"
+    "VulkanDescriptorHeap.hpp"
+)
+target_link_libraries(
+    CrispVulkanDescriptorHeap
+    PUBLIC Crisp::HashMap
+    PUBLIC Crisp::SpvReflection
+    PUBLIC Crisp::VulkanCommandEncoder
+    PUBLIC Crisp::VulkanStagingBelt
+    PUBLIC Crisp::VulkanAccelerationStructure
+    PUBLIC Crisp::VulkanBuffer
+    PUBLIC Crisp::VulkanImageView
+)
+
+add_cpp_static_library(
     CrispVulkanStagingBelt
     "VulkanStagingBelt.cpp"
     "VulkanStagingBelt.hpp"

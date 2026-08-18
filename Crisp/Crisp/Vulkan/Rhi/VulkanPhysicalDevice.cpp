@@ -77,6 +77,7 @@ void logResolvedFeatures(const VulkanDeviceFeatures& features) {
     CRISP_LOGI(" - Mesh shading:         {}", status(features.meshShading));
     CRISP_LOGI(" - Pageable memory:      {}", status(features.pageableMemory));
     CRISP_LOGI(" - Descriptor heap:      {}", status(features.descriptorHeap));
+    CRISP_LOGI(" - Untyped pointers:     {}", status(features.shaderUntypedPointers));
 }
 
 } // namespace
@@ -532,6 +533,24 @@ void addDescriptorHeapFeatures(std::vector<VulkanDeviceFeatureRequest>& featureR
                     featureChain.link(featureChain.descriptorHeapFeatures).descriptorHeap = VK_TRUE;
                 },
             .setFunc = [](VulkanDeviceFeatures& features) { features.descriptorHeap = true; },
+        });
+}
+
+void addShaderUntypedPointersFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequests) {
+    featureRequests.emplace_back(
+        VulkanDeviceFeatureRequest{
+            .extensionName = VK_KHR_SHADER_UNTYPED_POINTERS_EXTENSION_NAME,
+            .isRequired = false,
+            .isSupportedFunc =
+                [](const VulkanPhysicalDevice& physicalDevice) {
+                    return physicalDevice.queryFeatures<VkPhysicalDeviceShaderUntypedPointersFeaturesKHR>()
+                               .shaderUntypedPointers == VK_TRUE;
+                },
+            .linkFunc =
+                [](VulkanDeviceFeatureChain& featureChain) {
+                    featureChain.link(featureChain.shaderUntypedPointersFeatures).shaderUntypedPointers = VK_TRUE;
+                },
+            .setFunc = [](VulkanDeviceFeatures& features) { features.shaderUntypedPointers = true; },
         });
 }
 

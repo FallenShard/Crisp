@@ -5,24 +5,22 @@
 #include <Crisp/Geometry/TransformBuffer.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/Vulkan/RayTracingPipelineBuilder.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/RayTracingSceneData.hpp>
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 #include <Crisp/Scenes/Scene.hpp>
+#include <Crisp/Vulkan/RayTracingPipelineBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
+#include <Crisp/Vulkan/VulkanDescriptorHeap.hpp>
 #include <Crisp/Vulkan/VulkanStagingBelt.hpp>
 
 namespace crisp {
 class VulkanRayTracingScene : public Scene {
 public:
     VulkanRayTracingScene(
-        Renderer* renderer,
-        Window* window,
-        std::filesystem::path outputDir,
-        const nlohmann::json& args);
+        Renderer* renderer, Window* window, std::filesystem::path outputDir, const nlohmann::json& args);
 
     void resize(int width, int height) override;
     void update(const UpdateParams& updateParams) override;
@@ -32,7 +30,7 @@ public:
 private:
     std::unique_ptr<VulkanPipeline> createPipeline();
     void buildRenderGraph();
-    void updateDescriptorSets();
+    void updateDescriptorHeap();
     void traceRays(const FrameContext& frameContext);
 
     void setupInput();
@@ -52,7 +50,7 @@ private:
     std::filesystem::path m_screenshotFilename{"screenshot.exr"};
 
     std::unique_ptr<VulkanPipeline> m_pipeline;
-    std::unique_ptr<Material> m_material;
+    std::unique_ptr<VulkanDescriptorHeap> m_descriptorHeap;
 
     ShaderBindingTable m_shaderBindingTable;
 

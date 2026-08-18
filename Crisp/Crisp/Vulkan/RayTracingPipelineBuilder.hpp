@@ -5,6 +5,7 @@
 #include <array>
 #include <filesystem>
 #include <memory>
+#include <span>
 #include <unordered_map>
 #include <vector>
 
@@ -34,7 +35,12 @@ public:
     void addShaderStage(const std::filesystem::path& spvPath);
     void addShaderGroup(uint32_t shaderStageIdx, VkRayTracingShaderGroupTypeKHR type);
 
+    // Resolves legacy (set, binding) decorations in one stage against the bound resource heap.
+    void setDescriptorHeapMappings(
+        uint32_t shaderStageIdx, std::span<const VkDescriptorSetAndBindingMappingEXT> mappings);
+
     VkPipeline createHandle(VkPipelineLayout pipelineLayout);
+    VkPipeline createDescriptorHeapHandle();
     ShaderBindingTable createShaderBindingTable(VkPipeline rayTracingPipeline);
 
 private:
@@ -44,6 +50,16 @@ private:
     std::vector<VkPipelineShaderStageCreateInfo> m_stages;
     std::unordered_map<VkShaderStageFlagBits, int32_t> m_stageCounts;
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> m_groups;
+
+    // pNext points into these, so they must stay put until the pipeline is created; unique_ptr keeps the
+    // addresses stable when the vector grows.
+    struct StageMappings {
+        std::vector<VkDescriptorSetAndBindingMappingEXT> mappings;
+        VkShaderDescriptorSetAndBindingMappingInfoEXT info{
+            VK_STRUCTURE_TYPE_SHADER_DESCRIPTOR_SET_AND_BINDING_MAPPING_INFO_EXT};
+    };
+
+    std::vector<std::unique_ptr<StageMappings>> m_stageMappings;
 };
 
 } // namespace crisp

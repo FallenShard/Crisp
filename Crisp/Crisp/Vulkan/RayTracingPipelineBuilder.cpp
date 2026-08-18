@@ -68,17 +68,50 @@ void RayTracingPipelineBuilder::addShaderGroup(
     }
 }
 
+void RayTracingPipelineBuilder::setDescriptorHeapMappings(
+    const uint32_t shaderStageIdx, const std::span<const VkDescriptorSetAndBindingMappingEXT> mappings) {
+    auto stage = std::make_unique<StageMappings>();
+    stage->mappings.assign(mappings.begin(), mappings.end());
+    stage->info.mappingCount = static_cast<uint32_t>(stage->mappings.size());
+    stage->info.pMappings = stage->mappings.data();
+
+    m_stages.at(shaderStageIdx).pNext = &stage->info;
+    m_stageMappings.push_back(std::move(stage));
+}
+
 VkPipeline RayTracingPipelineBuilder::createHandle(const VkPipelineLayout pipelineLayout) {
-    VkRayTracingPipelineCreateInfoKHR raytracingCreateInfo = {VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR};
-    raytracingCreateInfo.stageCount = static_cast<uint32_t>(m_stages.size());
-    raytracingCreateInfo.pStages = m_stages.data();
-    raytracingCreateInfo.groupCount = static_cast<uint32_t>(m_groups.size());
-    raytracingCreateInfo.pGroups = m_groups.data();
-    raytracingCreateInfo.layout = pipelineLayout;
-    raytracingCreateInfo.maxPipelineRayRecursionDepth = 1; // We set up iterative ray tracing in the generation shader.
+    const VkRayTracingPipelineCreateInfoKHR raytracingCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
+        .stageCount = static_cast<uint32_t>(m_stages.size()),
+        .pStages = m_stages.data(),
+        .groupCount = static_cast<uint32_t>(m_groups.size()),
+        .pGroups = m_groups.data(),
+        .maxPipelineRayRecursionDepth = 1, // We set up iterative ray tracing in the generation shader.
+        .layout = pipelineLayout,
+    };
     VkPipeline pipeline{VK_NULL_HANDLE};
-    vkCreateRayTracingPipelinesKHR(
-        m_device.getHandle(), {}, nullptr, 1, &raytracingCreateInfo, nullptr, &pipeline);
+    VK_FATAL(vkCreateRayTracingPipelinesKHR(
+        m_device.getHandle(), {}, nullptr, 1, &raytracingCreateInfo, nullptr, &pipeline));
+    return pipeline;
+}
+
+VkPipeline RayTracingPipelineBuilder::createDescriptorHeapHandle() {
+    const VkPipelineCreateFlags2CreateInfo flagsInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO,
+        .flags = VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT,
+    };
+    const VkRayTracingPipelineCreateInfoKHR createInfo{
+        .sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
+        .pNext = &flagsInfo,
+        .stageCount = static_cast<uint32_t>(m_stages.size()),
+        .pStages = m_stages.data(),
+        .groupCount = static_cast<uint32_t>(m_groups.size()),
+        .pGroups = m_groups.data(),
+        .maxPipelineRayRecursionDepth = 1,
+        .layout = VK_NULL_HANDLE,
+    };
+    VkPipeline pipeline{VK_NULL_HANDLE};
+    VK_FATAL(vkCreateRayTracingPipelinesKHR(m_device.getHandle(), {}, nullptr, 1, &createInfo, nullptr, &pipeline));
     return pipeline;
 }
 

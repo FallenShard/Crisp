@@ -1,8 +1,9 @@
 #include <Crisp/ShaderUtils/Reflection.hpp>
-#include <Crisp/ShaderUtils/Test/TestShaderMap.hpp>
 
 #include <gmock/gmock.h>
 #include <spirv_reflect.h>
+
+#include <Crisp/ShaderUtils/Test/TestShaderMap.hpp>
 
 namespace crisp {
 namespace {
@@ -15,6 +16,7 @@ const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispSp
 const TestShaderMap kTestShaders{
     kShaderSourceDirectory / "reflection.comp",
     kShaderSourceDirectory / "reflection.vert",
+    kShaderSourceDirectory / "heap-untyped.comp",
 };
 
 TEST(ReflectionTest, ComputeShader) {
@@ -101,8 +103,7 @@ TEST(ReflectionTest, SpirvReflect) {
 
 TEST(ReflectionTest, VertexShaderExcludesBuiltIns) {
     const auto reflection =
-        reflectVertexMetadataFromSpirvShader(
-            readSpirvFile(kTestShaders.getSpirvPath("reflection.vert")).unwrap())
+        reflectVertexMetadataFromSpirvShader(readSpirvFile(kTestShaders.getSpirvPath("reflection.vert")).unwrap())
             .unwrap();
     using AttribDesc = decltype(reflection)::VertexAttributeDescription;
     EXPECT_THAT(
@@ -124,6 +125,34 @@ TEST(ReflectionTest, VertexShaderExcludesBuiltIns) {
                 Field(&AttribDesc::name, "tangent"),
                 Field(&AttribDesc::location, 3),
                 Field(&AttribDesc::format, VK_FORMAT_R32G32B32A32_SFLOAT))));
+}
+
+TEST(DescriptorHeapReflectionTest, UntypedHeapReportsAccessesNotBindings) {
+    const auto spirv = readSpirvFile(kTestShaders.getSpirvPath("heap-untyped.comp")).unwrap();
+
+    SpvReflectShaderModule module;
+    ASSERT_THAT(spvReflectCreateShaderModule(spirv.size(), spirv.data(), &module), SPV_REFLECT_RESULT_SUCCESS);
+
+    EXPECT_THAT(module.descriptor_binding_count, 0U);
+    EXPECT_THAT(module.descriptor_set_count, 0U);
+    EXPECT_THAT(module.push_constant_block_count, 1U);
+
+    ASSERT_THAT(module.entry_point_count, 1U);
+    const auto& entryPoint = module.entry_points[0]; // NOLINT
+    EXPECT_THAT(entryPoint.sampler_heap_access_count, 0U);
+
+    std::vector<SpvReflectDescriptorType> accessedTypes;
+    for (uint32_t i = 0; i < entryPoint.resource_heap_access_count; ++i) {
+        accessedTypes.push_back(entryPoint.resource_heap_accesses[i].descriptor_type); // NOLINT
+    }
+    EXPECT_THAT(
+        accessedTypes,
+        ::testing::UnorderedElementsAre(
+            SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER));
+
+    spvReflectDestroyShaderModule(&module);
 }
 
 } // namespace
