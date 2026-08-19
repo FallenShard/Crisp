@@ -85,13 +85,25 @@ public:
     void dispatchCompute(const VkExtent3D& workGroupCount) const;
     void drawMeshTasks(const VkExtent3D& groupCount) const;
     void drawMeshTasks(uint32_t groupCount) const;
+    void drawMeshTasksIndirect(
+        const VulkanBuffer& argsBuffer,
+        VkDeviceSize offset,
+        uint32_t drawCount,
+        uint32_t stride = sizeof(VkDrawMeshTasksIndirectCommandEXT)) const;
+    void drawMeshTasksIndirectCount(
+        const VulkanBuffer& argsBuffer,
+        VkDeviceSize offset,
+        const VulkanBuffer& countBuffer,
+        VkDeviceSize countOffset,
+        uint32_t maxDrawCount,
+        uint32_t stride = sizeof(VkDrawMeshTasksIndirectCommandEXT)) const;
     void traceRays(std::span<const VkStridedDeviceAddressRegionKHR> bindingRegions, const VkExtent2D& gridSize) const;
 
     void updateBuffer(const VulkanBuffer& buffer, std::span<const std::byte> data) const;
     void buildAccelerationStructure(VulkanAccelerationStructure& accelerationStructure) const;
 
-    void writeTimestamp(const VulkanTimestampQueryPool& queryPool, VkPipelineStageFlags2 stage, uint32_t queryIndex)
-        const;
+    void writeTimestamp(
+        const VulkanTimestampQueryPool& queryPool, VkPipelineStageFlags2 stage, uint32_t queryIndex) const;
 
     template <typename T, typename... Ts>
     void setPushConstants(

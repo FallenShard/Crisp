@@ -393,17 +393,23 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
         builder.setInputAssemblyState(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST);
     }
 
-    if (!hasField<JsonType::Array>(pipelineJson, "vertexInputBindings")) {
+    const bool isMeshPipeline = shaderFiles.contains(VK_SHADER_STAGE_MESH_BIT_EXT);
+    if (!isMeshPipeline && !hasField<JsonType::Array>(pipelineJson, "vertexInputBindings")) {
         return resultError("Pipeline field 'vertexInputBindings' must be an array.");
+    }
+    if (isMeshPipeline && shaderFiles.contains(VK_SHADER_STAGE_VERTEX_BIT)) {
+        return resultError("Pipeline declares both a vertex and a mesh stage; they are mutually exclusive.");
     }
     if (pipelineJson.contains("vertexAttributes")) {
         return resultError(
             "Pipeline field 'vertexAttributes' is obsolete; vertex formats and attributes are reflected from the "
             "shader.");
     }
-    CRISP_TRY(
-        readVertexInputBindings(pipelineJson["vertexInputBindings"], vertexInputMetadata, builder),
-        "Invalid vertex input metadata");
+    if (!isMeshPipeline) {
+        CRISP_TRY(
+            readVertexInputBindings(pipelineJson["vertexInputBindings"], vertexInputMetadata, builder),
+            "Invalid vertex input metadata");
+    }
 
     // Optional state for overrides.
     if (hasField<JsonType::Object>(pipelineJson, "inputAssembly")) {
@@ -462,8 +468,7 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFileImpl(
     CRISP_TRY(const auto& json, loadJsonFromFile(path), "Failed to open json config at {}", path.generic_string());
     CRISP_TRY(
         auto pipeline,
-        createPipelineFromJson(
-            json, spvShaderDir, device, rasterizationPassDescriptor, bindlessDescriptorSetLayout),
+        createPipelineFromJson(json, spvShaderDir, device, rasterizationPassDescriptor, bindlessDescriptorSetLayout),
         "Failed to create pipeline from json");
     device.setObjectName(*pipeline, fmt::format("{} Pipeline", path.stem().string()));
     return pipeline;

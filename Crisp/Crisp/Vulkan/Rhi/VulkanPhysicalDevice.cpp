@@ -602,12 +602,13 @@ void addMeshShadingFeatures(std::vector<VulkanDeviceFeatureRequest>& featureRequ
             .isSupportedFunc =
                 [](const VulkanPhysicalDevice& physicalDevice) {
                     const auto features = physicalDevice.queryFeatures<VkPhysicalDeviceMeshShaderFeaturesEXT>();
-                    return features.meshShader == VK_TRUE;
+                    return features.meshShader == VK_TRUE && features.taskShader == VK_TRUE;
                 },
             .linkFunc =
                 [](VulkanDeviceFeatureChain& featureChain) {
                     featureChain.link(featureChain.meshShaderFeatures);
                     featureChain.meshShaderFeatures.meshShader = VK_TRUE;
+                    featureChain.meshShaderFeatures.taskShader = VK_TRUE;
                 },
             .setFunc = [](VulkanDeviceFeatures& features) { features.meshShading = true; },
             .prerequisites =

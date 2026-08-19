@@ -396,6 +396,22 @@ void VulkanCommandEncoder::drawMeshTasks(const uint32_t groupCount) const {
     vkCmdDrawMeshTasksEXT(m_cmdBuffer, groupCount, 1, 1);
 }
 
+void VulkanCommandEncoder::drawMeshTasksIndirect(
+    const VulkanBuffer& argsBuffer, const VkDeviceSize offset, const uint32_t drawCount, const uint32_t stride) const {
+    vkCmdDrawMeshTasksIndirectEXT(m_cmdBuffer, argsBuffer.getHandle(), offset, drawCount, stride);
+}
+
+void VulkanCommandEncoder::drawMeshTasksIndirectCount(
+    const VulkanBuffer& argsBuffer,
+    const VkDeviceSize offset,
+    const VulkanBuffer& countBuffer,
+    const VkDeviceSize countOffset,
+    const uint32_t maxDrawCount,
+    const uint32_t stride) const {
+    vkCmdDrawMeshTasksIndirectCountEXT(
+        m_cmdBuffer, argsBuffer.getHandle(), offset, countBuffer.getHandle(), countOffset, maxDrawCount, stride);
+}
+
 void VulkanCommandEncoder::traceRays(
     const std::span<const VkStridedDeviceAddressRegionKHR> bindingRegions, const VkExtent2D& gridSize) const {
     CRISP_CHECK_GE(bindingRegions.size(), 4);

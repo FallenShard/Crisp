@@ -204,6 +204,10 @@ public:
         return m_capabilities->descriptorHeapProperties;
     }
 
+    const VkPhysicalDeviceMeshShaderPropertiesEXT& getMeshShaderProperties() const {
+        return m_capabilities->meshShaderProperties;
+    }
+
     const VkPhysicalDeviceMemoryProperties& getMemoryProperties() const {
         return m_capabilities->memoryProperties.memoryProperties;
     }
