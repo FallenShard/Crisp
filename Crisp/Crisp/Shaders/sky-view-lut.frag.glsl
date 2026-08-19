@@ -2,8 +2,6 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define PI 3.14159265358979323846
-
 layout(location = 0) in vec2 texCoord;
 
 layout(location = 0) out vec4 finalColor;

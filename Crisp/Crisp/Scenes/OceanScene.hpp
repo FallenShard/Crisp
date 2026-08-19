@@ -4,9 +4,8 @@
 
 #include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Geometry/TransformBuffer.hpp>
-#include <Crisp/Lights/EnvironmentLight.hpp>
+#include <Crisp/Models/Atmosphere.hpp>
 #include <Crisp/Models/Ocean.hpp>
-#include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Models/Tonemap.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -43,10 +42,13 @@ private:
     TransformHandle m_transformHandle{TransformHandle::createInvalidHandle()};
     VulkanPipeline* m_oceanPipeline{nullptr};
     Material* m_oceanMaterial{nullptr};
+    VulkanPipeline* m_skyPipeline{nullptr};
+    Material* m_skyMaterial{nullptr};
 
-    std::unique_ptr<EnvironmentLight> m_envLight;
-    std::unique_ptr<Skybox> m_skybox;
     OceanParameters m_oceanParams;
+    // Drives the sky, the reflected ray and the sun colour from one set of LUTs; docs/ocean.md 13.
+    AtmosphereMaterials m_atmosphereMaterials;
+    AtmosphereParameters m_atmosphereParams{};
     std::array<OceanCascade, kOceanCascadeCount> m_cascades;
     std::array<OceanCascadeMoments, kOceanCascadeCount> m_unitAmplitudeMoments{};
     std::array<OceanCascadeMoments, kOceanCascadeCount> m_cascadeMoments{};
@@ -71,9 +73,9 @@ private:
 
     float m_slopeVarianceScale{1.0f};
 
-    float m_sunAzimuthDegrees{45.0f};
-    float m_sunElevationDegrees{35.0f};
-    float m_sunIntensity{1.0f};
+    // Azimuth 225 puts the sun opposite the default camera, so its glitter path lands in frame; the water is
+    // otherwise lit from behind the viewer and reads almost black.
+    AtmosphereSettings m_atmosphereSettings{.sunAzimuthDegrees = 225.0f, .sunElevationDegrees = 35.0f};
 
     float m_rmsWaveHeight{1.0f};
     bool m_spectrumDirty{true};

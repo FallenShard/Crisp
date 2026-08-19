@@ -1,6 +1,8 @@
 #ifndef CRISP_ATMOSPHERE_GLSL
 #define CRISP_ATMOSPHERE_GLSL
 
+#include "math-constants.part.glsl"
+
 struct AtmosphereParams {
     mat4 VP;
     mat4 invVP;

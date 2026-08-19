@@ -2,8 +2,10 @@
 #include <Crisp/Scenes/OceanScene.hpp>
 
 #include <Crisp/Gui/ImGuiUtils.hpp>
-#include <Crisp/Lights/EnvironmentLightIo.hpp>
+#include <Crisp/Lights/EnvironmentLight.hpp> // integrateBrdfLut; the cubemaps themselves are gone.
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
+#include <Crisp/Models/Atmosphere.hpp>
+#include <Crisp/Models/AtmosphereGui.hpp>
 #include <Crisp/Renderer/ComputePipeline.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphIo.hpp>
@@ -33,14 +35,13 @@ constexpr int32_t kMaxInstancesPerSide = 8;
 constexpr int32_t kFoamGridSize = 512;
 constexpr uint32_t kFoamLayerCount = 2;
 
+constexpr const char* kAtmosphereBufferId = "atmosphereBuffer";
+
 constexpr uint32_t kFoamNoiseSize = 256;
 constexpr uint32_t kFoamNoiseOctaves = 5;
 
 // Mirrors the push constant block in Shaders/Common/ocean-draw.part.glsl.
 struct OceanPushConstants {
-    glm::vec3 sunDirection;
-    float sunIntensity;
-
     float patchWorldSize;
     int32_t instancesPerSide;
     int32_t gridSize;
@@ -63,7 +64,7 @@ struct OceanPushConstants {
     float foamFreshness;
 };
 
-static_assert(sizeof(OceanPushConstants) == 120);
+static_assert(sizeof(OceanPushConstants) == 104);
 
 struct OscillationPassData {
     RenderGraphResourceHandle packedDisplacement;
@@ -109,13 +110,6 @@ struct FoamPushConstants {
 };
 
 static_assert(sizeof(FoamPushConstants) == 80);
-
-// Y-up: elevation is measured from the horizon, azimuth around +Y from +Z.
-glm::vec3 computeSunDirection(const float azimuthDegrees, const float elevationDegrees) {
-    const float azimuth = glm::radians(azimuthDegrees);
-    const float elevation = glm::radians(elevationDegrees);
-    return {std::cos(elevation) * std::sin(azimuth), std::sin(elevation), std::cos(elevation) * std::cos(azimuth)};
-}
 
 struct ComputeDispatch {
     std::unique_ptr<VulkanPipeline> pipeline;
@@ -229,6 +223,7 @@ void OceanScene::setupResources() {
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     m_resourceContext->createUniformRingBuffer("camera", sizeof(CameraParameters));
     m_resourceContext->createUniformRingBuffer<TonemapParameters>(kTonemapBufferId);
+    m_resourceContext->createUniformRingBuffer<AtmosphereParameters>(kAtmosphereBufferId);
 
     std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {{VertexAttribute::Position}};
     TriangleMesh mesh = createGridMesh(kMeshPatchWorldSize, kMeshTessellation);
@@ -248,16 +243,14 @@ void OceanScene::setupResources() {
 
     auto& imageCache = m_resourceContext->imageCache;
     imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice(), 16.0f));
-    imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), 16.0f));
-    imageCache.addSampler("linearMipmap", createLinearClampSampler(m_renderer->getDevice(), 16.0f, 9.0f));
+    // addAtmosphereLutPasses registers its own "linearClamp"; ImageCache::addSampler replaces the
+    // entry and destroys the old sampler, which the bindless registry is still pointing at, so this
+    // one needs a key of its own.
+    imageCache.addSampler("oceanLinearClamp", createLinearClampSampler(m_renderer->getDevice(), 16.0f));
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 1);
     m_transformHandle = m_transformBuffer->getNextIndex();
-
-    m_envLight = std::make_unique<EnvironmentLight>(
-        *m_renderer,
-        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps/TableMountain").unwrap());
 
     resetCamera();
 }
@@ -318,8 +311,17 @@ void OceanScene::update(const UpdateParams& updateParams) {
         cameraParams, updateParams.frameInFlightIdx);
     m_resourceContext->getRingBuffer(kTonemapBufferId)
         ->updateStagingBufferFromStruct(m_tonemapParams, updateParams.frameInFlightIdx);
+
+    // One sun drives the sky, the reflection and the specular highlight, which is item 4 closed by
+    // construction rather than by dialling a constant onto a cubemap.
+    applyAtmosphereSettings(m_atmosphereSettings, m_atmosphereParams);
+    m_atmosphereParams.cameraPosition = m_cameraController->getCamera().getPosition() / kMetersPerKilometer;
+    m_atmosphereParams.VP = cameraParams.P * cameraParams.V;
+    m_atmosphereParams.invVP = glm::inverse(m_atmosphereParams.VP);
+    m_atmosphereParams.screenResolution = cameraParams.screenSize;
+    m_resourceContext->getRingBuffer(kAtmosphereBufferId)
+        ->updateStagingBufferFromStruct(m_atmosphereParams, updateParams.frameInFlightIdx);
     m_transformBuffer->updateStagingBuffer(updateParams.frameInFlightIdx);
-    m_skybox->updateTransforms(cameraParams.V, cameraParams.P, updateParams.frameInFlightIdx);
 
     // The foam pass integrates in seconds, so a paused sim must not keep decaying it.
     m_foamDeltaTime = m_paused ? 0.0f : updateParams.dt;
@@ -332,9 +334,9 @@ void OceanScene::render(const FrameContext& frameContext) {
     auto* cameraBuffer = m_resourceContext->getRingBuffer("camera");
     cameraBuffer->updateDeviceBuffer(frameContext.commandEncoder);
     m_resourceContext->getRingBuffer(kTonemapBufferId)->updateDeviceBuffer(frameContext.commandEncoder);
+    m_resourceContext->getRingBuffer(kAtmosphereBufferId)->updateDeviceBuffer(frameContext.commandEncoder);
 
     m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder);
-    m_skybox->updateDeviceBuffer(frameContext.commandEncoder);
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead));
 
     m_renderGraph->execute(frameContext);
@@ -407,9 +409,6 @@ void OceanScene::drawGui() {
     ImGui::SliderFloat("Foam Threshold", &m_foamThreshold, 0.0f, 2.0f);
     ImGui::SliderFloat("Foam Softness", &m_foamSoftness, 0.01f, 1.0f);
     ImGui::SliderFloat("Foam Intensity", &m_foamIntensity, 0.0f, 2.0f);
-    ImGui::SliderFloat("Sun Azimuth", &m_sunAzimuthDegrees, -180.0f, 180.0f, "%.1f deg");
-    ImGui::SliderFloat("Sun Elevation", &m_sunElevationDegrees, 0.0f, 90.0f, "%.1f deg");
-    ImGui::SliderFloat("Sun Intensity", &m_sunIntensity, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
     ImGui::Combo(
         "Tonemap Operator",
         &m_tonemapParams.operatorIndex,
@@ -422,6 +421,17 @@ void OceanScene::drawGui() {
     }
     if (ImGui::Button("Reset View")) {
         resetCamera();
+    }
+    ImGui::End();
+
+    // The scene builds the LUTs but has no full screen march, so the debug view mode, the sun disk and the
+    // fast-path toggles would all be controls over a pass that is not in this graph.
+    ImGui::SetNextWindowSize(ImVec2(440.0f, 700.0f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Atmosphere")) {
+        drawAtmosphereGuiContents(
+            m_atmosphereSettings,
+            m_atmosphereParams,
+            {.showDebugViewMode = false, .showSunDisk = false, .showRayMarchingDebug = false});
     }
     ImGui::End();
 
@@ -491,6 +501,9 @@ std::unique_ptr<VulkanImage> OceanScene::createFoamNoise() {
 void OceanScene::buildRenderGraph() {
     m_passResources = std::make_unique<OceanPassResources>();
     m_renderGraph = std::make_unique<rg::RenderGraph>();
+    // The LUTs only; the sky's own full screen march would just be overdrawn by the ocean, and
+    // ocean-sky.frag resolves the background from the same sky view LUT the water reflects.
+    addAtmosphereLutPasses(*m_renderGraph, *m_renderer, *m_resourceContext, m_atmosphereMaterials);
     m_renderGraph->getBlackboard().insert<OscillationPassData>();
     m_renderGraph->addPass(
         "oscillation",
@@ -636,6 +649,9 @@ void OceanScene::buildRenderGraph() {
             builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<0>>().image, kOceanMapRead);
             builder.readTexture(builder.getBlackboard().get<VerticalFftPassData<1>>().image, kOceanMapRead);
             builder.readTexture(builder.getBlackboard().get<FoamPassData>().foam);
+            builder.readTexture(builder.getBlackboard().get<TransmittanceLutData>().lut);
+            builder.readTexture(builder.getBlackboard().get<SkyViewLutData>().lut);
+            builder.readTexture(builder.getBlackboard().get<SkyVolumeLutData>().lut);
             auto& data = builder.getBlackboard().insert<OceanOutputData>();
             data.hdrImage = builder.createAttachment(
                 {
@@ -664,6 +680,12 @@ void OceanScene::buildRenderGraph() {
                 cascadeSlopeVariances[static_cast<int32_t>(i)] = m_cascadeMoments[i].slopeVariance;
             }
 
+            ctx.commandEncoder.bindPipeline(*m_skyPipeline);
+            ctx.commandEncoder.setViewport(m_renderer->getDefaultViewport());
+            ctx.commandEncoder.setScissor(m_renderer->getDefaultScissor());
+            ctx.commandEncoder.bindDescriptorSets(m_skyMaterial->getDescriptorSetBinding());
+            m_renderer->drawFullScreenQuad(ctx.commandEncoder);
+
             auto& geometry = m_resourceContext->getGeometry("ocean");
             ctx.commandEncoder.bindPipeline(*m_oceanPipeline);
             ctx.commandEncoder.setViewport(m_renderer->getDefaultViewport());
@@ -672,8 +694,6 @@ void OceanScene::buildRenderGraph() {
                 *m_oceanPipeline->getPipelineLayout(),
                 VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                 OceanPushConstants{
-                    .sunDirection = computeSunDirection(m_sunAzimuthDegrees, m_sunElevationDegrees),
-                    .sunIntensity = m_sunIntensity,
                     .patchWorldSize = kMeshPatchWorldSize,
                     .instancesPerSide = m_instancesPerSide,
                     .gridSize = kMeshTessellation,
@@ -693,12 +713,6 @@ void OceanScene::buildRenderGraph() {
                     .foamFreshness = m_foamFreshness});
             ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
             geometry.bindAndDraw(ctx.commandEncoder);
-
-            const RenderNode& skyboxNode = m_skybox->getRenderNode();
-            const auto& skyboxMaterialData = skyboxNode.materials.at({kForwardLightingPass, 0}).at(-1);
-            ctx.commandEncoder.bindPipeline(*skyboxMaterialData.material->getPipeline());
-            ctx.commandEncoder.bindDescriptorSets(skyboxMaterialData.material->getDescriptorSetBinding());
-            skyboxNode.geometry->bindAndDraw(ctx.commandEncoder);
         });
 
     addTonemapPass(
@@ -711,12 +725,6 @@ void OceanScene::buildRenderGraph() {
 
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     m_renderer->setSceneImageView(&m_renderGraph->getImageView<&TonemapPassData::image>());
-
-    m_skybox = std::make_unique<Skybox>(
-        m_renderer,
-        m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass),
-        m_envLight->getCubeMapView(),
-        m_resourceContext->imageCache.getSampler("linearClamp"));
 
     m_passResources->oscillation = createOscillationPassDispatch(*m_renderer, m_resourceContext->imageCache);
 
@@ -735,17 +743,17 @@ void OceanScene::buildRenderGraph() {
     m_oceanPipeline = m_resourceContext->createPipeline(
         "ocean", "Ocean.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
     m_oceanMaterial = m_resourceContext->createMaterial("ocean", m_oceanPipeline);
+
+    m_skyPipeline = m_resourceContext->createPipeline(
+        "oceanSky", "OceanSky.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+    m_skyMaterial = m_resourceContext->createMaterial("oceanSky", m_skyPipeline);
     m_oceanMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
     m_oceanMaterial->writeDescriptor(1, 0, *m_resourceContext->getRingBuffer("camera"));
     m_oceanMaterial->writeDescriptor(
-        1, 1, m_envLight->getDiffuseMapView(), m_resourceContext->imageCache.getSampler("linearClamp"));
-    m_oceanMaterial->writeDescriptor(
-        1, 2, m_envLight->getSpecularMapView(), m_resourceContext->imageCache.getSampler("linearMipmap"));
-    m_oceanMaterial->writeDescriptor(
         1,
-        3,
+        1,
         m_resourceContext->imageCache.getImage("brdfLut").getView(),
-        m_resourceContext->imageCache.getSampler("linearClamp"));
+        m_resourceContext->imageCache.getSampler("oceanLinearClamp"));
 
     writeGraphDependentDescriptors();
 }
@@ -778,6 +786,23 @@ void OceanScene::writeGraphDependentDescriptors() {
     m_oceanMaterial->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
     m_oceanMaterial->writeDescriptor(0, 3, foamView, linearRepeat);
     m_oceanMaterial->writeDescriptor(0, 4, m_resourceContext->imageCache.getImageView("foamNoiseView"), linearRepeat);
+
+    const auto& blackboard = m_renderGraph->getBlackboard();
+    const auto& transmittanceLut = m_renderGraph->getResourceImageView(blackboard.get<TransmittanceLutData>().lut);
+    const auto& skyViewLut = m_renderGraph->getResourceImageView(blackboard.get<SkyViewLutData>().lut);
+    const auto& skyVolumeLut = m_renderGraph->getResourceImageView(blackboard.get<SkyVolumeLutData>().lut);
+    auto& linearClamp = m_resourceContext->imageCache.getSampler("linearClamp");
+
+    m_oceanMaterial->writeDescriptor(2, 0, *m_resourceContext->getRingBuffer(kAtmosphereBufferId));
+    m_oceanMaterial->writeDescriptor(2, 1, transmittanceLut, linearClamp);
+    m_oceanMaterial->writeDescriptor(2, 2, skyViewLut, linearClamp);
+    m_oceanMaterial->writeDescriptor(2, 3, skyVolumeLut, linearClamp);
+
+    m_skyMaterial->writeDescriptor(0, 0, *m_resourceContext->getRingBuffer("camera"));
+    m_skyMaterial->writeDescriptor(1, 0, *m_resourceContext->getRingBuffer(kAtmosphereBufferId));
+    m_skyMaterial->writeDescriptor(1, 1, skyViewLut, linearClamp);
+
+    createAtmosphereLutMaterials(m_atmosphereMaterials, *m_renderGraph, *m_renderer, *m_resourceContext);
 
     m_renderer->getDevice().flushDescriptorUpdates();
 }

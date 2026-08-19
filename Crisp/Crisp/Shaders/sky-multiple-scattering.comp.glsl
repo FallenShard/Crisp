@@ -2,8 +2,6 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#define PI 3.1415926535897932384626433832795
-
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 #include "Common/atmosphere.part.glsl"

@@ -1,7 +1,6 @@
 #version 450 core
 
 #extension GL_GOOGLE_include_directive : require
-#define PI 3.1415926535897932384626433832795
 
 layout(location = 0) in vec2 texCoord;
 

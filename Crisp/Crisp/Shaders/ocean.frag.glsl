@@ -8,6 +8,7 @@ layout(location = 0) in vec3 eyePosition;
 layout(location = 1) in vec2 oceanWorldXZ;
 
 #include "Brdf/microfacet.part.glsl"
+#include "Common/ocean-atmosphere.part.glsl"
 #include "Common/ocean-draw.part.glsl"
 #include "Common/view.part.glsl"
 
@@ -22,9 +23,15 @@ layout(set = 1, binding = 0) uniform View {
     ViewParameters view;
 };
 
-layout(set = 1, binding = 1) uniform samplerCube irrMap;
-layout(set = 1, binding = 2) uniform samplerCube refMap;
-layout(set = 1, binding = 3) uniform sampler2D brdfLut;
+layout(set = 1, binding = 1) uniform sampler2D brdfLut;
+
+layout(set = 2, binding = 0) uniform Atmosphere {
+    AtmosphereParams atmosphere;
+};
+
+layout(set = 2, binding = 1) uniform sampler2D transmittanceLut;
+layout(set = 2, binding = 2) uniform sampler2D skyViewLut;
+layout(set = 2, binding = 3) uniform sampler2DArray cameraVolumeLut;
 
 const float kScatterFraction = 0.35f;
 
@@ -38,17 +45,14 @@ float sampleFoamNoise(const vec2 worldXZ) {
            kFoamNoiseWeights.z * texture(foamNoiseMap, worldXZ * kFoamNoiseScales.z).r;
 }
 
-vec3 computeEnvSpecular(vec3 eyeN, vec3 eyeV, vec3 F0, float roughness, out vec3 irradiance) {
-    const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
-    irradiance = texture(irrMap, worldN).rgb;
+vec3 computeSkyReflection(
+    const vec3 worldN, const vec3 worldV, const vec3 worldPosKm, const float roughness, const vec3 F0) {
+    const vec3 worldR = reflect(-worldV, worldN);
+    const vec3 blurredR = normalize(mix(worldR, worldN, roughness * roughness));
+    const vec3 reflection = sampleSkyRadiance(skyViewLut, atmosphere, worldPosKm, blurredR);
 
-    const vec3 eyeR = reflect(-eyeV, eyeN);
-    const vec3 worldR = (view.invV * vec4(eyeR, 0.0f)).rgb;
-    const float maxReflectionLod = float(textureQueryLevels(refMap) - 1);
-    const vec3 reflection = textureLod(refMap, worldR, roughness * maxReflectionLod).rgb;
-    const float NdotV = max(dot(eyeN, eyeV), 0.0f);
+    const float NdotV = max(dot(worldN, worldV), 0.0f);
     const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
-
     return reflection * (F0 * brdf.x + brdf.y);
 }
 
@@ -118,7 +122,7 @@ void main() {
     const vec3 eyeV = normalize(-eyePosition);
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
 
-    const vec3 eyeL = normalize((view.V * vec4(sunDirection, 0.0f)).xyz);
+    const vec3 eyeL = normalize((view.V * vec4(atmosphere.sunDirection, 0.0f)).xyz);
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
     const float crestFactor = smoothstep(0.0f, 1.5f, fields.waveHeight * invRmsWaveHeight);
@@ -152,27 +156,38 @@ void main() {
     const vec3 F0 = vec3(0.02f);
     const vec3 F = fresnelSchlick(NdotV, F0);
 
+    const vec3 worldV = normalize((view.invV * vec4(eyeV, 0.0f)).xyz);
+    const vec3 worldPosKm = atmosphere.cameraPosition + vec3(0.0f, atmosphere.bottomRadius, 0.0f);
+    const vec3 sunIrradiance = sampleSunIrradiance(transmittanceLut, atmosphere, worldPosKm);
+
     const vec3 eyeH = normalize(eyeL + eyeV);
     const float NdotH = max(dot(eyeN, eyeH), 0.0f);
     const float D = distributionGGX(NdotH, alpha); // GGX takes alpha, not perceptual roughness.
     const float G = geometrySmith(NdotV, NdotL, roughness);
     const vec3 sunFresnel = fresnelSchlick(max(dot(eyeV, eyeH), 0.0f), F0);
-    const vec3 sunSpecular = (D * G * sunFresnel / max(4.0f * NdotV * NdotL, 0.001f)) * NdotL * sunIntensity;
+    const vec3 sunSpecular = (D * G * sunFresnel / max(4.0f * NdotV * NdotL, 0.001f)) * NdotL * sunIrradiance;
+    const vec3 reflection = computeSkyReflection(worldN, worldV, worldPosKm, roughness, F0);
+    const vec3 skyIrradiance = PI * sampleSkyRadiance(skyViewLut, atmosphere, worldPosKm, vec3(0.0f, 1.0f, 0.0f));
 
-    vec3 irradiance;
-    const vec3 reflection = computeEnvSpecular(eyeN, eyeV, F0, roughness, irradiance);
+    const vec3 downwellingIrradiance = skyIrradiance + sunIrradiance * NdotL;
 
     // Water has no Lambertian albedo, so both scatter terms share one (1 - F).
     const vec3 scatterColor = pow(vec3(12, 120, 167) / 255.0f, vec3(2.2f));
     const vec3 subsurfaceColor = pow(vec3(20, 140, 130) / 255.0f, vec3(2.2f));
-    // Sun terms need the diffuse 1/PI; the irradiance map already has it baked in.
     const float backLitFactor = pow(max(dot(eyeV, -eyeL), 0.0f), 4.0f);
     const vec3 body =
-        (1.0f - F) * (scatterColor * irradiance * kScatterFraction +
-                      subsurfaceColor * crestFactor * backLitFactor * sunIntensity / PI);
+        (1.0f - F) * (scatterColor * downwellingIrradiance * kScatterFraction / PI +
+                      subsurfaceColor * crestFactor * backLitFactor * sunIrradiance / PI);
 
     const vec3 waterRadiance = body + reflection + sunSpecular;
     const vec3 foamColor = pow(vec3(235, 244, 238) / 255.0f, vec3(2.2f));
-    const vec3 foamRadiance = foamColor * (irradiance + sunIntensity * NdotL / PI);
-    finalColor = vec4(mix(waterRadiance, foamRadiance, foam), 1.0f);
+    const vec3 foamRadiance = foamColor * downwellingIrradiance / PI;
+    vec3 radiance = mix(waterRadiance, foamRadiance, foam);
+
+    const vec2 screenUv = gl_FragCoord.xy / view.screenSize;
+    const float distanceKm = length(eyePosition) / kMetersPerKilometer;
+    const vec4 aerialPerspective = sampleOceanAerialPerspective(cameraVolumeLut, screenUv, distanceKm);
+    radiance = radiance * (1.0f - aerialPerspective.a) + aerialPerspective.rgb;
+
+    finalColor = vec4(radiance, 1.0f);
 }

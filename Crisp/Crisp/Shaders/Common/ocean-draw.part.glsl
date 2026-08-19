@@ -7,32 +7,29 @@
 // a mismatch would shade geometry that was displaced by a different set of bands, so the block lives
 // here rather than being spelled out twice. Mirrors OceanPushConstants in Scenes/OceanScene.cpp.
 layout(push_constant) uniform OceanPushConstant {
-    layout(offset = 0) vec3 sunDirection;
-    layout(offset = 12) float sunIntensity;
-
     // The mesh patch spans cascade 0; the finer cascades tile inside it at their own periods.
-    layout(offset = 16) float patchWorldSize;
-    layout(offset = 20) int instancesPerSide;
-    layout(offset = 24) int gridSize;
-    layout(offset = 28) float choppiness;
+    layout(offset = 0) float patchWorldSize;
+    layout(offset = 4) int instancesPerSide;
+    layout(offset = 8) int gridSize;
+    layout(offset = 12) float choppiness;
 
-    layout(offset = 32) float waterRoughness;
-    layout(offset = 36) float foamThreshold;
-    layout(offset = 40) float foamSoftness;
-    layout(offset = 44) float foamIntensity;
-    layout(offset = 48) float invRmsWaveHeight;
-    layout(offset = 52) float slopeVarianceScale;
-    layout(offset = 56) float foamPatchWorldSize;
-    layout(offset = 60) int foamLayer;
+    layout(offset = 16) float waterRoughness;
+    layout(offset = 20) float foamThreshold;
+    layout(offset = 24) float foamSoftness;
+    layout(offset = 28) float foamIntensity;
+    layout(offset = 32) float invRmsWaveHeight;
+    layout(offset = 36) float slopeVarianceScale;
+    layout(offset = 40) float foamPatchWorldSize;
+    layout(offset = 44) int foamLayer;
 
-    layout(offset = 64) vec4 cascadeSizes;
+    layout(offset = 48) vec4 cascadeSizes;
     // Geometric mean of each band's wavelength range, against which a sample spacing is judged.
-    layout(offset = 80) vec4 cascadeWavelengths;
+    layout(offset = 64) vec4 cascadeWavelengths;
     // Per-axis slope variance of each band, folded into the specular lobe once the band is lost.
-    layout(offset = 96) vec4 cascadeSlopeVariances;
+    layout(offset = 80) vec4 cascadeSlopeVariances;
 
-    layout(offset = 112) float foamErosion;
-    layout(offset = 116) float foamFreshness;
+    layout(offset = 96) float foamErosion;
+    layout(offset = 100) float foamFreshness;
 };
 
 #endif // CRISP_OCEAN_DRAW_GLSL
