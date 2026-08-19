@@ -235,6 +235,19 @@ float computeDirectionalSpreadNormalization(const float directionalSpread) {
     return static_cast<float>(1.0 / integral);
 }
 
+int32_t computeClipmapInstanceCount(const OceanClipmap& clipmap) {
+    return kOceanClipmapLevel0Blocks + kOceanClipmapRingBlocks * (clipmap.levelCount - 1);
+}
+
+float computeClipmapRadius(const OceanClipmap& clipmap) {
+    const float level0HalfExtent = 2.0f * static_cast<float>(clipmap.blockQuads) * clipmap.finestSpacing;
+    return level0HalfExtent * std::exp2(static_cast<float>(clipmap.levelCount - 1));
+}
+
+glm::vec2 computeClipmapOrigin(const OceanClipmap& clipmap, const glm::vec2 cameraXZ) {
+    return glm::floor(cameraXZ / clipmap.snapGrid) * clipmap.snapGrid;
+}
+
 float computeBandWavelength(const OceanCascade& cascade) {
     const float shortest = 2.0f * glm::pi<float>() / cascade.kMax;
     // The coarsest cascade has no kMin; its longest representable wave is the patch itself.

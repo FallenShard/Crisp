@@ -80,9 +80,12 @@ private:
     float m_rmsWaveHeight{1.0f};
     bool m_spectrumDirty{true};
 
-    float m_modelScale{1.0f};
+    // Camera-centred nested rings; see docs/ocean.md item 17.
+    OceanClipmap m_clipmap{};
+    glm::vec2 m_clipmapOrigin{0.0f};
 
-    int32_t m_instancesPerSide{1};
+    glm::vec2 m_foamAnchor{0.0f};
+    glm::vec2 m_previousFoamAnchor{1.0e9f};
 
     bool m_paused{false};
 };

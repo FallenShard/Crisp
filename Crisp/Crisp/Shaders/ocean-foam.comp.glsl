@@ -15,8 +15,7 @@ layout(set = 0, binding = 1, r32f) uniform image2DArray foamImg;
 
 layout(push_constant) uniform PushConstant {
     int foamGridSize;
-    // The foam field lives in the coarsest cascade's reference space, which is where breaking is.
-    float foamPatchWorldSize;
+    float foamWindowSize;
     float vertexSpacing;
     float choppiness;
 
@@ -29,9 +28,22 @@ layout(push_constant) uniform PushConstant {
     int readLayer;
     int writeLayer;
 
+    vec2 anchor;
+    vec2 previousAnchor;
+
     vec4 cascadeSizes;
     vec4 cascadeWavelengths;
 };
+
+// Texels that scrolled in this frame hold water the window has never covered. Two cells of slack
+// cover the bilinear tap and a frame of drift reaching back past the edge.
+const float kFoamHistoryMargin = 2.0f;
+
+vec2 foamWindowCell(const ivec2 texel, const vec2 anchorCell) {
+    const float gridSize = float(foamGridSize);
+    const vec2 delta = mod(vec2(texel) - anchorCell + 0.5f * gridSize, gridSize) - 0.5f * gridSize;
+    return anchorCell + delta;
+}
 
 // Bilinear by hand: the image is bound as storage in this pass, so there is no sampler to do it.
 float sampleFoamBilinear(const vec2 texelCoord) {
@@ -42,7 +54,8 @@ float sampleFoamBilinear(const vec2 texelCoord) {
     float result = 0.0f;
     for (int j = 0; j <= 1; ++j) {
         for (int i = 0; i <= 1; ++i) {
-            // The reference grid is periodic, so the fetch wraps.
+            // Wrapping is the torus, not a periodic ocean: the neighbour across the seam is the
+            // one on the far side of the window.
             const ivec2 wrapped = (baseTexel + ivec2(i, j) + ivec2(foamGridSize)) % ivec2(foamGridSize);
             const float weight = (i == 0 ? 1.0f - frac.x : frac.x) * (j == 0 ? 1.0f - frac.y : frac.y);
             result += weight * imageLoad(foamImg, ivec3(wrapped, readLayer)).r;
@@ -57,8 +70,10 @@ void main() {
         return;
     }
 
-    // Texel centre in the coarsest cascade's reference space, matching oceanCascadeUv's mapping.
-    const vec2 worldXZ = (vec2(texel) + 0.5f) / float(foamGridSize) * foamPatchWorldSize - 0.5f * foamPatchWorldSize;
+    const float cellSize = foamWindowSize / float(foamGridSize);
+    const vec2 anchorCell = floor(anchor / cellSize);
+    const vec2 cell = foamWindowCell(texel, anchorCell);
+    const vec2 worldXZ = (cell + 0.5f) * cellSize;
 
     // The same combined, weighted Jacobian ocean.frag builds, so foam is injected exactly where the
     // shaded surface is compressed.
@@ -80,9 +95,12 @@ void main() {
         (1.0f - choppiness * dDxDx) * (1.0f - choppiness * dDzDz) - choppiness * choppiness * dDxDz * dDxDz;
 
     // Advect before accumulating: the previous frame's foam has drifted by now. Only net drift is
-    // gathered here -- foam riding its own wave already comes out of storing this in reference space.
-    const vec2 drift = driftVelocity * deltaTime / foamPatchWorldSize * float(foamGridSize);
-    const float previous = sampleFoamBilinear(vec2(texel) + 0.5f - drift);
+    // gathered here -- foam riding its own wave already comes out of storing this against the world.
+    const vec2 drift = driftVelocity * deltaTime / foamWindowSize * float(foamGridSize);
+    const vec2 fromPreviousAnchor = abs(cell - floor(previousAnchor / cellSize));
+    const bool hasHistory =
+        max(fromPreviousAnchor.x, fromPreviousAnchor.y) <= 0.5f * float(foamGridSize) - kFoamHistoryMargin;
+    const float previous = hasHistory ? sampleFoamBilinear(vec2(texel) + 0.5f - drift) : 0.0f;
 
     // Exponential decay expressed as a half-life, so the slider means something in seconds.
     const float decay = exp2(-deltaTime / max(halfLife, 1e-3f));

@@ -85,6 +85,24 @@ struct OceanSpectrumPushConstants {
 
 static_assert(sizeof(OceanSpectrumPushConstants) == 76);
 
+struct OceanClipmap {
+    int32_t blockQuads{128};
+    int32_t levelCount{13};
+    float finestSpacing{0.125f};
+    float snapGrid{2.0f};
+};
+
+// Must match the layout in Shaders/Common/ocean-clipmap.part.glsl.
+inline constexpr int32_t kOceanClipmapLevel0Blocks = 16;
+inline constexpr int32_t kOceanClipmapRingBlocks = 12;
+
+int32_t computeClipmapInstanceCount(const OceanClipmap& clipmap);
+
+// Half-width of the outermost ring, in metres.
+float computeClipmapRadius(const OceanClipmap& clipmap);
+
+glm::vec2 computeClipmapOrigin(const OceanClipmap& clipmap, glm::vec2 cameraXZ);
+
 // Integrated second moments of one band. They move only when the spectrum does, so the CPU owns them
 // rather than the shader re-deriving them per pixel.
 struct OceanCascadeMoments {

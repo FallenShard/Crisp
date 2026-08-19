@@ -8,6 +8,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 
 #include <array>
+#include <cmath>
 #include <limits>
 #include <numeric>
 
@@ -20,6 +21,40 @@ const TestShaderMap kTestShaders{
     kShaderSourceDirectory / "ocean-spectrum.comp.glsl",
     kShaderSourceDirectory / "ifft.comp.glsl",
 };
+
+TEST(OceanClipmapTest, RingsTileTheLevelBelow) {
+    const OceanClipmap clipmap{};
+
+    // Level 0's outer half-extent has to equal level 1's inner one, or the rings gap. Both sides are
+    // written in blocks, so this is really a check that the shader's 4x4-minus-2x2 layout is the one
+    // the sizes were derived from.
+    const float blockQuads = static_cast<float>(clipmap.blockQuads);
+    for (int32_t level = 1; level < clipmap.levelCount; ++level) {
+        const float finerSpacing = clipmap.finestSpacing * std::exp2(static_cast<float>(level - 1));
+        const float coarserSpacing = 2.0f * finerSpacing;
+        EXPECT_FLOAT_EQ(2.0f * blockQuads * finerSpacing, blockQuads * coarserSpacing);
+    }
+
+    EXPECT_EQ(
+        computeClipmapInstanceCount(clipmap),
+        kOceanClipmapLevel0Blocks + kOceanClipmapRingBlocks * (clipmap.levelCount - 1));
+    // Reaching the geometric horizon from any plausible eye height is the whole point.
+    EXPECT_GT(computeClipmapRadius(clipmap), 100.0f * 1000.0f);
+}
+
+TEST(OceanClipmapTest, OriginStaysOnTheSnapGrid) {
+    const OceanClipmap clipmap{};
+
+    for (const float x : {-1234.5f, -0.5f, 0.0f, 7.25f, 5000.125f}) {
+        const glm::vec2 origin = computeClipmapOrigin(clipmap, glm::vec2(x, -x));
+        // Off the grid, levels stop being aligned to their own spacing and their vertices swim.
+        EXPECT_FLOAT_EQ(std::fmod(origin.x, clipmap.snapGrid), 0.0f);
+        EXPECT_FLOAT_EQ(std::fmod(origin.y, clipmap.snapGrid), 0.0f);
+        // And it has to actually follow the camera, within one cell.
+        EXPECT_LT(std::abs(origin.x - x), clipmap.snapGrid);
+        EXPECT_LT(std::abs(origin.y + x), clipmap.snapGrid);
+    }
+}
 
 TEST_F(OceanTest, PatchConstruction) {
     constexpr float kSize = 5.0;

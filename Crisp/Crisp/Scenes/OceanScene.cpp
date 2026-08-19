@@ -23,17 +23,16 @@ constexpr float kGravity = 9.81f;
 // Non-power-of-two ratios on purpose: prevent visible tiling. The sizes are in meters.
 constexpr std::array<float, kOceanCascadeCount> kPatchWorldSizes{503.0f, 127.0f, 31.0f};
 
-// The mesh spans the coarsest cascade; the finer two tile inside it at their own periods.
-constexpr float kMeshPatchWorldSize = kPatchWorldSizes[0];
-constexpr int32_t kMeshTessellation = 512;
-
 // The Phillips tail cutoff wants to sit just below the finest wave the cascades can represent.
 constexpr float kFinestCellSize = kPatchWorldSizes[kOceanCascadeCount - 1] / N;
 
-constexpr int32_t kMaxInstancesPerSide = 8;
-
-constexpr int32_t kFoamGridSize = 512;
+constexpr float kFoamWindowSize = 1024.0f;
+constexpr int32_t kFoamGridSize = 1024;
+constexpr float kFoamCellSize = kFoamWindowSize / static_cast<float>(kFoamGridSize);
 constexpr uint32_t kFoamLayerCount = 2;
+
+// Level 16 reaches 2000 km, well past the point where float world coordinates stop being exact.
+constexpr int32_t kMaxClipmapLevels = 16;
 
 constexpr const char* kAtmosphereBufferId = "atmosphereBuffer";
 
@@ -42,29 +41,31 @@ constexpr uint32_t kFoamNoiseOctaves = 5;
 
 // Mirrors the push constant block in Shaders/Common/ocean-draw.part.glsl.
 struct OceanPushConstants {
-    float patchWorldSize;
-    int32_t instancesPerSide;
-    int32_t gridSize;
-    float choppiness;
+    glm::vec2 clipmapOrigin;
+    float clipmapFinestSpacing;
+    int32_t clipmapBlockQuads;
 
+    float choppiness;
     float waterRoughness;
     float foamThreshold;
     float foamSoftness;
+
     float foamIntensity;
     float invRmsWaveHeight;
     float slopeVarianceScale;
-    float foamPatchWorldSize;
+    float foamWindowSize;
+
     int32_t foamLayer;
+    float foamErosion;
+    float foamFreshness;
+    float planetRadius;
 
     glm::vec4 cascadeSizes;
     glm::vec4 cascadeWavelengths;
     glm::vec4 cascadeSlopeVariances;
-
-    float foamErosion;
-    float foamFreshness;
 };
 
-static_assert(sizeof(OceanPushConstants) == 104);
+static_assert(sizeof(OceanPushConstants) == 112);
 
 struct OscillationPassData {
     RenderGraphResourceHandle packedDisplacement;
@@ -92,7 +93,7 @@ struct OceanOutputData {
 // Mirrors the push constant block in ocean-foam.comp.glsl.
 struct FoamPushConstants {
     int32_t foamGridSize;
-    float foamPatchWorldSize;
+    float foamWindowSize;
     float vertexSpacing;
     float choppiness;
 
@@ -105,11 +106,14 @@ struct FoamPushConstants {
     int32_t readLayer;
     int32_t writeLayer;
 
+    glm::vec2 anchor;
+    glm::vec2 previousAnchor;
+
     glm::vec4 cascadeSizes;
     glm::vec4 cascadeWavelengths;
 };
 
-static_assert(sizeof(FoamPushConstants) == 80);
+static_assert(sizeof(FoamPushConstants) == 96);
 
 struct ComputeDispatch {
     std::unique_ptr<VulkanPipeline> pipeline;
@@ -226,9 +230,11 @@ void OceanScene::setupResources() {
     m_resourceContext->createUniformRingBuffer<AtmosphereParameters>(kAtmosphereBufferId);
 
     std::vector<std::vector<VertexAttributeDescriptor>> vertexFormat = {{VertexAttribute::Position}};
-    TriangleMesh mesh = createGridMesh(kMeshPatchWorldSize, kMeshTessellation);
+    // One block template in cell units: unit spacing, centred on the origin. Every clipmap instance
+    // is this same mesh placed and scaled by ocean.vert, so the whole ocean is a single draw.
+    TriangleMesh mesh = createGridMesh(static_cast<float>(m_clipmap.blockQuads), m_clipmap.blockQuads);
     m_resourceContext->addGeometry("ocean", createGeometry(*m_renderer, mesh, vertexFormat))
-        .setInstanceCount(m_instancesPerSide * m_instancesPerSide);
+        .setInstanceCount(static_cast<uint32_t>(computeClipmapInstanceCount(m_clipmap)));
 
     auto foamNoiseImage = createFoamNoise();
     m_resourceContext->imageCache.addImageView(
@@ -258,15 +264,16 @@ void OceanScene::setupResources() {
 void OceanScene::resetCamera() {
     constexpr float kAngularSpeed = glm::radians(90.0f);
 
-    const float patchOnScreenSize = kMeshPatchWorldSize * m_modelScale;
-    const glm::vec3 direction = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f));
-    const float distance = 1.6f * patchOnScreenSize;
+    // Level 0's half-extent, which is as far as the finest tessellation reaches.
+    const float nearFieldSize = 2.0f * static_cast<float>(m_clipmap.blockQuads) * m_clipmap.finestSpacing;
+    // Low and nearly level: the near field and the horizon are both in frame, which is what the
+    // clipmap has to get right at once.
     const float yaw = glm::radians(45.0f);
-    const float pitch = -glm::atan(1.0f / glm::sqrt(2.0f));
+    const float pitch = glm::radians(-10.0f);
 
-    m_cameraController->setPosition(distance * direction);
+    m_cameraController->setPosition(glm::vec3(0.0f, 0.8f * nearFieldSize, 0.0f));
     m_cameraController->updateOrientation(yaw / kAngularSpeed, pitch / kAngularSpeed);
-    m_cameraController->setSpeed(std::max(0.05f, patchOnScreenSize * 0.15f));
+    m_cameraController->setSpeed(std::max(0.05f, nearFieldSize * 0.15f));
 }
 
 OceanScene::~OceanScene() {
@@ -305,7 +312,13 @@ void OceanScene::update(const UpdateParams& updateParams) {
     m_cameraController->update(updateParams.dt);
     const auto& cameraParams = m_cameraController->getCameraParameters();
 
-    m_transformBuffer->getPack(m_transformHandle).M = glm::scale(glm::mat4(1.0f), glm::vec3(m_modelScale));
+    // The clipmap places itself in world metres, so any model transform would fight the snapping.
+    m_transformBuffer->getPack(m_transformHandle).M = glm::mat4(1.0f);
+    const glm::vec3 cameraPosition = m_cameraController->getCamera().getPosition();
+    m_clipmapOrigin = computeClipmapOrigin(m_clipmap, glm::vec2(cameraPosition.x, cameraPosition.z));
+    // Snapped to a whole texel: the toroidal addressing only keeps a texel's world identity if the
+    // window moves in texel steps.
+    m_foamAnchor = glm::floor(glm::vec2(cameraPosition.x, cameraPosition.z) / kFoamCellSize) * kFoamCellSize;
     m_transformBuffer->update(cameraParams.V, cameraParams.P);
     m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(
         cameraParams, updateParams.frameInFlightIdx);
@@ -315,7 +328,7 @@ void OceanScene::update(const UpdateParams& updateParams) {
     // One sun drives the sky, the reflection and the specular highlight, which is item 4 closed by
     // construction rather than by dialling a constant onto a cubemap.
     applyAtmosphereSettings(m_atmosphereSettings, m_atmosphereParams);
-    m_atmosphereParams.cameraPosition = m_cameraController->getCamera().getPosition() / kMetersPerKilometer;
+    m_atmosphereParams.cameraPosition = cameraPosition / kMetersPerKilometer;
     m_atmosphereParams.VP = cameraParams.P * cameraParams.V;
     m_atmosphereParams.invVP = glm::inverse(m_atmosphereParams.VP);
     m_atmosphereParams.screenResolution = cameraParams.screenSize;
@@ -415,10 +428,11 @@ void OceanScene::drawGui() {
         kTonemapOperatorNames.data(),
         static_cast<int32_t>(kTonemapOperatorNames.size()));
     ImGui::SliderFloat("Exposure", &m_tonemapParams.exposure, 0.05f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
-    ImGui::SliderFloat("Model Scale", &m_modelScale, 0.001f, 1.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
-    if (ImGui::SliderInt("Instances Per Side", &m_instancesPerSide, 1, kMaxInstancesPerSide)) {
-        m_resourceContext->getGeometry("ocean").setInstanceCount(m_instancesPerSide * m_instancesPerSide);
+    if (ImGui::SliderInt("Clipmap Levels", &m_clipmap.levelCount, 1, kMaxClipmapLevels)) {
+        m_resourceContext->getGeometry("ocean").setInstanceCount(
+            static_cast<uint32_t>(computeClipmapInstanceCount(m_clipmap)));
     }
+    ImGui::Text("Clipmap Radius: %.1f km", computeClipmapRadius(m_clipmap) / kMetersPerKilometer);
     if (ImGui::Button("Reset View")) {
         resetCamera();
     }
@@ -626,8 +640,8 @@ void OceanScene::buildRenderGraph() {
                 VK_SHADER_STAGE_COMPUTE_BIT,
                 FoamPushConstants{
                     .foamGridSize = kFoamGridSize,
-                    .foamPatchWorldSize = kMeshPatchWorldSize,
-                    .vertexSpacing = kMeshPatchWorldSize / kMeshTessellation,
+                    .foamWindowSize = kFoamWindowSize,
+                    .vertexSpacing = kFoamCellSize,
                     .choppiness = m_choppiness,
                     .deltaTime = m_foamDeltaTime,
                     .halfLife = m_foamHalfLife,
@@ -636,9 +650,14 @@ void OceanScene::buildRenderGraph() {
                     .driftVelocity = m_oceanParams.windDirection * m_foamDriftSpeed,
                     .readLayer = 1 - writeLayer,
                     .writeLayer = writeLayer,
+                    .anchor = m_foamAnchor,
+                    .previousAnchor = m_previousFoamAnchor,
                     .cascadeSizes = cascadeSizes,
                     .cascadeWavelengths = cascadeWavelengths});
             ctx.commandEncoder.dispatchCompute(m_passResources->foam.dispatchSize);
+            // Paired with the dispatch rather than with update(), so a dropped frame cannot advance
+            // the window without the shader having been told the band it invalidates.
+            m_previousFoamAnchor = m_foamAnchor;
         });
 
     m_renderGraph->addPass(
@@ -694,9 +713,9 @@ void OceanScene::buildRenderGraph() {
                 *m_oceanPipeline->getPipelineLayout(),
                 VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                 OceanPushConstants{
-                    .patchWorldSize = kMeshPatchWorldSize,
-                    .instancesPerSide = m_instancesPerSide,
-                    .gridSize = kMeshTessellation,
+                    .clipmapOrigin = m_clipmapOrigin,
+                    .clipmapFinestSpacing = m_clipmap.finestSpacing,
+                    .clipmapBlockQuads = m_clipmap.blockQuads,
                     .choppiness = m_choppiness,
                     .waterRoughness = m_waterRoughness,
                     .foamThreshold = m_foamThreshold,
@@ -704,13 +723,15 @@ void OceanScene::buildRenderGraph() {
                     .foamIntensity = m_foamIntensity,
                     .invRmsWaveHeight = 1.0f / std::max(m_rmsWaveHeight, 1e-4f),
                     .slopeVarianceScale = m_slopeVarianceScale,
-                    .foamPatchWorldSize = kMeshPatchWorldSize,
+                    .foamWindowSize = kFoamWindowSize,
                     .foamLayer = static_cast<int32_t>(ctx.frameIndex % kFoamLayerCount),
+                    .foamErosion = m_foamErosion,
+                    .foamFreshness = m_foamFreshness,
+                    // One planet: the horizon the water bends to is the one the sky is built on.
+                    .planetRadius = m_atmosphereParams.bottomRadius * kMetersPerKilometer,
                     .cascadeSizes = cascadeSizes,
                     .cascadeWavelengths = cascadeWavelengths,
-                    .cascadeSlopeVariances = cascadeSlopeVariances,
-                    .foamErosion = m_foamErosion,
-                    .foamFreshness = m_foamFreshness});
+                    .cascadeSlopeVariances = cascadeSlopeVariances});
             ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
             geometry.bindAndDraw(ctx.commandEncoder);
         });

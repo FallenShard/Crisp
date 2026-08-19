@@ -6,6 +6,7 @@ layout(location = 0) out vec4 finalColor;
 
 layout(location = 0) in vec3 eyePosition;
 layout(location = 1) in vec2 oceanWorldXZ;
+layout(location = 2) in float vertexSpacing;
 
 #include "Brdf/microfacet.part.glsl"
 #include "Common/ocean-atmosphere.part.glsl"
@@ -102,7 +103,6 @@ SurfaceFields sampleCascades(const float pixelSpacing, const float vertexSpacing
 void main() {
     const vec2 footprint = fwidth(oceanWorldXZ);
     const float pixelSpacing = max(footprint.x, footprint.y);
-    const float vertexSpacing = patchWorldSize / float(gridSize);
 
     const SurfaceFields fields = sampleCascades(pixelSpacing, vertexSpacing);
 
@@ -129,8 +129,10 @@ void main() {
     // Foam is read from the accumulation buffer rather than from this frame's Jacobian, so it
     // persists and decays instead of blinking with the wave that made it. The instantaneous
     // compression still contributes, which keeps the leading edge of a break crisp.
-    const vec2 foamUv = oceanWorldXZ / foamPatchWorldSize + 0.5f;
-    const float accumulated = texture(foamMap, vec3(foamUv, float(foamLayer))).r;
+    const vec2 foamUv = oceanWorldXZ / foamWindowSize;
+    const float windowFade =
+        1.0f - smoothstep(0.75f, 0.95f, distance(oceanWorldXZ, view.invV[3].xz) / (0.5f * foamWindowSize));
+    const float accumulated = windowFade * texture(foamMap, vec3(foamUv, float(foamLayer))).r;
     const float foamSignal = compression + accumulated;
 
     // Zero-mean on purpose: the noise has to eat into the boundary and bulge out of it in equal
