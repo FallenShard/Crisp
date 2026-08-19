@@ -303,3 +303,10 @@ profile.json
 
 # Output folder
 Output/*
+
+# Python tooling environment (uv sync); uv.lock is committed.
+.venv/
+
+# Claude Code: local instructions, settings, and session state
+.claude/
+CLAUDE.md
