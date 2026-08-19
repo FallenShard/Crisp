@@ -7,6 +7,7 @@
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Math/Headers.hpp>
 
+#include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 
 namespace crisp {
@@ -116,6 +117,26 @@ struct AtmosphereParameters {
     int32_t fastAerialPerspectiveEnabled{1};
 };
 
+// The handful of controls that are more natural to author than the derived values the shaders read.
+// applyAtmosphereSettings() folds these into an AtmosphereParameters block.
+struct AtmosphereSettings {
+    float sunAzimuthDegrees{270.0f};
+    float sunElevationDegrees{25.8f};
+    glm::vec3 sunColor{1.0f, 1.0f, 1.0f};
+    float sunIrradianceScale{1.0f};
+
+    float rayleighScaleHeight{kEarthRayleighScaleHeight};
+    float mieScaleHeight{kEarthMieScaleHeight};
+    float atmosphereHeight{100.0f};
+};
+
+// Y-up: elevation is measured from the horizon, azimuth around +Y starting at +X and turning toward +Z.
+glm::vec3 computeSunDirection(float azimuthDegrees, float elevationDegrees);
+
+// Derives every field of params that is authored indirectly. Leaves the camera-dependent fields alone, so a
+// caller is free to run this before or after filling those in.
+void applyAtmosphereSettings(const AtmosphereSettings& settings, AtmosphereParameters& params);
+
 inline constexpr std::array<const char*, 5> kDebugViewModeNames{
     "Atmosphere",
     "Transmittance LUT",
@@ -144,7 +165,41 @@ struct SkyVolumeLutData {
     RenderGraphResourceHandle lut;
 };
 
-void addAtmosphereLutPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext);
-void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext);
+// The materials the atmosphere passes bind. The scene owns this, and every material in it is rebuilt whenever
+// the graph is compiled: their descriptors name the graph's physical images, and compile() -- which resize()
+// routes through -- destroys and recreates those.
+struct AtmosphereMaterials {
+    std::unique_ptr<Material> transmittanceLut;
+    std::unique_ptr<Material> multiScattering;
+    std::unique_ptr<Material> skyViewLut;
+    std::unique_ptr<Material> cameraVolume;
+
+    // Null unless addAtmosphereRenderPasses added the full screen march.
+    std::unique_ptr<Material> rayMarching;
+
+    // The one pipeline that stays out of the cache: its work group size is a specialization constant, so it is
+    // built by hand. It does not depend on the graph's images, so it outlives any number of compilations.
+    std::unique_ptr<VulkanPipeline> multiScatteringPipeline;
+};
+
+void addAtmosphereLutPasses(
+    rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext, AtmosphereMaterials& materials);
+void addAtmosphereRenderPasses(
+    rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext, AtmosphereMaterials& materials);
+
+// Rebuilds every material the LUT passes bind. Must run after RenderGraph::compile() and again after every
+// resize, both of which reallocate the images these descriptors name. Pair with addAtmosphereLutPasses.
+void createAtmosphereLutMaterials(
+    AtmosphereMaterials& materials,
+    const rg::RenderGraph& renderGraph,
+    Renderer& renderer,
+    ResourceContext& resourceContext);
+
+// As above, plus the full screen march's own material. Pair with addAtmosphereRenderPasses.
+void createAtmosphereRenderMaterials(
+    AtmosphereMaterials& materials,
+    const rg::RenderGraph& renderGraph,
+    Renderer& renderer,
+    ResourceContext& resourceContext);
 
 } // namespace crisp

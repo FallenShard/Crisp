@@ -18,20 +18,7 @@ public:
     void drawGui() override;
 
 private:
-    struct AtmosphereSettings {
-        float sunAzimuthDegrees{270.0f};
-        float sunElevationDegrees{25.8f};
-        glm::vec3 sunColor{1.0f, 1.0f, 1.0f};
-        float sunIrradianceScale{1.0f};
-
-        float rayleighScaleHeight{kEarthRayleighScaleHeight};
-        float mieScaleHeight{kEarthMieScaleHeight};
-        float atmosphereHeight{100.0f};
-    };
-
     void setupInput();
-
-    void applyAtmosphereSettings();
 
     void drawAtmosphereGui();
 
@@ -40,6 +27,7 @@ private:
     std::unique_ptr<rg::RenderGraph> m_renderGraph;
     std::unique_ptr<FreeCameraController> m_cameraController;
 
+    AtmosphereMaterials m_atmosphereMaterials;
     AtmosphereParameters m_atmosphereParams;
     AtmosphereSettings m_settings;
     TonemapParameters m_tonemapParams;

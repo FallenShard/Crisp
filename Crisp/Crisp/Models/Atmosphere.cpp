@@ -1,5 +1,8 @@
 #include <Crisp/Models/Atmosphere.hpp>
 
+#include <algorithm>
+#include <cmath>
+
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Renderer/ComputePipeline.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -28,33 +31,57 @@ std::unique_ptr<VulkanPipeline> createMultiScatteringPipeline(Renderer& renderer
     return result;
 }
 
-// Wires up the descriptors shared by every atmosphere pass: the parameter buffer in set 0, followed by the LUTs
-// this pass samples in set 1, in binding order. The render graph only allocates its physical images during
-// compile(), which runs after every pass has been declared, so materials can only be built once a pass first
-// executes.
-Material* createAtmosphereMaterial(
+// Builds one pass's material: the parameter buffer in set 0, then the LUTs it samples in set 1, in binding
+// order. The materials are constructed directly rather than parked in the ResourceContext, since they are
+// rebuilt on every compile and nothing else looks them up.
+std::unique_ptr<Material> createAtmosphereMaterial(
     Renderer& renderer,
     ResourceContext& resourceContext,
-    rg::RenderGraph& renderGraph,
+    const rg::RenderGraph& renderGraph,
     const std::string& id,
     const std::string& pipelineFilename,
     const std::string& passName,
     const std::vector<RenderGraphResourceHandle>& sampledLuts) {
     VulkanPipeline* pipeline = resourceContext.pipelineCache.loadPipeline(
         id, pipelineFilename, renderer.getDevice(), renderGraph.getRasterizationPassDescriptor(passName));
-    Material* material = resourceContext.createMaterial(id, pipeline);
+
+    // Cached pipelines take their allocator from the cache; only hand-built layouts own one.
+    auto material =
+        std::make_unique<Material>(pipeline, resourceContext.getDescriptorAllocator(pipeline->getPipelineLayout()));
+    material->setDebugName(id);
     material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kAtmosphereBufferId));
 
     const VulkanSampler& sampler = resourceContext.imageCache.getSampler(kLinearClampSamplerId);
     for (uint32_t binding = 0; binding < static_cast<uint32_t>(sampledLuts.size()); ++binding) {
         material->writeDescriptor(1, binding, renderGraph.getResourceImageView(sampledLuts[binding]), sampler);
     }
-    renderer.getDevice().flushDescriptorUpdates();
     return material;
 }
 } // namespace
 
-void addAtmosphereLutPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext) {
+glm::vec3 computeSunDirection(const float azimuthDegrees, const float elevationDegrees) {
+    const float azimuth = glm::radians(azimuthDegrees);
+    const float elevation = glm::radians(elevationDegrees);
+    const float cosElevation = std::cos(elevation);
+    return {cosElevation * std::cos(azimuth), std::sin(elevation), cosElevation * std::sin(azimuth)};
+}
+
+void applyAtmosphereSettings(const AtmosphereSettings& settings, AtmosphereParameters& params) {
+    params.sunDirection = computeSunDirection(settings.sunAzimuthDegrees, settings.sunElevationDegrees);
+    params.sunIrradiance = glm::vec4(settings.sunColor * settings.sunIrradianceScale, 1.0f);
+
+    // The shaders evaluate exp(densityScale * altitude), so they want the negated reciprocal scale height.
+    params.rayleighDensityScale = -1.0f / std::max(settings.rayleighScaleHeight, 1e-3f);
+    params.mieDensityScale = -1.0f / std::max(settings.mieScaleHeight, 1e-3f);
+
+    params.topRadius = params.bottomRadius + settings.atmosphereHeight;
+
+    // Extinction is not independently authored: what is not scattered out of the beam has to be absorbed.
+    params.mieExtinction = params.mieScattering + glm::vec3(params.mieAbsorption);
+}
+
+void addAtmosphereLutPasses(
+    rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext, AtmosphereMaterials& materials) {
     resourceContext.imageCache.addSampler(kLinearClampSamplerId, createLinearClampSampler(renderer.getDevice()));
 
     // The camera volume is filled one layer per instance; the geometry shader routes each instance to its slice
@@ -78,21 +105,10 @@ void addAtmosphereLutPasses(rg::RenderGraph& renderGraph, Renderer& renderer, Re
                 },
                 "transmittanceLut");
         },
-        [&renderer, &resourceContext, &renderGraph, material = static_cast<Material*>(nullptr)](
-            const FrameContext& ctx) mutable {
-            if (material == nullptr) {
-                material = createAtmosphereMaterial(
-                    renderer,
-                    resourceContext,
-                    renderGraph,
-                    "transmittanceLut",
-                    "SkyTransLut.json",
-                    TransmittanceLutPass,
-                    {});
-            }
-
-            ctx.commandEncoder.bindPipeline(*material->getPipeline());
-            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
+        [&renderer, &materials](const FrameContext& ctx) {
+            const Material& material = *materials.transmittanceLut;
+            ctx.commandEncoder.bindPipeline(*material.getPipeline());
+            ctx.commandEncoder.bindDescriptorSets(material.getDescriptorSetBinding());
 
             // SkyTransLut.json bakes the viewport and scissor from the pass render area, so the pipeline
             // declares neither as dynamic state. Setting them here would violate the static state and also
@@ -116,41 +132,9 @@ void addAtmosphereLutPasses(rg::RenderGraph& renderGraph, Renderer& renderer, Re
                 },
                 "multiScatTex");
         },
-        [&renderer,
-         &resourceContext,
-         &renderGraph,
-         pipeline = std::shared_ptr<VulkanPipeline>{},
-         material = std::shared_ptr<Material>{}](const FrameContext& ctx) mutable {
-            if (material == nullptr) {
-                // Built by hand rather than from a json description because the work group size has to be fed in
-                // as a specialization constant. The material is likewise constructed directly instead of through
-                // ResourceContext, whose createMaterial() resolves the descriptor allocator through the pipeline
-                // cache - this pipeline never goes through the cache, so it has no entry there. The layout built
-                // above owns its own allocator, which is what Material picks up from the pipeline.
-                pipeline = createMultiScatteringPipeline(renderer, {1, 1, 64});
-                material = std::make_shared<Material>(pipeline.get());
-                material->setDebugName(MultipleScatteringPass);
-                material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kAtmosphereBufferId));
-
-                auto& blackboard = renderGraph.getBlackboard();
-                material->writeDescriptor(
-                    1,
-                    0,
-                    VkDescriptorImageInfo{
-                        VK_NULL_HANDLE,
-                        renderGraph.getResourceImageView(blackboard.get<MultipleScatteringData>().tex).getHandle(),
-                        VK_IMAGE_LAYOUT_GENERAL,
-                    });
-                material->writeDescriptor(
-                    1,
-                    1,
-                    renderGraph.getResourceImageView(blackboard.get<TransmittanceLutData>().lut),
-                    resourceContext.imageCache.getSampler(kLinearClampSamplerId));
-                renderer.getDevice().flushDescriptorUpdates();
-            }
-
-            ctx.commandEncoder.bindPipeline(*pipeline);
-            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
+        [&materials](const FrameContext& ctx) {
+            ctx.commandEncoder.bindPipeline(*materials.multiScatteringPipeline);
+            ctx.commandEncoder.bindDescriptorSets(materials.multiScattering->getDescriptorSetBinding());
             ctx.commandEncoder.dispatchCompute({kMultiScatteringLutResolution, kMultiScatteringLutResolution, 1});
         });
 
@@ -171,25 +155,10 @@ void addAtmosphereLutPasses(rg::RenderGraph& renderGraph, Renderer& renderer, Re
                 },
                 "skyViewLut");
         },
-        [&renderer, &resourceContext, &renderGraph, material = static_cast<Material*>(nullptr)](
-            const FrameContext& ctx) mutable {
-            if (material == nullptr) {
-                auto& blackboard = renderGraph.getBlackboard();
-                material = createAtmosphereMaterial(
-                    renderer,
-                    resourceContext,
-                    renderGraph,
-                    "skyViewLut",
-                    "SkyViewLut.json",
-                    SkyViewLutPass,
-                    {
-                        blackboard.get<TransmittanceLutData>().lut,
-                        blackboard.get<MultipleScatteringData>().tex,
-                    });
-            }
-
-            ctx.commandEncoder.bindPipeline(*material->getPipeline());
-            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
+        [&renderer, &materials](const FrameContext& ctx) {
+            const Material& material = *materials.skyViewLut;
+            ctx.commandEncoder.bindPipeline(*material.getPipeline());
+            ctx.commandEncoder.bindDescriptorSets(material.getDescriptorSetBinding());
             renderer.drawFullScreenQuad(ctx.commandEncoder);
         });
 
@@ -211,31 +180,17 @@ void addAtmosphereLutPasses(rg::RenderGraph& renderGraph, Renderer& renderer, Re
                 },
                 "skyVolumeLut");
         },
-        [&renderer, &resourceContext, &renderGraph, material = static_cast<Material*>(nullptr)](
-            const FrameContext& ctx) mutable {
-            if (material == nullptr) {
-                auto& blackboard = renderGraph.getBlackboard();
-                material = createAtmosphereMaterial(
-                    renderer,
-                    resourceContext,
-                    renderGraph,
-                    "skyCameraVolumes",
-                    "SkyCameraVolumes.json",
-                    ViewVolumePass,
-                    {
-                        blackboard.get<TransmittanceLutData>().lut,
-                        blackboard.get<MultipleScatteringData>().tex,
-                    });
-            }
-
-            ctx.commandEncoder.bindPipeline(*material->getPipeline());
-            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
+        [&resourceContext, &materials](const FrameContext& ctx) {
+            const Material& material = *materials.cameraVolume;
+            ctx.commandEncoder.bindPipeline(*material.getPipeline());
+            ctx.commandEncoder.bindDescriptorSets(material.getDescriptorSetBinding());
             resourceContext.getGeometry(kVolumeGeometryId).bindAndDraw(ctx.commandEncoder);
         });
 }
 
-void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext) {
-    addAtmosphereLutPasses(renderGraph, renderer, resourceContext);
+void addAtmosphereRenderPasses(
+    rg::RenderGraph& renderGraph, Renderer& renderer, ResourceContext& resourceContext, AtmosphereMaterials& materials) {
+    addAtmosphereLutPasses(renderGraph, renderer, resourceContext, materials);
 
     renderGraph.addPass(
         RayMarchingPass,
@@ -255,31 +210,91 @@ void addAtmosphereRenderPasses(rg::RenderGraph& renderGraph, Renderer& renderer,
                 "rayMarchedImage");
             builder.exportTexture(data.image);
         },
-        [&renderer, &resourceContext, &renderGraph, material = static_cast<Material*>(nullptr)](
-            const FrameContext& ctx) mutable {
-            if (material == nullptr) {
-                auto& blackboard = renderGraph.getBlackboard();
-                // Set 1 binding 4 is the view depth texture, which sky-ray-march.frag currently does not sample,
-                // so it is intentionally left unwritten until a depth pre-pass feeds it.
-                material = createAtmosphereMaterial(
-                    renderer,
-                    resourceContext,
-                    renderGraph,
-                    "rayMarching",
-                    "SkyRayMarching.json",
-                    RayMarchingPass,
-                    {
-                        blackboard.get<TransmittanceLutData>().lut,
-                        blackboard.get<MultipleScatteringData>().tex,
-                        blackboard.get<SkyViewLutData>().lut,
-                        blackboard.get<SkyVolumeLutData>().lut,
-                    });
-            }
-
-            ctx.commandEncoder.bindPipeline(*material->getPipeline());
-            ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
+        [&renderer, &materials](const FrameContext& ctx) {
+            const Material& material = *materials.rayMarching;
+            ctx.commandEncoder.bindPipeline(*material.getPipeline());
+            ctx.commandEncoder.bindDescriptorSets(material.getDescriptorSetBinding());
             renderer.drawFullScreenQuad(ctx.commandEncoder);
         });
+}
+
+void createAtmosphereLutMaterials(
+    AtmosphereMaterials& materials,
+    const rg::RenderGraph& renderGraph,
+    Renderer& renderer,
+    ResourceContext& resourceContext) {
+    const auto& blackboard = renderGraph.getBlackboard();
+    const auto transmittanceLut = blackboard.get<TransmittanceLutData>().lut;
+    const auto multiScatteringTex = blackboard.get<MultipleScatteringData>().tex;
+
+    materials.transmittanceLut = createAtmosphereMaterial(
+        renderer, resourceContext, renderGraph, "transmittanceLut", "SkyTransLut.json", TransmittanceLutPass, {});
+    materials.skyViewLut = createAtmosphereMaterial(
+        renderer,
+        resourceContext,
+        renderGraph,
+        "skyViewLut",
+        "SkyViewLut.json",
+        SkyViewLutPass,
+        {transmittanceLut, multiScatteringTex});
+    materials.cameraVolume = createAtmosphereMaterial(
+        renderer,
+        resourceContext,
+        renderGraph,
+        "skyCameraVolumes",
+        "SkyCameraVolumes.json",
+        ViewVolumePass,
+        {transmittanceLut, multiScatteringTex});
+
+    if (materials.multiScatteringPipeline == nullptr) {
+        materials.multiScatteringPipeline = createMultiScatteringPipeline(renderer, {1, 1, 64});
+    }
+    materials.multiScattering = std::make_unique<Material>(materials.multiScatteringPipeline.get());
+    materials.multiScattering->setDebugName(MultipleScatteringPass);
+    materials.multiScattering->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kAtmosphereBufferId));
+    // This pass writes its own LUT, so binding 0 is a storage image rather than a sampled one.
+    materials.multiScattering->writeDescriptor(
+        1,
+        0,
+        VkDescriptorImageInfo{
+            VK_NULL_HANDLE,
+            renderGraph.getResourceImageView(multiScatteringTex).getHandle(),
+            VK_IMAGE_LAYOUT_GENERAL,
+        });
+    materials.multiScattering->writeDescriptor(
+        1,
+        1,
+        renderGraph.getResourceImageView(transmittanceLut),
+        resourceContext.imageCache.getSampler(kLinearClampSamplerId));
+
+    renderer.getDevice().flushDescriptorUpdates();
+}
+
+void createAtmosphereRenderMaterials(
+    AtmosphereMaterials& materials,
+    const rg::RenderGraph& renderGraph,
+    Renderer& renderer,
+    ResourceContext& resourceContext) {
+    createAtmosphereLutMaterials(materials, renderGraph, renderer, resourceContext);
+
+    const auto& blackboard = renderGraph.getBlackboard();
+    // Set 1 binding 4 is the view depth texture, which sky-ray-march.frag currently does not sample, so it is
+    // intentionally left unwritten until a depth pre-pass feeds it.
+    materials.rayMarching = createAtmosphereMaterial(
+        renderer,
+        resourceContext,
+        renderGraph,
+        "rayMarching",
+        "SkyRayMarching.json",
+        RayMarchingPass,
+        {
+            blackboard.get<TransmittanceLutData>().lut,
+            blackboard.get<MultipleScatteringData>().tex,
+            blackboard.get<SkyViewLutData>().lut,
+            blackboard.get<SkyVolumeLutData>().lut,
+        });
+
+    renderer.getDevice().flushDescriptorUpdates();
 }
 
 } // namespace crisp

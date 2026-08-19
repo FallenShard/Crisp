@@ -46,6 +46,7 @@ target_link_libraries(CrispScenes
 
     PRIVATE Crisp::RenderGraphGui
     PRIVATE Crisp::ImGuiCameraUtils
+    PRIVATE Crisp::AtmosphereGui
 )
 
 add_cpp_static_library(CrispScene
@@ -99,6 +100,7 @@ target_link_libraries(CrispPbrScene
     PRIVATE Crisp::RenderGraph
     PRIVATE Crisp::RenderGraphGui
     PRIVATE Crisp::ImGuiCameraUtils
+    PRIVATE Crisp::AtmosphereGui
 )
 
 add_cpp_static_library(CrispVulkanRayTracingScene
