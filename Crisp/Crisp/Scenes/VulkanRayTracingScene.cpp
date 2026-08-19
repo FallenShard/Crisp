@@ -87,8 +87,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     m_closeAfterScreenshot = args.value("closeAfterCapture", false);
     m_screenshotFilename = args.value("captureFilename", std::string{"screenshot.exr"});
 
-    const auto json =
-        loadJsonFromFile(renderer->getAssetPaths().resourceDir / "VesperScenes/Nori-PA-4/cbox-mats.json").unwrap();
+    const auto sceneFile = args.value("sceneFile", std::string{"VesperScenes/Nori-PA-4/cbox-mats.json"});
+    const auto json = loadJsonFromFile(renderer->getAssetPaths().resourceDir / sceneFile).unwrap();
     m_sceneDesc = parseSceneDescription(json["shapes"]);
 
     // Camera

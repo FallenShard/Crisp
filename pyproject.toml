@@ -1,0 +1,18 @@
+[project]
+name = "crisp-tools"
+version = "0.1.0"
+description = "Python tooling for the Crisp renderer: path-tracer evaluation against Mitsuba"
+# flip-evaluator publishes no wheel past CPython 3.13, and it has to share a
+# process with Mitsuba, so the whole toolchain is pinned to 3.13.
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "flip-evaluator>=1.7",
+    "matplotlib>=3.9",
+    "mitsuba>=3.6",
+    "numpy>=2.0",
+    "pillow>=11.0",
+]
+
+# Crisp is a CMake project; nothing here is an installable Python package.
+[tool.uv]
+package = false
