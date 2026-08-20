@@ -41,7 +41,9 @@ public:
     explicit GraphView(const rg::RenderGraph& renderGraph)
         : m_graph(&renderGraph)
         , m_passTimings(renderGraph.getGpuPassTimingsMs())
-        , m_graphTiming(renderGraph.getGpuFrameTimingMs()) {
+        , m_graphTiming(renderGraph.getGpuFrameTimingMs())
+        , m_cpuPassTimings(renderGraph.getCpuPassTimingsMs())
+        , m_cpuGraphTiming(renderGraph.getCpuFrameTimingMs()) {
         m_lifetimes.reserve(renderGraph.getResourceCount());
         for (const auto& resource : renderGraph.getResources()) {
             m_lifetimes.push_back(computeLifetime(resource));
@@ -107,6 +109,30 @@ public:
         return std::min(m_passTimings.size(), passCount());
     }
 
+    // CPU timings are recorded on the submitting thread, so unlike the GPU ones they are current from the very
+    // first frame.
+    std::optional<double> cpuPassTiming(const size_t passIndex) const {
+        return passIndex < m_cpuPassTimings.size() ? m_cpuPassTimings[passIndex] : std::nullopt;
+    }
+
+    std::optional<double> cpuGraphTiming() const {
+        return m_cpuGraphTiming;
+    }
+
+    std::optional<double> cpuPassTimingSum() const {
+        std::optional<double> sum;
+        for (size_t i = 0; i < cpuTimedPassCount(); ++i) {
+            if (const auto timing = cpuPassTiming(i)) {
+                sum = sum.value_or(0.0) + *timing;
+            }
+        }
+        return sum;
+    }
+
+    size_t cpuTimedPassCount() const {
+        return std::min(m_cpuPassTimings.size(), passCount());
+    }
+
 private:
     ResourceLifetime computeLifetime(const RenderGraphResource& resource) const {
         ResourceLifetime lifetime{};
@@ -131,6 +157,8 @@ private:
     const rg::RenderGraph* m_graph;
     std::span<const std::optional<double>> m_passTimings;
     std::optional<double> m_graphTiming;
+    std::span<const std::optional<double>> m_cpuPassTimings;
+    std::optional<double> m_cpuGraphTiming;
     std::vector<ResourceLifetime> m_lifetimes;
 };
 
@@ -151,6 +179,7 @@ constexpr ImGuiID kPassColGpu{3};
 constexpr ImGuiID kPassColInputs{4};
 constexpr ImGuiID kPassColOutputs{5};
 constexpr ImGuiID kPassColShare{6};
+constexpr ImGuiID kPassColCpu{7};
 
 constexpr ImGuiID kResColIndex{0};
 constexpr ImGuiID kResColName{1};
@@ -465,6 +494,14 @@ void drawOverview(const GraphView& view) {
         }
     }
 
+    std::optional<size_t> slowestCpuPass;
+    for (size_t i = 0; i < view.cpuTimedPassCount(); ++i) {
+        const auto timing = view.cpuPassTiming(i);
+        if (timing && (!slowestCpuPass || *timing > *view.cpuPassTiming(*slowestCpuPass))) {
+            slowestCpuPass = i;
+        }
+    }
+
     constexpr auto kMetricTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchSame;
     if (ImGui::BeginTable("##RenderGraphStructure", 3, kMetricTableFlags)) {
         drawMetric("PASSES", std::to_string(view.passCount()));
@@ -496,6 +533,23 @@ void drawOverview(const GraphView& view) {
         } else {
             drawMetric("SLOWEST PASS", pendingText);
         }
+
+        const auto cpuTime = view.cpuGraphTiming();
+        const auto cpuPassSum = view.cpuPassTimingSum();
+        drawMetric("CPU TOTAL", cpuTime ? milliseconds(*cpuTime) : "Pending");
+        drawMetric("CPU SUM OF PASSES", cpuPassSum ? milliseconds(*cpuPassSum) : "Pending");
+        if (cpuTime && cpuPassSum) {
+            drawMetric("CPU BETWEEN PASSES", milliseconds(std::max(0.0, *cpuTime - *cpuPassSum)));
+        } else {
+            drawMetric("CPU BETWEEN PASSES", "Pending");
+        }
+        if (slowestCpuPass) {
+            drawMetric(
+                "SLOWEST CPU PASS",
+                view.pass(*slowestCpuPass).name + " (" + milliseconds(*view.cpuPassTiming(*slowestCpuPass)) + ")");
+        } else {
+            drawMetric("SLOWEST CPU PASS", "Pending");
+        }
         ImGui::EndTable();
     }
     ImGui::Spacing();
@@ -514,7 +568,9 @@ void drawOverview(const GraphView& view) {
     ImGui::SetItemTooltip(
         "GPU TOTAL is the span from the first pass's begin to the last pass's end, so it also covers the gaps "
         "between passes. SUM OF PASSES adds up the individual pass timers only, and BETWEEN PASSES is the "
-        "difference: barriers, layout transitions and idle time.");
+        "difference: barriers, layout transitions and idle time.\n\n"
+        "The CPU rows measure command recording on the submitting thread with the same begin/end brackets. A CPU "
+        "total far above the GPU total means the frame is bound on recording, not on the device.");
     ImGui::SameLine();
     ImGui::TextWrapped(
         "GPU timings are read asynchronously when a virtual frame is reused. Static graph metadata remains available "
@@ -536,6 +592,10 @@ void sortPassIndices(std::vector<size_t>& indices, const GraphView& view, const 
             break;
         case kPassColType:
             result = compareValues(lhs.type, rhs.type);
+            break;
+        case kPassColCpu:
+            result = compareValues(
+                view.cpuPassTiming(lhsIndex).value_or(-1.0), view.cpuPassTiming(rhsIndex).value_or(-1.0));
             break;
         case kPassColGpu:
             result = compareValues(
@@ -567,7 +627,7 @@ void drawPassTable(const GraphView& view, InspectorState& state) {
     std::vector<size_t> indices(view.passCount());
     std::iota(indices.begin(), indices.end(), 0);
 
-    if (!ImGui::BeginTable("##RenderGraphPasses", 7, kTableFlags, ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 14.0f))) {
+    if (!ImGui::BeginTable("##RenderGraphPasses", 8, kTableFlags, ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 14.0f))) {
         return;
     }
     ImGui::TableSetupScrollFreeze(0, 1);
@@ -576,6 +636,7 @@ void drawPassTable(const GraphView& view, InspectorState& state) {
     ImGui::TableSetupColumn("Pass", ImGuiTableColumnFlags_WidthStretch, 2.0f, kPassColName);
     ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, 88.0f, kPassColType);
     ImGui::TableSetupColumn("GPU", ImGuiTableColumnFlags_WidthFixed, 76.0f, kPassColGpu);
+    ImGui::TableSetupColumn("CPU", ImGuiTableColumnFlags_WidthFixed, 76.0f, kPassColCpu);
     ImGui::TableSetupColumn(
         "Graph %", ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed, 110.0f, kPassColShare);
     ImGui::TableSetupColumn("Inputs", ImGuiTableColumnFlags_WidthFixed, 54.0f, kPassColInputs);
@@ -602,6 +663,12 @@ void drawPassTable(const GraphView& view, InspectorState& state) {
         const auto timing = view.passTiming(passIndex);
         if (timing) {
             ImGui::Text("%.3f ms", *timing); // NOLINT
+        } else {
+            ImGui::TextDisabled("--");
+        }
+        ImGui::TableNextColumn();
+        if (const auto cpuTiming = view.cpuPassTiming(passIndex)) {
+            ImGui::Text("%.3f ms", *cpuTiming); // NOLINT
         } else {
             ImGui::TextDisabled("--");
         }
@@ -638,6 +705,10 @@ void drawPassTable(const GraphView& view, InspectorState& state) {
         }
     } else {
         ImGui::TextDisabled("Sum of passes: pending");
+    }
+
+    if (const auto cpuTime = view.cpuGraphTiming()) {
+        ImGui::TextDisabled("CPU recording total: %s", milliseconds(*cpuTime).c_str()); // NOLINT
     }
 }
 
@@ -804,7 +875,10 @@ void drawTimelineHeader(
             ImGui::TextUnformatted(pass.name.c_str());
             ImGui::TextDisabled("Pass %zu, %s", passIndex, toString(pass.type)); // NOLINT
             if (const auto timing = view.passTiming(passIndex)) {
-                ImGui::Text("%.3f ms", *timing); // NOLINT
+                ImGui::Text("GPU %.3f ms", *timing); // NOLINT
+            }
+            if (const auto cpuTiming = view.cpuPassTiming(passIndex)) {
+                ImGui::Text("CPU %.3f ms", *cpuTiming); // NOLINT
             }
             ImGui::EndTooltip();
         }
@@ -935,7 +1009,11 @@ void drawPassInspector(const GraphView& view, InspectorState& state, const uint3
     ImGui::TextColored(passColor(pass.type), "[%s]", toString(pass.type)); // NOLINT
     if (const auto timing = view.passTiming(passIndex)) {
         ImGui::SameLine();
-        ImGui::Text("%.3f ms", *timing); // NOLINT
+        ImGui::Text("GPU %.3f ms", *timing); // NOLINT
+    }
+    if (const auto cpuTiming = view.cpuPassTiming(passIndex)) {
+        ImGui::SameLine();
+        ImGui::Text("CPU %.3f ms", *cpuTiming); // NOLINT
     }
 
     if (ImGui::BeginTable("##PassInspector", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {

@@ -127,6 +127,14 @@ public:
         return m_passProfiler.isSupported();
     }
 
+    std::span<const std::optional<double>> getCpuPassTimingsMs() const {
+        return m_passProfiler.getCpuPassTimingsMs();
+    }
+
+    std::optional<double> getCpuFrameTimingMs() const {
+        return m_passProfiler.getCpuTotalTimingMs();
+    }
+
     const RenderGraphImageDescription& getImageDescription(const RenderGraphResourceHandle handle) const {
         return m_imageDescriptions.at(getResource(handle).descriptionIndex);
     }

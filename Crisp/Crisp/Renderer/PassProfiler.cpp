@@ -1,5 +1,7 @@
 #include <Crisp/Renderer/PassProfiler.hpp>
 
+#include <algorithm>
+
 #include <Crisp/Core/Format.hpp>
 
 namespace crisp {
@@ -19,6 +21,11 @@ void PassProfiler::initialize(const VulkanDevice& device, const size_t passCount
     m_totalTimingMs.reset();
     m_currentFrame = nullptr;
 
+    m_cpuPassTimingsInFlight.assign(passCount, std::nullopt);
+    m_cpuPassTimingsMs.assign(passCount, std::nullopt);
+    m_cpuTotalTimingMs.reset();
+    m_hasCpuSamples = false;
+
     for (auto& frame : m_frames) {
         frame.queryPool->reset();
         frame.pending = false;
@@ -27,6 +34,11 @@ void PassProfiler::initialize(const VulkanDevice& device, const size_t passCount
 
 void PassProfiler::beginFrame(const uint32_t virtualFrameIndex) {
     m_currentFrame = nullptr;
+
+    // CPU timing is independent of timestamp query support, so it is armed before the early-out below.
+    std::ranges::fill(m_cpuPassTimingsInFlight, std::nullopt);
+    m_hasCpuSamples = false;
+
     if (!m_device || m_queryCount == 0) {
         return;
     }
@@ -69,18 +81,35 @@ void PassProfiler::endFrame() {
         m_currentFrame->pending = true;
         m_currentFrame = nullptr;
     }
+
+    if (m_hasCpuSamples) {
+        m_cpuPassTimingsMs = m_cpuPassTimingsInFlight;
+        m_cpuTotalTimingMs = std::chrono::duration<double, std::milli>(m_cpuFrameEnd - m_cpuFrameBegin).count();
+    }
 }
 
-void PassProfiler::beginPass(const VulkanCommandEncoder& encoder, const uint32_t passIndex) const {
+void PassProfiler::beginPass(const VulkanCommandEncoder& encoder, const uint32_t passIndex) {
+    m_cpuPassBegin = Clock::now();
+    if (!m_hasCpuSamples) {
+        m_cpuFrameBegin = m_cpuPassBegin;
+    }
+
     if (m_currentFrame) {
         encoder.writeTimestamp(*m_currentFrame->queryPool, VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, passIndex * 2);
     }
 }
 
-void PassProfiler::endPass(const VulkanCommandEncoder& encoder, const uint32_t passIndex) const {
+void PassProfiler::endPass(const VulkanCommandEncoder& encoder, const uint32_t passIndex) {
     if (m_currentFrame) {
         encoder.writeTimestamp(*m_currentFrame->queryPool, VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT, passIndex * 2 + 1);
     }
+
+    m_cpuFrameEnd = Clock::now();
+    if (passIndex < m_cpuPassTimingsInFlight.size()) {
+        m_cpuPassTimingsInFlight[passIndex] =
+            std::chrono::duration<double, std::milli>(m_cpuFrameEnd - m_cpuPassBegin).count();
+    }
+    m_hasCpuSamples = true;
 }
 
 } // namespace crisp
