@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <limits>
 #include <optional>
 #include <ranges>
 #include <string_view>
@@ -23,9 +24,6 @@
 namespace crisp {
 namespace {
 const auto logger = createLoggerMt("GltfLoader");
-
-constexpr uint32_t kRoughnessMapChannel{1};
-constexpr uint32_t kMetallicMapChannel{2};
 
 constexpr int32_t GltfInvalidIdx{-1};
 constexpr uint32_t kMaximumImageDecodeThreadCount{8};
@@ -201,6 +199,8 @@ struct GltfImageLoader {
     std::vector<EncodedGltfImage> encodedImages;
     std::vector<ImageData> loadedImages;
     std::vector<uint32_t> sourceToLoadedImage;
+    std::vector<Image> ormImages;
+    FlatHashMap<uint64_t, uint32_t> ormImageIndices;
     uint64_t bytesTotal{0};
 };
 
@@ -380,25 +380,55 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 PbrMaterial createPbrMaterialFromGltfMaterial(
     const tinygltf::Model& model, const tinygltf::Material& material, GltfImageLoader& loader) {
     PbrMaterial pbrMaterial{};
-    const auto getTexture = [&model, &loader, &pbrMaterial](const int32_t index, const int32_t textureIndex) {
-        if (isValidGltfIndex(textureIndex)) {
-            const int32_t sourceIndex = model.textures.at(textureIndex).source;
-            const uint32_t loadedImageIndex = loader.sourceToLoadedImage.at(sourceIndex);
-            pbrMaterial.textureKeys[index] = fmt::format("{}", loadedImageIndex);
-            loader.loadedImages[loadedImageIndex].accessTypes[index] = true;
-            return true;
+    const auto getImageIndex = [&model, &loader](const int32_t textureIndex) -> std::optional<uint32_t> {
+        if (!isValidGltfIndex(textureIndex)) {
+            return std::nullopt;
         }
-        return false;
+        const int32_t sourceIndex = model.textures.at(textureIndex).source;
+        CRISP_CHECK(isValidGltfIndex(sourceIndex));
+        return loader.sourceToLoadedImage.at(sourceIndex);
+    };
+    const auto setTexture = [&loader, &pbrMaterial, &getImageIndex](const uint32_t mapIndex, const int32_t textureIndex) {
+        if (const auto imageIndex = getImageIndex(textureIndex)) {
+            pbrMaterial.textureKeys[mapIndex] = fmt::format("{}", *imageIndex);
+            loader.loadedImages[*imageIndex].accessTypes[mapIndex] = true;
+        }
     };
 
-    getTexture(0, material.pbrMetallicRoughness.baseColorTexture.index);
-    getTexture(1, material.normalTexture.index);
-    if (getTexture(2, material.pbrMetallicRoughness.metallicRoughnessTexture.index)) {
-        pbrMaterial.textureKeys[3] = pbrMaterial.textureKeys[2];
-        loader.loadedImages[std::stoi(pbrMaterial.textureKeys[3])].accessTypes[3] = true;
+    setTexture(kPbrAlbedoMapIndex, material.pbrMetallicRoughness.baseColorTexture.index);
+    setTexture(kPbrNormalMapIndex, material.normalTexture.index);
+    setTexture(kPbrEmissiveMapIndex, material.emissiveTexture.index);
+
+    const auto metallicRoughnessImage = getImageIndex(material.pbrMetallicRoughness.metallicRoughnessTexture.index);
+    const auto occlusionImage = getImageIndex(material.occlusionTexture.index);
+    if (metallicRoughnessImage || occlusionImage) {
+        constexpr uint32_t kNoImage{std::numeric_limits<uint32_t>::max()};
+        const uint32_t metallicRoughnessIndex = metallicRoughnessImage.value_or(kNoImage);
+        const uint32_t occlusionIndex = occlusionImage.value_or(kNoImage);
+        const uint64_t ormSourceKey = (static_cast<uint64_t>(occlusionIndex) << 32) | metallicRoughnessIndex;
+
+        auto ormImage = loader.ormImageIndices.find(ormSourceKey);
+        if (ormImage == loader.ormImageIndices.end()) {
+            const Image* metallicRoughness =
+                metallicRoughnessImage ? &loader.loadedImages[*metallicRoughnessImage].image : nullptr;
+            const Image* occlusion = occlusionImage ? &loader.loadedImages[*occlusionImage].image : nullptr;
+            const uint32_t ormImageIndex = static_cast<uint32_t>(loader.ormImages.size());
+            if (metallicRoughnessImage == occlusionImage) {
+                loader.ormImages.push_back(*metallicRoughness);
+            } else {
+                loader.ormImages.push_back(createPbrOrmMap({
+                    .occlusion = occlusion,
+                    .occlusionChannel = 0,
+                    .roughness = metallicRoughness,
+                    .roughnessChannel = 1,
+                    .metallic = metallicRoughness,
+                    .metallicChannel = 2,
+                }));
+            }
+            ormImage = loader.ormImageIndices.emplace(ormSourceKey, ormImageIndex).first;
+        }
+        pbrMaterial.textureKeys[kPbrOrmMapIndex] = fmt::format("{}", ormImage->second);
     }
-    getTexture(4, material.occlusionTexture.index);
-    getTexture(5, material.emissiveTexture.index);
 
     pbrMaterial.params.albedo = toGlm<glm::vec4>(material.pbrMetallicRoughness.baseColorFactor);
     pbrMaterial.params.metallic = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
@@ -567,8 +597,8 @@ AnimationData createAnimationData(const tinygltf::Model& model, const tinygltf::
 }
 
 PbrImageGroup createPbrImageData(
-    std::string name, const std::span<ImageData> images, const std::span<ModelData> models) {
-    PbrImageGroup imageData{.name = std::move(name)};
+    std::string name, const std::span<ImageData> images, std::vector<Image> ormImages, const std::span<ModelData> models) {
+    PbrImageGroup imageData{.name = std::move(name), .ormMaps = std::move(ormImages)};
     std::array<std::vector<int32_t>, kPbrMapTypeCount> remappedIndices;
     for (auto& indices : remappedIndices) {
         indices.resize(images.size(), -1);
@@ -581,18 +611,10 @@ PbrImageGroup createPbrImageData(
         };
 
     for (auto&& [idx, image] : std::views::enumerate(images)) {
-        if (image.accessTypes[2]) {
-            appendImage(imageData.roughnessMaps, image.image.createFromChannel(kRoughnessMapChannel), idx, 2);
-        }
-        if (image.accessTypes[3]) {
-            appendImage(imageData.metallicMaps, image.image.createFromChannel(kMetallicMapChannel), idx, 3);
-        }
-
-        const std::array<std::pair<uint32_t, std::vector<Image>*>, 4> fullImageMaps{{
+        const std::array<std::pair<uint32_t, std::vector<Image>*>, 3> fullImageMaps{{
             {0, &imageData.albedoMaps},
             {1, &imageData.normalMaps},
-            {4, &imageData.occlusionMaps},
-            {5, &imageData.emissiveMaps},
+            {3, &imageData.emissiveMaps},
         }};
         size_t remainingFullImageUses = std::ranges::count_if(fullImageMaps, [&image](const auto& map) {
             return image.accessTypes[map.first];
@@ -610,7 +632,9 @@ PbrImageGroup createPbrImageData(
     for (auto& model : models) {
         for (auto&& [idx, index] : std::views::enumerate(model.material.textureKeys)) {
             if (!index.empty()) {
-                index = creator.createMapKey(static_cast<uint32_t>(idx), remappedIndices[idx][std::stoi(index)]);
+                const int32_t remappedIndex =
+                    idx == kPbrOrmMapIndex ? std::stoi(index) : remappedIndices[idx][std::stoi(index)];
+                index = creator.createMapKey(static_cast<uint32_t>(idx), remappedIndex);
             }
         }
     }
@@ -672,7 +696,8 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
     }
     sceneData.models.back().animations = std::move(animations);
 
-    sceneData.images = createPbrImageData(path.stem().string(), imageLoader.loadedImages, sceneData.models);
+    sceneData.images = createPbrImageData(
+        path.stem().string(), imageLoader.loadedImages, std::move(imageLoader.ormImages), sceneData.models);
 
     return sceneData;
 }

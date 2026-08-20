@@ -56,10 +56,10 @@ struct PbrMaterialParameters {
     uint samplerIndex;
     uint albedoTex;
     uint normalTex;
-    uint roughnessTex;
-    uint metallicTex;
-    uint occlusionTex;
+    uint ormTex;
     uint emissiveTex;
+    uint padding0;
+    uint padding1;
 };
 
 layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer PbrMaterialTable {
@@ -311,10 +311,11 @@ void main() {
 
     // Material properties.
     const vec3 albedo = sampleMaterial(material, material.albedoTex, uvCoord).rgb * material.albedo.rgb;
-    float roughness = sampleMaterial(material, material.roughnessTex, uvCoord).r * material.roughness;
+    const vec3 orm = sampleMaterial(material, material.ormTex, uvCoord).rgb;
+    float roughness = orm.g * material.roughness;
     roughness *= roughness;
-    const float metallic = sampleMaterial(material, material.metallicTex, uvCoord).r * material.metallic;
-    const float ao = sampleMaterial(material, material.occlusionTex, uvCoord).r;
+    const float metallic = orm.b * material.metallic;
+    const float ao = mix(1.0f, orm.r, clamp(material.aoStrength, 0.0f, 1.0f));
     const vec3 emission = sampleMaterial(material, material.emissiveTex, uvCoord).rgb;
 
     // BRDF diffuse (view-independent).

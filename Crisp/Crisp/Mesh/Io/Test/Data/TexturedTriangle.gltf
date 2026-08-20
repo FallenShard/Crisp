@@ -11,8 +11,12 @@
     }]
   }],
   "materials": [{
-    "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 } },
-    "normalTexture": { "index": 1 }
+    "pbrMetallicRoughness": {
+      "baseColorTexture": { "index": 0 },
+      "metallicRoughnessTexture": { "index": 0 }
+    },
+    "normalTexture": { "index": 1 },
+    "occlusionTexture": { "index": 0, "strength": 0.5 }
   }],
   "textures": [{ "source": 0 }, { "source": 1 }],
   "images": [

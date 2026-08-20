@@ -1,5 +1,6 @@
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
 
+#include <optional>
 #include <ranges>
 
 #include <Crisp/Core/Logger.hpp>
@@ -24,9 +25,7 @@ consteval auto createTexInfos() {
     }
     texInfos[kPbrAlbedoMapIndex].defaultFormat = VK_FORMAT_R8G8B8A8_SRGB;
     texInfos[kPbrNormalMapIndex].defaultFormat = VK_FORMAT_R8G8B8A8_UNORM;
-    texInfos[kPbrMetallicMapIndex].defaultFormat = VK_FORMAT_R8_UNORM;
-    texInfos[kPbrRoughnessMapIndex].defaultFormat = VK_FORMAT_R8_UNORM;
-    texInfos[kPbrOcclusionMapIndex].defaultFormat = VK_FORMAT_R8_UNORM;
+    texInfos[kPbrOrmMapIndex].defaultFormat = VK_FORMAT_R8G8B8A8_UNORM;
     texInfos[kPbrEmissiveMapIndex].defaultFormat = VK_FORMAT_R8G8B8A8_SRGB;
     return texInfos;
 }
@@ -36,49 +35,53 @@ constexpr std::array<TexInfo, kPbrMapTypeCount> kTexInfos = createTexInfos();
 const std::vector<FlatStringHashSet> kTextureFileAliases = {
     {"diffuse"},
     {},
-    {},
-    {},
-    {"ao"},
+    {"arm"},
     {},
 };
 
 PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::string name) {
     const auto loadImageIfExists =
         [&materialDir](
-            std::vector<Image>& images,
-            const std::string_view filename,
-            const FlatStringHashSet& aliases,
-            const uint32_t requestedChannels) {
-            const auto& path = materialDir / fmt::format("{}.png", filename);
-            if (std::filesystem::exists(path)) {
-                images.push_back(loadImage(path, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap());
-                return;
+            const std::string_view filename, const FlatStringHashSet& aliases, const uint32_t requestedChannels)
+        -> std::optional<Image> {
+        const auto& path = materialDir / fmt::format("{}.png", filename);
+        if (std::filesystem::exists(path)) {
+            return loadImage(path, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap();
+        }
+        for (const auto& alias : aliases) {
+            const auto& aliasPath = materialDir / fmt::format("{}.png", alias);
+            if (std::filesystem::exists(aliasPath)) {
+                return loadImage(aliasPath, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap();
             }
-            for (const auto& alias : aliases) {
-                const auto& aliasPath = materialDir / fmt::format("{}.png", alias);
-                if (std::filesystem::exists(aliasPath)) {
-                    images.push_back(
-                        loadImage(aliasPath, static_cast<int32_t>(requestedChannels), FlipAxis::Y).unwrap());
-                    return;
-                }
-            }
-
-            CRISP_LOGW("Image does not exist at path: '{}'.", path.string()); // NOLINT
-        };
+        }
+        return std::nullopt;
+    };
 
     PbrImageGroup group{};
     group.name = std::move(name);
-    std::array<std::vector<Image>*, kPbrMapTypeCount> mapArrays{
-        &group.albedoMaps,
-        &group.normalMaps,
-        &group.roughnessMaps,
-        &group.metallicMaps,
-        &group.occlusionMaps,
-        &group.emissiveMaps,
+
+    const auto appendIfPresent = [](std::vector<Image>& images, std::optional<Image> image) {
+        if (image) {
+            images.push_back(std::move(*image));
+        }
     };
-    for (auto&& [idx, mapArray] : std::views::enumerate(mapArrays)) {
-        loadImageIfExists(
-            *mapArray, kTexInfos[idx].name, kTextureFileAliases[idx], getChannelCount(kTexInfos[idx].defaultFormat));
+    appendIfPresent(group.albedoMaps, loadImageIfExists("albedo", kTextureFileAliases[0], 4));
+    appendIfPresent(group.normalMaps, loadImageIfExists("normal", kTextureFileAliases[1], 4));
+    appendIfPresent(group.emissiveMaps, loadImageIfExists("emissive", kTextureFileAliases[3], 4));
+
+    if (auto orm = loadImageIfExists("orm", kTextureFileAliases[2], 4)) {
+        group.ormMaps.push_back(std::move(*orm));
+    } else {
+        auto occlusion = loadImageIfExists("occlusion", FlatStringHashSet{"ao"}, 1);
+        auto roughness = loadImageIfExists("roughness", {}, 1);
+        auto metallic = loadImageIfExists("metallic", {}, 1);
+        if (occlusion || roughness || metallic) {
+            group.ormMaps.push_back(createPbrOrmMap({
+                .occlusion = occlusion ? &*occlusion : nullptr,
+                .roughness = roughness ? &*roughness : nullptr,
+                .metallic = metallic ? &*metallic : nullptr,
+            }));
+        }
     }
     return group;
 }
@@ -106,10 +109,8 @@ std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::pat
     const PbrImageKeyCreator keyCreator{group.name};
     material.textureKeys[0] = group.albedoMaps.empty() ? "" : keyCreator.createAlbedoMapKey(0);
     material.textureKeys[1] = group.normalMaps.empty() ? "" : keyCreator.createNormalMapKey(0);
-    material.textureKeys[2] = group.roughnessMaps.empty() ? "" : keyCreator.createRoughnessMapKey(0);
-    material.textureKeys[3] = group.metallicMaps.empty() ? "" : keyCreator.createMetallicMapKey(0);
-    material.textureKeys[4] = group.occlusionMaps.empty() ? "" : keyCreator.createOcclusionMapKey(0);
-    material.textureKeys[5] = group.emissiveMaps.empty() ? "" : keyCreator.createEmissiveMapKey(0);
+    material.textureKeys[2] = group.ormMaps.empty() ? "" : keyCreator.createOrmMapKey(0);
+    material.textureKeys[3] = group.emissiveMaps.empty() ? "" : keyCreator.createEmissiveMapKey(0);
 
     return {std::move(material), std::move(group)};
 }
@@ -120,9 +121,7 @@ void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& i
     std::array<std::span<const Image>, kPbrMapTypeCount> mapArrays{
         imageGroup.albedoMaps,
         imageGroup.normalMaps,
-        imageGroup.roughnessMaps,
-        imageGroup.metallicMaps,
-        imageGroup.occlusionMaps,
+        imageGroup.ormMaps,
         imageGroup.emissiveMaps,
     };
 
@@ -167,10 +166,8 @@ PbrParams createGpuPbrParams(const PbrMaterial& pbrMaterial, const ImageCache& i
     };
     params.albedoTex = textureSlot(0);
     params.normalTex = textureSlot(1);
-    params.roughnessTex = textureSlot(2);
-    params.metallicTex = textureSlot(3);
-    params.occlusionTex = textureSlot(4);
-    params.emissiveTex = textureSlot(5);
+    params.ormTex = textureSlot(2);
+    params.emissiveTex = textureSlot(3);
 
     return params;
 }
