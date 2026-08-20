@@ -7,6 +7,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetBinding.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipelineStatsQueryPool.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanTimestampQueryPool.hpp>
 #include <Crisp/Vulkan/VulkanSynchronization.hpp>
@@ -104,6 +105,9 @@ public:
 
     void writeTimestamp(
         const VulkanTimestampQueryPool& queryPool, VkPipelineStageFlags2 stage, uint32_t queryIndex) const;
+
+    void beginQuery(const VulkanPipelineStatsQueryPool& queryPool, uint32_t queryIndex = 0) const;
+    void endQuery(const VulkanPipelineStatsQueryPool& queryPool, uint32_t queryIndex = 0) const;
 
     template <typename T, typename... Ts>
     void setPushConstants(

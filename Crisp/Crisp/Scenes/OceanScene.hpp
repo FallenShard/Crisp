@@ -10,6 +10,7 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/Scene.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipelineStatsQueryPool.hpp>
 
 namespace crisp {
 struct OceanPassResources;
@@ -30,6 +31,7 @@ private:
     void buildRenderGraph();
     void resetCamera();
     void writeGraphDependentDescriptors();
+    void beginPipelineStatsFrame(uint32_t virtualFrameIndex);
 
     std::unique_ptr<VulkanImage> createInitialSpectrum();
     std::unique_ptr<VulkanImage> createFoamNoise();
@@ -42,6 +44,8 @@ private:
     TransformHandle m_transformHandle{TransformHandle::createInvalidHandle()};
     VulkanPipeline* m_oceanPipeline{nullptr};
     Material* m_oceanMaterial{nullptr};
+    std::unique_ptr<VulkanPipelineStatsQueryPool> m_pipelineStatsQueryPool;
+    PipelineStats m_pipelineStats{};
     VulkanPipeline* m_skyPipeline{nullptr};
     Material* m_skyMaterial{nullptr};
 

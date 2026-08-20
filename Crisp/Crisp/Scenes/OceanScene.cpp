@@ -34,6 +34,11 @@ constexpr uint32_t kFoamLayerCount = 2;
 // Level 16 reaches 2000 km, well past the point where float world coordinates stop being exact.
 constexpr int32_t kMaxClipmapLevels = 16;
 
+constexpr VkQueryPipelineStatisticFlags kOceanGeometryStats =
+    VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT | VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT |
+    VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT |
+    VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT | VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
+
 constexpr const char* kAtmosphereBufferId = "atmosphereBuffer";
 
 constexpr uint32_t kFoamNoiseSize = 256;
@@ -211,6 +216,9 @@ OceanScene::OceanScene(Renderer* renderer, Window* window)
     buildRenderGraph();
 
     m_renderer->getDevice().flushDescriptorUpdates();
+
+    m_pipelineStatsQueryPool = std::make_unique<VulkanPipelineStatsQueryPool>(
+        m_renderer->getDevice(), kOceanGeometryStats, kRendererVirtualFrameCount, fmt::format("Ocean Geometry Stats"));
 }
 
 void OceanScene::setupInput() {
@@ -343,7 +351,18 @@ void OceanScene::update(const UpdateParams& updateParams) {
     }
 }
 
+void OceanScene::beginPipelineStatsFrame(const uint32_t virtualFrameIndex) {
+    if (m_pipelineStatsQueryPool->isPending(virtualFrameIndex)) {
+        if (!m_pipelineStatsQueryPool->tryGetResults(m_pipelineStats, virtualFrameIndex)) {
+            return;
+        }
+        m_pipelineStatsQueryPool->reset(virtualFrameIndex);
+    }
+}
+
 void OceanScene::render(const FrameContext& frameContext) {
+    beginPipelineStatsFrame(frameContext.virtualFrameIndex);
+
     auto* cameraBuffer = m_resourceContext->getRingBuffer("camera");
     cameraBuffer->updateDeviceBuffer(frameContext.commandEncoder);
     m_resourceContext->getRingBuffer(kTonemapBufferId)->updateDeviceBuffer(frameContext.commandEncoder);
@@ -367,7 +386,7 @@ void OceanScene::drawGui() {
         m_oceanParams.Lw = m_oceanParams.windSpeed * m_oceanParams.windSpeed / kGravity;
         m_spectrumDirty = true;
     }
-    int32_t spectrumModel = static_cast<int32_t>(m_oceanParams.spectrumModel);
+    auto spectrumModel = static_cast<int32_t>(m_oceanParams.spectrumModel);
     if (ImGui::Combo(
             "Spectrum",
             &spectrumModel,
@@ -433,6 +452,44 @@ void OceanScene::drawGui() {
             static_cast<uint32_t>(computeClipmapInstanceCount(m_clipmap)));
     }
     ImGui::Text("Clipmap Radius: %.1f km", computeClipmapRadius(m_clipmap) / kMetersPerKilometer);
+
+    if (ImGui::CollapsingHeader("Pipeline Counters", ImGuiTreeNodeFlags_DefaultOpen)) {
+        // What the clipmap describes before anything culls it, so the query results have a
+        // denominator that does not itself depend on the view.
+        const auto blockQuads = static_cast<uint64_t>(m_clipmap.blockQuads);
+        const uint64_t submittedPrimitives =
+            static_cast<uint64_t>(computeClipmapInstanceCount(m_clipmap)) * blockQuads * blockQuads * 2;
+
+        const uint64_t emitted = m_pipelineStats.clippingInvocations.value_or(0);
+        const uint64_t rasterized = m_pipelineStats.clippingPrimitives.value_or(0);
+        const auto percentOf = [](const uint64_t value, const uint64_t total) {
+            return total == 0 ? 0.0f : 100.0f * static_cast<float>(value) / static_cast<float>(total);
+        };
+
+        ImGui::Text("Submitted prims  (P): %8.3f M", static_cast<double>(submittedPrimitives) / 1.0e6);
+        ImGui::Text(
+            "Reached clipping (P): %8.3f M  (%.1f%%)",
+            static_cast<double>(emitted) / 1.0e6,
+            percentOf(emitted, submittedPrimitives));
+        ImGui::Text(
+            "Rasterized       (P): %8.3f M  (%.1f%%)",
+            static_cast<double>(rasterized) / 1.0e6,
+            percentOf(rasterized, submittedPrimitives));
+        ImGui::Text(
+            "VS invocations   (V): %8.3f M",
+            static_cast<double>(m_pipelineStats.vertexShaderInvocations.value_or(0)) / 1.0e6);
+        ImGui::Text(
+            "IA vertices      (V): %8.3f M",
+            static_cast<double>(m_pipelineStats.inputAssemblyVertices.value_or(0)) / 1.0e6);
+
+        const auto extent = m_renderer->getSwapChainExtent();
+        const auto pixels = static_cast<double>(extent.width) * extent.height;
+        const auto fragments = static_cast<double>(m_pipelineStats.fragmentShaderInvocations.value_or(0));
+        ImGui::Text(
+            "FS invocations   (F): %8.3f M  (%.2fx overdraw)",
+            fragments / 1.0e6,
+            pixels > 0.0 ? fragments / pixels : 0.0);
+    }
     if (ImGui::Button("Reset View")) {
         resetCamera();
     }
@@ -632,7 +689,7 @@ void OceanScene::buildRenderGraph() {
 
             // Ping-pong by frame parity. Reading one layer while writing the other is what makes the
             // drift gather safe without a second image.
-            const int32_t writeLayer = static_cast<int32_t>(ctx.frameIndex % kFoamLayerCount);
+            const auto writeLayer = static_cast<int32_t>(ctx.frameIndex % kFoamLayerCount);
 
             m_passResources->foam.bind(ctx);
             ctx.commandEncoder.setPushConstants(
@@ -733,7 +790,16 @@ void OceanScene::buildRenderGraph() {
                     .cascadeWavelengths = cascadeWavelengths,
                     .cascadeSlopeVariances = cascadeSlopeVariances});
             ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
+            const bool recordStats =
+                m_pipelineStatsQueryPool != nullptr && !m_pipelineStatsQueryPool->isPending(ctx.virtualFrameIndex);
+            if (recordStats) {
+                ctx.commandEncoder.beginQuery(*m_pipelineStatsQueryPool, ctx.virtualFrameIndex);
+            }
             geometry.bindAndDraw(ctx.commandEncoder);
+            if (recordStats) {
+                ctx.commandEncoder.endQuery(*m_pipelineStatsQueryPool, ctx.virtualFrameIndex);
+                m_pipelineStatsQueryPool->setPending(ctx.virtualFrameIndex);
+            }
         });
 
     addTonemapPass(

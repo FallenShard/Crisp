@@ -368,7 +368,7 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                 [](const VulkanPhysicalDevice& physicalDevice) {
                     const auto& core = physicalDevice.queryFeatures();
                     return core.samplerAnisotropy && core.fillModeNonSolid && core.geometryShader &&
-                           core.tessellationShader;
+                           core.tessellationShader && core.pipelineStatisticsQuery;
                 },
             .linkFunc =
                 [](VulkanDeviceFeatureChain& featureChain) {
@@ -377,6 +377,7 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                     core.fillModeNonSolid = VK_TRUE;
                     core.geometryShader = VK_TRUE;
                     core.tessellationShader = VK_TRUE;
+                    core.pipelineStatisticsQuery = VK_TRUE;
                 },
         },
         VulkanDeviceFeatureRequest{

@@ -412,6 +412,14 @@ void VulkanCommandEncoder::drawMeshTasksIndirectCount(
         m_cmdBuffer, argsBuffer.getHandle(), offset, countBuffer.getHandle(), countOffset, maxDrawCount, stride);
 }
 
+void VulkanCommandEncoder::beginQuery(const VulkanPipelineStatsQueryPool& queryPool, const uint32_t queryIndex) const {
+    vkCmdBeginQuery(m_cmdBuffer, queryPool.getHandle(), queryIndex, 0);
+}
+
+void VulkanCommandEncoder::endQuery(const VulkanPipelineStatsQueryPool& queryPool, const uint32_t queryIndex) const {
+    vkCmdEndQuery(m_cmdBuffer, queryPool.getHandle(), queryIndex);
+}
+
 void VulkanCommandEncoder::traceRays(
     const std::span<const VkStridedDeviceAddressRegionKHR> bindingRegions, const VkExtent2D& gridSize) const {
     CRISP_CHECK_GE(bindingRegions.size(), 4);

@@ -68,6 +68,8 @@ add_cpp_static_library(
     "VulkanQueueConfiguration.hpp"
     "VulkanTimelineSemaphore.cpp"
     "VulkanTimelineSemaphore.hpp"
+    "VulkanPipelineStatsQueryPool.cpp"
+    "VulkanPipelineStatsQueryPool.hpp"
     "VulkanTimestampQueryPool.cpp"
     "VulkanTimestampQueryPool.hpp"
     "VulkanDescriptorSetAllocator.cpp"
