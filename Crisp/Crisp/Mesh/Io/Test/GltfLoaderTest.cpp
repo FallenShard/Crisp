@@ -23,6 +23,18 @@ TEST(GltfLoaderTest, LoadsTrackedTriangle) {
     EXPECT_EQ(loaded.models[0].mesh.getTriangleCount(), 1);
 }
 
+TEST(GltfLoaderTest, LoadsEmbeddedImagesInSourceOrder) {
+    auto asset = loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "TexturedTriangle.gltf");
+    ASSERT_THAT(asset, HasValue());
+
+    const auto loaded = asset.unwrap();
+    ASSERT_THAT(loaded.models, SizeIs(1));
+    ASSERT_THAT(loaded.images.albedoMaps, SizeIs(1));
+    ASSERT_THAT(loaded.images.normalMaps, SizeIs(1));
+    EXPECT_EQ(loaded.models[0].material.textureKeys[0], "TexturedTriangle-albedo-0");
+    EXPECT_EQ(loaded.models[0].material.textureKeys[1], "TexturedTriangle-normal-0");
+}
+
 TEST(GltfLoaderTest, LoadsAvocadoFromExternalAssetPack) {
     if (test::kExternalAssetDir.empty()) {
         GTEST_SKIP() << "Set CRISP_EXTERNAL_ASSET_DIR to the full Crisp Resources directory";

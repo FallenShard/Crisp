@@ -1,5 +1,8 @@
 #include <Crisp/Mesh/Io/GltfLoader.hpp>
 
+#include <algorithm>
+#include <chrono>
+#include <optional>
 #include <ranges>
 
 #pragma warning(push)
@@ -12,6 +15,7 @@
 #pragma warning(pop)
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 
 namespace crisp {
@@ -22,6 +26,7 @@ constexpr uint32_t kRoughnessMapChannel{1};
 constexpr uint32_t kMetallicMapChannel{2};
 
 constexpr int32_t GltfInvalidIdx{-1};
+constexpr uint32_t kMaximumImageDecodeThreadCount{8};
 
 constexpr bool isValidGltfIndex(const int32_t index) {
     return index != GltfInvalidIdx;
@@ -180,8 +185,13 @@ Result<std::vector<DstType>> createBuffer(
     return createBuffer<DstType, SrcType>(model, model.accessors.at(primitive.attributes.at(attrib)));
 }
 
+struct EncodedGltfImage {
+    std::vector<uint8_t> bytes;
+    std::string name;
+};
+
 struct GltfImageLoader {
-    const std::filesystem::path baseDir;
+    std::vector<EncodedGltfImage> encodedImages;
     std::vector<ImageData> loadedImages;
     uint64_t bytesTotal{0};
 };
@@ -196,8 +206,14 @@ bool loadImageFromGltf(
     const uint8_t* bytes,
     const int32_t size,
     void* userPtr) {
-    CRISP_CHECK(image != nullptr);
-    CRISP_LOGI("Loading image {:>4} '{}', byte size {} from {}.", imageIdx, image->name, size, image->uri);
+    if (image == nullptr || userPtr == nullptr || imageIdx < 0 || bytes == nullptr || size <= 0) {
+        if (err != nullptr) {
+            *err = fmt::format("Invalid encoded GLTF image at index {}.", imageIdx);
+        }
+        return false;
+    }
+
+    CRISP_LOGT("Read image {:>4} '{}', byte size {} from {}.", imageIdx, image->name, size, image->uri);
     if (err && !err->empty()) {
         CRISP_LOGE("Error while loading GLTF image: {}", *err);
     }
@@ -206,9 +222,73 @@ bool loadImageFromGltf(
     }
 
     GltfImageLoader& imageLoader{*static_cast<GltfImageLoader*>(userPtr)};
-    imageLoader.bytesTotal += size;
-    imageLoader.loadedImages.emplace_back(loadImage(std::span(bytes, size)).unwrap(), image->name);
+    const auto imageIndex = static_cast<size_t>(imageIdx);
+    if (imageLoader.encodedImages.size() <= imageIndex) {
+        imageLoader.encodedImages.resize(imageIndex + 1);
+    }
+
+    auto& encodedImage = imageLoader.encodedImages[imageIndex];
+    encodedImage.bytes.assign(bytes, bytes + size); // NOLINT
+    encodedImage.name = image->name;
+    imageLoader.bytesTotal += static_cast<uint64_t>(size);
     return true;
+}
+
+Result<std::vector<ImageData>> decodeGltfImages(const GltfImageLoader& imageLoader) {
+    if (imageLoader.encodedImages.empty()) {
+        return std::vector<ImageData>{};
+    }
+
+    const uint32_t hardwareThreadCount{std::max(1u, std::thread::hardware_concurrency())};
+    const uint32_t decodeThreadCount{std::min(
+        {hardwareThreadCount, kMaximumImageDecodeThreadCount, static_cast<uint32_t>(imageLoader.encodedImages.size())})};
+
+    std::vector<std::optional<Image>> decodedImages(imageLoader.encodedImages.size());
+    std::vector<std::string> decodeErrors(imageLoader.encodedImages.size());
+
+    const auto decodeStart = std::chrono::steady_clock::now();
+    ThreadPool threadPool(decodeThreadCount);
+    threadPool.parallelFor(imageLoader.encodedImages.size(), [&](const size_t imageIdx, const size_t /*threadIdx*/) {
+        const auto& encodedImage = imageLoader.encodedImages[imageIdx];
+        if (encodedImage.bytes.empty()) {
+            decodeErrors[imageIdx] = "No encoded image data was provided.";
+            return;
+        }
+
+        auto decodedImage = loadImage(std::span<const uint8_t>(encodedImage.bytes));
+        if (!decodedImage) {
+            decodeErrors[imageIdx] = std::move(decodedImage).getError();
+            return;
+        }
+        decodedImages[imageIdx] = std::move(decodedImage).extract();
+    });
+
+    std::vector<ImageData> images;
+    images.reserve(decodedImages.size());
+    for (size_t imageIdx = 0; imageIdx < decodedImages.size(); ++imageIdx) {
+        if (!decodeErrors[imageIdx].empty()) {
+            return resultError(
+                "Failed to decode GLTF image {} '{}': {}",
+                imageIdx,
+                imageLoader.encodedImages[imageIdx].name,
+                decodeErrors[imageIdx]);
+        }
+        if (!decodedImages[imageIdx]) {
+            return resultError(
+                "GLTF image {} '{}' produced no decoded data.", imageIdx, imageLoader.encodedImages[imageIdx].name);
+        }
+        images.emplace_back(std::move(*decodedImages[imageIdx]), imageLoader.encodedImages[imageIdx].name);
+    }
+
+    const std::chrono::duration<double, std::milli> decodeDuration{std::chrono::steady_clock::now() - decodeStart};
+    CRISP_LOGI(
+        "Decoded {} GLTF images ({:.1f} MiB encoded) on {} threads in {:.1f} ms.",
+        images.size(),
+        static_cast<double>(imageLoader.bytesTotal) / (1024.0 * 1024.0),
+        decodeThreadCount,
+        decodeDuration.count());
+
+    return images;
 }
 
 template <GlmAttrib GlmType, typename T>
@@ -501,13 +581,14 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
     tinygltf::Model model;
 
     tinygltf::TinyGLTF loader;
-    GltfImageLoader imageLoader{path.parent_path()};
+    GltfImageLoader imageLoader{};
     loader.SetImageLoader(loadImageFromGltf, &imageLoader);
 
     std::string err{};
     std::string warn{};
+    const auto parseStart = std::chrono::steady_clock::now();
     const bool success{loader.LoadASCIIFromFile(&model, &err, &warn, path.string())};
-    CRISP_LOGT("{} MB for images.", (imageLoader.bytesTotal >> 20) + 1);
+    const std::chrono::duration<double, std::milli> parseDuration{std::chrono::steady_clock::now() - parseStart};
 
     if (!warn.empty()) {
         CRISP_LOGW("GLTF warning from {}: {}", path.string(), warn);
@@ -525,6 +606,10 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
     CRISP_CHECK_EQ(model.scenes.size(), 1, "Multi-scene GLTF is unsupported.");
     CRISP_CHECK_EQ(model.defaultScene, 0);
     const auto& scene{model.scenes.at(model.defaultScene)};
+
+    CRISP_LOGI(
+        "Parsed GLTF and read {} encoded images in {:.1f} ms.", imageLoader.encodedImages.size(), parseDuration.count());
+    CRISP_TRY(imageLoader.loadedImages, decodeGltfImages(imageLoader));
 
     SceneData sceneData{};
     for (const int32_t nodeIndex : scene.nodes) {

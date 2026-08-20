@@ -15,6 +15,7 @@ target_link_libraries(CrispGltfLoader
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::ModelData
     PRIVATE Crisp::Logger
+    PRIVATE Crisp::ThreadPool
     PRIVATE Crisp::ImageIo
     PRIVATE tinygltf
 )
@@ -64,3 +65,4 @@ add_cpp_test(CrispGltfLoaderTest "Test/GltfLoaderTest.cpp")
 target_link_libraries(CrispGltfLoaderTest PRIVATE Crisp::GltfLoader)
 target_include_directories(CrispGltfLoaderTest PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/Generated")
 target_add_test_file(CrispGltfLoaderTest "Test/Data/Triangle.gltf")
+target_add_test_file(CrispGltfLoaderTest "Test/Data/TexturedTriangle.gltf")

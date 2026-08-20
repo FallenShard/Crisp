@@ -69,7 +69,7 @@ Result<std::vector<Image>> loadCubeMapFaces(const std::filesystem::path& path) {
 }
 
 Result<Image> loadImage(const std::filesystem::path& filePath, const int requestedChannels, const FlipAxis flip) {
-    stbi_set_flip_vertically_on_load(flip == FlipAxis::Y);
+    stbi_set_flip_vertically_on_load_thread(flip == FlipAxis::Y);
 
     uint32_t elementSize = sizeof(uint8_t);
 
@@ -86,7 +86,7 @@ Result<Image> loadImage(const std::filesystem::path& filePath, const int request
         dataPtr =
             stbi_load(filePathString.c_str(), &width, &height, &channelCount, getStbComponentFormat(requestedChannels));
     }
-    stbi_set_flip_vertically_on_load(false);
+    stbi_set_flip_vertically_on_load_thread(false);
 
     if (!dataPtr) {
         return resultError("Failed to load image from {}. STB error: {}.", filePathString, stbi_failure_reason());
@@ -104,7 +104,7 @@ Result<Image> loadImage(const std::filesystem::path& filePath, const int request
 
 Result<Image> loadImage(
     const std::span<const uint8_t> imageFileContent, const int requestedChannels, const FlipAxis flip) {
-    stbi_set_flip_vertically_on_load(flip == FlipAxis::Y);
+    stbi_set_flip_vertically_on_load_thread(flip == FlipAxis::Y);
 
     uint32_t elementSize = sizeof(uint8_t);
     void* dataPtr = nullptr;
@@ -118,7 +118,7 @@ Result<Image> loadImage(
         &height,
         &channelCount,
         getStbComponentFormat(requestedChannels));
-    stbi_set_flip_vertically_on_load(false);
+    stbi_set_flip_vertically_on_load_thread(false);
 
     if (!dataPtr) {
         return resultError("Failed to load image from memory. STB error: {}.", stbi_failure_reason());
