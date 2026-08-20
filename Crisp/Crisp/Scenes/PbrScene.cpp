@@ -112,11 +112,13 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
             executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
         }
 
-        auto* meshPipeline = m_resourceContext->pipelineCache.getPipeline("mesh");
-        ctx.commandEncoder.bindPipeline(*meshPipeline);
-        auto* meshMaterial = m_resourceContext->getMaterial("mesh");
-        ctx.commandEncoder.bindDescriptorSets(meshMaterial->getDescriptorSetBinding());
-        ctx.commandEncoder.drawMeshTasks(static_cast<uint32_t>(m_meshletData.meshlets.size()));
+        if (m_drawMeshlets) {
+            auto* meshPipeline = m_resourceContext->pipelineCache.getPipeline("mesh");
+            ctx.commandEncoder.bindPipeline(*meshPipeline);
+            auto* meshMaterial = m_resourceContext->getMaterial("mesh");
+            ctx.commandEncoder.bindDescriptorSets(meshMaterial->getDescriptorSetBinding());
+            ctx.commandEncoder.drawMeshTasks(static_cast<uint32_t>(m_meshletData.meshlets.size()));
+        }
     });
 
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
@@ -142,7 +144,12 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     }
 
     createPlane();
-    createSceneObject(args["modelPath"]);
+    createSceneObjects(args.value("modelPath", std::string{}));
+
+    if (args.value("meshletTest", false)) {
+        createMeshletTestNode();
+        m_drawMeshlets = true;
+    }
 
     m_nodesToDraw = static_cast<int32_t>(m_renderNodes.size());
 
@@ -212,6 +219,14 @@ void PbrScene::drawGui() {
             m_environmentMapNames,
             [this](const std::string& selectedItem) { setEnvironmentMap(selectedItem); });
     }
+    if (ImGui::CollapsingHeader("Objects")) {
+        if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
+            m_renderNodes["floor"]->isVisible = m_showFloor;
+        }
+        if (!m_meshletData.meshlets.empty()) {
+            ImGui::Checkbox("Draw Meshlets", &m_drawMeshlets);
+        }
+    }
     ImGui::End();
 
     ImGui::Begin("Render Graph");
@@ -222,77 +237,6 @@ void PbrScene::drawGui() {
         ImGui::SliderInt("Nodes to Draw", &m_nodesToDraw, 0, static_cast<int32_t>(m_renderNodes.size()));
     }
     ImGui::End();
-
-    // ImGui::Begin("Settings");
-    // ImGui::SliderFloat("Roughness", &m_uniformMaterialParams.roughness,
-    // 0.0f, 1.0f); ImGui::SliderFloat("Metallic",
-    // &m_uniformMaterialParams.metallic, 0.0f, 1.0f); ImGui::SliderFloat("Red",
-    // &m_uniformMaterialParams.albedo.r, 0.0f, 1.0f); ImGui::SliderFloat("Green",
-    // &m_uniformMaterialParams.albedo.g, 0.0f, 1.0f); ImGui::SliderFloat("Blue",
-    // &m_uniformMaterialParams.albedo.b, 0.0f, 1.0f); ImGui::SliderFloat("U
-    // Scale", &m_uniformMaterialParams.uvScale.s, 1.0f, 20.0f);
-    // ImGui::SliderFloat("V Scale",
-    // &m_uniformMaterialParams.uvScale.t, 1.0f, 20.0f);
-
-    // if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
-    //     m_renderNodes["floor"]->isVisible = m_showFloor;
-    // }
-
-    // ImGui::End();
-
-    // std::vector<std::string> materials;
-    // for (const auto& dir :
-    //      std::filesystem::directory_iterator(m_renderer->getResourcesPath() /
-    //      "Textures/PbrMaterials"))
-    //     materials.push_back(dir.path().stem().string());
-    // materials.push_back("Uniform");
-
-    // auto comboBox = std::make_unique<gui::ComboBox>(form);
-    // comboBox->setId("materialComboBox");
-    // comboBox->setItems(materials);
-    // comboBox->itemSelected.subscribe<&PbrScene::onMaterialSelected>(this);
-    // panel->addControl(std::move(comboBox));
-
-    // form->add(std::move(panel));
-}
-
-void PbrScene::onMaterialSelected(const std::string&) {
-    // m_renderer->finish();
-
-    // const auto materialPath{m_renderer->getResourcesPath() / "Textures/PbrMaterials" / materialName};
-    // PbrMaterial pbrMaterial{};
-    // pbrMaterial.name = materialPath.stem().string();
-
-    // auto* shaderBallMaterial = m_resourceContext->getMaterial("pbrTexshaderBall");
-
-    // auto& imageCache{m_resourceContext->imageCache};
-    // const auto setMaterialTexture =
-    //     [&shaderBallMaterial, &imageCache, &pbrMaterial](const uint32_t index, const std::string_view texName) {
-    //         const std::string key = fmt::format("{}-{}", pbrMaterial.name, texName);
-    //         const std::string fallbackKey = fmt::format("default-{}", texName);
-    //         shaderBallMaterial->writeDescriptor(
-    //             2, index, imageCache.getImageView(key, fallbackKey), imageCache.getSampler("linearRepeat"));
-    //     };
-
-    // // if (pbrMaterial.name != "Grass") {
-    // //     auto [material, images] = loadPbrMaterial(materialPath);
-    // //     material.params.uvScale = glm::vec2(100.0f, 100.0f);
-    // //     addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
-
-    // //     addPbrTexturesToImageCache(loadPbrTextureGroup(materialPath), pbrMaterial.name, imageCache);
-    // // }
-    // // if (m_shaderBallPbrMaterialKey != "Grass") {
-    // //     removePbrTexturesFromImageCache(m_shaderBallPbrMaterialKey, imageCache);
-    // // }
-    // setMaterialTexture(0, "diffuse");
-    // setMaterialTexture(1, "metallic");
-    // setMaterialTexture(2, "roughness");
-    // setMaterialTexture(3, "normal");
-    // setMaterialTexture(4, "ao");
-    // setMaterialTexture(5, "emissive");
-    // m_renderer->getDevice().flushDescriptorUpdates();
-
-    // m_shaderBallPbrMaterialKey = pbrMaterial.name;
 }
 
 RenderNode& PbrScene::createRenderNode(const std::string_view id, const bool hasTransform) {
@@ -316,9 +260,6 @@ void PbrScene::createCommonTextures() {
 
     auto pipeline = m_resourceContext->createPipeline(
         "pbr", "PbrTex.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
-
-    m_resourceContext->createPipeline(
-        "mesh", "MeshShading.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
 
     setEnvironmentMap("GreenwichPark");
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
@@ -345,119 +286,67 @@ void PbrScene::setEnvironmentMap(const std::string& envMapName) {
         m_resourceContext->imageCache.getSampler("linearClamp"));
 }
 
-void PbrScene::createSceneObject(const std::filesystem::path&) {
-    // const std::filesystem::path absPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
-    // if (absPath.extension() == ".gltf") {
-    //     auto [images, models] = loadGltfAsset(absPath).unwrap();
-    //     CRISP_LOGI("Loaded {} models and {} images from {}.", models.size(), images.size(),
-    //     absPath.generic_string()); addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
+void PbrScene::createSceneObjects(const std::filesystem::path& path) {
+    if (path.empty()) {
+        CRISP_LOGW("No modelPath in the scene args; rendering the floor only.");
+        return;
+    }
 
-    //     const auto modelName = path.stem().string();
-    //     for (auto&& [idx, renderObject] : std::views::enumerate(models)) {
-    //         CRISP_LOGI("Adding object {} with {} triangles.", idx, renderObject.mesh.getTriangleCount());
-    //         const std::string entityName = fmt::format("{}_{}", modelName, idx);
+    const std::filesystem::path absPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
+    if (absPath.extension() == ".gltf") {
+        createGltfSceneObjects(absPath);
+    } else {
+        createObjSceneObject(absPath);
+    }
+}
 
-    //         auto& geometry = m_resourceContext->addGeometry(
-    //             entityName, createGeometry(*m_renderer, renderObject.mesh, kPbrVertexFormat));
+void PbrScene::createGltfSceneObjects(const std::filesystem::path& path) {
+    auto [images, models] = loadGltfAsset(path).unwrap();
+    CRISP_LOGI("Loaded {} models from {}.", models.size(), path.generic_string());
 
-    //         auto& sceneObject = createRenderNode(entityName);
-    //         sceneObject.geometry = &geometry;
-    //         sceneObject.transformPack->M = renderObject.transform;
-    //         auto& forwardPass = sceneObject.pass(kForwardLightingPass);
-    //         forwardPass.material = m_pbrDrawMaterial.get();
-    //         forwardPass.transformBufferDynamicIndex = 0;
-    //         const auto materialHandle =
-    //             m_pbrMaterialTable->add(createGpuPbrParams(renderObject.material, m_resourceContext->imageCache));
-    //         forwardPass.setPushConstants(m_pbrMaterialTable->createDrawParameters(materialHandle));
+    // Every loaded image lands in the bindless table here; the per-model params below resolve their slots by key.
+    addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
 
-    //         for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
-    //             auto& subpass = sceneObject.pass(kCsmPasses[c]);
-    //             subpass.setGeometry(&geometry, 0, 1);
-    //             subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
-    //             CRISP_CHECK(
-    //                 subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
-    //         }
-    //     }
-    // }
+    const auto modelName = path.stem().string();
+    for (auto&& [idx, model] : std::views::enumerate(models)) {
+        addSceneObject(fmt::format("{}_{}", modelName, idx), model.mesh, model.material, model.transform);
+    }
+}
 
-    TriangleMesh mesh{};
+void PbrScene::createObjSceneObject(const std::filesystem::path& path) {
+    const auto mesh = loadTriangleMesh(path).unwrap();
+
     PbrMaterial material{};
+    material.name = path.stem().string();
     material.params.albedo = glm::vec4(0.5f);
 
-    auto [triMesh, materials, meshletData] =
-        loadTriangleMeshlets(m_renderer->getResourcesPath() / "Meshes/bunny.obj").unwrap();
-    mesh = std::move(triMesh);
+    addSceneObject(
+        material.name, mesh, material, glm::translate(glm::vec3(0.0f, kFloorHeight - mesh.getBoundingBox().min.y, 0.0f)));
+}
 
-    m_meshletData = std::move(meshletData);
+void PbrScene::addSceneObject(
+    const std::string_view nodeId,
+    const TriangleMesh& mesh,
+    const PbrMaterial& material,
+    const glm::mat4& modelMatrix) {
+    auto& geometry = m_resourceContext->addGeometry(nodeId, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
 
-    auto meshletBuffer = m_resourceContext->createStorageBuffer("meshletBuffer", m_meshletData.meshlets);
-    auto meshletVertices = m_resourceContext->createStorageBuffer("meshletVertices", m_meshletData.meshletVertices);
-    auto meshletTriangles = m_resourceContext->createStorageBuffer("meshletTriangles", m_meshletData.meshletTriangles);
-    auto meshPipeline = m_resourceContext->pipelineCache.getPipeline("mesh");
-    auto meshMaterial = m_resourceContext->createMaterial("mesh", meshPipeline);
-    meshMaterial->writeDescriptor(0, 0, meshletBuffer->createDescriptorInfo());
-    meshMaterial->writeDescriptor(0, 1, meshletTriangles->createDescriptorInfo());
-    meshMaterial->writeDescriptor(0, 2, meshletVertices->createDescriptorInfo());
+    auto& node = createRenderNode(nodeId);
+    node.geometry = &geometry;
+    node.transformPack->M = modelMatrix;
 
-    material.name = "shaderBall";
-
-    const std::string entityName = fmt::format("shaderBall");
-
-    auto& geometry = m_resourceContext->addGeometry(
-        entityName, createGeometry(*m_renderer, mesh, kPbrVertexFormat, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
-
-    meshMaterial->writeDescriptor(0, 3, geometry.getVertexBuffer(0)->createDescriptorInfo());
-    meshMaterial->writeDescriptor(0, 4, m_resourceContext->getRingBuffer("camera")->getDescriptorInfo());
-    meshMaterial->writeDescriptor(0, 5, geometry.getVertexBuffer(1)->createDescriptorInfo());
-
-    auto& sceneObject = createRenderNode(entityName);
-    sceneObject.geometry = &geometry;
-    const glm::mat4 translation =
-        glm::translate(glm::vec3(5.0f, kFloorHeight, 0.0f)) * glm::scale(glm::vec3(1.0f)) *
-        glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
-    sceneObject.transformPack->M = translation;
-    auto& forwardPass = sceneObject.pass(kForwardLightingPass);
+    auto& forwardPass = node.pass(kForwardLightingPass);
     forwardPass.material = m_pbrDrawMaterial.get();
     forwardPass.transformBufferDynamicIndex = 0;
     const auto materialHandle = m_pbrMaterialTable->add(createGpuPbrParams(material, m_resourceContext->imageCache));
     forwardPass.setPushConstants(m_pbrMaterialTable->createDrawParameters(materialHandle));
 
     for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
-        auto& subpass = sceneObject.pass(kCsmPasses[c]);
+        auto& subpass = node.pass(kCsmPasses[c]);
         subpass.setGeometry(&geometry, 0, 1);
         subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
         CRISP_CHECK(subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
     }
-
-    // else {
-
-    //     // material.name = "vokselia";
-    //     // material.textureKeys = createDefaultPbrTextureGroup();
-    //     // material.textures.albedo =
-    //     //     loadImage(m_renderer->getResourcesPath() / "Meshes/vokselia_spawn.png", 4, FlipAxis::Y).unwrap();
-
-    //     const glm::mat4 translation = glm::translate(glm::vec3(0.0f, -mesh.getBoundingBox().min.y, 0.0f));
-    //     const float maxDimLength = mesh.getBoundingBox().getMaximumExtent();
-    //     sceneObject->transformPack->M = translation * glm::scale(glm::vec3(10.0f / maxDimLength));
-    // }
-
-    // m_shaderBallPbrMaterialKey = material.name;
-    // addPbrTexturesToImageCache(material.textures, material.name, m_resourceContext->imageCache);
-
-    // m_resourceContext->addGeometry(entityName, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
-    // sceneObject->geometry = m_resourceContext->getGeometry(entityName);
-    // sceneObject->pass(kForwardLightingPass).material =
-    //     createPbrMaterial(entityName, material.name, *m_resourceContext, material.params, *m_transformBuffer);
-    // setPbrMaterialSceneParams(
-    //     *sceneObject->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem, *m_renderGraph);
-    // m_renderer->getDevice().flushDescriptorUpdates();
-
-    // for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
-    //     auto& subpass = sceneObject->pass(kCsmPasses[c]);
-    //     subpass.setGeometry(m_resourceContext->getGeometry(entityName), 0, 1);
-    //     subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
-    //     CRISP_CHECK(subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
-    // }
 }
 
 void PbrScene::createPlane() {
@@ -484,6 +373,32 @@ void PbrScene::createPlane() {
             .material->getPipeline()
             ->getVertexLayout()
             .isSubsetOf(floor.geometry->getVertexLayout()));
+}
+
+void PbrScene::createMeshletTestNode() {
+    constexpr std::string_view kNodeName{"meshletTest"};
+
+    auto [mesh, materials, meshletData] =
+        loadTriangleMeshlets(m_renderer->getResourcesPath() / "Meshes/bunny.obj").unwrap();
+    m_meshletData = std::move(meshletData);
+
+    // The mesh shader reads positions and attributes straight out of the vertex buffers, so they need storage usage.
+    auto& geometry = m_resourceContext->addGeometry(
+        kNodeName, createGeometry(*m_renderer, mesh, kPbrVertexFormat, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+
+    auto* meshletBuffer = m_resourceContext->createStorageBuffer("meshletBuffer", m_meshletData.meshlets);
+    auto* meshletVertices = m_resourceContext->createStorageBuffer("meshletVertices", m_meshletData.meshletVertices);
+    auto* meshletTriangles = m_resourceContext->createStorageBuffer("meshletTriangles", m_meshletData.meshletTriangles);
+
+    auto* meshPipeline = m_resourceContext->createPipeline(
+        "mesh", "MeshShading.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+    auto* meshMaterial = m_resourceContext->createMaterial("mesh", meshPipeline);
+    meshMaterial->writeDescriptor(0, 0, meshletBuffer->createDescriptorInfo());
+    meshMaterial->writeDescriptor(0, 1, meshletTriangles->createDescriptorInfo());
+    meshMaterial->writeDescriptor(0, 2, meshletVertices->createDescriptorInfo());
+    meshMaterial->writeDescriptor(0, 3, geometry.getVertexBuffer(0)->createDescriptorInfo());
+    meshMaterial->writeDescriptor(0, 4, m_resourceContext->getRingBuffer("camera")->getDescriptorInfo());
+    meshMaterial->writeDescriptor(0, 5, geometry.getVertexBuffer(1)->createDescriptorInfo());
 }
 
 void PbrScene::setupInput() {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Camera/TargetCameraController.hpp>
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
@@ -21,18 +20,21 @@ public:
     void render(const FrameContext& frameContext) override;
     void drawGui() override;
 
-    void onMaterialSelected(const std::string& material);
-
 private:
-    static constexpr uint32_t kMaximumObjectCount = 1000;
+    static constexpr uint32_t kMaximumObjectCount = 4096;
 
     RenderNode& createRenderNode(std::string_view nodeId, bool hasTransform = true);
 
     void createCommonTextures();
     void setEnvironmentMap(const std::string& envMapName);
 
-    void createSceneObject(const std::filesystem::path& path);
+    void createSceneObjects(const std::filesystem::path& path);
+    void createGltfSceneObjects(const std::filesystem::path& path);
+    void createObjSceneObject(const std::filesystem::path& path);
+    void addSceneObject(
+        std::string_view nodeId, const TriangleMesh& mesh, const PbrMaterial& material, const glm::mat4& modelMatrix);
     void createPlane();
+    void createMeshletTestNode();
 
     void setupInput();
 
@@ -50,15 +52,13 @@ private:
     std::unique_ptr<Material> m_pbrDrawMaterial;
     std::unique_ptr<PbrMaterialTable> m_pbrMaterialTable;
 
-    PbrParams m_uniformMaterialParams;
     std::unique_ptr<Skybox> m_skybox;
-
-    std::string m_shaderBallPbrMaterialKey;
 
     std::vector<std::string> m_environmentMapNames;
 
     bool m_showFloor{true};
 
+    bool m_drawMeshlets{false};
     MeshletData m_meshletData;
 };
 } // namespace crisp
