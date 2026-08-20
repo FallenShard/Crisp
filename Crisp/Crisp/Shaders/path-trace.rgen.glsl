@@ -21,7 +21,7 @@ const uint kImageSlot = 1;
 const uint kViewSlot = 2;
 const uint kIntegratorSlot = 3;
 
-// This doesn't work yet in a descriptor_heap: TODO: investigate.
+// This doesn't work yet in a descriptor_heap: Nvidia driver bug.
 layout(set = 1, binding = 0) uniform accelerationStructureEXT sceneBvh;
 layout(descriptor_heap, descriptor_stride = 64, rgba32f) uniform image2D heapStorageImages[];
 

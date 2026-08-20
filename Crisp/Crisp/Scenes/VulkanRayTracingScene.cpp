@@ -16,6 +16,11 @@
 namespace crisp {
 namespace {
 
+template <typename T>
+std::span<const std::byte> structAsBytes(const T& value) {
+    return std::span<const std::byte>{reinterpret_cast<const std::byte*>(&value), sizeof(value)}; // NOLINT
+}
+
 struct PathTracingPassData {
     RenderGraphResourceHandle image;
 };
@@ -195,10 +200,9 @@ void VulkanRayTracingScene::buildRenderGraph() {
                     .imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
                 },
                 "path-trace-accumulation");
-            builder.exportTexture(builder.getBlackboard().get<PathTracingPassData>().image);
         },
         [this](const FrameContext& frameContext) { traceRays(frameContext); });
-
+    m_renderGraph->exportTexture(m_renderGraph->getBlackboard().get<PathTracingPassData>().image);
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     updateDescriptorHeap();
     m_renderer->setSceneImageView(&m_renderGraph->getImageView<&PathTracingPassData::image>());
@@ -256,20 +260,10 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
 void VulkanRayTracingScene::traceRays(const FrameContext& frameContext) {
     const auto& encoder = frameContext.commandEncoder;
-    m_descriptorHeap->uploadIfPending(encoder, *frameContext.stagingBelt, kRayTracingResourceHeapRead);
+    uploadIfPending(*m_descriptorHeap, encoder, *frameContext.stagingBelt, kRayTracingResourceHeapRead);
     encoder.bindPipeline(*m_pipeline);
-    m_descriptorHeap->bind(encoder);
-    const VkPushDataInfoEXT pushDataInfo{
-        .sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT,
-        .offset = 0,
-        .data =
-            {
-                .address = &m_sceneAddresses,
-                .size = sizeof(m_sceneAddresses),
-            },
-    };
-    vkCmdPushDataEXT(encoder.getHandle(), &pushDataInfo);
-
+    encoder.bindDescriptorHeap(*m_descriptorHeap);
+    encoder.pushData(structAsBytes(m_sceneAddresses));
     encoder.traceRays(m_shaderBindingTable.bindings, m_renderer->getSwapChainExtent());
 
     if (!m_screenshotRequested || m_screenshot.isPending()) {
