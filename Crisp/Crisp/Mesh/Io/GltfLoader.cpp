@@ -4,6 +4,7 @@
 #include <chrono>
 #include <optional>
 #include <ranges>
+#include <string_view>
 
 #pragma warning(push)
 #pragma warning(disable : 4018) // Signed/unsigned comparison.
@@ -15,6 +16,7 @@
 #pragma warning(pop)
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 
@@ -27,6 +29,11 @@ constexpr uint32_t kMetallicMapChannel{2};
 
 constexpr int32_t GltfInvalidIdx{-1};
 constexpr uint32_t kMaximumImageDecodeThreadCount{8};
+
+uint64_t hashImageContents(const std::span<const uint8_t> bytes) {
+    const auto contents = std::string_view{reinterpret_cast<const char*>(bytes.data()), bytes.size()}; // NOLINT
+    return ankerl::unordered_dense::hash<std::string_view>{}(contents);
+}
 
 constexpr bool isValidGltfIndex(const int32_t index) {
     return index != GltfInvalidIdx;
@@ -193,6 +200,7 @@ struct EncodedGltfImage {
 struct GltfImageLoader {
     std::vector<EncodedGltfImage> encodedImages;
     std::vector<ImageData> loadedImages;
+    std::vector<uint32_t> sourceToLoadedImage;
     uint64_t bytesTotal{0};
 };
 
@@ -234,59 +242,93 @@ bool loadImageFromGltf(
     return true;
 }
 
-Result<std::vector<ImageData>> decodeGltfImages(const GltfImageLoader& imageLoader) {
+Result<std::vector<ImageData>> decodeGltfImages(GltfImageLoader& imageLoader) {
     if (imageLoader.encodedImages.empty()) {
         return std::vector<ImageData>{};
     }
 
+    std::vector<size_t> uniqueImageIndices;
+    uniqueImageIndices.reserve(imageLoader.encodedImages.size());
+    imageLoader.sourceToLoadedImage.resize(imageLoader.encodedImages.size());
+
+    // Each hash owns a small candidate bucket so hash collisions can be resolved with exact byte comparisons.
+    FlatHashMap<uint64_t, std::vector<size_t>> imageIndicesByHash;
+    uint64_t uniqueBytesTotal{0};
+    const auto deduplicationStart = std::chrono::steady_clock::now();
+    for (size_t imageIdx = 0; imageIdx < imageLoader.encodedImages.size(); ++imageIdx) {
+        const auto& encodedImage = imageLoader.encodedImages[imageIdx];
+        auto& matchingHashIndices = imageIndicesByHash[hashImageContents(encodedImage.bytes)];
+
+        const auto duplicate = std::ranges::find_if(matchingHashIndices, [&](const size_t candidateIdx) {
+            return imageLoader.encodedImages[candidateIdx].bytes == encodedImage.bytes;
+        });
+        if (duplicate != matchingHashIndices.end()) {
+            imageLoader.sourceToLoadedImage[imageIdx] = imageLoader.sourceToLoadedImage[*duplicate];
+            continue;
+        }
+
+        imageLoader.sourceToLoadedImage[imageIdx] = static_cast<uint32_t>(uniqueImageIndices.size());
+        uniqueImageIndices.push_back(imageIdx);
+        matchingHashIndices.push_back(imageIdx);
+        uniqueBytesTotal += encodedImage.bytes.size();
+    }
+    const std::chrono::duration<double, std::milli> deduplicationDuration{
+        std::chrono::steady_clock::now() - deduplicationStart};
+
     const uint32_t hardwareThreadCount{std::max(1u, std::thread::hardware_concurrency())};
     const uint32_t decodeThreadCount{std::min(
-        {hardwareThreadCount, kMaximumImageDecodeThreadCount, static_cast<uint32_t>(imageLoader.encodedImages.size())})};
+        {hardwareThreadCount, kMaximumImageDecodeThreadCount, static_cast<uint32_t>(uniqueImageIndices.size())})};
 
-    std::vector<std::optional<Image>> decodedImages(imageLoader.encodedImages.size());
-    std::vector<std::string> decodeErrors(imageLoader.encodedImages.size());
+    std::vector<std::optional<Image>> decodedImages(uniqueImageIndices.size());
+    std::vector<std::string> decodeErrors(uniqueImageIndices.size());
 
     const auto decodeStart = std::chrono::steady_clock::now();
     ThreadPool threadPool(decodeThreadCount);
-    threadPool.parallelFor(imageLoader.encodedImages.size(), [&](const size_t imageIdx, const size_t /*threadIdx*/) {
+    threadPool.parallelFor(uniqueImageIndices.size(), [&](const size_t uniqueIdx, const size_t /*threadIdx*/) {
+        const size_t imageIdx = uniqueImageIndices[uniqueIdx];
         const auto& encodedImage = imageLoader.encodedImages[imageIdx];
         if (encodedImage.bytes.empty()) {
-            decodeErrors[imageIdx] = "No encoded image data was provided.";
+            decodeErrors[uniqueIdx] = "No encoded image data was provided.";
             return;
         }
 
         auto decodedImage = loadImage(std::span<const uint8_t>(encodedImage.bytes));
         if (!decodedImage) {
-            decodeErrors[imageIdx] = std::move(decodedImage).getError();
+            decodeErrors[uniqueIdx] = std::move(decodedImage).getError();
             return;
         }
-        decodedImages[imageIdx] = std::move(decodedImage).extract();
+        decodedImages[uniqueIdx] = std::move(decodedImage).extract();
     });
 
     std::vector<ImageData> images;
     images.reserve(decodedImages.size());
-    for (size_t imageIdx = 0; imageIdx < decodedImages.size(); ++imageIdx) {
-        if (!decodeErrors[imageIdx].empty()) {
+    for (size_t uniqueIdx = 0; uniqueIdx < decodedImages.size(); ++uniqueIdx) {
+        const size_t imageIdx = uniqueImageIndices[uniqueIdx];
+        if (!decodeErrors[uniqueIdx].empty()) {
             return resultError(
                 "Failed to decode GLTF image {} '{}': {}",
                 imageIdx,
                 imageLoader.encodedImages[imageIdx].name,
-                decodeErrors[imageIdx]);
+                decodeErrors[uniqueIdx]);
         }
-        if (!decodedImages[imageIdx]) {
+        if (!decodedImages[uniqueIdx]) {
             return resultError(
                 "GLTF image {} '{}' produced no decoded data.", imageIdx, imageLoader.encodedImages[imageIdx].name);
         }
-        images.emplace_back(std::move(*decodedImages[imageIdx]), imageLoader.encodedImages[imageIdx].name);
+        images.emplace_back(std::move(*decodedImages[uniqueIdx]), imageLoader.encodedImages[imageIdx].name);
     }
 
     const std::chrono::duration<double, std::milli> decodeDuration{std::chrono::steady_clock::now() - decodeStart};
     CRISP_LOGI(
-        "Decoded {} GLTF images ({:.1f} MiB encoded) on {} threads in {:.1f} ms.",
+        "Decoded {} unique GLTF images ({:.1f} MiB encoded) on {} threads in {:.1f} ms; skipped {} duplicates "
+        "({:.1f} MiB).",
         images.size(),
-        static_cast<double>(imageLoader.bytesTotal) / (1024.0 * 1024.0),
+        static_cast<double>(uniqueBytesTotal) / (1024.0 * 1024.0),
         decodeThreadCount,
-        decodeDuration.count());
+        decodeDuration.count(),
+        imageLoader.encodedImages.size() - images.size(),
+        static_cast<double>(imageLoader.bytesTotal - uniqueBytesTotal) / (1024.0 * 1024.0));
+    CRISP_LOGI("Content-hash image deduplication took {:.1f} ms.", deduplicationDuration.count());
 
     return images;
 }
@@ -341,8 +383,9 @@ PbrMaterial createPbrMaterialFromGltfMaterial(
     const auto getTexture = [&model, &loader, &pbrMaterial](const int32_t index, const int32_t textureIndex) {
         if (isValidGltfIndex(textureIndex)) {
             const int32_t sourceIndex = model.textures.at(textureIndex).source;
-            pbrMaterial.textureKeys[index] = fmt::format("{}", sourceIndex);
-            loader.loadedImages[sourceIndex].accessTypes[index] = true;
+            const uint32_t loadedImageIndex = loader.sourceToLoadedImage.at(sourceIndex);
+            pbrMaterial.textureKeys[index] = fmt::format("{}", loadedImageIndex);
+            loader.loadedImages[loadedImageIndex].accessTypes[index] = true;
             return true;
         }
         return false;
@@ -526,38 +569,40 @@ AnimationData createAnimationData(const tinygltf::Model& model, const tinygltf::
 PbrImageGroup createPbrImageData(
     std::string name, const std::span<ImageData> images, const std::span<ModelData> models) {
     PbrImageGroup imageData{.name = std::move(name)};
-    std::vector<int32_t> remappedIndices(images.size(), -1);
+    std::array<std::vector<int32_t>, kPbrMapTypeCount> remappedIndices;
+    for (auto& indices : remappedIndices) {
+        indices.resize(images.size(), -1);
+    }
 
-    const auto appendImage = [&remappedIndices](std::vector<Image>& images, Image&& image, const size_t idx) {
-        images.push_back(std::move(image));
-        remappedIndices[idx] = static_cast<int32_t>(images.size()) - 1;
-    };
+    const auto appendImage =
+        [&remappedIndices](std::vector<Image>& images, Image image, const size_t imageIdx, const size_t typeIdx) {
+            images.push_back(std::move(image));
+            remappedIndices[typeIdx][imageIdx] = static_cast<int32_t>(images.size()) - 1;
+        };
 
     for (auto&& [idx, image] : std::views::enumerate(images)) {
-        if (image.accessTypes[0]) {
-            CRISP_CHECK(image.hasSingleAccessType());
-            appendImage(imageData.albedoMaps, std::move(image.image), idx);
-            continue;
-        }
-        if (image.accessTypes[1]) {
-            CRISP_CHECK(image.hasSingleAccessType());
-            appendImage(imageData.normalMaps, std::move(image.image), idx);
-            continue;
-        }
         if (image.accessTypes[2]) {
-            appendImage(imageData.roughnessMaps, image.image.createFromChannel(kRoughnessMapChannel), idx);
+            appendImage(imageData.roughnessMaps, image.image.createFromChannel(kRoughnessMapChannel), idx, 2);
         }
         if (image.accessTypes[3]) {
-            appendImage(imageData.metallicMaps, image.image.createFromChannel(kMetallicMapChannel), idx);
+            appendImage(imageData.metallicMaps, image.image.createFromChannel(kMetallicMapChannel), idx, 3);
         }
-        if (image.accessTypes[4]) {
-            CRISP_CHECK(image.hasSingleAccessType());
-            appendImage(imageData.occlusionMaps, std::move(image.image), idx);
-            continue;
-        }
-        if (image.accessTypes[5]) {
-            CRISP_CHECK(image.hasSingleAccessType());
-            appendImage(imageData.emissiveMaps, std::move(image.image), idx);
+
+        const std::array<std::pair<uint32_t, std::vector<Image>*>, 4> fullImageMaps{{
+            {0, &imageData.albedoMaps},
+            {1, &imageData.normalMaps},
+            {4, &imageData.occlusionMaps},
+            {5, &imageData.emissiveMaps},
+        }};
+        size_t remainingFullImageUses = std::ranges::count_if(fullImageMaps, [&image](const auto& map) {
+            return image.accessTypes[map.first];
+        });
+        for (const auto& [typeIdx, maps] : fullImageMaps) {
+            if (!image.accessTypes[typeIdx]) {
+                continue;
+            }
+            --remainingFullImageUses;
+            appendImage(*maps, remainingFullImageUses == 0 ? std::move(image.image) : image.image, idx, typeIdx);
         }
     }
 
@@ -565,7 +610,7 @@ PbrImageGroup createPbrImageData(
     for (auto& model : models) {
         for (auto&& [idx, index] : std::views::enumerate(model.material.textureKeys)) {
             if (!index.empty()) {
-                index = creator.createMapKey(static_cast<uint32_t>(idx), remappedIndices[std::stoi(index)]);
+                index = creator.createMapKey(static_cast<uint32_t>(idx), remappedIndices[idx][std::stoi(index)]);
             }
         }
     }
