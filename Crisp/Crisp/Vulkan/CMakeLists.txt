@@ -16,6 +16,7 @@ target_link_libraries(CrispVulkan
     PUBLIC Crisp::VulkanImageView
     PUBLIC Crisp::VulkanPipelineLayout
     PUBLIC Crisp::VulkanDescriptorSet
+    PUBLIC Crisp::VulkanDescriptorHeap
     PUBLIC Crisp::VulkanPipeline
     PUBLIC Crisp::VulkanRasterizationPassDescriptor
     PUBLIC Crisp::VulkanCommandBuffer
@@ -83,8 +84,6 @@ target_link_libraries(
     CrispVulkanDescriptorHeap
     PUBLIC Crisp::HashMap
     PUBLIC Crisp::SpvReflection
-    PUBLIC Crisp::VulkanCommandEncoder
-    PUBLIC Crisp::VulkanStagingBelt
     PUBLIC Crisp::VulkanAccelerationStructure
     PUBLIC Crisp::VulkanBuffer
     PUBLIC Crisp::VulkanImageView
@@ -99,6 +98,7 @@ target_link_libraries(
     CrispVulkanStagingBelt
     PUBLIC Crisp::VulkanStagingBuffer
     PUBLIC Crisp::VulkanCommandEncoder
+    PUBLIC Crisp::VulkanDescriptorHeap
     PRIVATE Crisp::VulkanImage
 )
 

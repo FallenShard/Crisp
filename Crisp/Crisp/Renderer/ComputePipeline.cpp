@@ -1,15 +1,14 @@
 #include <Crisp/Renderer/ComputePipeline.hpp>
 
-#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+#include <bit>
+#include <vector>
 
 #include <Crisp/Io/FileUtils.hpp>
+#include <Crisp/ShaderUtils/Reflection.hpp>
 #include <Crisp/Vulkan/PipelineBuilder.hpp>
 #include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
-
-#include <Crisp/ShaderUtils/Reflection.hpp>
-
-#include <vector>
 
 namespace crisp {
 FlatHashMap<VkPipeline, VkExtent3D> workGroupSizes;
@@ -19,6 +18,11 @@ VkExtent3D getWorkGroupSize(const VulkanPipeline& pipeline) {
 }
 
 namespace {
+// Specialization data is untyped bytes, so every alternative collapses to the same four.
+uint32_t toSpecializationBytes(const SpecializationConstant& value) {
+    return std::visit([](const auto alternative) { return std::bit_cast<uint32_t>(alternative); }, value);
+}
+
 std::unique_ptr<VulkanPipeline> createComputePipelineFromModule(
     const VulkanDevice& device,
     VkShaderModule shaderModule,
@@ -41,7 +45,7 @@ std::unique_ptr<VulkanPipeline> createComputePipelineFromModule(
                 .offset = static_cast<uint32_t>(specData.size() * sizeof(uint32_t)),
                 .size = sizeof(uint32_t),
             });
-        specData.push_back(value);
+        specData.push_back(toSpecializationBytes(value));
     }
 
     VkSpecializationInfo specInfo = {};

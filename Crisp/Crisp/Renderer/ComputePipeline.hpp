@@ -9,7 +9,6 @@
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 namespace crisp {
-using SpecializationConstantMap = std::flat_map<uint32_t, uint32_t>;
 
 std::unique_ptr<VulkanPipeline> createComputePipeline(
     const VulkanDevice& device,

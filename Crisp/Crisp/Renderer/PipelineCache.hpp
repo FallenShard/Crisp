@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include <Crisp/Renderer/AssetPaths.hpp>
+#include <Crisp/Vulkan/PipelineBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSetAllocator.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
@@ -19,7 +20,8 @@ public:
         const std::string& id,
         std::string_view filename,
         VulkanDevice& device,
-        const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
+        const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
+        const SpecializationConstantMap& specializationConstants = {});
 
     VulkanPipeline* getPipeline(const std::string& key) const;
 
@@ -36,6 +38,7 @@ private:
     struct PipelineInfo {
         std::string filename;
         VulkanRasterizationPassDescriptor rasterizationPassDescriptor;
+        SpecializationConstantMap specializationConstants;
     };
 
     FlatHashMap<std::string, PipelineInfo> m_pipelineInfos;

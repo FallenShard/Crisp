@@ -1,8 +1,10 @@
 #pragma once
 
 #include <filesystem>
+#include <flat_map>
 #include <string_view>
 #include <utility>
+#include <variant>
 
 #include <Crisp/Utils/BitFlags.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDescriptorSet.hpp>
@@ -12,6 +14,9 @@
 #include <Crisp/Vulkan/VulkanVertexLayout.hpp>
 
 namespace crisp {
+using SpecializationConstant = std::variant<uint32_t, float>;
+using SpecializationConstantMap = std::flat_map<uint32_t, SpecializationConstant>;
+
 enum class PipelineDynamicState : uint8_t { None = 0x00, Viewport = 0x01, Scissor = 0x02 };
 DECLARE_BITFLAG(PipelineDynamicState);
 

@@ -11,8 +11,10 @@ ResourceContext::ResourceContext(Renderer* renderer)
 VulkanPipeline* ResourceContext::createPipeline(
     const std::string& id,
     const std::string_view filename,
-    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
-    return pipelineCache.loadPipeline(id, filename, m_renderer->getDevice(), rasterizationPassDescriptor);
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
+    const SpecializationConstantMap& specializationConstants) {
+    return pipelineCache.loadPipeline(
+        id, filename, m_renderer->getDevice(), rasterizationPassDescriptor, specializationConstants);
 }
 
 Material* ResourceContext::createMaterial(std::string materialId, const std::string& pipelineId) {

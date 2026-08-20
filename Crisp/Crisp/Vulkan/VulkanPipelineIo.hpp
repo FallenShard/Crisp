@@ -14,6 +14,7 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     const std::filesystem::path& spvShaderDir,
     const VulkanDevice& device,
     const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
-    VkDescriptorSetLayout bindlessDescriptorSetLayout);
+    VkDescriptorSetLayout bindlessDescriptorSetLayout,
+    const SpecializationConstantMap& specializationConstants = {});
 
 } // namespace crisp
