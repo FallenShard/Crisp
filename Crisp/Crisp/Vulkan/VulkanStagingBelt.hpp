@@ -1,7 +1,8 @@
 #pragma once
 
+#include <Crisp/Vulkan/VulkanDescriptorHeap.hpp>
 #include <Crisp/Vulkan/VulkanStagingBuffer.hpp>
-#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
+#include <Crisp/Vulkan/VulkanSynchronization.hpp>
 
 #include <optional>
 #include <span>
@@ -11,6 +12,7 @@
 namespace crisp {
 
 class VulkanImage;
+class VulkanCommandEncoder;
 
 struct ReadbackBuffer {
     std::unique_ptr<VulkanBuffer> buffer;
@@ -89,10 +91,7 @@ public:
     // (caller's responsibility — typically by waiting on the timeline value that submission signals).
     // The source must already be in a layout/access that supports TRANSFER_READ.
     ReadbackBuffer downloadBuffer(
-        const VulkanCommandEncoder& encoder,
-        const VulkanBuffer& src,
-        VkDeviceSize srcOffset,
-        VkDeviceSize size);
+        const VulkanCommandEncoder& encoder, const VulkanBuffer& src, VkDeviceSize srcOffset, VkDeviceSize size);
 
     ReadbackBuffer downloadImage(
         const VulkanCommandEncoder& encoder,
@@ -128,10 +127,7 @@ public:
     template <typename T>
         requires std::is_trivially_copyable_v<T>
     void uploadBuffer(
-        const VulkanCommandEncoder& encoder,
-        const VulkanBuffer& dstBuffer,
-        VkDeviceSize dstOffset,
-        const T& value) {
+        const VulkanCommandEncoder& encoder, const VulkanBuffer& dstBuffer, VkDeviceSize dstOffset, const T& value) {
         uploadBuffer(encoder, dstBuffer, dstOffset, &value, sizeof(T));
     }
 
@@ -146,10 +142,7 @@ public:
 
     template <typename T>
     void uploadBuffer(
-        const VulkanCommandEncoder& encoder,
-        const VulkanBuffer& dstBuffer,
-        VkDeviceSize dstOffset,
-        std::span<T> data) {
+        const VulkanCommandEncoder& encoder, const VulkanBuffer& dstBuffer, VkDeviceSize dstOffset, std::span<T> data) {
         uploadBuffer(encoder, dstBuffer, dstOffset, data.data(), data.size_bytes());
     }
 
@@ -185,5 +178,11 @@ private:
     // Counts collect() calls. Drives chunk eviction only, which is a staleness heuristic and not a safety property.
     uint64_t m_tick{0};
 };
+
+void uploadIfPending(
+    VulkanDescriptorHeap& heap,
+    const VulkanCommandEncoder& encoder,
+    VulkanStagingBelt& stagingBelt,
+    const VulkanSynchronizationStage& consumer);
 
 } // namespace crisp

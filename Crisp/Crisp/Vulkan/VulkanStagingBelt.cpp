@@ -3,6 +3,7 @@
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImage.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 #include <algorithm>
 
@@ -16,10 +17,11 @@ VulkanStagingBelt::VulkanStagingBelt(VulkanDevice& device, const VkDeviceSize in
 }
 
 VulkanStagingBelt::Chunk& VulkanStagingBelt::addChunk(const VkDeviceSize capacity) {
-    return m_chunks.emplace_back(Chunk{
-        .buffer = VulkanStagingBuffer(*m_device, capacity, m_alignment),
-        .lastUsedTick = m_tick,
-    });
+    return m_chunks.emplace_back(
+        Chunk{
+            .buffer = VulkanStagingBuffer(*m_device, capacity, m_alignment),
+            .lastUsedTick = m_tick,
+        });
 }
 
 void VulkanStagingBelt::setRetirementValue(const uint64_t value) {
@@ -168,10 +170,7 @@ void VulkanStagingBelt::uploadImage(
 }
 
 ReadbackBuffer VulkanStagingBelt::downloadBuffer(
-    const VulkanCommandEncoder& encoder,
-    const VulkanBuffer& src,
-    const VkDeviceSize srcOffset,
-    const VkDeviceSize size) {
+    const VulkanCommandEncoder& encoder, const VulkanBuffer& src, const VkDeviceSize srcOffset, const VkDeviceSize size) {
     auto buffer = std::make_unique<VulkanBuffer>(
         *m_device, size, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
 
@@ -208,6 +207,21 @@ ReadbackBuffer VulkanStagingBelt::downloadImage(
     encoder.copyImageToBuffer(src, *buffer, copyRegion);
 
     return {.buffer = std::move(buffer)};
+}
+
+void uploadIfPending(
+    VulkanDescriptorHeap& heap,
+    const VulkanCommandEncoder& encoder,
+    VulkanStagingBelt& stagingBelt,
+    const VulkanSynchronizationStage& consumer) {
+    const auto upload = heap.takePendingUpload();
+    if (!upload) {
+        return;
+    }
+
+    stagingBelt.uploadBuffer(encoder, upload->buffer, upload->bufferOffset, upload->bytes.data(), upload->bytes.size());
+    encoder.insertBufferMemoryBarrier(
+        upload->buffer.getHandle(), upload->bufferOffset, upload->bytes.size(), kTransferWrite >> consumer);
 }
 
 } // namespace crisp

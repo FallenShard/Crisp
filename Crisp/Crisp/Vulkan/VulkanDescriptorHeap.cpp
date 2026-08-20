@@ -80,9 +80,6 @@ void VulkanDescriptorHeap::encode(const uint32_t slot, const VkResourceDescripto
 
 void VulkanDescriptorHeap::writeAccelerationStructure(
     const uint32_t slot, const VulkanAccelerationStructure& accelerationStructure) {
-    // The descriptor holds the structure's own address, not its backing buffer's. A non-zero size would have
-    // to fall inside the range bound to that structure (VUID-VkResourceDescriptorInfoEXT-type-11484), which the
-    // backing buffer's size does not describe; 0 opts out of the bound entirely.
     const VkDeviceAddressRangeEXT addressRange{
         .address = accelerationStructure.getDeviceAddress(),
         .size = 0,
@@ -131,16 +128,17 @@ void VulkanDescriptorHeap::writeStorageImage(
         });
 }
 
-void VulkanDescriptorHeap::uploadIfPending(
-    const VulkanCommandEncoder& encoder, VulkanStagingBelt& stagingBelt, const VulkanSynchronizationStage& consumer) {
+std::optional<VulkanDescriptorHeap::PendingUpload> VulkanDescriptorHeap::takePendingUpload() {
     if (!m_uploadPending) {
-        return;
+        return std::nullopt;
     }
 
-    stagingBelt.uploadBuffer(encoder, *m_buffer, m_bufferOffset, m_descriptorBytes.data(), m_descriptorBytes.size());
-    encoder.insertBufferMemoryBarrier(
-        m_buffer->getHandle(), m_bufferOffset, m_reservedRangeOffset, kTransferWrite >> consumer);
     m_uploadPending = false;
+    return PendingUpload{
+        .buffer = *m_buffer,
+        .bufferOffset = m_bufferOffset,
+        .bytes = m_descriptorBytes,
+    };
 }
 
 VkDescriptorSetAndBindingMappingEXT VulkanDescriptorHeap::makeMapping(
@@ -162,8 +160,8 @@ VkDescriptorSetAndBindingMappingEXT VulkanDescriptorHeap::makeMapping(
     return mapping;
 }
 
-void VulkanDescriptorHeap::bind(const VulkanCommandEncoder& encoder) const {
-    vkCmdBindResourceHeapEXT(encoder.getHandle(), &m_bindInfo);
+const VkBindHeapInfoEXT& VulkanDescriptorHeap::getBindInfo() const {
+    return m_bindInfo;
 }
 
 } // namespace crisp

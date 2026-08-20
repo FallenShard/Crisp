@@ -10,6 +10,7 @@
 #include <Crisp/Vulkan/Rhi/VulkanPipelineStatsQueryPool.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanQueue.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanTimestampQueryPool.hpp>
+#include <Crisp/Vulkan/VulkanDescriptorHeap.hpp>
 #include <Crisp/Vulkan/VulkanSynchronization.hpp>
 
 namespace crisp {
@@ -28,6 +29,7 @@ public:
         uint32_t firstSet,
         std::span<const VkDescriptorSet> sets,
         std::span<const uint32_t> dynamicOffsets = {}) const;
+    void bindDescriptorHeap(const VulkanDescriptorHeap& heap) const;
     void bindVertexBuffers(
         uint32_t firstBinding, std::span<const VkBuffer> buffers, std::span<const VkDeviceSize> offsets) const;
     void bindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType) const;
@@ -116,6 +118,7 @@ public:
     }
 
     void setPushConstants(const VulkanPipelineLayout& layout, std::span<const std::byte> data) const;
+    void pushData(std::span<const std::byte> data) const;
 
     VkCommandBuffer getHandle() const {
         return m_cmdBuffer;

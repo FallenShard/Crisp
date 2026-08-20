@@ -1,16 +1,14 @@
 #pragma once
 
+#include <memory>
+#include <optional>
+#include <span>
+#include <string_view>
+#include <vector>
+
 #include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
-#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
-#include <Crisp/Vulkan/VulkanStagingBelt.hpp>
-#include <Crisp/Vulkan/VulkanSynchronization.hpp>
-
-#include <limits>
-#include <memory>
-#include <string_view>
-#include <vector>
 
 namespace crisp {
 
@@ -41,13 +39,15 @@ public:
     void writeStorageBuffer(uint32_t slot, const VulkanBuffer& buffer);
     void writeStorageImage(uint32_t slot, const VulkanImageView& imageView, VkImageLayout layout);
 
-    // Uploads only if a write actually changed the encoded bytes, then barriers against `consumer`.
-    void uploadIfPending(
-        const VulkanCommandEncoder& encoder,
-        VulkanStagingBelt& stagingBelt,
-        const VulkanSynchronizationStage& consumer);
+    struct PendingUpload {
+        const VulkanBuffer& buffer;
+        VkDeviceSize bufferOffset{};
+        std::span<const std::byte> bytes;
+    };
 
-    void bind(const VulkanCommandEncoder& encoder) const;
+    std::optional<PendingUpload> takePendingUpload();
+
+    const VkBindHeapInfoEXT& getBindInfo() const;
 
     // Describes a slot to a pipeline as a legacy (set, binding) instead of a heap array subscript. Needed for
     // resources that cannot be reached through an unsized array; see docs/descriptor-heap.md.

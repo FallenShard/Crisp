@@ -48,6 +48,10 @@ void VulkanCommandEncoder::bindDescriptorSets(
         dynamicOffsets.data());
 }
 
+void VulkanCommandEncoder::bindDescriptorHeap(const VulkanDescriptorHeap& heap) const {
+    vkCmdBindResourceHeapEXT(m_cmdBuffer, &heap.getBindInfo());
+}
+
 void VulkanCommandEncoder::bindVertexBuffers(
     const uint32_t firstBinding,
     const std::span<const VkBuffer> buffers,
@@ -463,6 +467,19 @@ void VulkanCommandEncoder::setPushConstants(
         vkCmdPushConstants(
             m_cmdBuffer, layout.getHandle(), range.stageFlags, range.offset, range.size, data.data() + range.offset); // NOLINT
     }
+}
+
+void VulkanCommandEncoder::pushData(const std::span<const std::byte> data) const {
+    const VkPushDataInfoEXT pushDataInfo{
+        .sType = VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT,
+        .offset = 0,
+        .data =
+            {
+                .address = data.data(),
+                .size = data.size_bytes(),
+            },
+    };
+    vkCmdPushDataEXT(m_cmdBuffer, &pushDataInfo);
 }
 
 } // namespace crisp
