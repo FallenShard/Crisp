@@ -44,6 +44,12 @@ private:
     TransformHandle m_transformHandle{TransformHandle::createInvalidHandle()};
     VulkanPipeline* m_oceanPipeline{nullptr};
     Material* m_oceanMaterial{nullptr};
+    // Same geometry through a task/mesh pipeline, switchable at runtime so the two can be compared
+    // in one frame. Null when the device has no mesh shading.
+    VulkanPipeline* m_oceanMeshPipeline{nullptr};
+    Material* m_oceanMeshMaterial{nullptr};
+    bool m_useMeshShaderPath{false};
+
     std::unique_ptr<VulkanPipelineStatsQueryPool> m_pipelineStatsQueryPool;
     PipelineStats m_pipelineStats{};
     VulkanPipeline* m_skyPipeline{nullptr};

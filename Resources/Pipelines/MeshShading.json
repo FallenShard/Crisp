@@ -1,5 +1,4 @@
 {
     "shaders": { "mesh": "basic.mesh", "frag": "basic.frag" },
-    "vertexInputBindings": [],
     "depthStencil": { "reverseDepth": true }
 }

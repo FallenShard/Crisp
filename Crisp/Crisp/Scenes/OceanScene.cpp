@@ -34,6 +34,14 @@ constexpr uint32_t kFoamLayerCount = 2;
 // Level 16 reaches 2000 km, well past the point where float world coordinates stop being exact.
 constexpr int32_t kMaxClipmapLevels = 16;
 
+constexpr uint32_t kTilesPerTaskGroupConstantId = 0;
+constexpr uint32_t kTaskGroupsPerBlockConstantId = 1;
+constexpr uint32_t kTileHeightSigmasConstantId = 2;
+
+constexpr uint32_t kOceanTilesPerTaskGroup = 32;
+constexpr uint32_t kOceanTaskGroupsPerBlock = 8;
+constexpr float kOceanTileHeightSigmas = 4.0f;
+
 constexpr VkQueryPipelineStatisticFlags kOceanGeometryStats =
     VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT | VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT |
     VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT |
@@ -447,6 +455,9 @@ void OceanScene::drawGui() {
         kTonemapOperatorNames.data(),
         static_cast<int32_t>(kTonemapOperatorNames.size()));
     ImGui::SliderFloat("Exposure", &m_tonemapParams.exposure, 0.05f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+    ImGui::BeginDisabled(m_oceanMeshPipeline == nullptr);
+    ImGui::Checkbox("Task + Mesh Shader Path", &m_useMeshShaderPath);
+    ImGui::EndDisabled();
     if (ImGui::SliderInt("Clipmap Levels", &m_clipmap.levelCount, 1, kMaxClipmapLevels)) {
         m_resourceContext->getGeometry("ocean").setInstanceCount(
             static_cast<uint32_t>(computeClipmapInstanceCount(m_clipmap)));
@@ -489,6 +500,9 @@ void OceanScene::drawGui() {
             "FS invocations   (F): %8.3f M  (%.2fx overdraw)",
             fragments / 1.0e6,
             pixels > 0.0 ? fragments / pixels : 0.0);
+        if (m_useMeshShaderPath) {
+            ImGui::TextDisabled("Not collected on the mesh path; showing the last vertex-path frame.");
+        }
     }
     if (ImGui::Button("Reset View")) {
         resetCamera();
@@ -762,13 +776,20 @@ void OceanScene::buildRenderGraph() {
             ctx.commandEncoder.bindDescriptorSets(m_skyMaterial->getDescriptorSetBinding());
             m_renderer->drawFullScreenQuad(ctx.commandEncoder);
 
-            auto& geometry = m_resourceContext->getGeometry("ocean");
-            ctx.commandEncoder.bindPipeline(*m_oceanPipeline);
+            const bool useMeshPath = m_useMeshShaderPath && m_oceanMeshPipeline != nullptr;
+            VulkanPipeline& oceanPipeline = useMeshPath ? *m_oceanMeshPipeline : *m_oceanPipeline;
+            Material& oceanMaterial = useMeshPath ? *m_oceanMeshMaterial : *m_oceanMaterial;
+            // Has to match the range the layout reflected, or the write lands in no stage at all.
+            const VkShaderStageFlags pushConstantStages =
+                useMeshPath ? VK_SHADER_STAGE_TASK_BIT_EXT | VK_SHADER_STAGE_MESH_BIT_EXT | VK_SHADER_STAGE_FRAGMENT_BIT
+                            : VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+            ctx.commandEncoder.bindPipeline(oceanPipeline);
             ctx.commandEncoder.setViewport(m_renderer->getDefaultViewport());
             ctx.commandEncoder.setScissor(m_renderer->getDefaultScissor());
             ctx.commandEncoder.setPushConstants(
-                *m_oceanPipeline->getPipelineLayout(),
-                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                *oceanPipeline.getPipelineLayout(),
+                pushConstantStages,
                 OceanPushConstants{
                     .clipmapOrigin = m_clipmapOrigin,
                     .clipmapFinestSpacing = m_clipmap.finestSpacing,
@@ -789,19 +810,26 @@ void OceanScene::buildRenderGraph() {
                     .cascadeSizes = cascadeSizes,
                     .cascadeWavelengths = cascadeWavelengths,
                     .cascadeSlopeVariances = cascadeSlopeVariances});
-            ctx.commandEncoder.bindDescriptorSets(m_oceanMaterial->getDescriptorSetBinding());
-            const bool recordStats =
-                m_pipelineStatsQueryPool != nullptr && !m_pipelineStatsQueryPool->isPending(ctx.virtualFrameIndex);
-            if (recordStats) {
-                ctx.commandEncoder.beginQuery(*m_pipelineStatsQueryPool, ctx.virtualFrameIndex);
-            }
-            geometry.bindAndDraw(ctx.commandEncoder);
-            if (recordStats) {
-                ctx.commandEncoder.endQuery(*m_pipelineStatsQueryPool, ctx.virtualFrameIndex);
-                m_pipelineStatsQueryPool->setPending(ctx.virtualFrameIndex);
+            ctx.commandEncoder.bindDescriptorSets(oceanMaterial.getDescriptorSetBinding());
+            if (useMeshPath) {
+                ctx.commandEncoder.drawMeshTasks(
+                    static_cast<uint32_t>(computeClipmapInstanceCount(m_clipmap)) * kOceanTaskGroupsPerBlock);
+            } else {
+                const bool recordStats =
+                    m_pipelineStatsQueryPool != nullptr && !m_pipelineStatsQueryPool->isPending(ctx.virtualFrameIndex);
+                if (recordStats) {
+                    ctx.commandEncoder.beginQuery(*m_pipelineStatsQueryPool, ctx.virtualFrameIndex);
+                }
+                m_resourceContext->getGeometry("ocean").bindAndDraw(ctx.commandEncoder);
+                if (recordStats) {
+                    ctx.commandEncoder.endQuery(*m_pipelineStatsQueryPool, ctx.virtualFrameIndex);
+                    m_pipelineStatsQueryPool->setPending(ctx.virtualFrameIndex);
+                }
             }
         });
 
+    // addTonemapComputePass is the same curve as a compute dispatch; it measured ~0.07 ms faster and
+    // pixel-identical, but stays opt-in.
     addTonemapPass(
         *m_renderGraph,
         *m_renderer,
@@ -831,16 +859,36 @@ void OceanScene::buildRenderGraph() {
         "ocean", "Ocean.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
     m_oceanMaterial = m_resourceContext->createMaterial("ocean", m_oceanPipeline);
 
+    if (m_renderer->getDevice().getEnabledFeatures().meshShading) {
+        const SpecializationConstantMap oceanMeshConstants{
+            {kTilesPerTaskGroupConstantId, kOceanTilesPerTaskGroup},
+            {kTaskGroupsPerBlockConstantId, kOceanTaskGroupsPerBlock},
+            {kTileHeightSigmasConstantId, kOceanTileHeightSigmas},
+        };
+        m_oceanMeshPipeline = m_resourceContext->createPipeline(
+            "oceanMesh",
+            "OceanMesh.json",
+            m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass),
+            oceanMeshConstants);
+        m_oceanMeshMaterial = m_resourceContext->createMaterial("oceanMesh", m_oceanMeshPipeline);
+    }
+
     m_skyPipeline = m_resourceContext->createPipeline(
         "oceanSky", "OceanSky.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
     m_skyMaterial = m_resourceContext->createMaterial("oceanSky", m_skyPipeline);
-    m_oceanMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
-    m_oceanMaterial->writeDescriptor(1, 0, *m_resourceContext->getRingBuffer("camera"));
-    m_oceanMaterial->writeDescriptor(
-        1,
-        1,
-        m_resourceContext->imageCache.getImage("brdfLut").getView(),
-        m_resourceContext->imageCache.getSampler("oceanLinearClamp"));
+
+    for (Material* material : {m_oceanMaterial, m_oceanMeshMaterial}) {
+        if (material == nullptr) {
+            continue;
+        }
+        material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
+        material->writeDescriptor(1, 0, *m_resourceContext->getRingBuffer("camera"));
+        material->writeDescriptor(
+            1,
+            1,
+            m_resourceContext->imageCache.getImage("brdfLut").getView(),
+            m_resourceContext->imageCache.getSampler("oceanLinearClamp"));
+    }
 
     writeGraphDependentDescriptors();
 }
@@ -869,10 +917,15 @@ void OceanScene::writeGraphDependentDescriptors() {
     m_passResources->foam.material->writeDescriptor(0, 0, finalFftView.operator()<1>(), linearRepeat);
     m_passResources->foam.material->writeDescriptor(0, 1, foamView.getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
 
-    m_oceanMaterial->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
-    m_oceanMaterial->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
-    m_oceanMaterial->writeDescriptor(0, 3, foamView, linearRepeat);
-    m_oceanMaterial->writeDescriptor(0, 4, m_resourceContext->imageCache.getImageView("foamNoiseView"), linearRepeat);
+    for (Material* material : {m_oceanMaterial, m_oceanMeshMaterial}) {
+        if (material == nullptr) {
+            continue;
+        }
+        material->writeDescriptor(0, 1, finalFftView.operator()<0>(), linearRepeat);
+        material->writeDescriptor(0, 2, finalFftView.operator()<1>(), linearRepeat);
+        material->writeDescriptor(0, 3, foamView, linearRepeat);
+        material->writeDescriptor(0, 4, m_resourceContext->imageCache.getImageView("foamNoiseView"), linearRepeat);
+    }
 
     const auto& blackboard = m_renderGraph->getBlackboard();
     const auto& transmittanceLut = m_renderGraph->getResourceImageView(blackboard.get<TransmittanceLutData>().lut);
@@ -880,10 +933,15 @@ void OceanScene::writeGraphDependentDescriptors() {
     const auto& skyVolumeLut = m_renderGraph->getResourceImageView(blackboard.get<SkyVolumeLutData>().lut);
     auto& linearClamp = m_resourceContext->imageCache.getSampler("linearClamp");
 
-    m_oceanMaterial->writeDescriptor(2, 0, *m_resourceContext->getRingBuffer(kAtmosphereBufferId));
-    m_oceanMaterial->writeDescriptor(2, 1, transmittanceLut, linearClamp);
-    m_oceanMaterial->writeDescriptor(2, 2, skyViewLut, linearClamp);
-    m_oceanMaterial->writeDescriptor(2, 3, skyVolumeLut, linearClamp);
+    for (Material* material : {m_oceanMaterial, m_oceanMeshMaterial}) {
+        if (material == nullptr) {
+            continue;
+        }
+        material->writeDescriptor(2, 0, *m_resourceContext->getRingBuffer(kAtmosphereBufferId));
+        material->writeDescriptor(2, 1, transmittanceLut, linearClamp);
+        material->writeDescriptor(2, 2, skyViewLut, linearClamp);
+        material->writeDescriptor(2, 3, skyVolumeLut, linearClamp);
+    }
 
     m_skyMaterial->writeDescriptor(0, 0, *m_resourceContext->getRingBuffer("camera"));
     m_skyMaterial->writeDescriptor(1, 0, *m_resourceContext->getRingBuffer(kAtmosphereBufferId));

@@ -392,8 +392,9 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                 [](const VulkanPhysicalDevice& physicalDevice) {
                     const auto f12 = physicalDevice.queryFeatures<VkPhysicalDeviceVulkan12Features>();
                     return f12.bufferDeviceAddress && f12.hostQueryReset && f12.timelineSemaphore &&
-                           f12.scalarBlockLayout && f12.descriptorIndexing && f12.runtimeDescriptorArray &&
-                           f12.descriptorBindingPartiallyBound && f12.descriptorBindingVariableDescriptorCount &&
+                           f12.scalarBlockLayout && f12.shaderInt8 && f12.descriptorIndexing &&
+                           f12.runtimeDescriptorArray && f12.descriptorBindingPartiallyBound &&
+                           f12.descriptorBindingVariableDescriptorCount &&
                            f12.descriptorBindingUniformBufferUpdateAfterBind &&
                            f12.shaderSampledImageArrayNonUniformIndexing &&
                            f12.shaderStorageImageArrayNonUniformIndexing &&
@@ -406,6 +407,7 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                     f12.hostQueryReset = VK_TRUE;
                     f12.timelineSemaphore = VK_TRUE;
                     f12.scalarBlockLayout = VK_TRUE;
+                    f12.shaderInt8 = VK_TRUE;
                     f12.descriptorIndexing = VK_TRUE;
                     f12.runtimeDescriptorArray = VK_TRUE;
                     f12.descriptorBindingPartiallyBound = VK_TRUE;

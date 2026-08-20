@@ -86,7 +86,9 @@ struct OceanSpectrumPushConstants {
 static_assert(sizeof(OceanSpectrumPushConstants) == 76);
 
 struct OceanClipmap {
-    int32_t blockQuads{128};
+    // 126 = 2*3^2*7 divides by 7 and 9, so a block splits into 9x7-quad meshlets of exactly 126
+    // primitives. A power of two admits only power-of-two tiles, whose 8x8 is 128 -- two over.
+    int32_t blockQuads{126};
     int32_t levelCount{13};
     float finestSpacing{0.125f};
     float snapGrid{2.0f};

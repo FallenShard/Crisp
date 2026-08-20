@@ -61,6 +61,7 @@ std::vector<float> renderOceanScene() {
         .includeValidation = true,
     };
     addPageableMemoryFeatures(coreParams.deviceFeatureRequests);
+    addMeshShadingFeatures(coreParams.deviceFeatureRequests);
     Renderer renderer(
         std::move(coreParams),
         window.createSurfaceCallback(),

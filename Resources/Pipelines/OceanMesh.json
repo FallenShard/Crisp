@@ -1,0 +1,11 @@
+{
+    "shaders"            : { "task": "ocean.task", "mesh": "ocean.mesh", "frag": "ocean.frag" },
+    "descriptorSets"     : [
+        { "buffered": false, "dynamicBuffers": [ 0 ] },
+        { "buffered": false, "dynamicBuffers": [ 0 ] },
+        { "buffered": false, "dynamicBuffers": [ 0 ] }
+    ],
+    "depthStencil"       : { "reverseDepth": true },
+    "multisample"        : { "sampleCount": 1 },
+    "rasterization"      : { "cullMode": "back" }
+}
