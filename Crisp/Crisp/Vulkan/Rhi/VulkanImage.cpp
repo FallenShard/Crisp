@@ -135,7 +135,7 @@ VulkanImage::VulkanImage(const VulkanDevice& device, const VulkanImageDescriptio
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-    VK_CHECK(vmaCreateImage(
+    VK_DEV_CHECK(vmaCreateImage(
         device.getMemoryAllocator(), &createInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
 
     m_view = createView(
@@ -158,7 +158,7 @@ VulkanImage::VulkanImage(const VulkanDevice& device, const VkImageCreateInfo& cr
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-    VK_CHECK(vmaCreateImage(
+    VK_DEV_CHECK(vmaCreateImage(
         device.getMemoryAllocator(), &createInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
 
     m_view = createView(
@@ -200,7 +200,7 @@ VulkanImage::VulkanImage(
     VmaAllocationCreateInfo allocInfo{};
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-    VK_CHECK(vmaCreateImage(
+    VK_DEV_CHECK(vmaCreateImage(
         device.getMemoryAllocator(), &createInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
 
     m_view = createView(

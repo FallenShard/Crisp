@@ -57,10 +57,10 @@ Result<> assertRequiredExtensionSupport(const std::span<const char* const> requi
     }
 
     uint32_t extensionCount = 0;
-    VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr));
+    VK_DEV_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr));
 
     std::vector<VkExtensionProperties> extensionProps(extensionCount);
-    VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data()));
+    VK_DEV_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensionProps.data()));
 
     for (const auto& ext : extensionProps) {
         pendingExtensions.erase(ext.extensionName); // Will hold unsupported required extensions, if any. // NOLINT
@@ -89,10 +89,10 @@ Result<> assertRequiredLayerSupport(const std::span<const char* const> requiredL
     }
 
     uint32_t layerCount{0};
-    VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
+    VK_DEV_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
 
     std::vector<VkLayerProperties> instanceLayers(layerCount);
-    VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, instanceLayers.data()));
+    VK_DEV_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, instanceLayers.data()));
 
     for (const auto& layer : instanceLayers) {
         pendingLayers.erase(layer.layerName); // NOLINT
@@ -142,7 +142,7 @@ VkInstance createInstance(std::vector<std::string> requiredExtensions, const boo
     createInfo.ppEnabledLayerNames = requiredLayers.data();
 
     VkInstance instance{VK_NULL_HANDLE};
-    VK_CHECK(vkCreateInstance(&createInfo, nullptr, &instance));
+    VK_DEV_CHECK(vkCreateInstance(&createInfo, nullptr, &instance));
 
     loadVulkanInstanceFunctions(instance);
     return instance;
@@ -166,7 +166,7 @@ VkDebugUtilsMessengerEXT createDebugMessenger(const VkInstance instance) {
 
 VkSurfaceKHR createSurface(const VkInstance instance, const SurfaceCreator& surfaceCreator) {
     VkSurfaceKHR surface{VK_NULL_HANDLE};
-    VK_CHECK(surfaceCreator(instance, nullptr, &surface));
+    VK_DEV_CHECK(surfaceCreator(instance, nullptr, &surface));
     return surface;
 }
 } // namespace

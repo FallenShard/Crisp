@@ -42,7 +42,7 @@ VulkanBuffer::VulkanBuffer(
         break;
     }
 
-    VK_CHECK(vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
+    VK_DEV_CHECK(vmaCreateBuffer(m_allocator, &bufferInfo, &allocInfo, &m_handle, &m_allocation, &m_allocationInfo));
 
     const VkBufferDeviceAddressInfo getAddressInfo{
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
@@ -80,7 +80,7 @@ VulkanBuffer& VulkanBuffer::operator=(VulkanBuffer&& other) noexcept {
 }
 
 void VulkanBuffer::invalidateMappedRange() const {
-    VK_CHECK(vmaInvalidateAllocation(m_allocator, m_allocation, 0, VK_WHOLE_SIZE));
+    VK_DEV_CHECK(vmaInvalidateAllocation(m_allocator, m_allocation, 0, VK_WHOLE_SIZE));
 }
 
 VkDeviceSize VulkanBuffer::getSize() const {

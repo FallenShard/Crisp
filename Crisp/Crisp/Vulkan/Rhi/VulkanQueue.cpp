@@ -78,7 +78,7 @@ VkResult VulkanQueue::present(
 }
 
 void VulkanQueue::waitIdle() const {
-    VK_CHECK(vkQueueWaitIdle(m_handle));
+    VK_DEV_CHECK(vkQueueWaitIdle(m_handle));
 }
 
 VkCommandPool VulkanQueue::createCommandPool(const VkCommandPoolCreateFlags flags) const {
@@ -87,7 +87,7 @@ VkCommandPool VulkanQueue::createCommandPool(const VkCommandPoolCreateFlags flag
     poolInfo.flags = flags;
 
     VkCommandPool pool{VK_NULL_HANDLE};
-    VK_CHECK(vkCreateCommandPool(m_deviceHandle, &poolInfo, nullptr, &pool));
+    VK_DEV_CHECK(vkCreateCommandPool(m_deviceHandle, &poolInfo, nullptr, &pool));
     return pool;
 }
 

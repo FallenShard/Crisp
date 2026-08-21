@@ -29,12 +29,13 @@ VkBufferImageCopy createBufferImageCopy(
     return {
         .bufferRowLength = extent.width,
         .bufferImageHeight = extent.height,
-        .imageSubresource = {
-            .aspectMask = image.getAspectMask(),
-            .mipLevel = mipLevel,
-            .baseArrayLayer = baseLayer,
-            .layerCount = layerCount,
-        },
+        .imageSubresource =
+            {
+                .aspectMask = image.getAspectMask(),
+                .mipLevel = mipLevel,
+                .baseArrayLayer = baseLayer,
+                .layerCount = layerCount,
+            },
         .imageExtent = extent,
     };
 }
@@ -51,8 +52,7 @@ void fillImageLayers(
     submitAndWait(device.getGeneralQueue(), [&staging, &image, layerIdx, numLayers](const VulkanCommandEncoder& encoder) {
         const auto range = createSubresourceRange(image, layerIdx, numLayers, 0, image.getMipLevels());
         encoder.transitionLayout(image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite, range);
-        encoder.copyBufferToImage(
-            *staging, image, createBufferImageCopy(image, image.getExtent(), layerIdx, numLayers));
+        encoder.copyBufferToImage(*staging, image, createBufferImageCopy(image, image.getExtent(), layerIdx, numLayers));
         encoder.transitionLayout(
             image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead, range);
     });
@@ -71,18 +71,19 @@ std::unique_ptr<VulkanImage> createVulkanImage(Renderer& renderer, const Image& 
         });
 
     const auto staging = createStagingBuffer(renderer.getDevice(), image.getData(), image.getByteSize());
-    submitAndWait(renderer.getDevice().getGeneralQueue(), [&staging, &vulkanImage](const VulkanCommandEncoder& commandEncoder) {
-        commandEncoder.transitionLayout(
-            *vulkanImage,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            kNullStage >> kTransferWrite,
-            vulkanImage->getFirstMipRange());
-        commandEncoder.copyBufferToImage(
-            *staging, *vulkanImage, createBufferImageCopy(*vulkanImage, vulkanImage->getExtent(), 0, 1));
-        commandEncoder.generateMipmaps(*vulkanImage, kTransferWrite);
-        commandEncoder.transitionLayout(
-            *vulkanImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead);
-    });
+    submitAndWait(
+        renderer.getDevice().getGeneralQueue(), [&staging, &vulkanImage](const VulkanCommandEncoder& commandEncoder) {
+            commandEncoder.transitionLayout(
+                *vulkanImage,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                kNullStage >> kTransferWrite,
+                vulkanImage->getFirstMipRange());
+            commandEncoder.copyBufferToImage(
+                *staging, *vulkanImage, createBufferImageCopy(*vulkanImage, vulkanImage->getExtent(), 0, 1));
+            commandEncoder.generateMipmaps(*vulkanImage, kTransferWrite);
+            commandEncoder.transitionLayout(
+                *vulkanImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead);
+        });
 
     return vulkanImage;
 }
@@ -121,9 +122,7 @@ std::unique_ptr<VulkanImage> createVulkanCubeMap(
                 for (uint32_t face = 0; face < faceStaging.size(); ++face) { // NOLINT
                     const VkExtent3D extent{mipSize, mipSize, 1};
                     commandEncoder.copyBufferToImage(
-                        *faceStaging[face],
-                        *vulkanImage,
-                        createBufferImageCopy(*vulkanImage, extent, face, 1, mipLevel));
+                        *faceStaging[face], *vulkanImage, createBufferImageCopy(*vulkanImage, extent, face, 1, mipLevel));
                 }
                 commandEncoder.transitionLayout(
                     *vulkanImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead);
@@ -138,21 +137,23 @@ std::unique_ptr<VulkanImage> createVulkanImage(
     auto image = std::make_unique<VulkanImage>(renderer.getDevice(), imageCreateInfo);
 
     const auto staging = createStagingBuffer(renderer.getDevice(), data, size);
-    submitAndWait(renderer.getDevice().getGeneralQueue(), [&staging, img = image.get()](const VulkanCommandEncoder& encoder) {
-        const auto fullRange = createSubresourceRange(*img, 0, 1, 0, img->getMipLevels());
-        encoder.transitionLayout(*img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite, fullRange);
-        encoder.copyBufferToImage(*staging, *img, createBufferImageCopy(*img, img->getExtent(), 0, 1));
-        encoder.generateMipmaps(*img);
+    submitAndWait(
+        renderer.getDevice().getGeneralQueue(), [&staging, img = image.get()](const VulkanCommandEncoder& encoder) {
+            const auto fullRange = createSubresourceRange(*img, 0, 1, 0, img->getMipLevels());
+            encoder.transitionLayout(
+                *img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite, fullRange);
+            encoder.copyBufferToImage(*staging, *img, createBufferImageCopy(*img, img->getExtent(), 0, 1));
+            encoder.generateMipmaps(*img);
 
-        VkImageSubresourceRange mipRange = {};
-        mipRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        mipRange.baseMipLevel = 0;
-        mipRange.levelCount = img->getMipLevels();
-        mipRange.baseArrayLayer = 0;
-        mipRange.layerCount = 1;
-        encoder.transitionLayout(
-            *img, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead, mipRange);
-    });
+            VkImageSubresourceRange mipRange = {};
+            mipRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            mipRange.baseMipLevel = 0;
+            mipRange.levelCount = img->getMipLevels();
+            mipRange.baseArrayLayer = 0;
+            mipRange.layerCount = 1;
+            encoder.transitionLayout(
+                *img, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead, mipRange);
+        });
 
     return image;
 }
@@ -176,13 +177,9 @@ void updateCubeMap(
                 const auto range = createSubresourceRange(image, i, 1, mipLevel);
                 encoder.transitionLayout(
                     image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kFragmentRead >> kTransferWrite, range);
-                encoder.copyBufferToImage(
-                    *faceStaging[i], image, createBufferImageCopy(image, extent, i, 1, mipLevel));
+                encoder.copyBufferToImage(*faceStaging[i], image, createBufferImageCopy(image, extent, i, 1, mipLevel));
                 encoder.transitionLayout(
-                    image,
-                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                    kTransferWrite >> kFragmentRead,
-                    range);
+                    image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kFragmentRead, range);
             }
         });
 }

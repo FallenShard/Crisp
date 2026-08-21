@@ -163,7 +163,7 @@ VkDescriptorSet VulkanDescriptorSetAllocator::DescriptorPool::allocate(
     }
 
     VkDescriptorSet descSet{VK_NULL_HANDLE};
-    VK_CHECK(vkAllocateDescriptorSets(device, &descSetInfo, &descSet));
+    VK_DEV_CHECK(vkAllocateDescriptorSets(device, &descSetInfo, &descSet));
     return descSet;
 }
 } // namespace crisp

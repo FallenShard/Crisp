@@ -46,7 +46,7 @@ uint64_t VulkanTimelineSemaphore::advance() {
 
 uint64_t VulkanTimelineSemaphore::getCompletedValue() const {
     uint64_t value{0};
-    VK_CHECK(vkGetSemaphoreCounterValue(m_deallocator->getDeviceHandle(), m_handle, &value));
+    VK_DEV_CHECK(vkGetSemaphoreCounterValue(m_deallocator->getDeviceHandle(), m_handle, &value));
     return value;
 }
 

@@ -138,16 +138,16 @@ void VulkanSwapChain::createSwapChain(
     createInfo.oldSwapchain = m_handle;
 
     VkDevice deviceHandle = device.getHandle();
-    VK_CHECK(vkCreateSwapchainKHR(deviceHandle, &createInfo, nullptr, &m_handle));
+    VK_DEV_CHECK(vkCreateSwapchainKHR(deviceHandle, &createInfo, nullptr, &m_handle));
     device.setObjectName(m_handle, "Main Swap Chain");
 
     if (createInfo.oldSwapchain != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(deviceHandle, createInfo.oldSwapchain, nullptr);
     }
 
-    VK_CHECK(vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, nullptr));
+    VK_DEV_CHECK(vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, nullptr));
     m_images.resize(imageCount);
-    VK_CHECK(vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, m_images.data()));
+    VK_DEV_CHECK(vkGetSwapchainImagesKHR(deviceHandle, m_handle, &imageCount, m_images.data()));
     m_imageLayouts.assign(imageCount, VK_IMAGE_LAYOUT_UNDEFINED);
     for (uint32_t i = 0; i < m_images.size(); ++i) {
         device.setObjectName(m_images[i], fmt::format("Swap Chain Image {}", i));
@@ -175,7 +175,7 @@ void VulkanSwapChain::createImageViews(const VulkanDevice& device) {
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
-        VK_CHECK(vkCreateImageView(device.getHandle(), &viewInfo, nullptr, &m_imageViews[i]));
+        VK_DEV_CHECK(vkCreateImageView(device.getHandle(), &viewInfo, nullptr, &m_imageViews[i]));
         device.setObjectName(m_imageViews[i], fmt::format("Swap Chain Image {} View", i));
     }
 }

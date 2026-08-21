@@ -13,6 +13,15 @@ target_link_libraries(
     PUBLIC Crisp::Checks
 )
 
+add_cpp_test(
+    CrispVulkanChecksTest
+    "Test/VulkanChecksTest.cpp"
+)
+target_link_libraries(
+    CrispVulkanChecksTest
+    PRIVATE Crisp::VulkanHeader
+)
+
 add_cpp_static_library(
     CrispVulkanInstance
     "VulkanInstance.cpp"

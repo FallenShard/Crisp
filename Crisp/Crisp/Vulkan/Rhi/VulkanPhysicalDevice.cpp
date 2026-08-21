@@ -299,20 +299,20 @@ const FlatStringHashSet& VulkanPhysicalDevice::getAvailableExtensions() const {
 
 std::vector<VkPhysicalDevice> enumeratePhysicalDevices(const VulkanInstance& instance) {
     uint32_t deviceCount = 0;
-    VK_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, nullptr));
+    VK_DEV_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, nullptr));
     CRISP_CHECK_GT(deviceCount, 0, "Vulkan found no physical devices.");
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
-    VK_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, devices.data()));
+    VK_DEV_CHECK(vkEnumeratePhysicalDevices(instance.getHandle(), &deviceCount, devices.data()));
     return devices;
 }
 
 std::vector<VkExtensionProperties> querySupportedExtensions(const VkPhysicalDevice physicalDevice) {
     uint32_t extensionCount = 0;
-    VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr));
+    VK_DEV_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr));
 
     std::vector<VkExtensionProperties> extensions(extensionCount);
-    VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, extensions.data()));
+    VK_DEV_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, extensions.data()));
 
     return extensions;
 }

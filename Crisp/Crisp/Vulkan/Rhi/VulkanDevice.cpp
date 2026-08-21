@@ -74,8 +74,8 @@ VmaAllocator createMemoryAllocator(
     };
 
     VmaAllocatorCreateInfo createInfo{
-        .flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT |
-            VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT | VMA_ALLOCATOR_CREATE_KHR_MAINTENANCE5_BIT,
+        .flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT |
+                 VMA_ALLOCATOR_CREATE_KHR_MAINTENANCE5_BIT,
         .physicalDevice = physicalDevice.getHandle(),
         .device = deviceHandle,
         .pVulkanFunctions = &functions,
@@ -292,7 +292,7 @@ VkDevice createLogicalDeviceHandle(const VulkanPhysicalDevice& physicalDevice, c
     createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
     VkDevice device(VK_NULL_HANDLE);
-    VK_CHECK(vkCreateDevice(physicalDevice.getHandle(), &createInfo, nullptr, &device));
+    VK_DEV_CHECK(vkCreateDevice(physicalDevice.getHandle(), &createInfo, nullptr, &device));
     loadVulkanDeviceFunctions(device);
     return device;
 }

@@ -6,29 +6,36 @@
 namespace crisp::detail {
 const char* toString(VkResult result) noexcept;
 
-inline VkResult doVkAssert(const VkResult result, const LocationFormatString& formatString = {}) noexcept {
-    if (result == VK_SUCCESS) {
-        return VK_SUCCESS;
-    }
-
-    spdlog::critical(
-        "VkResult: {}\nFile: {}\n({}:{}) -- Function: `{}` \nMessage: {}",
-        toString(result),
-        formatString.loc.file_name(),
-        formatString.loc.line(),
-        formatString.loc.column(),
-        formatString.loc.function_name(),
-        formatString.str);
-    std::abort();
+[[noreturn]] inline void failVkCall(
+    const char* expression, const VkResult result, const std::string& message, const std::source_location& loc) noexcept {
+    failCheck(expression, fmt::format("\n  result = {}", toString(result)), message, loc);
 }
 } // namespace crisp::detail
 
 // Always-on check — use for calls where failure is unrecoverable (allocation, submission, object creation).
-#define VK_FATAL(expr, ...) crisp::detail::doVkAssert(expr __VA_OPT__(, fmt::format(__VA_ARGS__)))
+// The message and the source location are only produced once the call has failed.
+#define VK_FATAL(expr, ...)                                                                                            \
+    do {                                                                                                               \
+        const VkResult crispVkCallResult = (expr);                                                                     \
+        if (crispVkCallResult != VK_SUCCESS) [[unlikely]] {                                                            \
+            crisp::detail::failVkCall(                                                                                 \
+                #expr,                                                                                                 \
+                crispVkCallResult,                                                                                     \
+                crisp::detail::makeCheckMessage(crisp::detail::CheckMessageTag {} __VA_OPT__(, ) __VA_ARGS__),         \
+                std::source_location::current());                                                                      \
+        }                                                                                                              \
+    } while (false)
 
-// Debug-only check — use for hot-path calls where release overhead is undesirable.
+// Development-only check — use for hot-path calls where release overhead is undesirable. Unlike
+// CRISP_DEV_CHECK, the expression is still evaluated in release: it is the Vulkan call itself.
 #ifdef _DEBUG
-#define VK_CHECK(expr, ...) crisp::detail::doVkAssert(expr __VA_OPT__(, fmt::format(__VA_ARGS__)))
+#define VK_DEV_CHECK(expr, ...) VK_FATAL(expr __VA_OPT__(, ) __VA_ARGS__)
 #else
-#define VK_CHECK(expr, ...) expr
+// sizeof keeps the message arguments type-checked without evaluating them, so a release build cannot
+// rot a development-only message into something that no longer compiles.
+#define VK_DEV_CHECK(expr, ...)                                                                                        \
+    do {                                                                                                               \
+        (void)(expr);                                                                                                  \
+        (void)sizeof(crisp::detail::discardCheckArgs(__VA_ARGS__));                                                    \
+    } while (false)
 #endif
