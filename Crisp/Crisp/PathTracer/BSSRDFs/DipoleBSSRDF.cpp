@@ -67,7 +67,6 @@ struct SubsurfaceParams {
     Spectrum sigmaA;
     Spectrum sigmaPrimeS;
     float eta;
-    // TODO: add presets
 };
 
 static std::unordered_map<std::string, SubsurfaceParams> materials = {
@@ -107,7 +106,6 @@ struct IrradianceTask {
                     frame.toWorld(warp::squareToCosineHemisphere(glm::vec2(distrib(engine), distrib(engine))));
                 Ray3 ray(in[i].p, dir);
 
-                // TODO: Request ONLY INDIRECT
                 color += integrator->Li(scene, *sampler, ray, Illumination::Indirect) * PI<>;
             }
 

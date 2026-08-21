@@ -14,4 +14,7 @@ target_link_libraries(CrispMesh
     PRIVATE Crisp::Logger
     PUBLIC Crisp::HashMap)
 
+add_cpp_test(CrispMeshTest "Test/TriangleMeshTest.cpp")
+target_link_libraries(CrispMeshTest PRIVATE Crisp::Mesh)
+
 add_subdirectory(Io)

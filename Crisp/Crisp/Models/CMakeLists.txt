@@ -7,8 +7,6 @@ add_cpp_static_library(CrispModels
     # "BoxVisualizer.hpp"
     # "FluidSimulation.hpp"
     # "FluidSimulationParams.hpp"
-    # "Grass.cpp"
-    # "Grass.hpp"
     "Skybox.cpp"
     "Skybox.hpp"
 

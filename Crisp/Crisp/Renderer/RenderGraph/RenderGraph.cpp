@@ -795,7 +795,8 @@ void RenderGraph::createPhysicalResources(
             physicalImage.image->getWidth(),
             physicalImage.image->getHeight());
 
-        // TODO(fallenshard): Looks like a hack.
+        // Aliased indices are in timeline order, so .back() owns this memory when the frame ends - seeding
+        // from it starts frame 0 where every later frame does, as layout tracking never resets between frames.
         const auto lastUsageFlags = getImageDescription({physicalImage.aliasedResourceIndices.back()}).imageUsageFlags;
         const auto [initialLayout, stage] = determineInitialLayout(physicalImage, lastUsageFlags);
         commandEncoder.transitionLayout(*physicalImage.image, initialLayout, kNullStage >> stage);

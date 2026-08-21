@@ -103,7 +103,6 @@ vec3 getVsmCoeff(vec3 worldPos, mat4 lightVP, float bias) {
 
     moments /= (2 * pcfRadius + 1) * (2 * pcfRadius + 1);
 
-    // TODO
     vec4 lvPos = light.V * vec4(worldPos, 1.0f);
     float fragDepth = -lvPos.z;
     float E_x2 = moments.y;

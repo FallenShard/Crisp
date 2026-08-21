@@ -145,6 +145,7 @@ void TriangleMesh::setCustomAttribute(const std::string_view attributeName, Vert
 void TriangleMesh::append(TriangleMesh&& mesh) { // NOLINT
     const uint32_t prevVertexCount = getVertexCount();
     const uint32_t prevIndexCount = getIndexCount();
+    const uint32_t appendedVertexCount = mesh.getVertexCount();
 
     appendStdVector(m_positions, std::move(mesh.m_positions));
     appendStdVector(m_normals, std::move(mesh.m_normals));
@@ -160,7 +161,23 @@ void TriangleMesh::append(TriangleMesh&& mesh) { // NOLINT
         m_triangles.push_back(tri + glm::uvec3(prevVertexCount));
     }
 
-    // TODO at another time. m_customAttributes.size(), mesh.m_customAttributes.size();
+    for (auto& [name, attribute] : mesh.m_customAttributes) {
+        const auto [it, inserted] = m_customAttributes.try_emplace(name);
+        auto& merged = it->second;
+        if (inserted) {
+            merged.descriptor = attribute.descriptor;
+            merged.buffer.resize(static_cast<size_t>(prevVertexCount) * merged.descriptor.size);
+        } else {
+            CRISP_CHECK_EQ(
+                merged.descriptor.size, attribute.descriptor.size, "Size mismatch for custom attribute '{}'.", name);
+        }
+        appendStdVector(merged.buffer, std::move(attribute.buffer));
+    }
+
+    const size_t mergedVertexCount = static_cast<size_t>(prevVertexCount) + appendedVertexCount;
+    for (auto& [name, attribute] : m_customAttributes) {
+        attribute.buffer.resize(mergedVertexCount * attribute.descriptor.size);
+    }
 
     m_boundingBox.expandBy(mesh.getBoundingBox());
 }

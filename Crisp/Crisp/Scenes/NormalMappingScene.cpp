@@ -114,9 +114,6 @@ void NormalMappingScene::update(float dt) {
 
     m_transformBuffer->update(cameraParams.V, cameraParams.P);
 
-    // TODO
-    // m_lightSystem->update(m_cameraController->getCamera(),
-    // dt);
 
     m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(cameraParams);
 }

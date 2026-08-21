@@ -128,8 +128,6 @@ void ClusteredLightingScene::update(float dt) {
 
     m_transformBuffer->update(cameraParams.V, cameraParams.P);
 
-    // TODO
-    // m_lightSystem->update(m_cameraController->getCamera(), dt);
 
     m_resourceContext->getUniformBuffer("pbrUnifParams")->updateStagingBuffer2(m_uniformMaterialParams);
 

@@ -36,7 +36,6 @@
 
 #include <Crisp/Geometry/Geometry.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
-#include <Crisp/Models/Grass.hpp>
 #include <Crisp/Models/Skybox.hpp>
 
 #include <Crisp/Math/Constants.hpp>

@@ -50,7 +50,6 @@ class VulkanSampler;
 class BoxVisualizer;
 class Skybox;
 
-class Grass;
 class RayTracingMaterial;
 
 class ShadowMappingScene : public Scene {
@@ -114,7 +113,6 @@ private:
     std::unique_ptr<BoxVisualizer> m_boxVisualizer;
     std::unique_ptr<Skybox> m_skybox;
 
-    // std::unique_ptr<Grass> m_grass;
 
     // std::unique_ptr<Material> m_lightShaftMaterial;
     // std::unique_ptr<UniformBuffer> m_lightShaftBuffer;
