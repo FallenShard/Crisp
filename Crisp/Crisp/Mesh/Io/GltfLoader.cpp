@@ -82,6 +82,27 @@ using ComponentType = typename ComponentTypeHelper<T>::Type;
 template <GltfAttrib T>
 constexpr int32_t ComponentCount = ComponentTypeHelper<T>::kCount;
 
+void validateAccessorRange(
+    const tinygltf::BufferView& bufferView,
+    const size_t bufferByteSize,
+    const size_t accessorByteOffset,
+    const size_t elementCount,
+    const size_t byteStride,
+    const size_t elementByteSize) {
+    CRISP_CHECK_GT(elementByteSize, 0);
+    CRISP_CHECK_GE(byteStride, elementByteSize);
+    CRISP_CHECK_LE(bufferView.byteOffset, bufferByteSize);
+    CRISP_CHECK_LE(bufferView.byteLength, bufferByteSize - bufferView.byteOffset);
+    CRISP_CHECK_LE(accessorByteOffset, bufferView.byteLength);
+    if (elementCount == 0) {
+        return;
+    }
+
+    const size_t availableBytes = bufferView.byteLength - accessorByteOffset;
+    CRISP_CHECK_LE(elementByteSize, availableBytes);
+    CRISP_CHECK_LE(elementCount - 1, (availableBytes - elementByteSize) / byteStride);
+}
+
 template <ScalarAttrib T>
 int32_t determineGltfComponentType() {
     if constexpr (std::is_same_v<T, float>) {
@@ -106,36 +127,47 @@ int32_t determineGltfComponentType() {
 }
 
 Result<std::vector<glm::uvec3>> loadIndexBuffer(const tinygltf::Model& model, const tinygltf::Accessor& accessor) {
+    if (accessor.type != TINYGLTF_TYPE_SCALAR) {
+        return resultError("Index accessor must contain scalar elements.");
+    }
+    if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE &&
+        accessor.componentType != TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT &&
+        accessor.componentType != TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
+        return resultError("Unsupported GLTF index component type {}.", accessor.componentType);
+    }
+
     const auto& bufferView{model.bufferViews.at(accessor.bufferView)};
     const auto& buffer{model.buffers.at(bufferView.buffer)};
 
-    const int32_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
-    const int32_t componentCount = tinygltf::GetNumComponentsInType(accessor.type);
-    const size_t attributeByteSize = componentByteSize * componentCount;
+    const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
 
     CRISP_CHECK_EQ(accessor.count % glm::uvec3::length(), 0);
     const size_t triangleCount = accessor.count / glm::uvec3::length();
 
-    const size_t byteStride{bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride};
+    const size_t byteStride{bufferView.byteStride == 0 ? componentByteSize : bufferView.byteStride};
     const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
-    CRISP_CHECK(bufferRangeStart <= buffer.data.size());
-    CRISP_CHECK(bufferRangeStart + accessor.count * byteStride <= buffer.data.size());
+    validateAccessorRange(
+        bufferView, buffer.data.size(), accessor.byteOffset, accessor.count, byteStride, componentByteSize);
 
     std::vector<glm::uvec3> indices(triangleCount);
-    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT && byteStride == attributeByteSize) {
-        std::memcpy(
-            indices.data(), buffer.data.data() + bufferView.byteOffset, accessor.count * attributeByteSize); // NOLINT
-    } else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
-        glm::u16vec3 temp{};
-        for (size_t i = 0; i < indices.size(); ++i) {
-            for (uint32_t j = 0; j < 3; ++j) {
-                const size_t offset{bufferRangeStart + (i * 3 + j) * byteStride};
-                std::memcpy(&temp[j], buffer.data.data() + offset, attributeByteSize); // NOLINT
-            }
-            indices[i] = glm::uvec3(temp.x, temp.y, temp.z);
-        }
+    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT && byteStride == componentByteSize) {
+        static_assert(sizeof(glm::uvec3) == 3 * sizeof(uint32_t));
+        std::memcpy(indices.data(), buffer.data.data() + bufferRangeStart, accessor.count * componentByteSize); // NOLINT
     } else {
-        return resultError("Failed to parse index buffer!");
+        for (size_t i = 0; i < accessor.count; ++i) {
+            const size_t offset{bufferRangeStart + i * byteStride};
+            uint32_t index{0};
+            if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
+                index = buffer.data[offset];
+            } else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
+                uint16_t index16;
+                std::memcpy(&index16, buffer.data.data() + offset, sizeof(index16)); // NOLINT
+                index = index16;
+            } else {
+                std::memcpy(&index, buffer.data.data() + offset, sizeof(index)); // NOLINT
+            }
+            indices[i / 3][i % 3] = index;
+        }
     }
 
     return indices;
@@ -157,8 +189,8 @@ Result<std::vector<DstType>> createBuffer(const tinygltf::Model& model, const ti
 
     const size_t byteStride = bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride;
     const size_t bufferRangeStart = bufferView.byteOffset + accessor.byteOffset;
-    CRISP_CHECK_LE(bufferRangeStart, buffer.data.size());
-    CRISP_CHECK_LE(bufferRangeStart + accessor.count * byteStride, buffer.data.size());
+    validateAccessorRange(
+        bufferView, buffer.data.size(), accessor.byteOffset, accessor.count, byteStride, attributeByteSize);
 
     std::vector<DstType> attributes;
     attributes.reserve(accessor.count);
@@ -479,8 +511,8 @@ Result<std::vector<glm::mat4>> loadInverseBindTransforms(const tinygltf::Model& 
     transforms.reserve(accessor.count);
 
     const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
-    CRISP_CHECK(bufferRangeStart <= buffer.data.size());
-    CRISP_CHECK(bufferRangeStart + accessor.count * byteStride <= buffer.data.size());
+    validateAccessorRange(
+        bufferView, buffer.data.size(), accessor.byteOffset, accessor.count, byteStride, attributeByteSize);
 
     glm::mat4 temp{};
     for (size_t i = 0; i < accessor.count; ++i) {

@@ -21,6 +21,18 @@ TEST(GltfLoaderTest, LoadsTrackedTriangle) {
     ASSERT_THAT(loaded.models, SizeIs(1));
     EXPECT_EQ(loaded.models[0].mesh.getVertexCount(), 3);
     EXPECT_EQ(loaded.models[0].mesh.getTriangleCount(), 1);
+    EXPECT_EQ(loaded.models[0].mesh.getTriangles()[0], glm::uvec3(0, 1, 2));
+}
+
+TEST(GltfLoaderTest, LoadsUnsignedByteIndices) {
+    auto asset =
+        loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "UnsignedByteIndicesTriangle.gltf");
+    ASSERT_THAT(asset, HasValue());
+
+    const auto loaded = asset.unwrap();
+    ASSERT_THAT(loaded.models, SizeIs(1));
+    ASSERT_THAT(loaded.models[0].mesh.getTriangles(), SizeIs(1));
+    EXPECT_EQ(loaded.models[0].mesh.getTriangles()[0], glm::uvec3(0, 1, 2));
 }
 
 TEST(GltfLoaderTest, LoadsEmbeddedImagesInSourceOrder) {
