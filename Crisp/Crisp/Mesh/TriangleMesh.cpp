@@ -34,25 +34,36 @@ TriangleMesh::TriangleMesh(
     std::vector<glm::vec3> positions,
     std::vector<glm::vec3> normals,
     std::vector<glm::vec2> texCoords,
-    std::vector<glm::uvec3> faces)
+    std::vector<glm::uvec3> faces,
+    std::vector<glm::vec4> tangents)
     : m_positions(std::move(positions))
     , m_normals(std::move(normals))
     , m_texCoords(std::move(texCoords))
+    , m_tangents(std::move(tangents))
     , m_triangles(std::move(faces)) {
     m_views.emplace_back("", 0, static_cast<uint32_t>(m_triangles.size() * 3));
 
     if (m_normals.empty()) {
         computeVertexNormals();
     } else {
-        CRISP_CHECK_EQ(m_normals.size(), m_positions.size());
+        CRISP_CHECK_SIZE_EQ(m_normals, m_positions);
     }
 
-    if (m_texCoords.empty()) {
+    const bool hasTexCoords = !m_texCoords.empty();
+    if (!hasTexCoords) {
         m_texCoords.resize(m_positions.size(), glm::vec2(0.0f, 0.0f));
-        m_tangents.resize(m_positions.size(), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
     } else {
-        CRISP_CHECK_EQ(m_texCoords.size(), m_positions.size());
-        computeTangentVectors();
+        CRISP_CHECK_SIZE_EQ(m_texCoords, m_positions);
+    }
+
+    if (m_tangents.empty()) {
+        if (hasTexCoords) {
+            computeTangentVectors();
+        } else {
+            m_tangents.resize(m_positions.size(), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+        }
+    } else {
+        CRISP_CHECK_SIZE_EQ(m_tangents, m_positions);
     }
 
     computeBoundingBox();

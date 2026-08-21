@@ -14,7 +14,8 @@ public:
         std::vector<glm::vec3> positions,
         std::vector<glm::vec3> normals,
         std::vector<glm::vec2> texCoords,
-        std::vector<glm::uvec3> faces);
+        std::vector<glm::uvec3> faces,
+        std::vector<glm::vec4> tangents = {});
 
     uint32_t getVertexCount() const;
     uint32_t getTriangleCount() const;
