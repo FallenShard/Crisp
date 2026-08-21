@@ -60,7 +60,22 @@ TEST(GltfLoaderTest, PreservesSkinningAcrossMultiplePrimitives) {
         EXPECT_THAT(model.skinningData.inverseBindTransforms, SizeIs(1));
         ASSERT_TRUE(model.skinningData.modelNodeToLinearIdx.contains(1));
         EXPECT_EQ(model.skinningData.modelNodeToLinearIdx.at(1), 0);
+        ASSERT_THAT(model.animations, SizeIs(1));
+        ASSERT_THAT(model.animations[0].channels, SizeIs(1));
+        EXPECT_EQ(model.animations[0].channels[0].targetNode, 0);
     }
+}
+
+TEST(GltfLoaderTest, LoadsMeshlessScene) {
+    auto asset = loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "MeshlessScene.gltf");
+    ASSERT_THAT(asset, HasValue());
+
+    const auto loaded = asset.unwrap();
+    EXPECT_TRUE(loaded.models.empty());
+    EXPECT_TRUE(loaded.images.albedoMaps.empty());
+    EXPECT_TRUE(loaded.images.normalMaps.empty());
+    EXPECT_TRUE(loaded.images.ormMaps.empty());
+    EXPECT_TRUE(loaded.images.emissiveMaps.empty());
 }
 
 TEST(GltfLoaderTest, LoadsEmbeddedImagesInSourceOrder) {

@@ -725,15 +725,36 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
     }
 
     std::vector<AnimationData> animations{};
-    for (const auto& anim : model.animations) {
-        animations.push_back(createAnimationData(model, anim));
+    animations.reserve(model.animations.size());
+    for (const auto& animation : model.animations) {
+        animations.push_back(createAnimationData(model, animation));
+    }
 
-        // Check if animation matches the skeleton.
-        for (auto& channel : animations.back().channels) {
-            channel.targetNode = sceneData.models.back().skinningData.modelNodeToLinearIdx[channel.targetNode]; // NOLINT
+    for (auto& sceneModel : sceneData.models) {
+        const auto& jointIndices = sceneModel.skinningData.modelNodeToLinearIdx;
+        if (jointIndices.empty()) {
+            continue;
+        }
+
+        for (const auto& animation : animations) {
+            AnimationData filteredAnimation{};
+            filteredAnimation.channels.reserve(animation.channels.size());
+            for (const auto& channel : animation.channels) {
+                const auto joint = jointIndices.find(static_cast<int32_t>(channel.targetNode));
+                if (joint == jointIndices.end()) {
+                    continue;
+                }
+
+                auto remappedChannel = channel;
+                remappedChannel.targetNode = static_cast<uint32_t>(joint->second);
+                filteredAnimation.channels.push_back(std::move(remappedChannel));
+            }
+
+            if (!filteredAnimation.channels.empty()) {
+                sceneModel.animations.push_back(std::move(filteredAnimation));
+            }
         }
     }
-    sceneData.models.back().animations = std::move(animations);
 
     sceneData.images = createPbrImageData(
         path.stem().string(), imageLoader.loadedImages, std::move(imageLoader.ormImages), sceneData.models);
