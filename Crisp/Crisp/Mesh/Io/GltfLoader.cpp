@@ -484,7 +484,42 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 
 PbrMaterial createPbrMaterialFromGltfMaterial(
     const tinygltf::Model& model, const tinygltf::Material& material, GltfImageLoader& loader) {
-    PbrMaterial pbrMaterial{};
+    PbrMaterial pbrMaterial{.name = material.name};
+    if (material.alphaMode != "OPAQUE") {
+        CRISP_LOGW(
+            "GLTF material '{}' uses unsupported alpha mode '{}' and will render opaque.",
+            material.name,
+            material.alphaMode);
+    }
+    if (material.doubleSided) {
+        CRISP_LOGW("GLTF material '{}' is double-sided, but the PBR pipeline uses back-face culling.", material.name);
+    }
+
+    const std::array textureCoordinateSets{
+        material.pbrMetallicRoughness.baseColorTexture.texCoord,
+        material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord,
+        material.normalTexture.texCoord,
+        material.occlusionTexture.texCoord,
+        material.emissiveTexture.texCoord,
+    };
+    if (std::ranges::any_of(textureCoordinateSets, [](const int32_t texCoord) { return texCoord != 0; })) {
+        CRISP_LOGW("GLTF material '{}' uses unsupported texture coordinate sets other than TEXCOORD_0.", material.name);
+    }
+
+    const std::array textureIndices{
+        material.pbrMetallicRoughness.baseColorTexture.index,
+        material.pbrMetallicRoughness.metallicRoughnessTexture.index,
+        material.normalTexture.index,
+        material.occlusionTexture.index,
+        material.emissiveTexture.index,
+    };
+    if (std::ranges::any_of(textureIndices, [&model](const int32_t textureIndex) {
+            return isValidGltfIndex(textureIndex) && isValidGltfIndex(model.textures.at(textureIndex).sampler);
+        })) {
+        CRISP_LOGW(
+            "GLTF material '{}' uses custom texture samplers, which the PBR pipeline currently ignores.", material.name);
+    }
+
     const auto getImageIndex = [&model, &loader](const int32_t textureIndex) -> std::optional<uint32_t> {
         if (!isValidGltfIndex(textureIndex)) {
             return std::nullopt;
@@ -518,24 +553,22 @@ PbrMaterial createPbrMaterialFromGltfMaterial(
                 metallicRoughnessImage ? &loader.loadedImages[*metallicRoughnessImage].image : nullptr;
             const Image* occlusion = occlusionImage ? &loader.loadedImages[*occlusionImage].image : nullptr;
             const uint32_t ormImageIndex = static_cast<uint32_t>(loader.ormImages.size());
-            if (metallicRoughnessImage == occlusionImage) {
-                loader.ormImages.push_back(*metallicRoughness);
-            } else {
-                loader.ormImages.push_back(createPbrOrmMap({
-                    .occlusion = occlusion,
-                    .occlusionChannel = 0,
-                    .roughness = metallicRoughness,
-                    .roughnessChannel = 1,
-                    .metallic = metallicRoughness,
-                    .metallicChannel = 2,
-                }));
-            }
+            loader.ormImages.push_back(createPbrOrmMap({
+                .occlusion = occlusion,
+                .occlusionChannel = 0,
+                .roughness = metallicRoughness,
+                .roughnessChannel = 1,
+                .metallic = metallicRoughness,
+                .metallicChannel = 2,
+            }));
             ormImage = loader.ormImageIndices.emplace(ormSourceKey, ormImageIndex).first;
         }
         pbrMaterial.textureKeys[kPbrOrmMapIndex] = fmt::format("{}", ormImage->second);
     }
 
     pbrMaterial.params.albedo = toGlm<glm::vec4>(material.pbrMetallicRoughness.baseColorFactor);
+    pbrMaterial.params.emissiveFactor = toGlm<glm::vec3>(material.emissiveFactor);
+    pbrMaterial.params.normalScale = static_cast<float>(material.normalTexture.scale);
     pbrMaterial.params.metallic = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
     pbrMaterial.params.roughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
     pbrMaterial.params.aoStrength = static_cast<float>(material.occlusionTexture.strength);

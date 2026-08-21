@@ -36,5 +36,15 @@ TEST(PbrMaterialTest, UsesGltfDefaultsForMissingOrmChannels) {
     EXPECT_EQ(orm.getData()[3], 255);
 }
 
+TEST(PbrMaterialTest, UsesWhiteAsTheDefaultEmissiveMultiplier) {
+    const Image emissive = createDefaultEmissiveMap();
+
+    ASSERT_EQ(emissive.getByteSize(), 4);
+    EXPECT_EQ(emissive.getData()[0], 255);
+    EXPECT_EQ(emissive.getData()[1], 255);
+    EXPECT_EQ(emissive.getData()[2], 255);
+    EXPECT_EQ(emissive.getData()[3], 255);
+}
+
 } // namespace
 } // namespace crisp

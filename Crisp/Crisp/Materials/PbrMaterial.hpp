@@ -28,6 +28,8 @@ inline constexpr std::array<std::string_view, kPbrMapTypeCount> kPbrMapNames = {
 // 0 is the registry's fallback, so an unauthored map samples the checkerboard.
 struct PbrParams {
     glm::vec4 albedo{1.0f, 1.0f, 1.0f, 1.0f};
+    glm::vec3 emissiveFactor{0.0f, 0.0f, 0.0f};
+    float normalScale{1.0f};
     glm::vec2 uvScale{1.0f, 1.0f};
     float metallic{1.0f};
     float roughness{1.0f};
@@ -42,13 +44,15 @@ struct PbrParams {
     uint32_t padding1{0};
 };
 
-static_assert(sizeof(PbrParams) == 64);
+static_assert(sizeof(PbrParams) == 80);
 static_assert(std::is_standard_layout_v<PbrParams>);
-static_assert(offsetof(PbrParams, uvScale) == 16);
-static_assert(offsetof(PbrParams, aoStrength) == 32);
-static_assert(offsetof(PbrParams, samplerIndex) == 36);
-static_assert(offsetof(PbrParams, ormTex) == 48);
-static_assert(offsetof(PbrParams, emissiveTex) == 52);
+static_assert(offsetof(PbrParams, emissiveFactor) == 16);
+static_assert(offsetof(PbrParams, normalScale) == 28);
+static_assert(offsetof(PbrParams, uvScale) == 32);
+static_assert(offsetof(PbrParams, aoStrength) == 48);
+static_assert(offsetof(PbrParams, samplerIndex) == 52);
+static_assert(offsetof(PbrParams, ormTex) == 64);
+static_assert(offsetof(PbrParams, emissiveTex) == 68);
 
 struct PbrImageKeyCreator {
     std::string name;

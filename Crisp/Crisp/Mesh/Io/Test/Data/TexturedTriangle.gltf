@@ -11,11 +11,13 @@
     }]
   }],
   "materials": [{
+    "name": "TestMaterial",
     "pbrMetallicRoughness": {
       "baseColorTexture": { "index": 0 },
       "metallicRoughnessTexture": { "index": 0 }
     },
-    "normalTexture": { "index": 1 },
+    "normalTexture": { "index": 1, "scale": 0.25 },
+    "emissiveFactor": [0.25, 0.5, 0.75],
     "occlusionTexture": { "index": 0, "strength": 0.5 }
   }],
   "textures": [{ "source": 0 }, { "source": 1 }],

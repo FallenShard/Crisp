@@ -111,9 +111,13 @@ TEST(GltfLoaderTest, LoadsEmbeddedImagesInSourceOrder) {
     ASSERT_THAT(loaded.images.albedoMaps, SizeIs(1));
     ASSERT_THAT(loaded.images.normalMaps, SizeIs(1));
     ASSERT_THAT(loaded.images.ormMaps, SizeIs(1));
+    EXPECT_EQ(loaded.images.ormMaps[0].getChannelCount(), 4);
     EXPECT_EQ(loaded.models[0].material.textureKeys[0], "TexturedTriangle-albedo-0");
     EXPECT_EQ(loaded.models[0].material.textureKeys[1], "TexturedTriangle-normal-0");
     EXPECT_EQ(loaded.models[0].material.textureKeys[2], "TexturedTriangle-orm-0");
+    EXPECT_EQ(loaded.models[0].material.name, "TestMaterial");
+    EXPECT_EQ(loaded.models[0].material.params.emissiveFactor, glm::vec3(0.25f, 0.5f, 0.75f));
+    EXPECT_FLOAT_EQ(loaded.models[0].material.params.normalScale, 0.25f);
     EXPECT_FLOAT_EQ(loaded.models[0].material.params.aoStrength, 0.5f);
 }
 

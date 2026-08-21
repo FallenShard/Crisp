@@ -111,6 +111,9 @@ std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::pat
     material.textureKeys[1] = group.normalMaps.empty() ? "" : keyCreator.createNormalMapKey(0);
     material.textureKeys[2] = group.ormMaps.empty() ? "" : keyCreator.createOrmMapKey(0);
     material.textureKeys[3] = group.emissiveMaps.empty() ? "" : keyCreator.createEmissiveMapKey(0);
+    if (!group.emissiveMaps.empty()) {
+        material.params.emissiveFactor = glm::vec3(1.0f);
+    }
 
     return {std::move(material), std::move(group)};
 }

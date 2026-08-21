@@ -293,7 +293,7 @@ void PbrScene::createSceneObjects(const std::filesystem::path& path) {
     }
 
     const std::filesystem::path absPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
-    if (absPath.extension() == ".gltf") {
+    if (absPath.extension() == ".gltf" || absPath.extension() == ".glb") {
         createGltfSceneObjects(absPath);
     } else {
         createObjSceneObject(absPath);

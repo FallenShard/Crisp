@@ -18,7 +18,7 @@ Image createDefaultOrmMap() {
 }
 
 Image createDefaultEmissiveMap() {
-    return {std::vector<uint8_t>{0, 0, 0, 0}, 1, 1, 4, 4 * sizeof(uint8_t)};
+    return {std::vector<uint8_t>{255, 255, 255, 255}, 1, 1, 4, 4 * sizeof(uint8_t)};
 }
 
 Image createPbrOrmMap(const PbrOrmSources& sources) {

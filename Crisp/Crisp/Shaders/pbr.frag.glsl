@@ -48,6 +48,8 @@ layout(set = 1, binding = 6) uniform sampler2D sheenLut;
 // Material-specific parameters. Must match PbrParams in Materials/PbrMaterial.hpp.
 struct PbrMaterialParameters {
     vec4 albedo;
+    vec3 emissiveFactor;
+    float normalScale;
     vec2 uvScale;
     float metallic;
     float roughness;
@@ -157,8 +159,9 @@ vec3 decodeNormal(const PbrMaterialParameters material, in vec2 uv) {
     vec3 bitangent = normalize(eyeBitangent);
     mat3 TBN = mat3(tangent, bitangent, normal);
 
-    vec3 n = sampleMaterial(material, material.normalTex, uv).xyz;
-    return normalize(TBN * normalize(n * 2.0f - 1.0f));
+    vec3 n = sampleMaterial(material, material.normalTex, uv).xyz * 2.0f - 1.0f;
+    n.xy *= material.normalScale;
+    return normalize(TBN * normalize(n));
 }
 
 vec3 sheenLogic() {
@@ -312,11 +315,11 @@ void main() {
     // Material properties.
     const vec3 albedo = sampleMaterial(material, material.albedoTex, uvCoord).rgb * material.albedo.rgb;
     const vec3 orm = sampleMaterial(material, material.ormTex, uvCoord).rgb;
-    float roughness = orm.g * material.roughness;
-    roughness *= roughness;
+    const float roughness = clamp(orm.g * material.roughness, 0.001f, 1.0f);
+    const float alpha = roughness * roughness;
     const float metallic = orm.b * material.metallic;
     const float ao = mix(1.0f, orm.r, clamp(material.aoStrength, 0.0f, 1.0f));
-    const vec3 emission = sampleMaterial(material, material.emissiveTex, uvCoord).rgb;
+    const vec3 emission = sampleMaterial(material, material.emissiveTex, uvCoord).rgb * material.emissiveFactor;
 
     // BRDF diffuse (view-independent).
     const vec3 F0 = mix(vec3(0.04), albedo, metallic);
@@ -328,7 +331,7 @@ void main() {
     // BRDF specularity (view-dependent).
     const vec3 eyeH = normalize(eyeL + eyeV);
     const float NdotH = max(dot(eyeN, eyeH), 0.0f);
-    const float D = distributionGGX(NdotH, roughness);
+    const float D = distributionGGX(NdotH, alpha);
     const float G = geometrySmith(NdotV, NdotL, roughness);
     const vec3 specularity = D * G * F / max(4.0f * NdotV * NdotL, 0.001);
 
