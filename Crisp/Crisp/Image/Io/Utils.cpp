@@ -1,5 +1,7 @@
 #include <Crisp/Image/Io/Utils.hpp>
 
+#include <Crisp/Image/Io/WuffsPng.hpp>
+
 #define STB_IMAGE_IMPLEMENTATION
 #pragma warning(push)
 #pragma warning(disable : 4244) // conversion warnings
@@ -31,6 +33,11 @@ auto getStbComponentFormat(const int numComponents) {
 constexpr std::size_t kNumCubeMapFaces = 6;
 const std::array<const std::string, kNumCubeMapFaces> kSideFilenames = {
     "left", "right", "top", "bottom", "back", "front"};
+
+constexpr bool isPng(const std::span<const uint8_t> bytes) {
+    return bytes.size() >= 8 && bytes[0] == 0x89 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G' &&
+           bytes[4] == 0x0d && bytes[5] == 0x0a && bytes[6] == 0x1a && bytes[7] == 0x0a;
+}
 } // namespace
 
 std::vector<Image> loadCubeMapFacesFromHCrossImage(const std::filesystem::path& path, const FlipAxis flip) {
@@ -104,6 +111,10 @@ Result<Image> loadImage(const std::filesystem::path& filePath, const int request
 
 Result<Image> loadImage(
     const std::span<const uint8_t> imageFileContent, const int requestedChannels, const FlipAxis flip) {
+    if (requestedChannels == 4 && flip == FlipAxis::None && isPng(imageFileContent)) {
+        return loadPngWithWuffs(imageFileContent);
+    }
+
     stbi_set_flip_vertically_on_load_thread(flip == FlipAxis::Y);
 
     uint32_t elementSize = sizeof(uint8_t);

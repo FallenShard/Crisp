@@ -244,6 +244,17 @@ add_library(stb INTERFACE)
 target_include_directories(stb SYSTEM INTERFACE "${stb_SOURCE_DIR}")
 set_target_properties(stb PROPERTIES FOLDER "ThirdParty")
 
+FetchContent_Declare(wuffs
+    GIT_REPOSITORY "https://github.com/google/wuffs.git"
+    GIT_TAG "v0.3.5"
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(wuffs)
+
+add_library(Wuffs INTERFACE)
+target_include_directories(Wuffs SYSTEM INTERFACE "${wuffs_SOURCE_DIR}/release/c")
+set_target_properties(Wuffs PROPERTIES FOLDER "ThirdParty")
+
 FetchContent_Declare(OpenEXR
     GIT_REPOSITORY "https://github.com/AcademySoftwareFoundation/openexr.git"
     GIT_TAG "v3.4.12"

@@ -3,6 +3,8 @@ add_cpp_static_library(
     "Common.hpp"
     "Utils.cpp"
     "Utils.hpp"
+    "WuffsPng.cpp"
+    "WuffsPng.hpp"
     "Exr.cpp"
     "Exr.hpp"
 )
@@ -13,4 +15,5 @@ target_link_libraries(
     PRIVATE Crisp::Format
     PRIVATE OpenEXR::OpenEXR
     PRIVATE stb
+    PRIVATE Wuffs
 )
