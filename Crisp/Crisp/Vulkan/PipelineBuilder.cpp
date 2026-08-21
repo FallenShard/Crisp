@@ -14,7 +14,7 @@ std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes(
     const std::span<const uint32_t> locations,
     const std::span<const VkFormat> formats,
     const VertexAttributeLayout layout) {
-    CRISP_CHECK_EQ(locations.size(), formats.size());
+    CRISP_CHECK_SIZE_EQ(locations, formats);
     std::vector<VkVertexInputAttributeDescription> vertexAttribs(formats.size());
 
     uint32_t offset = 0;

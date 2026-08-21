@@ -41,7 +41,7 @@ void TransformBuffer::updateStagingBuffer(const uint32_t regionIndex) {
 }
 
 TransformHandle TransformBuffer::getNextIndex() {
-    CRISP_CHECK(m_activeTransforms < m_transforms.size());
+    CRISP_CHECK_INDEX(m_activeTransforms, m_transforms);
     return TransformHandle{{{static_cast<uint16_t>(m_activeTransforms++), 0}}};
 }
 } // namespace crisp

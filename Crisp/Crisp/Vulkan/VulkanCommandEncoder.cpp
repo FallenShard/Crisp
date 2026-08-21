@@ -56,7 +56,7 @@ void VulkanCommandEncoder::bindVertexBuffers(
     const uint32_t firstBinding,
     const std::span<const VkBuffer> buffers,
     const std::span<const VkDeviceSize> offsets) const {
-    CRISP_CHECK_EQ(buffers.size(), offsets.size());
+    CRISP_CHECK_SIZE_EQ(buffers, offsets);
     if (!buffers.empty()) {
         vkCmdBindVertexBuffers(
             m_cmdBuffer, firstBinding, static_cast<uint32_t>(buffers.size()), buffers.data(), offsets.data());

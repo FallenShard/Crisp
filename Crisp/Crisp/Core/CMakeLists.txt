@@ -78,6 +78,15 @@ target_link_libraries(
     INTERFACE Crisp::Result
 )
 
+add_cpp_test(
+    CrispChecksTest
+    "Test/ChecksTest.cpp"
+)
+target_link_libraries(
+    CrispChecksTest
+    PRIVATE Crisp::Checks
+)
+
 add_cpp_static_library(
     CrispWindow
     "Window.cpp"
