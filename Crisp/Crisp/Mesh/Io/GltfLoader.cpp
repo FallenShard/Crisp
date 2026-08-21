@@ -23,10 +23,10 @@
 
 namespace crisp {
 namespace {
-const auto logger = createLoggerMt("GltfLoader");
+CRISP_MAKE_LOGGER_MT("GltfLoader");
 
-constexpr int32_t GltfInvalidIdx{-1};
-constexpr uint32_t kMaximumImageDecodeThreadCount{8};
+constexpr uint32_t kBaselineImageDecodeThreadCount{8};
+constexpr uint32_t kTargetImagesPerDecodeThread{4};
 
 uint64_t hashImageContents(const std::span<const uint8_t> bytes) {
     const auto contents = std::string_view{reinterpret_cast<const char*>(bytes.data()), bytes.size()}; // NOLINT
@@ -34,7 +34,7 @@ uint64_t hashImageContents(const std::span<const uint8_t> bytes) {
 }
 
 constexpr bool isValidGltfIndex(const int32_t index) {
-    return index != GltfInvalidIdx;
+    return index != -1;
 }
 
 template <typename T>
@@ -124,6 +124,13 @@ struct AccessorBufferView {
     size_t elementByteSize;
 };
 
+struct MaterialWarningCounts {
+    uint32_t nonOpaqueMaterialCount{0};
+    uint32_t doubleSidedMaterialCount{0};
+    uint32_t unsupportedTexCoordMaterialCount{0};
+    uint32_t customSamplerMaterialCount{0};
+};
+
 AccessorBufferView createAccessorBufferView(const tinygltf::Model& model, const tinygltf::Accessor& accessor) {
     CRISP_CHECK(isValidGltfIndex(accessor.bufferView), "Sparse GLTF accessors are unsupported.");
     CRISP_CHECK(!accessor.sparse.isSparse, "Sparse GLTF accessors are unsupported.");
@@ -179,7 +186,6 @@ Result<std::vector<glm::uvec3>> loadIndexBuffer(const tinygltf::Model& model, co
     }
 
     const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
-
     CRISP_CHECK_EQ(accessor.count % glm::uvec3::length(), 0);
     const size_t triangleCount = accessor.count / glm::uvec3::length();
 
@@ -220,7 +226,6 @@ Result<std::vector<DstType>> createBuffer(const tinygltf::Model& model, const ti
 
     const int32_t attributeByteSize = componentCount * componentByteSize;
     CRISP_CHECK_EQ(attributeByteSize, sizeof(SrcType));
-
     const auto accessorView = createAccessorBufferView(model, accessor);
     CRISP_CHECK_EQ(accessorView.elementByteSize, attributeByteSize);
 
@@ -306,7 +311,6 @@ struct GltfImageLoader {
     std::vector<uint32_t> sourceToLoadedImage;
     std::vector<Image> ormImages;
     FlatHashMap<uint64_t, uint32_t> ormImageIndices;
-    uint64_t bytesTotal{0};
 };
 
 bool loadImageFromGltf(
@@ -343,7 +347,6 @@ bool loadImageFromGltf(
     auto& encodedImage = imageLoader.encodedImages[imageIndex];
     encodedImage.bytes.assign(bytes, bytes + size); // NOLINT
     encodedImage.name = image->name;
-    imageLoader.bytesTotal += static_cast<uint64_t>(size);
     return true;
 }
 
@@ -358,8 +361,7 @@ Result<std::vector<ImageData>> decodeGltfImages(GltfImageLoader& imageLoader) {
 
     // Each hash owns a small candidate bucket so hash collisions can be resolved with exact byte comparisons.
     FlatHashMap<uint64_t, std::vector<size_t>> imageIndicesByHash;
-    uint64_t uniqueBytesTotal{0};
-    const auto deduplicationStart = std::chrono::steady_clock::now();
+    imageIndicesByHash.reserve(imageLoader.encodedImages.size());
     for (size_t imageIdx = 0; imageIdx < imageLoader.encodedImages.size(); ++imageIdx) {
         const auto& encodedImage = imageLoader.encodedImages[imageIdx];
         auto& matchingHashIndices = imageIndicesByHash[hashImageContents(encodedImage.bytes)];
@@ -375,19 +377,18 @@ Result<std::vector<ImageData>> decodeGltfImages(GltfImageLoader& imageLoader) {
         imageLoader.sourceToLoadedImage[imageIdx] = static_cast<uint32_t>(uniqueImageIndices.size());
         uniqueImageIndices.push_back(imageIdx);
         matchingHashIndices.push_back(imageIdx);
-        uniqueBytesTotal += encodedImage.bytes.size();
     }
-    const std::chrono::duration<double, std::milli> deduplicationDuration{
-        std::chrono::steady_clock::now() - deduplicationStart};
 
-    const uint32_t hardwareThreadCount{std::max(1u, std::thread::hardware_concurrency())};
-    const uint32_t decodeThreadCount{std::min(
-        {hardwareThreadCount, kMaximumImageDecodeThreadCount, static_cast<uint32_t>(uniqueImageIndices.size())})};
+    CRISP_CHECK_LE(uniqueImageIndices.size(), std::numeric_limits<uint32_t>::max());
+    const uint32_t uniqueImageCount = static_cast<uint32_t>(uniqueImageIndices.size());
+    const uint32_t hardwareThreadCount = std::max(1u, std::thread::hardware_concurrency());
+    const uint32_t baselineThreadCount = std::min(kBaselineImageDecodeThreadCount, uniqueImageCount);
+    const uint32_t workScaledThreadCount = 1 + (uniqueImageCount - 1) / kTargetImagesPerDecodeThread;
+    const uint32_t decodeThreadCount =
+        std::min({hardwareThreadCount, uniqueImageCount, std::max(baselineThreadCount, workScaledThreadCount)});
 
     std::vector<std::optional<Image>> decodedImages(uniqueImageIndices.size());
     std::vector<std::string> decodeErrors(uniqueImageIndices.size());
-
-    const auto decodeStart = std::chrono::steady_clock::now();
     ThreadPool threadPool(decodeThreadCount);
     threadPool.parallelFor(uniqueImageIndices.size(), [&](const size_t uniqueIdx, const size_t /*threadIdx*/) {
         const size_t imageIdx = uniqueImageIndices[uniqueIdx];
@@ -422,18 +423,6 @@ Result<std::vector<ImageData>> decodeGltfImages(GltfImageLoader& imageLoader) {
         }
         images.emplace_back(std::move(*decodedImages[uniqueIdx]), imageLoader.encodedImages[imageIdx].name);
     }
-
-    const std::chrono::duration<double, std::milli> decodeDuration{std::chrono::steady_clock::now() - decodeStart};
-    CRISP_LOGI(
-        "Decoded {} unique GLTF images ({:.1f} MiB encoded) on {} threads in {:.1f} ms; skipped {} duplicates "
-        "({:.1f} MiB).",
-        images.size(),
-        static_cast<double>(uniqueBytesTotal) / (1024.0 * 1024.0),
-        decodeThreadCount,
-        decodeDuration.count(),
-        imageLoader.encodedImages.size() - images.size(),
-        static_cast<double>(imageLoader.bytesTotal - uniqueBytesTotal) / (1024.0 * 1024.0));
-    CRISP_LOGI("Content-hash image deduplication took {:.1f} ms.", deduplicationDuration.count());
 
     return images;
 }
@@ -483,16 +472,16 @@ glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 } // namespace
 
 PbrMaterial createPbrMaterialFromGltfMaterial(
-    const tinygltf::Model& model, const tinygltf::Material& material, GltfImageLoader& loader) {
+    const tinygltf::Model& model,
+    const tinygltf::Material& material,
+    GltfImageLoader& loader,
+    MaterialWarningCounts& warningCounts) {
     PbrMaterial pbrMaterial{.name = material.name};
     if (material.alphaMode != "OPAQUE") {
-        CRISP_LOGW(
-            "GLTF material '{}' uses unsupported alpha mode '{}' and will render opaque.",
-            material.name,
-            material.alphaMode);
+        ++warningCounts.nonOpaqueMaterialCount;
     }
     if (material.doubleSided) {
-        CRISP_LOGW("GLTF material '{}' is double-sided, but the PBR pipeline uses back-face culling.", material.name);
+        ++warningCounts.doubleSidedMaterialCount;
     }
 
     const std::array textureCoordinateSets{
@@ -503,7 +492,7 @@ PbrMaterial createPbrMaterialFromGltfMaterial(
         material.emissiveTexture.texCoord,
     };
     if (std::ranges::any_of(textureCoordinateSets, [](const int32_t texCoord) { return texCoord != 0; })) {
-        CRISP_LOGW("GLTF material '{}' uses unsupported texture coordinate sets other than TEXCOORD_0.", material.name);
+        ++warningCounts.unsupportedTexCoordMaterialCount;
     }
 
     const std::array textureIndices{
@@ -516,8 +505,7 @@ PbrMaterial createPbrMaterialFromGltfMaterial(
     if (std::ranges::any_of(textureIndices, [&model](const int32_t textureIndex) {
             return isValidGltfIndex(textureIndex) && isValidGltfIndex(model.textures.at(textureIndex).sampler);
         })) {
-        CRISP_LOGW(
-            "GLTF material '{}' uses custom texture samplers, which the PBR pipeline currently ignores.", material.name);
+        ++warningCounts.customSamplerMaterialCount;
     }
 
     const auto getImageIndex = [&model, &loader](const int32_t textureIndex) -> std::optional<uint32_t> {
@@ -590,24 +578,19 @@ TriangleMesh createMeshFromPrimitive(const tinygltf::Model& model, const tinyglt
 
     std::vector<glm::uvec3> indices;
     if (isValidGltfIndex(primitive.indices)) {
-        CRISP_CHECK_LT(primitive.indices, static_cast<int32_t>(model.accessors.size()));
+        CRISP_CHECK_INDEX(primitive.indices, model.accessors);
         indices = loadIndexBuffer(model, model.accessors.at(primitive.indices)).unwrap();
     } else {
         CRISP_CHECK_EQ(positions.size() % 3, 0, "Non-indexed triangle primitives require a multiple of 3 vertices.");
-        CRISP_CHECK_LE(positions.size(), std::numeric_limits<uint32_t>::max());
-        indices.reserve(positions.size() / 3);
-        for (size_t vertex = 0; vertex < positions.size(); vertex += 3) {
-            indices.emplace_back(
-                static_cast<uint32_t>(vertex), static_cast<uint32_t>(vertex + 1), static_cast<uint32_t>(vertex + 2));
+        const auto vertexCount = checkedCast<uint32_t>(positions.size());
+        indices.reserve(vertexCount / 3);
+        for (uint32_t vertex = 0; vertex < vertexCount; vertex += 3) {
+            indices.emplace_back(vertex, vertex + 1, vertex + 2);
         }
     }
 
-    TriangleMesh triangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(indices)};
-    if (!tangents.empty()) {
-        triangleMesh.setTangents(std::move(tangents));
-    }
-
-    return triangleMesh;
+    return TriangleMesh{
+        std::move(positions), std::move(normals), std::move(texCoords), std::move(indices), std::move(tangents)};
 }
 
 Result<std::vector<glm::mat4>> loadInverseBindTransforms(const tinygltf::Model& model, const uint32_t accessorIdx) {
@@ -652,6 +635,8 @@ void createModelDataFromNode(
     const tinygltf::Node& node,
     const glm::mat4& parentTransform,
     GltfImageLoader& imageLoader,
+    MaterialWarningCounts& warningCounts,
+    std::vector<std::optional<PbrMaterial>>& materialCache,
     std::vector<ModelData>& models) {
     if (isValidGltfIndex(node.camera)) {
         CRISP_LOGT("Gltf contains camera information which will be unused.");
@@ -689,8 +674,13 @@ void createModelDataFromNode(
             }
 
             if (isValidGltfIndex(primitive.material)) {
-                modelData.material =
-                    createPbrMaterialFromGltfMaterial(model, model.materials.at(primitive.material), imageLoader);
+                auto& cachedMaterial = materialCache.at(primitive.material);
+                if (!cachedMaterial) {
+                    cachedMaterial.emplace(createPbrMaterialFromGltfMaterial(
+                        model, model.materials.at(primitive.material), imageLoader, warningCounts));
+                }
+
+                modelData.material = *cachedMaterial;
             }
 
             models.push_back(std::move(modelData));
@@ -698,12 +688,23 @@ void createModelDataFromNode(
     }
 
     for (const uint32_t childIdx : node.children) {
-        createModelDataFromNode(model, model.nodes.at(childIdx), worldTransform, imageLoader, models);
+        createModelDataFromNode(
+            model, model.nodes.at(childIdx), worldTransform, imageLoader, warningCounts, materialCache, models);
     }
+}
+
+size_t countModelPrimitives(const tinygltf::Model& model, const int32_t nodeIndex) {
+    const auto& node = model.nodes.at(nodeIndex);
+    size_t primitiveCount = isValidGltfIndex(node.mesh) ? model.meshes.at(node.mesh).primitives.size() : 0;
+    for (const int32_t childIndex : node.children) {
+        primitiveCount += countModelPrimitives(model, childIndex);
+    }
+    return primitiveCount;
 }
 
 AnimationData createAnimationData(const tinygltf::Model& model, const tinygltf::Animation& animation) {
     AnimationData anim;
+    anim.channels.reserve(animation.channels.size());
     for (const auto& ch : animation.channels) {
         AnimationChannel channel{};
         channel.targetNode = ch.target_node;
@@ -731,7 +732,7 @@ AnimationData createAnimationData(const tinygltf::Model& model, const tinygltf::
             channel.sampler.outputs.resize(vals.size() * sizeof(glm::vec3));
             memcpy(channel.sampler.outputs.data(), vals.data(), vals.size() * sizeof(glm::vec3));
         }
-        anim.channels.push_back(channel);
+        anim.channels.push_back(std::move(channel));
     }
 
     return anim;
@@ -740,6 +741,15 @@ AnimationData createAnimationData(const tinygltf::Model& model, const tinygltf::
 PbrImageGroup createPbrImageData(
     std::string name, const std::span<ImageData> images, std::vector<Image> ormImages, const std::span<ModelData> models) {
     PbrImageGroup imageData{.name = std::move(name), .ormMaps = std::move(ormImages)};
+    imageData.albedoMaps.reserve(std::ranges::count_if(images, [](const ImageData& image) {
+        return image.accessTypes[kPbrAlbedoMapIndex];
+    }));
+    imageData.normalMaps.reserve(std::ranges::count_if(images, [](const ImageData& image) {
+        return image.accessTypes[kPbrNormalMapIndex];
+    }));
+    imageData.emissiveMaps.reserve(std::ranges::count_if(images, [](const ImageData& image) {
+        return image.accessTypes[kPbrEmissiveMapIndex];
+    }));
     std::array<std::vector<int32_t>, kPbrMapTypeCount> remappedIndices;
     for (auto& indices : remappedIndices) {
         indices.resize(images.size(), -1);
@@ -796,12 +806,11 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
 
     std::string err{};
     std::string warn{};
-    const auto parseStart = std::chrono::steady_clock::now();
+    const auto loadStart = std::chrono::steady_clock::now();
     const bool success =
         path.extension() == ".glb"
             ? loader.LoadBinaryFromFile(&model, &err, &warn, path.string())
             : loader.LoadASCIIFromFile(&model, &err, &warn, path.string());
-    const std::chrono::duration<double, std::milli> parseDuration{std::chrono::steady_clock::now() - parseStart};
 
     if (!warn.empty()) {
         CRISP_LOGW("GLTF warning from {}: {}", path.string(), warn);
@@ -820,15 +829,32 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
     CRISP_CHECK_EQ(model.defaultScene, 0);
     const auto& scene{model.scenes.at(model.defaultScene)};
 
-    CRISP_LOGI(
-        "Parsed GLTF and read {} encoded images in {:.1f} ms.", imageLoader.encodedImages.size(), parseDuration.count());
+    const auto imageDecodeStart = std::chrono::steady_clock::now();
     CRISP_TRY(imageLoader.loadedImages, decodeGltfImages(imageLoader));
+    const auto imageDecodeDuration = std::chrono::steady_clock::now() - imageDecodeStart;
 
-    SceneData sceneData{};
+    const auto modelWorkStart = std::chrono::steady_clock::now();
+    size_t modelPrimitiveCount{0};
     for (const int32_t nodeIndex : scene.nodes) {
-        createModelDataFromNode(model, model.nodes[nodeIndex], glm::mat4(1.0f), imageLoader, sceneData.models);
+        modelPrimitiveCount += countModelPrimitives(model, nodeIndex);
     }
 
+    MaterialWarningCounts materialWarningCounts{};
+    SceneData sceneData{};
+    std::vector<std::optional<PbrMaterial>> materialCache(model.materials.size());
+    sceneData.models.reserve(modelPrimitiveCount);
+    imageLoader.ormImages.reserve(model.materials.size());
+    imageLoader.ormImageIndices.reserve(model.materials.size());
+    for (const int32_t nodeIndex : scene.nodes) {
+        createModelDataFromNode(
+            model,
+            model.nodes[nodeIndex],
+            glm::mat4(1.0f),
+            imageLoader,
+            materialWarningCounts,
+            materialCache,
+            sceneData.models);
+    }
     std::vector<AnimationData> animations{};
     animations.reserve(model.animations.size());
     for (const auto& animation : model.animations) {
@@ -841,6 +867,7 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
             continue;
         }
 
+        sceneModel.animations.reserve(animations.size());
         for (const auto& animation : animations) {
             AnimationData filteredAnimation{};
             filteredAnimation.channels.reserve(animation.channels.size());
@@ -860,9 +887,33 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
             }
         }
     }
+    const auto modelWorkDuration = std::chrono::steady_clock::now() - modelWorkStart;
 
+    const auto imageOrganizationStart = std::chrono::steady_clock::now();
     sceneData.images = createPbrImageData(
         path.stem().string(), imageLoader.loadedImages, std::move(imageLoader.ormImages), sceneData.models);
+    const auto imageWorkDuration = imageDecodeDuration + (std::chrono::steady_clock::now() - imageOrganizationStart);
+
+    const std::chrono::duration<double, std::milli> totalDuration{std::chrono::steady_clock::now() - loadStart};
+    const std::chrono::duration<double, std::milli> imageDuration{imageWorkDuration};
+    const std::chrono::duration<double, std::milli> modelDuration{modelWorkDuration};
+    CRISP_LOGI(
+        "GLTF load timing for '{}': total {:.1f} ms | images {:.1f} ms | models {:.1f} ms.",
+        path.filename().string(),
+        totalDuration.count(),
+        imageDuration.count(),
+        modelDuration.count());
+    if (materialWarningCounts.nonOpaqueMaterialCount != 0 || materialWarningCounts.doubleSidedMaterialCount != 0 ||
+        materialWarningCounts.unsupportedTexCoordMaterialCount != 0 ||
+        materialWarningCounts.customSamplerMaterialCount != 0) {
+        CRISP_LOGW(
+            "GLTF referenced-material limitations: {} non-opaque, {} double-sided, {} using texture coordinates "
+            "other than TEXCOORD_0, {} using custom samplers. These features are currently ignored.",
+            materialWarningCounts.nonOpaqueMaterialCount,
+            materialWarningCounts.doubleSidedMaterialCount,
+            materialWarningCounts.unsupportedTexCoordMaterialCount,
+            materialWarningCounts.customSamplerMaterialCount);
+    }
 
     return sceneData;
 }

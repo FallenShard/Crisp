@@ -36,6 +36,8 @@ TEST(GltfLoaderTest, LoadsNonIndexedTriangle) {
     ASSERT_THAT(loaded.models, SizeIs(1));
     ASSERT_THAT(loaded.models[0].mesh.getTriangles(), SizeIs(1));
     EXPECT_EQ(loaded.models[0].mesh.getTriangles()[0], glm::uvec3(0, 1, 2));
+    ASSERT_THAT(loaded.models[0].mesh.getTangents(), SizeIs(3));
+    EXPECT_EQ(loaded.models[0].mesh.getTangents()[0], glm::vec4(1.0f, 0.0f, 0.0f, -1.0f));
 }
 
 TEST(GltfLoaderTest, LoadsUnsignedByteIndices) {
