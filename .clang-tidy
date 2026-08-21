@@ -36,6 +36,7 @@ Checks: >
     -readability-implicit-bool-conversion,
     -readability-function-cognitive-complexity,
     -readability-math-missing-parentheses,
+    -readability-simplify-boolean-expr,
 
 CheckOptions:
   cppcoreguidelines-avoid-do-while.IgnoreMacros: true

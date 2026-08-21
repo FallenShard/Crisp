@@ -11,7 +11,7 @@ add_cpp_static_library(CrispDirectionalLight
 )
 target_link_libraries(CrispDirectionalLight
     PUBLIC Crisp::LightDescriptor
-    PRIVATE Crisp::Logger
+    PRIVATE Crisp::Checks
 )
 
 add_cpp_static_library(CrispCascadedShadowMapping
@@ -22,6 +22,18 @@ target_link_libraries(CrispCascadedShadowMapping
     PUBLIC Crisp::VulkanRingBuffer
     PUBLIC Crisp::DirectionalLight
     PUBLIC Crisp::Camera
+    PRIVATE Crisp::Checks
+)
+
+add_cpp_test(
+    CrispLightsTest
+    "Test/CascadedShadowMappingTest.cpp"
+    "Test/DirectionalLightTest.cpp"
+)
+target_link_libraries(
+    CrispLightsTest
+    PRIVATE Crisp::CascadedShadowMapping
+    PRIVATE Crisp::DirectionalLight
 )
 
 add_cpp_static_library(CrispLights

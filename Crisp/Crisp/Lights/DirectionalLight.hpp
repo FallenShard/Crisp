@@ -1,23 +1,18 @@
 #pragma once
 
-#include <array>
+#include <cstdint>
 
 #include <Crisp/Lights/LightDescriptor.hpp>
 
 namespace crisp {
 class DirectionalLight {
 public:
-    DirectionalLight() = default;
+    DirectionalLight();
     DirectionalLight(
         const glm::vec3& direction, const glm::vec3& radiance, const glm::vec3& extentMin, const glm::vec3& extentMax);
 
     void setDirection(glm::vec3 direction);
-    void fitProjectionToFrustum(const std::array<glm::vec3, 8>& worldFrustumPoints);
-    void fitProjectionToFrustum(
-        const std::array<glm::vec3, 8>& worldFrustumPoints,
-        const glm::vec3& center,
-        float radius,
-        uint32_t shadowMapSize);
+    void fitProjectionToBoundingSphere(const glm::vec3& center, float radius, uint32_t shadowMapSize);
 
     LightDescriptor createDescriptor() const;
 
@@ -28,6 +23,7 @@ public:
 private:
     glm::vec3 m_direction;
     glm::vec3 m_radiance;
+    glm::vec3 m_up;
 
     glm::mat4 m_view;
     glm::mat4 m_projection;

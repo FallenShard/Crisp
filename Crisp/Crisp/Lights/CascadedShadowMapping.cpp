@@ -1,5 +1,9 @@
 #include <Crisp/Lights/CascadedShadowMapping.hpp>
 
+#include <cmath>
+
+#include <Crisp/Core/Checks.hpp>
+
 namespace crisp {
 void CascadedShadowMapping::configure(
     const gsl::not_null<VulkanDevice*> device, const DirectionalLight& light, const uint32_t cascadeCount) {
@@ -21,6 +25,12 @@ void CascadedShadowMapping::updateSplitIntervals(const float zNear, const float 
         return;
     }
 
+    CRISP_CHECK(std::isfinite(zNear) && zNear > 0.0f, "The cascade near plane must be finite and positive.");
+    CRISP_CHECK(std::isfinite(zFar) && zFar > zNear, "The cascade far plane must be finite and beyond its near plane.");
+    CRISP_CHECK(
+        std::isfinite(splitLambda) && splitLambda >= 0.0f && splitLambda <= 1.0f,
+        "The cascade split lambda must be finite and in [0, 1].");
+
     const float range = zFar - zNear;
     const float ratio = zFar / zNear;
 
@@ -31,8 +41,8 @@ void CascadedShadowMapping::updateSplitIntervals(const float zNear, const float 
         const float logSplit = zNear * std::pow(ratio, p);
         const float linSplit = zNear + range * p;
         const float splitPos = splitLambda * (logSplit - linSplit) + linSplit;
-        cascades[i].zFar = splitPos - zNear;
-        cascades[i + 1].zNear = splitPos - zNear;
+        cascades[i].zFar = splitPos;
+        cascades[i + 1].zNear = splitPos;
     }
 }
 
@@ -42,8 +52,7 @@ void CascadedShadowMapping::updateTransforms(
         auto& cascade = cascades[i];
 
         glm::vec4 centerRadius = viewCamera.computeFrustumBoundingSphere(cascade.zNear, cascade.zFar);
-        cascade.light.fitProjectionToFrustum(
-            viewCamera.computeFrustumPoints(cascade.zNear, cascade.zFar), centerRadius, centerRadius.w, shadowMapSize);
+        cascade.light.fitProjectionToBoundingSphere(centerRadius, centerRadius.w, shadowMapSize);
 
         const auto desc = cascade.light.createDescriptor();
         cascadedLightBuffer->updateStagingBuffer(
