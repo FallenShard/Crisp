@@ -9,28 +9,32 @@
   ],
   "meshes": [{
     "primitives": [
-      { "attributes": { "POSITION": 1 }, "indices": 0 },
-      { "attributes": { "POSITION": 1 }, "indices": 0 }
+      { "attributes": { "POSITION": 1, "WEIGHTS_0": 4, "JOINTS_0": 5 }, "indices": 0 },
+      { "attributes": { "POSITION": 1, "WEIGHTS_0": 4, "JOINTS_0": 5 }, "indices": 0 }
     ]
   }],
   "skins": [{
     "joints": [1]
   }],
   "buffers": [{
-    "uri": "data:application/octet-stream;base64,AAABAAIAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAABAAABAQA==",
-    "byteLength": 76
+    "uri": "data:application/octet-stream;base64,AAABAAIAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAABAAABAQP8AAAD/AAAA/wAAAAAAAAAAAAAAAAAAAA==",
+    "byteLength": 100
   }],
   "bufferViews": [
     { "buffer": 0, "byteOffset": 0, "byteLength": 6, "target": 34963 },
     { "buffer": 0, "byteOffset": 8, "byteLength": 36, "target": 34962 },
     { "buffer": 0, "byteOffset": 44, "byteLength": 8 },
-    { "buffer": 0, "byteOffset": 52, "byteLength": 24 }
+    { "buffer": 0, "byteOffset": 52, "byteLength": 24 },
+    { "buffer": 0, "byteOffset": 76, "byteLength": 12, "target": 34962 },
+    { "buffer": 0, "byteOffset": 88, "byteLength": 12, "target": 34962 }
   ],
   "accessors": [
     { "bufferView": 0, "byteOffset": 0, "componentType": 5123, "count": 3, "type": "SCALAR", "max": [2], "min": [0] },
     { "bufferView": 1, "byteOffset": 0, "componentType": 5126, "count": 3, "type": "VEC3", "max": [1.0, 1.0, 0.0], "min": [0.0, 0.0, 0.0] },
     { "bufferView": 2, "byteOffset": 0, "componentType": 5126, "count": 2, "type": "SCALAR", "max": [1.0], "min": [0.0] },
-    { "bufferView": 3, "byteOffset": 0, "componentType": 5126, "count": 2, "type": "VEC3" }
+    { "bufferView": 3, "byteOffset": 0, "componentType": 5126, "count": 2, "type": "VEC3" },
+    { "bufferView": 4, "byteOffset": 0, "componentType": 5121, "normalized": true, "count": 3, "type": "VEC4" },
+    { "bufferView": 5, "byteOffset": 0, "componentType": 5121, "count": 3, "type": "VEC4" }
   ],
   "animations": [{
     "samplers": [{ "input": 2, "output": 3, "interpolation": "LINEAR" }],

@@ -53,13 +53,22 @@ template <typename T>
 struct IsGlmQuat<glm::qua<T, glm::defaultp>> : public std::true_type {};
 
 template <typename T>
+struct IsGlmMat : public std::false_type {};
+
+template <glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+struct IsGlmMat<glm::mat<C, R, T, Q>> : public std::true_type {};
+
+template <typename T>
 concept GlmVector = IsGlmVec<T>::value;
 
 template <typename T>
 concept GlmQuaternion = IsGlmQuat<T>::value;
 
 template <typename T>
-concept GlmAttrib = GlmVector<T> || GlmQuaternion<T>;
+concept GlmMatrix = IsGlmMat<T>::value;
+
+template <typename T>
+concept GlmAttrib = GlmVector<T> || GlmQuaternion<T> || GlmMatrix<T>;
 
 template <typename T>
 concept GltfAttrib = ScalarAttrib<T> || GlmAttrib<T>;
@@ -74,6 +83,12 @@ template <ScalarAttrib T>
 struct ComponentTypeHelper<T> {
     using Type = T;
     static constexpr int32_t kCount = 1;
+};
+
+template <glm::length_t C, glm::length_t R, typename T, glm::qualifier Q>
+struct ComponentTypeHelper<glm::mat<C, R, T, Q>> {
+    using Type = T;
+    static constexpr int32_t kCount = C * R;
 };
 
 template <GltfAttrib T>
@@ -101,6 +116,33 @@ void validateAccessorRange(
     const size_t availableBytes = bufferView.byteLength - accessorByteOffset;
     CRISP_CHECK_LE(elementByteSize, availableBytes);
     CRISP_CHECK_LE(elementCount - 1, (availableBytes - elementByteSize) / byteStride);
+}
+
+struct AccessorBufferView {
+    std::span<const uint8_t> bytes;
+    size_t byteStride;
+    size_t elementByteSize;
+};
+
+AccessorBufferView createAccessorBufferView(const tinygltf::Model& model, const tinygltf::Accessor& accessor) {
+    CRISP_CHECK(isValidGltfIndex(accessor.bufferView), "Sparse GLTF accessors are unsupported.");
+    CRISP_CHECK(!accessor.sparse.isSparse, "Sparse GLTF accessors are unsupported.");
+
+    const auto& bufferView = model.bufferViews.at(accessor.bufferView);
+    const auto& buffer = model.buffers.at(bufferView.buffer);
+    const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
+    const size_t componentCount = tinygltf::GetNumComponentsInType(accessor.type);
+    const size_t elementByteSize = componentCount * componentByteSize;
+    const size_t byteStride = bufferView.byteStride == 0 ? elementByteSize : bufferView.byteStride;
+    validateAccessorRange(
+        bufferView, buffer.data.size(), accessor.byteOffset, accessor.count, byteStride, elementByteSize);
+
+    const size_t bufferRangeStart = bufferView.byteOffset + accessor.byteOffset;
+    return {
+        .bytes = std::span<const uint8_t>(buffer.data).subspan(bufferRangeStart),
+        .byteStride = byteStride,
+        .elementByteSize = elementByteSize,
+    };
 }
 
 template <ScalarAttrib T>
@@ -136,35 +178,30 @@ Result<std::vector<glm::uvec3>> loadIndexBuffer(const tinygltf::Model& model, co
         return resultError("Unsupported GLTF index component type {}.", accessor.componentType);
     }
 
-    const auto& bufferView{model.bufferViews.at(accessor.bufferView)};
-    const auto& buffer{model.buffers.at(bufferView.buffer)};
-
     const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
 
     CRISP_CHECK_EQ(accessor.count % glm::uvec3::length(), 0);
     const size_t triangleCount = accessor.count / glm::uvec3::length();
 
-    const size_t byteStride{bufferView.byteStride == 0 ? componentByteSize : bufferView.byteStride};
-    const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
-    validateAccessorRange(
-        bufferView, buffer.data.size(), accessor.byteOffset, accessor.count, byteStride, componentByteSize);
+    const auto accessorView = createAccessorBufferView(model, accessor);
+    CRISP_CHECK_EQ(accessorView.elementByteSize, componentByteSize);
 
     std::vector<glm::uvec3> indices(triangleCount);
-    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT && byteStride == componentByteSize) {
+    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT && accessorView.byteStride == componentByteSize) {
         static_assert(sizeof(glm::uvec3) == 3 * sizeof(uint32_t));
-        std::memcpy(indices.data(), buffer.data.data() + bufferRangeStart, accessor.count * componentByteSize); // NOLINT
+        std::memcpy(indices.data(), accessorView.bytes.data(), accessor.count * componentByteSize); // NOLINT
     } else {
         for (size_t i = 0; i < accessor.count; ++i) {
-            const size_t offset{bufferRangeStart + i * byteStride};
+            const size_t offset{i * accessorView.byteStride};
             uint32_t index{0};
             if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
-                index = buffer.data[offset];
+                index = accessorView.bytes[offset];
             } else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
                 uint16_t index16;
-                std::memcpy(&index16, buffer.data.data() + offset, sizeof(index16)); // NOLINT
+                std::memcpy(&index16, accessorView.bytes.data() + offset, sizeof(index16)); // NOLINT
                 index = index16;
             } else {
-                std::memcpy(&index, buffer.data.data() + offset, sizeof(index)); // NOLINT
+                std::memcpy(&index, accessorView.bytes.data() + offset, sizeof(index)); // NOLINT
             }
             indices[i / 3][i % 3] = index;
         }
@@ -184,29 +221,23 @@ Result<std::vector<DstType>> createBuffer(const tinygltf::Model& model, const ti
     const int32_t attributeByteSize = componentCount * componentByteSize;
     CRISP_CHECK_EQ(attributeByteSize, sizeof(SrcType));
 
-    const auto& bufferView = model.bufferViews.at(accessor.bufferView);
-    const auto& buffer = model.buffers.at(bufferView.buffer);
-
-    const size_t byteStride = bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride;
-    const size_t bufferRangeStart = bufferView.byteOffset + accessor.byteOffset;
-    validateAccessorRange(
-        bufferView, buffer.data.size(), accessor.byteOffset, accessor.count, byteStride, attributeByteSize);
+    const auto accessorView = createAccessorBufferView(model, accessor);
+    CRISP_CHECK_EQ(accessorView.elementByteSize, attributeByteSize);
 
     std::vector<DstType> attributes;
     attributes.reserve(accessor.count);
 
-    if (static_cast<int32_t>(byteStride) == attributeByteSize && std::is_same_v<DstType, SrcType> &&
+    if (static_cast<int32_t>(accessorView.byteStride) == attributeByteSize && std::is_same_v<DstType, SrcType> &&
         std::is_trivially_copy_assignable_v<DstType>) {
         attributes.resize(accessor.count);
-        std::memcpy(
-            attributes.data(), buffer.data.data() + bufferRangeStart, sizeof(DstType) * accessor.count); // NOLINT
+        std::memcpy(attributes.data(), accessorView.bytes.data(), sizeof(DstType) * accessor.count); // NOLINT
         return attributes;
     }
 
     SrcType temp{};
     for (size_t i = 0; i < accessor.count; ++i) {
-        const size_t offset{bufferRangeStart + i * byteStride};
-        std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize); // NOLINT
+        const size_t offset{i * accessorView.byteStride};
+        std::memcpy(&temp, accessorView.bytes.data() + offset, attributeByteSize); // NOLINT
         attributes.emplace_back(temp);
     }
 
@@ -220,6 +251,48 @@ Result<std::vector<DstType>> createBuffer(
         return std::vector<DstType>{};
     }
     return createBuffer<DstType, SrcType>(model, model.accessors.at(primitive.attributes.at(attrib)));
+}
+
+template <GlmVector SrcType>
+Result<std::vector<glm::vec4>> createNormalizedVec4Buffer(
+    const tinygltf::Model& model, const tinygltf::Accessor& accessor) {
+    CRISP_TRY(auto values, createBuffer<SrcType>(model, accessor));
+    std::vector<glm::vec4> normalizedValues;
+    normalizedValues.reserve(values.size());
+    constexpr auto maxValue = static_cast<float>(std::numeric_limits<ComponentType<SrcType>>::max());
+    for (const auto& value : values) {
+        normalizedValues.emplace_back(glm::vec4(value) / maxValue);
+    }
+    return normalizedValues;
+}
+
+Result<std::vector<glm::vec4>> loadWeightsBuffer(const tinygltf::Model& model, const tinygltf::Primitive& primitive) {
+    const auto& accessor = model.accessors.at(primitive.attributes.at("WEIGHTS_0"));
+    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT) {
+        return createBuffer<glm::vec4>(model, accessor);
+    }
+    if (!accessor.normalized) {
+        return resultError("Integer GLTF weights must use normalized accessors.");
+    }
+    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
+        return createNormalizedVec4Buffer<glm::u8vec4>(model, accessor);
+    }
+    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
+        return createNormalizedVec4Buffer<glm::u16vec4>(model, accessor);
+    }
+    return resultError("Unsupported GLTF weight component type {}.", accessor.componentType);
+}
+
+Result<std::vector<glm::uvec4>> loadJointIndexBuffer(
+    const tinygltf::Model& model, const tinygltf::Primitive& primitive) {
+    const auto& accessor = model.accessors.at(primitive.attributes.at("JOINTS_0"));
+    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
+        return createBuffer<glm::uvec4, glm::u8vec4>(model, accessor);
+    }
+    if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
+        return createBuffer<glm::uvec4, glm::u16vec4>(model, accessor);
+    }
+    return resultError("Unsupported GLTF joint-index component type {}.", accessor.componentType);
 }
 
 struct EncodedGltfImage {
@@ -482,8 +555,19 @@ TriangleMesh createMeshFromPrimitive(const tinygltf::Model& model, const tinyglt
     std::vector<glm::vec2> texCoords{createBuffer<glm::vec2>(model, primitive, "TEXCOORD_0").unwrap()};
     std::vector<glm::vec4> tangents{createBuffer<glm::vec4>(model, primitive, "TANGENT").unwrap()};
 
-    CRISP_CHECK_GE_LT(primitive.indices, 0, static_cast<int32_t>(model.accessors.size()));
-    std::vector<glm::uvec3> indices{loadIndexBuffer(model, model.accessors.at(primitive.indices)).unwrap()};
+    std::vector<glm::uvec3> indices;
+    if (isValidGltfIndex(primitive.indices)) {
+        CRISP_CHECK_LT(primitive.indices, static_cast<int32_t>(model.accessors.size()));
+        indices = loadIndexBuffer(model, model.accessors.at(primitive.indices)).unwrap();
+    } else {
+        CRISP_CHECK_EQ(positions.size() % 3, 0, "Non-indexed triangle primitives require a multiple of 3 vertices.");
+        CRISP_CHECK_LE(positions.size(), std::numeric_limits<uint32_t>::max());
+        indices.reserve(positions.size() / 3);
+        for (size_t vertex = 0; vertex < positions.size(); vertex += 3) {
+            indices.emplace_back(
+                static_cast<uint32_t>(vertex), static_cast<uint32_t>(vertex + 1), static_cast<uint32_t>(vertex + 2));
+        }
+    }
 
     TriangleMesh triangleMesh{std::move(positions), std::move(normals), std::move(texCoords), std::move(indices)};
     if (!tangents.empty()) {
@@ -494,33 +578,7 @@ TriangleMesh createMeshFromPrimitive(const tinygltf::Model& model, const tinyglt
 }
 
 Result<std::vector<glm::mat4>> loadInverseBindTransforms(const tinygltf::Model& model, const uint32_t accessorIdx) {
-    std::vector<glm::mat4> transforms{};
-    const auto& accessor{model.accessors.at(accessorIdx)};
-    if (accessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
-        return resultError("InverseBindTransforms must be a float accessor");
-    }
-
-    const auto& bufferView{model.bufferViews.at(accessor.bufferView)};
-    const auto& buffer{model.buffers.at(bufferView.buffer)};
-
-    const size_t componentByteSize = tinygltf::GetComponentSizeInBytes(accessor.componentType);
-    const size_t componentCount = tinygltf::GetNumComponentsInType(accessor.type);
-    const size_t attributeByteSize{componentCount * componentByteSize};
-    const size_t byteStride{bufferView.byteStride == 0 ? attributeByteSize : bufferView.byteStride};
-
-    transforms.reserve(accessor.count);
-
-    const size_t bufferRangeStart{bufferView.byteOffset + accessor.byteOffset};
-    validateAccessorRange(
-        bufferView, buffer.data.size(), accessor.byteOffset, accessor.count, byteStride, attributeByteSize);
-
-    glm::mat4 temp{};
-    for (size_t i = 0; i < accessor.count; ++i) {
-        const size_t offset{bufferRangeStart + i * byteStride};
-        std::memcpy(&temp, buffer.data.data() + offset, attributeByteSize); // NOLINT
-        transforms.emplace_back(temp);
-    }
-    return transforms;
+    return createBuffer<glm::mat4>(model, model.accessors.at(accessorIdx));
 }
 
 SkinningData createSkinningData(const tinygltf::Model& model, const tinygltf::Skin& skin) {
@@ -585,14 +643,17 @@ void createModelDataFromNode(
             }
             modelData.mesh = createMeshFromPrimitive(model, primitive);
 
-            modelData.mesh.setCustomAttribute(
-                "weights0",
-                createCustomVertexAttributeBuffer<glm::vec4>(
-                    createBuffer<glm::vec4>(model, primitive, "WEIGHTS_0").unwrap()));
-            modelData.mesh.setCustomAttribute(
-                "indices0",
-                createCustomVertexAttributeBuffer<glm::uvec4>(
-                    createBuffer<glm::uvec4, glm::u16vec4>(model, primitive, "JOINTS_0").unwrap()));
+            const bool hasWeights = primitive.attributes.contains("WEIGHTS_0");
+            const bool hasJoints = primitive.attributes.contains("JOINTS_0");
+            CRISP_CHECK_EQ(hasWeights, hasJoints, "GLTF skinning requires both WEIGHTS_0 and JOINTS_0.");
+            if (hasWeights) {
+                auto weights = loadWeightsBuffer(model, primitive).unwrap();
+                auto joints = loadJointIndexBuffer(model, primitive).unwrap();
+                CRISP_CHECK_EQ(weights.size(), modelData.mesh.getVertexCount());
+                CRISP_CHECK_EQ(joints.size(), modelData.mesh.getVertexCount());
+                modelData.mesh.setCustomAttribute("weights0", createCustomVertexAttributeBuffer<glm::vec4>(weights));
+                modelData.mesh.setCustomAttribute("indices0", createCustomVertexAttributeBuffer<glm::uvec4>(joints));
+            }
 
             if (isValidGltfIndex(primitive.material)) {
                 modelData.material =
@@ -703,7 +764,10 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
     std::string err{};
     std::string warn{};
     const auto parseStart = std::chrono::steady_clock::now();
-    const bool success{loader.LoadASCIIFromFile(&model, &err, &warn, path.string())};
+    const bool success =
+        path.extension() == ".glb"
+            ? loader.LoadBinaryFromFile(&model, &err, &warn, path.string())
+            : loader.LoadASCIIFromFile(&model, &err, &warn, path.string());
     const std::chrono::duration<double, std::milli> parseDuration{std::chrono::steady_clock::now() - parseStart};
 
     if (!warn.empty()) {

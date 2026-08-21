@@ -1,5 +1,7 @@
 #include <gmock/gmock.h>
 
+#include <cstring>
+
 #include <Crisp/Mesh/Io/ExternalAssetConfig.hpp>
 #include <Crisp/Mesh/Io/GltfLoader.hpp>
 
@@ -21,6 +23,18 @@ TEST(GltfLoaderTest, LoadsTrackedTriangle) {
     ASSERT_THAT(loaded.models, SizeIs(1));
     EXPECT_EQ(loaded.models[0].mesh.getVertexCount(), 3);
     EXPECT_EQ(loaded.models[0].mesh.getTriangleCount(), 1);
+    EXPECT_EQ(loaded.models[0].mesh.getTriangles()[0], glm::uvec3(0, 1, 2));
+    EXPECT_FALSE(loaded.models[0].mesh.hasCustomAttribute("weights0"));
+    EXPECT_FALSE(loaded.models[0].mesh.hasCustomAttribute("indices0"));
+}
+
+TEST(GltfLoaderTest, LoadsNonIndexedTriangle) {
+    auto asset = loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "NonIndexedTriangle.gltf");
+    ASSERT_THAT(asset, HasValue());
+
+    const auto loaded = asset.unwrap();
+    ASSERT_THAT(loaded.models, SizeIs(1));
+    ASSERT_THAT(loaded.models[0].mesh.getTriangles(), SizeIs(1));
     EXPECT_EQ(loaded.models[0].mesh.getTriangles()[0], glm::uvec3(0, 1, 2));
 }
 
@@ -63,6 +77,13 @@ TEST(GltfLoaderTest, PreservesSkinningAcrossMultiplePrimitives) {
         EXPECT_EQ(model.skinningData.inverseBindTransforms[0], glm::mat4(1.0f));
         ASSERT_TRUE(model.skinningData.modelNodeToLinearIdx.contains(1));
         EXPECT_EQ(model.skinningData.modelNodeToLinearIdx.at(1), 0);
+        EXPECT_TRUE(model.mesh.hasCustomAttribute("weights0"));
+        EXPECT_TRUE(model.mesh.hasCustomAttribute("indices0"));
+        EXPECT_EQ(model.mesh.getCustomAttribute("weights0").buffer.size(), 3 * sizeof(glm::vec4));
+        EXPECT_EQ(model.mesh.getCustomAttribute("indices0").buffer.size(), 3 * sizeof(glm::uvec4));
+        glm::vec4 firstWeights{};
+        std::memcpy(&firstWeights, model.mesh.getCustomAttribute("weights0").buffer.data(), sizeof(firstWeights));
+        EXPECT_EQ(firstWeights, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
         ASSERT_THAT(model.animations, SizeIs(1));
         ASSERT_THAT(model.animations[0].channels, SizeIs(1));
         EXPECT_EQ(model.animations[0].channels[0].targetNode, 0);
