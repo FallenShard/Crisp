@@ -551,6 +551,7 @@ SkinningData createSkinningData(const tinygltf::Model& model, const tinygltf::Sk
 void createModelDataFromNode(
     const tinygltf::Model& model,
     const tinygltf::Node& node,
+    const glm::mat4& parentTransform,
     GltfImageLoader& imageLoader,
     std::vector<ModelData>& models) {
     if (isValidGltfIndex(node.camera)) {
@@ -562,12 +563,14 @@ void createModelDataFromNode(
         modelData.skinningData = createSkinningData(model, model.skins.at(node.skin));
     }
 
+    const glm::mat4 worldTransform = parentTransform * getNodeTransform(node);
+
     if (isValidGltfIndex(node.mesh)) {
         const auto& mesh{model.meshes.at(node.mesh)};
         CRISP_CHECK(node.weights.empty(), "Morph targets are not supported!");
 
         for (const auto& primitive : mesh.primitives) {
-            modelData.transform = getNodeTransform(node);
+            modelData.transform = worldTransform;
             modelData.mesh = createMeshFromPrimitive(model, primitive);
 
             modelData.mesh.setCustomAttribute(
@@ -589,7 +592,7 @@ void createModelDataFromNode(
     }
 
     for (const uint32_t childIdx : node.children) {
-        createModelDataFromNode(model, model.nodes.at(childIdx), imageLoader, models);
+        createModelDataFromNode(model, model.nodes.at(childIdx), worldTransform, imageLoader, models);
     }
 }
 
@@ -714,7 +717,7 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
 
     SceneData sceneData{};
     for (const int32_t nodeIndex : scene.nodes) {
-        createModelDataFromNode(model, model.nodes[nodeIndex], imageLoader, sceneData.models);
+        createModelDataFromNode(model, model.nodes[nodeIndex], glm::mat4(1.0f), imageLoader, sceneData.models);
     }
 
     std::vector<AnimationData> animations{};

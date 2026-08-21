@@ -35,6 +35,19 @@ TEST(GltfLoaderTest, LoadsUnsignedByteIndices) {
     EXPECT_EQ(loaded.models[0].mesh.getTriangles()[0], glm::uvec3(0, 1, 2));
 }
 
+TEST(GltfLoaderTest, AccumulatesParentNodeTransforms) {
+    auto asset =
+        loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "ParentTransformTriangle.gltf");
+    ASSERT_THAT(asset, HasValue());
+
+    const auto loaded = asset.unwrap();
+    ASSERT_THAT(loaded.models, SizeIs(1));
+    const glm::vec3 worldOrigin = glm::vec3(loaded.models[0].transform * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    EXPECT_FLOAT_EQ(worldOrigin.x, 1.0f);
+    EXPECT_FLOAT_EQ(worldOrigin.y, 6.0f);
+    EXPECT_FLOAT_EQ(worldOrigin.z, 0.0f);
+}
+
 TEST(GltfLoaderTest, LoadsEmbeddedImagesInSourceOrder) {
     auto asset = loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "TexturedTriangle.gltf");
     ASSERT_THAT(asset, HasValue());
