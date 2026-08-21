@@ -3,8 +3,8 @@
   "scene": 0,
   "scenes": [{ "nodes": [0] }],
   "nodes": [
-    { "mesh": 0, "skin": 0, "children": [1, 2] },
-    { "name": "Joint" },
+    { "mesh": 0, "skin": 0, "children": [1] },
+    { "name": "Joint", "children": [2] },
     { "name": "NonJoint" }
   ],
   "meshes": [{
@@ -14,29 +14,26 @@
     ]
   }],
   "skins": [{
-    "joints": [1],
-    "inverseBindMatrices": 2
+    "joints": [1]
   }],
   "buffers": [{
-    "uri": "data:application/octet-stream;base64,AAABAAIAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAQAAAQEA=",
-    "byteLength": 140
+    "uri": "data:application/octet-stream;base64,AAABAAIAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAABAAABAQA==",
+    "byteLength": 76
   }],
   "bufferViews": [
     { "buffer": 0, "byteOffset": 0, "byteLength": 6, "target": 34963 },
     { "buffer": 0, "byteOffset": 8, "byteLength": 36, "target": 34962 },
-    { "buffer": 0, "byteOffset": 44, "byteLength": 64 },
-    { "buffer": 0, "byteOffset": 108, "byteLength": 8 },
-    { "buffer": 0, "byteOffset": 116, "byteLength": 24 }
+    { "buffer": 0, "byteOffset": 44, "byteLength": 8 },
+    { "buffer": 0, "byteOffset": 52, "byteLength": 24 }
   ],
   "accessors": [
     { "bufferView": 0, "byteOffset": 0, "componentType": 5123, "count": 3, "type": "SCALAR", "max": [2], "min": [0] },
     { "bufferView": 1, "byteOffset": 0, "componentType": 5126, "count": 3, "type": "VEC3", "max": [1.0, 1.0, 0.0], "min": [0.0, 0.0, 0.0] },
-    { "bufferView": 2, "byteOffset": 0, "componentType": 5126, "count": 1, "type": "MAT4" },
-    { "bufferView": 3, "byteOffset": 0, "componentType": 5126, "count": 2, "type": "SCALAR", "max": [1.0], "min": [0.0] },
-    { "bufferView": 4, "byteOffset": 0, "componentType": 5126, "count": 2, "type": "VEC3" }
+    { "bufferView": 2, "byteOffset": 0, "componentType": 5126, "count": 2, "type": "SCALAR", "max": [1.0], "min": [0.0] },
+    { "bufferView": 3, "byteOffset": 0, "componentType": 5126, "count": 2, "type": "VEC3" }
   ],
   "animations": [{
-    "samplers": [{ "input": 3, "output": 4, "interpolation": "LINEAR" }],
+    "samplers": [{ "input": 2, "output": 3, "interpolation": "LINEAR" }],
     "channels": [
       { "sampler": 0, "target": { "node": 1, "path": "translation" } },
       { "sampler": 0, "target": { "node": 2, "path": "translation" } }

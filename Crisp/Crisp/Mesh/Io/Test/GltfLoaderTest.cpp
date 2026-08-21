@@ -58,6 +58,9 @@ TEST(GltfLoaderTest, PreservesSkinningAcrossMultiplePrimitives) {
     for (const auto& model : loaded.models) {
         EXPECT_THAT(model.skinningData.skeleton.joints, SizeIs(1));
         EXPECT_THAT(model.skinningData.inverseBindTransforms, SizeIs(1));
+        ASSERT_THAT(model.skinningData.skeleton.parents, SizeIs(1));
+        EXPECT_EQ(model.skinningData.skeleton.parents[0], -1);
+        EXPECT_EQ(model.skinningData.inverseBindTransforms[0], glm::mat4(1.0f));
         ASSERT_TRUE(model.skinningData.modelNodeToLinearIdx.contains(1));
         EXPECT_EQ(model.skinningData.modelNodeToLinearIdx.at(1), 0);
         ASSERT_THAT(model.animations, SizeIs(1));

@@ -538,11 +538,19 @@ SkinningData createSkinningData(const tinygltf::Model& model, const tinygltf::Sk
     }
     for (const auto& [modelNodeIdx, localIdx] : modelNodeToLocalIdx) {
         for (const auto& child : model.nodes.at(modelNodeIdx).children) {
-            skeleton.parents[modelNodeToLocalIdx[child]] = localIdx;
+            const auto childJoint = modelNodeToLocalIdx.find(child);
+            if (childJoint != modelNodeToLocalIdx.end()) {
+                skeleton.parents[childJoint->second] = localIdx;
+            }
         }
     }
 
-    skinningData.inverseBindTransforms = loadInverseBindTransforms(model, skin.inverseBindMatrices).unwrap();
+    if (isValidGltfIndex(skin.inverseBindMatrices)) {
+        skinningData.inverseBindTransforms = loadInverseBindTransforms(model, skin.inverseBindMatrices).unwrap();
+        CRISP_CHECK_EQ(skinningData.inverseBindTransforms.size(), jointCount);
+    } else {
+        skinningData.inverseBindTransforms.resize(jointCount, glm::mat4(1.0f));
+    }
     skinningData.skeleton = std::move(skeleton);
     skinningData.modelNodeToLinearIdx = std::move(modelNodeToLocalIdx);
     return skinningData;
