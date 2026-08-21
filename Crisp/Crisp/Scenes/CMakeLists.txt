@@ -11,8 +11,6 @@ add_cpp_static_library(CrispScenes
     # "ClusteredLightingScene.hpp"
     # "GltfViewerScene.cpp"
     # "GltfViewerScene.hpp"
-    # "FluidSimulationScene.cpp"
-    # "FluidSimulationScene.hpp"
     # "NormalMappingScene.cpp"
     # "NormalMappingScene.hpp"
     # "OceanScene.cpp"
@@ -34,6 +32,7 @@ target_link_libraries(CrispScenes
 
     PRIVATE Crisp::PbrScene
     PRIVATE Crisp::OceanScene
+    PRIVATE Crisp::FluidSimulationScene
     PRIVATE Crisp::VulkanRayTracingScene
 
     PUBLIC Crisp::Models
@@ -102,6 +101,25 @@ target_link_libraries(CrispPbrScene
     PRIVATE Crisp::ImGuiCameraUtils
     PRIVATE Crisp::AtmosphereGui
 )
+
+add_cpp_static_library(CrispFluidSimulationScene
+    "FluidSimulationScene.cpp"
+    "FluidSimulationScene.hpp"
+)
+target_link_libraries(CrispFluidSimulationScene
+    PUBLIC Crisp::Scene
+    PUBLIC Crisp::Camera
+    PUBLIC Crisp::Models
+    PRIVATE Crisp::RenderGraph
+    PRIVATE Crisp::RenderGraphGui
+    PRIVATE ImGui
+)
+add_cpp_test(CrispFluidSimulationSceneTest
+    "Test/FluidSimulationSceneTest.cpp")
+target_link_libraries(CrispFluidSimulationSceneTest
+    PRIVATE Crisp::FluidSimulationScene
+    PRIVATE Crisp::Renderer
+    PRIVATE Crisp::Application)
 
 add_cpp_static_library(CrispVulkanRayTracingScene
     "VulkanRayTracingScene.cpp"

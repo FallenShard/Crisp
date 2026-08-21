@@ -1,7 +1,7 @@
 #version 450 core
 
 // Output: all cell counts will be 0
-layout(set = 0, binding = 0) buffer CellCounts {
+layout(std430, set = 0, binding = 0) buffer CellCounts {
     uint cellCounts[];
 };
 

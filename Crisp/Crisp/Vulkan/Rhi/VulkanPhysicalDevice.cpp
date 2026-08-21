@@ -368,7 +368,7 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                 [](const VulkanPhysicalDevice& physicalDevice) {
                     const auto& core = physicalDevice.queryFeatures();
                     return core.samplerAnisotropy && core.fillModeNonSolid && core.geometryShader &&
-                           core.tessellationShader && core.pipelineStatisticsQuery;
+                           core.tessellationShader && core.pipelineStatisticsQuery && core.largePoints;
                 },
             .linkFunc =
                 [](VulkanDeviceFeatureChain& featureChain) {
@@ -378,6 +378,7 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                     core.geometryShader = VK_TRUE;
                     core.tessellationShader = VK_TRUE;
                     core.pipelineStatisticsQuery = VK_TRUE;
+                    core.largePoints = VK_TRUE;
                 },
         },
         VulkanDeviceFeatureRequest{
@@ -427,7 +428,8 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
             .isSupportedFunc =
                 [](const VulkanPhysicalDevice& physicalDevice) {
                     const auto f13 = physicalDevice.queryFeatures<VkPhysicalDeviceVulkan13Features>();
-                    return f13.synchronization2 && f13.maintenance4 && f13.dynamicRendering;
+                    return f13.synchronization2 && f13.maintenance4 && f13.dynamicRendering &&
+                           f13.shaderDemoteToHelperInvocation;
                 },
             .linkFunc =
                 [](VulkanDeviceFeatureChain& featureChain) {
@@ -435,6 +437,7 @@ std::vector<VulkanDeviceFeatureRequest> createDefaultFeatureRequests() {
                     f13.synchronization2 = VK_TRUE;
                     f13.maintenance4 = VK_TRUE;
                     f13.dynamicRendering = VK_TRUE;
+                    f13.shaderDemoteToHelperInvocation = VK_TRUE;
                 },
         },
         VulkanDeviceFeatureRequest{

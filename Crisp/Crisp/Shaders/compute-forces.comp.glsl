@@ -3,40 +3,40 @@
 // Input buffers
 // ==========================================
 // Particle positions
-layout(set = 0, binding = 0) buffer Positions {
+layout(std430, set = 0, binding = 0) buffer Positions {
     vec4 positions[];
 };
 
 // Prefix sum of cell counts
-layout(set = 0, binding = 1) buffer CellCounts {
+layout(std430, set = 0, binding = 1) buffer CellCounts {
     uint cellCounts[];
 };
 
 // Particles belonging to cell i are identified with
 // indices[cellCounts[i]]...indices[cellCounts[i + 1]]
-layout(set = 0, binding = 2) buffer Indices {
+layout(std430, set = 0, binding = 2) buffer Indices {
     uint indices[];
 };
 
 // Particle densities
-layout(set = 0, binding = 3) buffer Densities {
+layout(std430, set = 0, binding = 3) buffer Densities {
     float densities[];
 };
 
 // Particle pressures
-layout(set = 0, binding = 4) buffer Pressures {
+layout(std430, set = 0, binding = 4) buffer Pressures {
     float pressures[];
 };
 
 // Particle velocities
-layout(set = 0, binding = 5) buffer Velocities {
+layout(std430, set = 0, binding = 5) buffer Velocities {
     vec4 velocities[];
 };
 
 // Output buffers
 // ==========================================
 // Particle densities
-layout(set = 0, binding = 6) buffer Forces {
+layout(std430, set = 0, binding = 6) buffer Forces {
     vec4 forces[];
 };
 
@@ -66,7 +66,6 @@ const float h = 4.0f * particleRadius;
 const float h2 = h * h;
 const float h3 = h2 * h;
 
-const float poly6Const = 315.0f / (64.0f * PI * h3 * h3 * h3);
 const float spikyGradConst = -45.0f / (PI * h2 * h2 * h2);
 const float viscosityLaplaceConst = 45.0f / (PI * h3 * h3);
 
@@ -89,15 +88,6 @@ float cubicSpline(float x) {
         float q2 = q * q;
         return 2.0f / 3.0f - q2 + 0.5f * q2 * q;
     }
-}
-
-float poly6(float x) {
-    if (x >= h) {
-        return 0.0f;
-    }
-
-    float val = h2 - x * x;
-    return poly6Const * val * val * val;
 }
 
 vec3 spikyGrad(vec3 v, float x) {

@@ -5,8 +5,6 @@ add_cpp_static_library(CrispModels
 
     # "BoxVisualizer.cpp"
     # "BoxVisualizer.hpp"
-    # "FluidSimulation.hpp"
-    # "FluidSimulationParams.hpp"
     "Skybox.cpp"
     "Skybox.hpp"
 
@@ -16,11 +14,12 @@ add_cpp_static_library(CrispModels
     "Tonemap.cpp"
     "Tonemap.hpp"
 
-    # "SPH.cpp"
-    # "SPH.hpp"
+    "SPH.cpp"
+    "SPH.hpp"
 )
 target_link_libraries(CrispModels
     PUBLIC Crisp::Renderer
+    PUBLIC Crisp::RenderGraph
     PUBLIC Crisp::MeshIo
     PUBLIC Crisp::Window
 )

@@ -3,32 +3,28 @@
 // Input buffers
 // ==========================================
 // Particle positions
-layout(set = 0, binding = 0) buffer Positions {
+layout(std430, set = 0, binding = 0) buffer Positions {
     vec4 positions[];
 };
 
 // Prefix sum of cell counts
-layout(set = 0, binding = 1) buffer CellCounts {
+layout(std430, set = 0, binding = 1) buffer CellCounts {
     uint cellCounts[];
 };
 
-layout(set = 0, binding = 2) buffer ReorderedPositions {
+layout(std430, set = 0, binding = 2) buffer ReorderedPositions {
     vec4 reorderedPositions[];
 };
-// layout(set = 0, binding = 2) buffer Indices
-// {
-//     uint indices[];
-// };
 
 // Output buffers
 // ==========================================
 // Particle densities
-layout(set = 0, binding = 3) buffer Densities {
+layout(std430, set = 0, binding = 3) buffer Densities {
     float densities[];
 };
 
 // Particle pressures
-layout(set = 0, binding = 4) buffer Pressures {
+layout(std430, set = 0, binding = 4) buffer Pressures {
     float pressures[];
 };
 
@@ -65,12 +61,12 @@ uint getGlobalIndex() {
     return getGridLinearIndex(gl_GlobalInvocationID, gl_WorkGroupSize * gl_NumWorkGroups);
 }
 
-float poly6(float x) {
-    if (x >= h) {
+float poly6FromDist2(float dist2) {
+    if (dist2 >= h2) {
         return 0.0f;
     }
 
-    float val = h2 - x * x;
+    float val = h2 - dist2;
     return poly6Const * val * val * val;
 }
 
@@ -103,10 +99,8 @@ void main() {
                 uint cellStart = cellCounts[cellIdx];
                 uint cellEnd = cellIdx == pc.numCells - 1 ? numParticles : cellCounts[cellIdx + 1];
                 for (uint k = cellStart; k < cellEnd; k++) {
-                    vec3 posJ = reorderedPositions[k].xyz;
-
-                    float dist = length(position - posJ);
-                    density += mass * poly6(dist);
+                    vec3 diff = position - reorderedPositions[k].xyz;
+                    density += mass * poly6FromDist2(dot(diff, diff));
                 }
             }
         }

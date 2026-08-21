@@ -1,86 +1,166 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/Models/FluidSimulation.hpp>
 #include <Crisp/Renderer/Material.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 
 namespace crisp {
-class VulkanPipeline;
-class Renderer;
-class VulkanDevice;
-class RenderGraph;
 
-class SPH : public FluidSimulation {
+struct SphPassData {
+    RenderGraphResourceHandle positions;
+    RenderGraphResourceHandle colors;
+};
+
+struct SphParameters {
+    glm::vec3 gravity{0.0f, -9.81f, 0.0f};
+    float viscosity{5.0f};
+    float kappa{1.0f}; // Surface tension coefficient.
+
+    // Simulated seconds one rendered frame advances, split evenly across the substeps.
+    float simulatedTimePerFrame{1.0f / 60.0f};
+    // Take that from the real frame time instead, so the fluid tracks wall clock rather than frames.
+    bool useRealFrameTime{false};
+
+    // Ceiling on a single substep, so a hitch costs simulated time rather than the solver. The
+    // Courant bound for the hardcoded stiffness is 0.4h/sqrt(stiffness) = 1.6 ms; stay under it.
+    float maxSubstepTime{0.0015f};
+};
+
+struct SphConfig {
+    glm::uvec3 fluidDim{32, 64, 32};
+    float particleRadius{0.01f};
+    // Solver iterations per rendered frame. 16 puts the default substep near 1 ms.
+    uint32_t substepCount{16};
+};
+
+class SPH {
 public:
-    SPH(Renderer* renderer, RenderGraph* renderGraph);
+    SPH(Renderer& renderer, const SphConfig& config);
+    ~SPH();
 
-    void update(float dt) override;
+    SPH(const SPH&) = delete;
+    SPH& operator=(const SPH&) = delete;
+    SPH(SPH&&) = delete;
+    SPH& operator=(SPH&&) = delete;
 
-    void onKeyPressed(Key key, int modifier) override;
-    void setGravityX(float value) override;
-    void setGravityY(float value) override;
-    void setGravityZ(float value) override;
-    void setViscosity(float value) override;
-    void setSurfaceTension(float value) override;
-    void reset() override;
+    void addComputePasses(rg::RenderGraph& renderGraph);
 
-    float getParticleRadius() const override;
+    // Derives the substep size from the configured rate. Call once per frame, before render().
+    void update(float dt);
 
-    VulkanBuffer* getVertexBuffer(std::string_view key) const override;
+    void reset();
 
-    uint32_t getParticleCount() const override;
-    uint32_t getCurrentSection() const override;
+    uint32_t getSubstepCount() const {
+        return m_substepCount;
+    }
+
+    // Takes effect only once the render graph is rebuilt: the substep count is how many times the
+    // solver chain is baked into it.
+    void setSubstepCount(const uint32_t substepCount) {
+        m_substepCount = substepCount;
+    }
+
+    float getSubstepTime() const {
+        return m_substepTime;
+    }
+
+    bool isPaused() const {
+        return m_isPaused;
+    }
+
+    void setPaused(const bool paused) {
+        m_isPaused = paused;
+    }
+
+    uint32_t getParticleCount() const {
+        return m_numParticles;
+    }
+
+    float getParticleRadius() const {
+        return m_particleRadius;
+    }
+
+    // The box the particles are confined to, in simulation units (metres).
+    glm::vec3 getFluidSpaceSize() const {
+        return m_fluidSpaceSize;
+    }
+
+    VulkanBuffer& getPositionBuffer() const {
+        return *m_positionBuffer;
+    }
+
+    VulkanBuffer& getColorBuffer() const {
+        return *m_colorBuffer;
+    }
+
+    SphParameters& getParameters() {
+        return m_params;
+    }
+
+    const SphParameters& getParameters() const {
+        return m_params;
+    }
 
 private:
-    std::vector<glm::vec4> createInitialPositions(glm::uvec3 fluidDim, float particleRadius) const;
+    struct Dispatch {
+        std::unique_ptr<VulkanPipeline> pipeline;
+        std::unique_ptr<Material> material;
+        VkExtent3D dispatchSize{};
 
-    Renderer* m_renderer;
-    std::unique_ptr<VulkanBuffer> m_vertexBuffer;
+        void bind(const FrameContext& ctx) const;
+    };
+
+    Dispatch createDispatch(
+        const std::string& shaderName, const VkExtent3D& workGroupSize, VkExtent3D dispatchSize) const;
+    std::vector<glm::vec4> createInitialPositions() const;
+
+    Renderer& m_renderer;
+
+    uint32_t m_numParticles;
+    float m_particleRadius;
+    glm::uvec3 m_fluidDim;
+    glm::vec3 m_fluidSpaceSize;
+
+    glm::uvec3 m_gridDim;
+    uint32_t m_numCells;
+    float m_cellSize;
+
+    // Elements one `scan` workgroup reduces, and therefore the number of partial sums `scan-block`
+    // has to scan in a single workgroup.
+    uint32_t m_scanElementsPerBlock;
+    uint32_t m_scanBlockCount;
+
+    SphParameters m_params;
+    uint32_t m_substepCount;
+    float m_substepTime{0.0f};
+    bool m_isPaused{false};
+
+    std::unique_ptr<VulkanBuffer> m_positionBuffer;
     std::unique_ptr<VulkanBuffer> m_colorBuffer;
-    std::unique_ptr<VulkanBuffer> m_indexBuffer;
-
-    std::unique_ptr<VulkanBuffer> m_reorderedPositionBuffer;
+    std::unique_ptr<VulkanBuffer> m_velocityBuffer;
+    std::unique_ptr<VulkanBuffer> m_forceBuffer;
+    std::unique_ptr<VulkanBuffer> m_densityBuffer;
+    std::unique_ptr<VulkanBuffer> m_pressureBuffer;
 
     std::unique_ptr<VulkanBuffer> m_cellCountBuffer;
     std::unique_ptr<VulkanBuffer> m_cellIdBuffer;
+    std::unique_ptr<VulkanBuffer> m_sortedIndexBuffer;
+    std::unique_ptr<VulkanBuffer> m_sortedPositionBuffer;
     std::unique_ptr<VulkanBuffer> m_blockSumBuffer;
-    uint32_t m_blockSumRegionSize;
 
-    std::unique_ptr<VulkanBuffer> m_densityBuffer;
-    std::unique_ptr<VulkanBuffer> m_pressureBuffer;
-    std::unique_ptr<VulkanBuffer> m_velocityBuffer;
-    std::unique_ptr<VulkanBuffer> m_forcesBuffer;
-
-    float m_particleRadius;
-    glm::uvec3 m_fluidDim;
-
-    float m_timeDelta;
-
-    mutable uint32_t m_prevSection;
-    mutable uint32_t m_currentSection;
-
-    struct GridParams {
-        glm::uvec3 dim;
-        uint32_t numCells;
-        glm::vec3 spaceSize;
-        float cellSize;
-    };
-
-    glm::vec3 m_fluidSpaceMin;
-    glm::vec3 m_fluidSpaceMax;
-    GridParams m_gridParams;
-
-    uint32_t m_numParticles;
-
-    float m_viscosityFactor = 5.0f;
-    float m_kappa = 1.0f;
-    glm::vec3 m_gravity = {0.0f, -9.81f, 0.0f};
-    bool m_runSimulation = false;
-
-    RenderGraph* m_renderGraphLegacy;
+    Dispatch m_clearHashGrid;
+    Dispatch m_cellCount;
+    Dispatch m_scan;
+    Dispatch m_scanBlock;
+    Dispatch m_scanCombine;
+    Dispatch m_reindex;
+    Dispatch m_densityPressure;
+    Dispatch m_forces;
+    Dispatch m_integrate;
 };
 } // namespace crisp

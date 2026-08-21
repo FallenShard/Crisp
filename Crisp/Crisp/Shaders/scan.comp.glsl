@@ -1,20 +1,22 @@
 #version 450 core
 
-layout(set = 0, binding = 0) buffer CellCounts {
-    uint cellCounts[];
+layout(std430, set = 0, binding = 0) buffer Elements {
+    uint elements[];
 };
 
-layout(set = 0, binding = 1) buffer BlockSums {
+layout(std430, set = 0, binding = 1) buffer BlockSums {
     uint blockSums[];
 };
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
+// Blelloch scan over 2 * gl_WorkGroupSize.x elements per workgroup. That count must be a power of
+// two; a workgroup whose slice runs past elementCount pads with zeros instead.
 shared uint temp[gl_WorkGroupSize.x * 2];
 
 layout(push_constant) uniform PushConstant {
     int storeSumBlocks;
-    uint numCells;
+    uint elementCount;
 }
 pushConst;
 
@@ -29,8 +31,10 @@ void main() {
     uint n = gl_WorkGroupSize.x * 2;
     uint localIdx = gl_LocalInvocationIndex;
 
-    temp[2 * localIdx] = 2 * localIdx < n ? cellCounts[2 * globalIdx] : 0;
-    temp[2 * localIdx + 1] = 2 * localIdx + 1 < n ? cellCounts[2 * globalIdx + 1] : 0;
+    uint lo = 2 * globalIdx;
+    uint hi = lo + 1;
+    temp[2 * localIdx] = lo < pushConst.elementCount ? elements[lo] : 0;
+    temp[2 * localIdx + 1] = hi < pushConst.elementCount ? elements[hi] : 0;
 
     uint offset = 1;
     for (uint i = n >> 1; i > 0; i >>= 1) {
@@ -66,6 +70,10 @@ void main() {
 
     memoryBarrierShared();
     barrier();
-    cellCounts[2 * globalIdx] = temp[2 * localIdx];
-    cellCounts[2 * globalIdx + 1] = temp[2 * localIdx + 1];
+    if (lo < pushConst.elementCount) {
+        elements[lo] = temp[2 * localIdx];
+    }
+    if (hi < pushConst.elementCount) {
+        elements[hi] = temp[2 * localIdx + 1];
+    }
 }

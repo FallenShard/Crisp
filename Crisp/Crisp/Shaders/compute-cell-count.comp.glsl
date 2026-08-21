@@ -1,28 +1,24 @@
 #version 450 core
 
 // Input: particle positions
-layout(set = 0, binding = 0) buffer Positions {
+layout(std430, set = 0, binding = 0) buffer Positions {
     vec4 positions[];
 };
 
 // Output: number of particles in each cell
-layout(set = 0, binding = 1) buffer CellCounts {
+layout(std430, set = 0, binding = 1) buffer CellCounts {
     uint cellCounts[];
 };
 
 // Output: intra-cell index of a particle
-layout(set = 0, binding = 2) buffer CellIds {
+layout(std430, set = 0, binding = 2) buffer CellIds {
     uint cellIds[];
 };
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
-uvec3 calculateGridPosition(vec3 position, float cellSize) {
-    uvec3 gridPosition;
-    gridPosition.x = uint(position.x / cellSize);
-    gridPosition.y = uint(position.y / cellSize);
-    gridPosition.z = uint(position.z / cellSize);
-    return gridPosition;
+uvec3 calculateGridPosition(vec3 position, float cellSize, uvec3 gridDims) {
+    return min(uvec3(max(position, vec3(0.0f)) / cellSize), gridDims - uvec3(1));
 }
 
 uint getGridLinearIndex(uvec3 gridPosition, uvec3 gridDims) {
@@ -46,7 +42,7 @@ void main() {
     }
 
     vec3 particlePosition = positions[threadIdx].xyz;
-    uvec3 gridPosition = calculateGridPosition(particlePosition, cellSize);
+    uvec3 gridPosition = calculateGridPosition(particlePosition, cellSize, dim);
     uint linearGridIdx = getGridLinearIndex(gridPosition, dim);
 
     uint intraCellIdx = atomicAdd(cellCounts[linearGridIdx], 1);

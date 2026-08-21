@@ -1,58 +1,57 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
 
 #include <Crisp/Camera/FreeCameraController.hpp>
 #include <Crisp/Geometry/TransformPack.hpp>
-#include <Crisp/Renderer/RenderNode.hpp>
-#include <Crisp/Renderer/RenderTargetCache.hpp>
+#include <Crisp/Models/SPH.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp {
-class FluidSimulation;
-
-class SceneRenderPass;
-class VulkanPipeline;
-class VulkanImageView;
-class VulkanDevice;
-class VulkanSampler;
 
 class FluidSimulationScene : public Scene {
 public:
     FluidSimulationScene(Renderer* renderer, Window* window);
-    ~FluidSimulationScene();
+    ~FluidSimulationScene() override;
 
-    virtual void resize(int width, int height) override;
-    virtual void update(float dt) override;
-    virtual void render() override;
+    FluidSimulationScene(FluidSimulationScene&&) = delete;
+    FluidSimulationScene& operator=(FluidSimulationScene&&) = delete;
+    FluidSimulationScene(const FluidSimulationScene&) = delete;
+    FluidSimulationScene& operator=(const FluidSimulationScene&) = delete;
+
+    void resize(int width, int height) override;
+    void update(const UpdateParams& updateParams) override;
+    void render(const FrameContext& frameContext) override;
+    void drawGui() override;
+
+    const SPH& getSimulation() const {
+        return *m_fluidSimulation;
+    }
 
 private:
-    void createGui();
-
-    std::unique_ptr<FreeCameraController> m_cameraController;
-
-    std::unique_ptr<FluidSimulation> m_fluidSimulation;
-
-    std::unique_ptr<VulkanPipeline> m_pointSpritePipeline;
-    std::unique_ptr<Material> m_pointSpriteMaterial;
-
-    TransformPack m_transforms;
-    std::unique_ptr<UniformBuffer> m_transformsBuffer;
-
+    // Mirrors the ParticleParams block in point-sphere-sprite.{vert,frag}.glsl.
     struct ParticleParams {
         float radius;
         float screenSpaceScale;
     };
 
-    ParticleParams m_particleParams;
+    void setupInput();
+    void buildRenderGraph();
+    void resetCamera();
 
-    std::unordered_map<std::string, std::unique_ptr<UniformBuffer>> m_uniformBuffers;
+    std::unique_ptr<rg::RenderGraph> m_renderGraph;
+    std::unique_ptr<FreeCameraController> m_cameraController;
+    std::unique_ptr<SPH> m_fluidSimulation;
 
-    RenderNode m_fluidRenderNode;
+    Geometry* m_particleGeometry{nullptr};
+    VulkanPipeline* m_pointSpritePipeline{nullptr};
+    Material* m_pointSpriteMaterial{nullptr};
 
-    std::unique_ptr<Geometry> m_fluidGeometry;
+    TransformPack m_transforms{};
+    ParticleParams m_particleParams{};
 
-    RenderTargetCache m_renderTargetCache;
+    // The simulation box is a metre or so across; the scene is drawn at this magnification.
+    float m_vizScale{10.0f};
 };
 } // namespace crisp

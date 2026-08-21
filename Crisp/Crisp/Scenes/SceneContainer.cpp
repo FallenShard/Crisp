@@ -3,7 +3,7 @@
 // #include <Crisp/Scenes/AmbientOcclusionScene.hpp>
 #include <Crisp/Scenes/AtmosphereScene.hpp>
 // #include <Crisp/Scenes/ClusteredLightingScene.hpp>
-// #include <Crisp/Scenes/FluidSimulationScene.hpp>
+#include <Crisp/Scenes/FluidSimulationScene.hpp>
 // #include <Crisp/Scenes/GltfViewerScene.hpp>
 // #include <Crisp/Scenes/NormalMappingScene.hpp>
 #include <Crisp/Scenes/OceanScene.hpp>
@@ -43,9 +43,9 @@ std::unique_ptr<Scene> createScene(
     // if (name == kSceneNames[0]) {
     //     return std::make_unique<AmbientOcclusionScene>(renderer, window);
     // }
-    // if (name == kSceneNames[1]) {
-    //     return std::make_unique<FluidSimulationScene>(renderer, window);
-    // }
+    if (name == kSceneNames[1]) {
+        return std::make_unique<FluidSimulationScene>(renderer, window);
+    }
     // if (name == kSceneNames[2]) {
     //     return std::make_unique<ShadowMappingScene>(renderer, window);
     // }

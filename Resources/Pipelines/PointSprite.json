@@ -1,0 +1,14 @@
+{
+    "shaders"            : { "vert": "point-sphere-sprite.vert", "frag": "point-sphere-sprite.frag" },
+    "vertexInputBindings": [
+        { "locations": [ 0 ], "inputRate": "vertex" },
+        { "locations": [ 1 ], "inputRate": "vertex" }
+    ],
+    "descriptorSets"     : [
+        { "buffered": false, "dynamicBuffers": [ 0 ] },
+        { "buffered": false, "dynamicBuffers": [ 0 ] }
+    ],
+    "inputAssembly"      : { "primitiveTopology": "pointList" },
+    "depthStencil"       : { "reverseDepth": true },
+    "rasterization"      : { "cullMode": "none" }
+}

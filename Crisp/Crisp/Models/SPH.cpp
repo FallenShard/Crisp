@@ -1,592 +1,430 @@
 #include <Crisp/Models/SPH.hpp>
 
+#include <algorithm>
+#include <bit>
+
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Renderer/ComputePipeline.hpp>
-#include <Crisp/Renderer/RenderGraph.hpp>
-#include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
 namespace {
 constexpr uint32_t kScanBlockSize = 256;
 constexpr uint32_t kScanElementsPerThread = 2;
-constexpr uint32_t kScanElementsPerBlock = kScanBlockSize * kScanElementsPerThread;
 
-void setDispatchLayout(RenderGraph::Node& computeNode, const glm::ivec3& workGroupSize, const glm::ivec3& items) {
-    computeNode.workGroupSize.width = workGroupSize.x;
-    computeNode.workGroupSize.height = workGroupSize.y;
-    computeNode.workGroupSize.depth = workGroupSize.z;
+constexpr float kSmoothingRadiusInParticleRadii = 4.0f;
 
-    const auto gridSize = (items + workGroupSize - 1) / workGroupSize;
-    computeNode.numWorkGroups.width = gridSize.x;
-    computeNode.numWorkGroups.height = gridSize.y;
-    computeNode.numWorkGroups.depth = gridSize.z;
+struct GridPushConstants {
+    glm::uvec3 dim;
+    uint32_t numCells;
+    glm::vec3 spaceSize;
+    float cellSize;
+};
+
+static_assert(sizeof(GridPushConstants) == 32);
+
+struct CellCountPushConstants {
+    glm::uvec3 dim;
+    float cellSize;
+    uint32_t numParticles;
+};
+
+struct ScanPushConstants {
+    int32_t storeSumBlocks;
+    uint32_t elementCount;
+};
+
+struct ScanCombinePushConstants {
+    uint32_t elementCount;
+    uint32_t elementsPerBlock;
+};
+
+struct ParticlePushConstants {
+    GridPushConstants grid;
+    uint32_t numParticles;
+};
+
+struct ForcesPushConstants {
+    GridPushConstants grid;
+    glm::vec3 gravity;
+    uint32_t numParticles;
+    float viscosity;
+    float kappa;
+};
+
+static_assert(sizeof(ForcesPushConstants) == 56);
+
+struct IntegratePushConstants {
+    GridPushConstants grid;
+    float timeDelta;
+    uint32_t numParticles;
+};
+
+VkExtent3D linearDispatch(const uint32_t itemCount, const uint32_t workGroupSize) {
+    return {(itemCount + workGroupSize - 1) / workGroupSize, 1, 1};
 }
 
-std::unique_ptr<VulkanPipeline> createComputePipeline(
-    Renderer* renderer, const std::string& shaderName, const int32_t dynamicBuffers, VkExtent3D workGroupSize) {
-    return crisp::createComputePipeline(
-        renderer->getDevice(),
-        renderer->getAssetPaths().getShaderSpvPath(shaderName),
-        workGroupSize,
-        [dynamicBuffers](PipelineLayoutBuilder& builder) {
-            for (int32_t i = 0; i < dynamicBuffers; ++i) {
-                builder.setDescriptorDynamic(0, i, true);
-            }
-        });
+RenderGraphBufferDescription describe(const VulkanBuffer& buffer) {
+    return {
+        .formatHint = VK_FORMAT_UNDEFINED,
+        .size = buffer.getSize(),
+        .usageFlags = 0,
+        .externalBuffer = buffer.getHandle(),
+    };
 }
 
-void createMaterial(
-    RenderGraph::Node& computeNode, Renderer* renderer, const std::string& shaderName, int32_t dynamicBuffers) {
-    computeNode.pipeline = createComputePipeline(renderer, shaderName, dynamicBuffers, computeNode.workGroupSize);
-    computeNode.material = std::make_unique<Material>(computeNode.pipeline.get());
+std::unique_ptr<VulkanBuffer> createParticleBuffer(
+    const VulkanDevice& device, const VkDeviceSize size, const VkBufferUsageFlags2 extraUsage = 0) {
+    return std::make_unique<VulkanBuffer>(
+        device,
+        size,
+        VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | extraUsage,
+        BufferMemoryType::GpuOnly);
 }
-
 } // namespace
 
-SPH::SPH(Renderer* renderer, RenderGraph* renderGraph)
+void SPH::Dispatch::bind(const FrameContext& ctx) const {
+    ctx.commandEncoder.bindPipeline(*pipeline);
+    ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
+}
+
+SPH::Dispatch SPH::createDispatch(
+    const std::string& shaderName, const VkExtent3D& workGroupSize, const VkExtent3D dispatchSize) const {
+    Dispatch dispatch{};
+    dispatch.dispatchSize = dispatchSize;
+    dispatch.pipeline = createComputePipeline(
+        m_renderer.getDevice(), m_renderer.getAssetPaths().getShaderSpvPath(shaderName), workGroupSize);
+    dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
+    dispatch.material->setDebugName(shaderName);
+    return dispatch;
+}
+
+SPH::SPH(Renderer& renderer, const SphConfig& config)
     : m_renderer(renderer)
-    , m_particleRadius(0.01f)
-    , m_fluidDim(32, 64, 32)
-    , m_timeDelta(0.0f)
-    , m_prevSection(0)
-    , m_currentSection(0)
-    , m_numParticles(m_fluidDim.x * m_fluidDim.y * m_fluidDim.z)
-    , m_runSimulation{true}
-    , m_renderGraphLegacy(renderGraph) {
-
-    const VkDeviceSize vertexBufferSize = m_numParticles * sizeof(glm::vec4);
-    m_vertexBuffer = std::make_unique<VulkanBuffer>(
-        m_renderer->getDevice(),
-        vertexBufferSize,
-        VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT,
-        BufferMemoryType::GpuOnly);
-    const std::vector<glm::vec4> positions = createInitialPositions(m_fluidDim, m_particleRadius);
-    fillDeviceBuffer(*m_renderer, m_vertexBuffer.get(), positions.data(), vertexBufferSize);
-
-    m_colorBuffer = std::make_unique<VulkanBuffer>(
-        m_renderer->getDevice(),
-        vertexBufferSize,
-        VK_BUFFER_USAGE_2_TRANSFER_DST_BIT | VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT,
-        BufferMemoryType::GpuOnly);
-    const auto colors = std::vector<glm::vec4>(m_numParticles, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
-    fillDeviceBuffer(*m_renderer, m_colorBuffer.get(), colors.data(), vertexBufferSize);
-
-    m_reorderedPositionBuffer = createStorageBuffer(m_renderer->getDevice(), vertexBufferSize);
-
-    m_fluidSpaceMin = glm::vec3(0.0f);
-    //// m_fluidSpaceMax = glm::vec3(m_fluidDim) * 2.0f * 2.0f * m_particleRadius;
-    m_fluidSpaceMax = glm::vec3(m_fluidDim.x, m_fluidDim.y / 2, m_fluidDim.z / 2) * 4.0f * m_particleRadius;
-    m_gridParams.cellSize = 4 * m_particleRadius;
-    m_gridParams.spaceSize = m_fluidSpaceMax - m_fluidSpaceMin;
-    m_gridParams.dim = glm::ivec3(glm::ceil((m_fluidSpaceMax - m_fluidSpaceMin) / m_gridParams.cellSize));
-    m_gridParams.numCells = m_gridParams.dim.x * m_gridParams.dim.y * m_gridParams.dim.z;
-
-    m_cellCountBuffer = createStorageBuffer(m_renderer->getDevice(), m_gridParams.numCells * sizeof(uint32_t));
-    m_cellIdBuffer = createStorageBuffer(m_renderer->getDevice(), m_numParticles * sizeof(uint32_t));
-    m_indexBuffer = createStorageBuffer(m_renderer->getDevice(), m_numParticles * sizeof(uint32_t));
-
-    m_blockSumRegionSize =
-        static_cast<uint32_t>(std::max(m_gridParams.numCells / kScanElementsPerBlock * sizeof(uint32_t), 32ull));
-    m_blockSumBuffer = createStorageBuffer(m_renderer->getDevice(), m_blockSumRegionSize);
-
-    m_densityBuffer = createStorageBuffer(m_renderer->getDevice(), m_numParticles * sizeof(float));
-    m_pressureBuffer = createStorageBuffer(m_renderer->getDevice(), m_numParticles * sizeof(float));
-    m_velocityBuffer = createStorageBuffer(m_renderer->getDevice(), vertexBufferSize, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT);
-    auto velocities = std::vector<glm::vec4>(m_numParticles, glm::vec4(glm::vec3(0.0f), 1.0f));
-    fillDeviceBuffer(*m_renderer, m_velocityBuffer.get(), velocities.data(), vertexBufferSize, 0);
-    m_forcesBuffer = createStorageBuffer(m_renderer->getDevice(), vertexBufferSize);
-
-    // Clear Hash Grid
-    auto& clearHashGrid = renderGraph->addComputePass("clear-hash-grid");
-    setDispatchLayout(clearHashGrid, glm::ivec3(256, 1, 1), glm::ivec3(m_gridParams.numCells, 1, 1));
-    createMaterial(clearHashGrid, m_renderer, "clear-hash-grid.comp", 1);
-
-    // Output
-    clearHashGrid.material->writeDescriptor(0, 0, *m_cellCountBuffer);
-
-    clearHashGrid.preDispatchCallback =
-        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-            node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.numCells);
-            node.material->setDynamicOffset(frameIdx, 0, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-            node.isEnabled = false;
-        };
-
-    renderGraph->addDependency(
-        "clear-hash-grid",
-        "compute-cell-count",
-        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarrier(
-                m_cellCountBuffer->createDescriptorInfo(), kComputeWrite >> kComputeRead);
-        });
-
-    // Compute particle count per cell
-    auto& computeCellCount = renderGraph->addComputePass("compute-cell-count");
-    computeCellCount.isEnabled = false;
-    setDispatchLayout(computeCellCount, glm::ivec3(256, 1, 1), glm::ivec3(m_numParticles, 1, 1));
-    createMaterial(computeCellCount, m_renderer, "compute-cell-count.comp", 3);
-
-    // Input
-    computeCellCount.material->writeDescriptor(0, 0, *m_vertexBuffer);
-
-    // Output
-    computeCellCount.material->writeDescriptor(0, 1, *m_cellCountBuffer);
-    computeCellCount.material->writeDescriptor(0, 2, *m_cellIdBuffer);
-
-    computeCellCount
-        .preDispatchCallback = [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-        node.pipeline->setPushConstants(
-            cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.dim, m_gridParams.cellSize, m_numParticles);
-
-        node.material->setDynamicOffset(frameIdx, 0, 0);
-        node.material->setDynamicOffset(frameIdx, 1, 0);
-        node.material->setDynamicOffset(frameIdx, 2, 0);
-
-        node.isEnabled = false;
-    };
-
-    renderGraph->addDependency(
-        "compute-cell-count",
-        "scan",
-        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            constexpr auto scope = kComputeWrite >> kComputeRead;
-            std::array<VkBufferMemoryBarrier2, 2> barriers{};
-            for (auto& barrier : barriers) {
-                barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-                barrier.srcStageMask = scope.srcStage;
-                barrier.srcAccessMask = scope.srcAccess;
-                barrier.dstStageMask = scope.dstStage;
-                barrier.dstAccessMask = scope.dstAccess;
-                barrier.size = m_gridParams.numCells * sizeof(uint32_t);
-                barrier.offset = m_currentSection * m_gridParams.numCells * sizeof(uint32_t);
-            }
-            barriers[0].buffer = m_cellCountBuffer->getHandle();
-
-            barriers[1].size = m_numParticles * sizeof(uint32_t);
-            barriers[1].offset = m_currentSection * m_numParticles * sizeof(uint32_t);
-            barriers[1].buffer = m_cellIdBuffer->getHandle();
-            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
-        });
-
-    // Scan for individual blocks
-    auto& scan = renderGraph->addComputePass("scan");
-    scan.isEnabled = false;
-    setDispatchLayout(scan, glm::ivec3(256, 1, 1), glm::ivec3(m_gridParams.numCells / kScanElementsPerThread, 1, 1));
-    scan.pipeline = createComputePipeline(m_renderer, "scan.comp", 2, scan.workGroupSize);
-    scan.material = std::make_unique<Material>(scan.pipeline.get());
-
-    scan.preDispatchCallback = [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-        node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 1, m_gridParams.numCells);
-
-        node.material->setDynamicOffset(frameIdx, 0, 0);
-        node.material->setDynamicOffset(frameIdx, 1, 0);
-
-        node.isEnabled = false;
-    };
-
-    // Input/Output
-    scan.material->writeDescriptor(0, 0, *m_cellCountBuffer);
-    scan.material->writeDescriptor(0, 1, *m_blockSumBuffer);
-
-    renderGraph->addDependency(
-        "scan",
-        "scan-block",
-        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarrier(
-                m_blockSumBuffer->createDescriptorInfo(), kComputeWrite >> kComputeRead);
-        });
-
-    // Scan for the block sums
-    auto& scanBlock = renderGraph->addComputePass("scan-block");
-    scanBlock.isEnabled = false;
-    setDispatchLayout(
-        scanBlock,
-        glm::ivec3(256, 1, 1),
-        glm::ivec3(m_gridParams.numCells / kScanElementsPerBlock / kScanElementsPerThread, 1, 1));
-    scanBlock.pipeline = createComputePipeline(m_renderer, "scan.comp", 2, scanBlock.workGroupSize);
-    scanBlock.material = std::make_unique<Material>(scanBlock.pipeline.get());
-
-    // Input/Output
-    scanBlock.material->writeDescriptor(0, 0, *m_blockSumBuffer);
-    scanBlock.material->writeDescriptor(0, 1, *m_blockSumBuffer);
-    scanBlock.preDispatchCallback = [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-        node.pipeline->setPushConstants(
-            cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, m_gridParams.numCells / kScanElementsPerBlock);
-
-        node.material->setDynamicOffset(frameIdx, 0, 0);
-        node.material->setDynamicOffset(frameIdx, 1, 0);
-
-        node.isEnabled = false;
-    };
-    renderGraph->addDependency(
-        "scan-block",
-        "scan-combine",
-        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            constexpr auto scope = kComputeWrite >> kComputeRead;
-            std::array<VkBufferMemoryBarrier2, 1> barriers{};
-            barriers[0].sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-            barriers[0].srcStageMask = scope.srcStage;
-            barriers[0].srcAccessMask = scope.srcAccess;
-            barriers[0].dstStageMask = scope.dstStage;
-            barriers[0].dstAccessMask = scope.dstAccess;
-            barriers[0].buffer = m_blockSumBuffer->getHandle();
-            barriers[0].size = m_blockSumRegionSize;
-            barriers[0].offset = m_currentSection * m_blockSumRegionSize;
-            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
-        });
-
-    // Add block prefix sum to intra-block prefix sums
-    auto& scanCombine = renderGraph->addComputePass("scan-combine");
-    scanCombine.isEnabled = false;
-    setDispatchLayout(scanCombine, glm::ivec3(512, 1, 1), glm::ivec3(m_gridParams.numCells, 1, 1));
-    scanCombine.pipeline = createComputePipeline(m_renderer, "scan-combine.comp", 2, scanCombine.workGroupSize);
-    scanCombine.material = std::make_unique<Material>(scanCombine.pipeline.get());
-
-    // Input/Output
-    scanCombine.material->writeDescriptor(0, 0, *m_cellCountBuffer);
-    scanCombine.material->writeDescriptor(0, 1, *m_blockSumBuffer);
-    scanCombine.preDispatchCallback = [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-        node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams.numCells);
-
-        node.material->setDynamicOffset(frameIdx, 0, 0);
-        node.material->setDynamicOffset(frameIdx, 1, 0);
-
-        node.isEnabled = false;
-    };
-
-    renderGraph->addDependency(
-        "scan-combine",
-        "reindex", //"reindex",
-        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            constexpr auto scope = kComputeWrite >> kComputeRead;
-            std::array<VkBufferMemoryBarrier2, 2> barriers{};
-            for (auto& barrier : barriers) {
-                barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-                barrier.srcStageMask = scope.srcStage;
-                barrier.srcAccessMask = scope.srcAccess;
-                barrier.dstStageMask = scope.dstStage;
-                barrier.dstAccessMask = scope.dstAccess;
-                barrier.size = m_gridParams.numCells * sizeof(uint32_t);
-                barrier.offset = m_currentSection * m_gridParams.numCells * sizeof(uint32_t);
-            }
-            barriers[0].buffer = m_cellCountBuffer->getHandle();
-
-            barriers[1].size = m_blockSumRegionSize;
-            barriers[1].offset = m_currentSection * m_blockSumRegionSize;
-            barriers[1].buffer = m_blockSumBuffer->getHandle();
-            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
-        });
-
-    auto& reindex = renderGraph->addComputePass("reindex");
-    reindex.isEnabled = false;
-    setDispatchLayout(reindex, glm::ivec3(256, 1, 1), glm::ivec3(m_numParticles, 1, 1));
-    reindex.pipeline = createComputePipeline(m_renderer, "reindex-particles.comp", 5, reindex.workGroupSize);
-    reindex.material = std::make_unique<Material>(reindex.pipeline.get());
-
-    // Input
-    reindex.material->writeDescriptor(0, 0, {m_vertexBuffer->getHandle(), 0, vertexBufferSize});
-    reindex.material->writeDescriptor(
-        0, 1, {m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t)});
-    reindex.material->writeDescriptor(0, 2, {m_cellIdBuffer->getHandle(), 0, m_numParticles * sizeof(uint32_t)});
-
-    // Output
-    reindex.material->writeDescriptor(0, 3, {m_indexBuffer->getHandle(), 0, m_numParticles * sizeof(uint32_t)});
-    reindex.material->writeDescriptor(0, 4, {m_reorderedPositionBuffer->getHandle(), 0, vertexBufferSize});
-
-    reindex.preDispatchCallback = [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-        node.pipeline->setPushConstants(
-            cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_numParticles);
-
-        node.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
-
-        node.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-        node.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(uint32_t));
-        node.material->setDynamicOffset(frameIdx, 3, m_currentSection * m_numParticles * sizeof(uint32_t));
-        node.material->setDynamicOffset(frameIdx, 4, m_currentSection * m_numParticles * sizeof(glm::vec4));
-
-        node.isEnabled = false;
-    };
-    renderGraph->addDependency(
-        "reindex",
-        "compute-density-and-pressure",
-        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            constexpr auto scope = kComputeWrite >> kComputeRead;
-            std::array<VkBufferMemoryBarrier2, 2> barriers{};
-            for (auto& barrier : barriers) {
-                barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-                barrier.srcStageMask = scope.srcStage;
-                barrier.srcAccessMask = scope.srcAccess;
-                barrier.dstStageMask = scope.dstStage;
-                barrier.dstAccessMask = scope.dstAccess;
-                barrier.size = m_numParticles * sizeof(uint32_t);
-                barrier.offset = m_currentSection * m_numParticles * sizeof(uint32_t);
-            }
-            barriers[0].buffer = m_indexBuffer->getHandle();
-            barriers[1].size = m_numParticles * sizeof(glm::vec4);
-            barriers[1].offset = m_currentSection * m_numParticles * sizeof(glm::vec4);
-            barriers[1].buffer = m_reorderedPositionBuffer->getHandle();
-            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
-        });
-
-    auto& computePressure = renderGraph->addComputePass("compute-density-and-pressure");
-    computePressure.isEnabled = false;
-    setDispatchLayout(computePressure, glm::ivec3(256, 1, 1), glm::ivec3(m_numParticles, 1, 1));
-    computePressure.pipeline =
-        createComputePipeline(m_renderer, "compute-density-and-pressure.comp", 5, computePressure.workGroupSize);
-    computePressure.material = std::make_unique<Material>(computePressure.pipeline.get());
-
-    // Input
-    computePressure.material->writeDescriptor(0, 0, {m_vertexBuffer->getHandle(), 0, vertexBufferSize});
-    computePressure.material->writeDescriptor(
-        0, 1, {m_cellCountBuffer->getHandle(), 0, m_gridParams.numCells * sizeof(uint32_t)});
-    computePressure.material->writeDescriptor(0, 2, {m_reorderedPositionBuffer->getHandle(), 0, vertexBufferSize});
-
-    // Output
-    computePressure.material->writeDescriptor(0, 3, {m_densityBuffer->getHandle(), 0, m_numParticles * sizeof(float)});
-    computePressure.material->writeDescriptor(0, 4, {m_pressureBuffer->getHandle(), 0, m_numParticles * sizeof(float)});
-    computePressure.preDispatchCallback =
-        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-            node.pipeline->setPushConstants(
-                cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_numParticles);
-
-            node.material->setDynamicOffset(frameIdx, 0, m_prevSection * m_numParticles * sizeof(glm::vec4));
-
-            node.material->setDynamicOffset(frameIdx, 1, m_currentSection * m_gridParams.numCells * sizeof(uint32_t));
-            node.material->setDynamicOffset(frameIdx, 2, m_currentSection * m_numParticles * sizeof(glm::vec4));
-            node.material->setDynamicOffset(frameIdx, 3, m_currentSection * m_numParticles * sizeof(float));
-            node.material->setDynamicOffset(frameIdx, 4, m_currentSection * m_numParticles * sizeof(float));
-
-            node.isEnabled = false;
-        };
-
-    renderGraph->addDependency(
-        "compute-density-and-pressure",
-        "compute-forces",
-        [this](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            constexpr auto scope = kComputeWrite >> kComputeRead;
-            std::array<VkBufferMemoryBarrier2, 2> barriers{};
-            for (auto& barrier : barriers) {
-                barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-                barrier.srcStageMask = scope.srcStage;
-                barrier.srcAccessMask = scope.srcAccess;
-                barrier.dstStageMask = scope.dstStage;
-                barrier.dstAccessMask = scope.dstAccess;
-                barrier.size = m_numParticles * sizeof(float);
-                barrier.offset = m_currentSection * m_numParticles * sizeof(float);
-            }
-            barriers[0].buffer = m_densityBuffer->getHandle();
-            barriers[1].buffer = m_pressureBuffer->getHandle();
-            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
-        });
-
-    auto& computeForces = renderGraph->addComputePass("compute-forces");
-    computeForces.isEnabled = false;
-    setDispatchLayout(computeForces, glm::ivec3(256, 1, 1), glm::ivec3(m_numParticles, 1, 1));
-    computeForces.pipeline = createComputePipeline(m_renderer, "compute-forces.comp", 7, computeForces.workGroupSize);
-    computeForces.material = std::make_unique<Material>(computeForces.pipeline.get());
-
-    // Input
-    computeForces.material->writeDescriptor(0, 0, *m_vertexBuffer);
-    computeForces.material->writeDescriptor(0, 1, *m_cellCountBuffer);
-    computeForces.material->writeDescriptor(0, 2, *m_indexBuffer);
-    computeForces.material->writeDescriptor(0, 3, *m_densityBuffer);
-    computeForces.material->writeDescriptor(0, 4, *m_pressureBuffer);
-    computeForces.material->writeDescriptor(0, 5, *m_velocityBuffer);
-
-    // Output
-    computeForces.material->writeDescriptor(0, 6, *m_forcesBuffer);
-    computeForces.preDispatchCallback =
-        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-            node.pipeline->setPushConstants(
-                cmdBuffer.getHandle(),
-                VK_SHADER_STAGE_COMPUTE_BIT,
-                m_gridParams,
-                m_gravity,
-                m_numParticles,
-                m_viscosityFactor,
-                m_kappa);
-
-            node.material->setDynamicOffset(frameIdx, 0, 0);
-            node.material->setDynamicOffset(frameIdx, 1, 0);
-            node.material->setDynamicOffset(frameIdx, 2, 0);
-            node.material->setDynamicOffset(frameIdx, 3, 0);
-            node.material->setDynamicOffset(frameIdx, 4, 0);
-            node.material->setDynamicOffset(frameIdx, 5, 0);
-            node.material->setDynamicOffset(frameIdx, 6, 0);
-
-            node.isEnabled = false;
-        };
-
-    renderGraph->addDependency(
-        "compute-forces",
-        "integrate",
-        [this,
-         vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarrier(
-                m_forcesBuffer->createDescriptorInfo(), kComputeWrite >> kComputeRead);
-        });
-
-    auto& integrateNode = renderGraph->addComputePass("integrate");
-    integrateNode.isEnabled = false;
-    setDispatchLayout(integrateNode, glm::ivec3(256, 1, 1), glm::ivec3(m_numParticles, 1, 1));
-    integrateNode.pipeline = createComputePipeline(m_renderer, "integrate.comp", 6, integrateNode.workGroupSize);
-    integrateNode.material = std::make_unique<Material>(integrateNode.pipeline.get());
-
-    // .createComputePass("integrate.comp", ...);
-    // .setWorkgroupSize(wgsize);
-    // .setComputeItems(items);
-
-    // setInputBuffer(0, 0, m_vertexBuffer, prevSection);
-    // setInputBuffer(0, 1, m_velocityBuffer, prevSection);
-    // setInputBuffer(0, 2, m_forcesBuffer, currSection);
-
-    // setOutputBuffer(0, 3, m_vertexBuffer, currSection);
-    // setOutputBuffer(0, 4, m_velocityBuffer, currSection);
-    // setOutputBuffer(0, 5, m_colorBuffer, currSection);
-
-    // auto configure preDispatchCallback to set material buffer dynamic offsets
-    // auto configure dependency to insert barrier on outputs
-    // synchronizeBufferOutputs({3, 5})
-
-    // Input
-    integrateNode.material->writeDescriptor(0, 0, *m_vertexBuffer);
-    integrateNode.material->writeDescriptor(0, 1, *m_velocityBuffer);
-    integrateNode.material->writeDescriptor(0, 2, *m_forcesBuffer);
-
-    // Output
-    integrateNode.material->writeDescriptor(0, 3, *m_vertexBuffer);
-    integrateNode.material->writeDescriptor(0, 4, *m_velocityBuffer);
-    integrateNode.material->writeDescriptor(0, 5, *m_colorBuffer);
-    integrateNode.preDispatchCallback =
-        [this](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t frameIdx) {
-            node.pipeline->setPushConstants(
-                cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, m_gridParams, m_timeDelta / 2.0f, m_numParticles);
-
-            node.material->setDynamicOffset(frameIdx, 0, 0);
-            node.material->setDynamicOffset(frameIdx, 1, 0);
-            node.material->setDynamicOffset(frameIdx, 2, 0);
-            node.material->setDynamicOffset(frameIdx, 3, 0);
-            node.material->setDynamicOffset(frameIdx, 4, 0);
-            node.material->setDynamicOffset(frameIdx, 5, 0);
-
-            node.isEnabled = false;
-        };
-
-    renderGraph->addDependency(
-        "integrate",
-        "mainPass",
-        [this,
-         vertexBufferSize](const VulkanRenderPass& /*src*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-            constexpr auto scope = kComputeWrite >> kVertexInputRead;
-            std::array<VkBufferMemoryBarrier2, 2> barriers{};
-            for (auto& barrier : barriers) {
-                barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-                barrier.srcStageMask = scope.srcStage;
-                barrier.srcAccessMask = scope.srcAccess;
-                barrier.dstStageMask = scope.dstStage;
-                barrier.dstAccessMask = scope.dstAccess;
-                barrier.size = vertexBufferSize;
-                barrier.offset = m_currentSection * vertexBufferSize;
-            }
-            barriers[0].buffer = m_vertexBuffer->getHandle();
-            barriers[1].buffer = m_colorBuffer->getHandle();
-            VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarriers(barriers);
-        });
+    , m_numParticles(config.fluidDim.x * config.fluidDim.y * config.fluidDim.z)
+    , m_particleRadius(config.particleRadius)
+    , m_fluidDim(config.fluidDim)
+    , m_substepCount(config.substepCount) {
+    CRISP_CHECK_GT(m_numParticles, 0);
+    CRISP_CHECK_GT(m_substepCount, 0);
+
+    // The block of particles fills the box in x but only a quarter of it in y and z, so it has room
+    // to collapse and spread instead of starting flush against the walls.
+    m_fluidSpaceSize = glm::vec3(m_fluidDim.x, m_fluidDim.y / 2, m_fluidDim.z / 2) * 4.0f * m_particleRadius;
+
+    m_cellSize = kSmoothingRadiusInParticleRadii * m_particleRadius;
+    m_gridDim = glm::uvec3(glm::ceil(m_fluidSpaceSize / m_cellSize));
+    m_numCells = m_gridDim.x * m_gridDim.y * m_gridDim.z;
+
+    m_scanElementsPerBlock = kScanBlockSize * kScanElementsPerThread;
+    m_scanBlockCount = (m_numCells + m_scanElementsPerBlock - 1) / m_scanElementsPerBlock;
+    // scan-block reduces every partial sum in a single workgroup, and its Blelloch pass needs a
+    // power-of-two element count.
+    const uint32_t scanBlockWorkGroupSize = std::max(std::bit_ceil(m_scanBlockCount) / 2, 1u);
+    CRISP_CHECK_LE(
+        scanBlockWorkGroupSize, m_renderer.getDevice().getPhysicalDevice().getLimits().maxComputeWorkGroupInvocations);
+
+    const VkDeviceSize vec4BufferSize = m_numParticles * sizeof(glm::vec4);
+    auto& device = m_renderer.getDevice();
+
+    m_positionBuffer = createParticleBuffer(device, vec4BufferSize, VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT);
+    m_colorBuffer = createParticleBuffer(device, vec4BufferSize, VK_BUFFER_USAGE_2_VERTEX_BUFFER_BIT);
+    m_velocityBuffer = createParticleBuffer(device, vec4BufferSize);
+    m_forceBuffer = createParticleBuffer(device, vec4BufferSize);
+    m_sortedPositionBuffer = createParticleBuffer(device, vec4BufferSize);
+    m_densityBuffer = createParticleBuffer(device, m_numParticles * sizeof(float));
+    m_pressureBuffer = createParticleBuffer(device, m_numParticles * sizeof(float));
+    m_cellIdBuffer = createParticleBuffer(device, m_numParticles * sizeof(uint32_t));
+    m_sortedIndexBuffer = createParticleBuffer(device, m_numParticles * sizeof(uint32_t));
+    m_cellCountBuffer = createParticleBuffer(device, m_numCells * sizeof(uint32_t));
+    m_blockSumBuffer = createParticleBuffer(device, m_scanBlockCount * sizeof(uint32_t));
+
+    device.setObjectName(m_positionBuffer->getHandle(), "sph-positions");
+    device.setObjectName(m_colorBuffer->getHandle(), "sph-colors");
+
+    reset();
+
+    constexpr VkExtent3D kLinearWorkGroup{kScanBlockSize, 1, 1};
+    const auto perParticle = linearDispatch(m_numParticles, kScanBlockSize);
+    const auto perCell = linearDispatch(m_numCells, kScanBlockSize);
+
+    m_clearHashGrid = createDispatch("clear-hash-grid.comp", kLinearWorkGroup, perCell);
+    m_clearHashGrid.material->writeDescriptor(0, 0, *m_cellCountBuffer);
+
+    m_cellCount = createDispatch("compute-cell-count.comp", kLinearWorkGroup, perParticle);
+    m_cellCount.material->writeDescriptor(0, 0, *m_positionBuffer);
+    m_cellCount.material->writeDescriptor(0, 1, *m_cellCountBuffer);
+    m_cellCount.material->writeDescriptor(0, 2, *m_cellIdBuffer);
+
+    m_scan = createDispatch("scan.comp", kLinearWorkGroup, VkExtent3D{m_scanBlockCount, 1, 1});
+    m_scan.material->writeDescriptor(0, 0, *m_cellCountBuffer);
+    m_scan.material->writeDescriptor(0, 1, *m_blockSumBuffer);
+
+    m_scanBlock = createDispatch("scan.comp", {scanBlockWorkGroupSize, 1, 1}, VkExtent3D{1, 1, 1});
+    m_scanBlock.material->writeDescriptor(0, 0, *m_blockSumBuffer);
+    m_scanBlock.material->writeDescriptor(0, 1, *m_blockSumBuffer);
+
+    m_scanCombine = createDispatch("scan-combine.comp", kLinearWorkGroup, perCell);
+    m_scanCombine.material->writeDescriptor(0, 0, *m_cellCountBuffer);
+    m_scanCombine.material->writeDescriptor(0, 1, *m_blockSumBuffer);
+
+    m_reindex = createDispatch("reindex-particles.comp", kLinearWorkGroup, perParticle);
+    m_reindex.material->writeDescriptor(0, 0, *m_positionBuffer);
+    m_reindex.material->writeDescriptor(0, 1, *m_cellCountBuffer);
+    m_reindex.material->writeDescriptor(0, 2, *m_cellIdBuffer);
+    m_reindex.material->writeDescriptor(0, 3, *m_sortedIndexBuffer);
+    m_reindex.material->writeDescriptor(0, 4, *m_sortedPositionBuffer);
+
+    m_densityPressure = createDispatch("compute-density-and-pressure.comp", kLinearWorkGroup, perParticle);
+    m_densityPressure.material->writeDescriptor(0, 0, *m_positionBuffer);
+    m_densityPressure.material->writeDescriptor(0, 1, *m_cellCountBuffer);
+    m_densityPressure.material->writeDescriptor(0, 2, *m_sortedPositionBuffer);
+    m_densityPressure.material->writeDescriptor(0, 3, *m_densityBuffer);
+    m_densityPressure.material->writeDescriptor(0, 4, *m_pressureBuffer);
+
+    m_forces = createDispatch("compute-forces.comp", kLinearWorkGroup, perParticle);
+    m_forces.material->writeDescriptor(0, 0, *m_positionBuffer);
+    m_forces.material->writeDescriptor(0, 1, *m_cellCountBuffer);
+    m_forces.material->writeDescriptor(0, 2, *m_sortedIndexBuffer);
+    m_forces.material->writeDescriptor(0, 3, *m_densityBuffer);
+    m_forces.material->writeDescriptor(0, 4, *m_pressureBuffer);
+    m_forces.material->writeDescriptor(0, 5, *m_velocityBuffer);
+    m_forces.material->writeDescriptor(0, 6, *m_forceBuffer);
+
+    m_integrate = createDispatch("integrate.comp", kLinearWorkGroup, perParticle);
+    m_integrate.material->writeDescriptor(0, 0, *m_positionBuffer);
+    m_integrate.material->writeDescriptor(0, 1, *m_velocityBuffer);
+    m_integrate.material->writeDescriptor(0, 2, *m_forceBuffer);
+    m_integrate.material->writeDescriptor(0, 3, *m_positionBuffer);
+    m_integrate.material->writeDescriptor(0, 4, *m_velocityBuffer);
+    m_integrate.material->writeDescriptor(0, 5, *m_colorBuffer);
+
+    device.flushDescriptorUpdates();
 }
 
-void SPH::update(float dt) {
-    m_timeDelta = dt;
-    m_prevSection = m_currentSection;
-    m_currentSection = (m_currentSection + 1) % kRendererVirtualFrameCount;
+SPH::~SPH() = default;
 
-    /*if (!m_runSimulation)
-        return;
-
-
-
-    m_renderGraphLegacy->getNode("clear-hash-grid").isEnabled = true;
-    m_renderGraphLegacy->getNode("compute-cell-count").isEnabled = true;
-    m_renderGraphLegacy->getNode("scan").isEnabled = true;
-    m_renderGraphLegacy->getNode("scan-block").isEnabled = true;
-    m_renderGraphLegacy->getNode("scan-combine").isEnabled = true;
-    m_renderGraphLegacy->getNode("reindex").isEnabled = true;
-    m_renderGraphLegacy->getNode("compute-density-and-pressure").isEnabled = true;
-    m_renderGraphLegacy->getNode("compute-forces").isEnabled = true;
-    m_renderGraphLegacy->getNode("integrate").isEnabled = true;*/
+void SPH::update(const float dt) {
+    const float frameTime = m_params.useRealFrameTime ? dt : m_params.simulatedTimePerFrame;
+    m_substepTime = std::min(frameTime / static_cast<float>(m_substepCount), m_params.maxSubstepTime);
 }
 
-void SPH::onKeyPressed(Key key, int) {
-    if (key == Key::Space) {
-        m_runSimulation = !m_runSimulation;
+void SPH::addComputePasses(rg::RenderGraph& renderGraph) {
+    // Each writing pass re-imports the buffer it modifies, producing a fresh handle that resolves to
+    // the same VkBuffer. The graph keys its access history by VkBuffer, so threading the latest
+    // handle forward is all the ordering the solver needs -- between substeps, and across frames.
+    RenderGraphResourceHandle positions{};
+    RenderGraphResourceHandle colors{};
+    RenderGraphResourceHandle velocities{};
+    RenderGraphResourceHandle forces{};
+    RenderGraphResourceHandle densities{};
+    RenderGraphResourceHandle pressures{};
+    RenderGraphResourceHandle cellCounts{};
+    RenderGraphResourceHandle cellIds{};
+    RenderGraphResourceHandle sortedIndices{};
+    RenderGraphResourceHandle sortedPositions{};
+    RenderGraphResourceHandle blockSums{};
+
+    const GridPushConstants grid{
+        .dim = m_gridDim,
+        .numCells = m_numCells,
+        .spaceSize = m_fluidSpaceSize,
+        .cellSize = m_cellSize,
+    };
+
+    const auto dispatch = [this](const Dispatch& d, const FrameContext& ctx, const auto& pushConstants) {
+        if (m_isPaused) {
+            return;
+        }
+        d.bind(ctx);
+        ctx.commandEncoder.setPushConstants(
+            *d.pipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, pushConstants);
+        ctx.commandEncoder.dispatchCompute(d.dispatchSize);
+    };
+
+    for (uint32_t substep = 0; substep < m_substepCount; ++substep) {
+        const auto passName = [substep](const std::string_view stage) {
+            return fmt::format("sph-{}-{}", substep, stage);
+        };
+        const auto resourceName = [substep](const std::string_view buffer, const std::string_view stage) {
+            return fmt::format("sph-{}@{}-{}", buffer, substep, stage);
+        };
+        const bool isLastSubstep = substep + 1 == m_substepCount;
+
+        renderGraph.addPass(
+            passName("clear-hash-grid"),
+            PassType::Compute,
+            [this, &cellCounts, &resourceName](rg::RenderGraph::Builder& builder) {
+                cellCounts =
+                    builder.importBuffer(describe(*m_cellCountBuffer), resourceName("cell-counts", "clear-hash-grid"));
+            },
+            [this, dispatch](const FrameContext& ctx) { dispatch(m_clearHashGrid, ctx, m_numCells); });
+
+        renderGraph.addPass(
+            passName("cell-count"),
+            PassType::Compute,
+            [this, &positions, &cellCounts, &cellIds, &resourceName](rg::RenderGraph::Builder& builder) {
+                positions = builder.importBuffer(describe(*m_positionBuffer), resourceName("positions", "cell-count"));
+                builder.readBuffer(positions, kComputeRead);
+                builder.readBuffer(cellCounts, kComputeRead);
+                cellCounts =
+                    builder.importBuffer(describe(*m_cellCountBuffer), resourceName("cell-counts", "cell-count"));
+                cellIds = builder.importBuffer(describe(*m_cellIdBuffer), resourceName("cell-ids", "cell-count"));
+            },
+            [this, dispatch, grid](const FrameContext& ctx) {
+                dispatch(
+                    m_cellCount,
+                    ctx,
+                    CellCountPushConstants{.dim = grid.dim, .cellSize = grid.cellSize, .numParticles = m_numParticles});
+            });
+
+        renderGraph.addPass(
+            passName("scan"),
+            PassType::Compute,
+            [this, &cellCounts, &blockSums, &resourceName](rg::RenderGraph::Builder& builder) {
+                builder.readBuffer(cellCounts, kComputeRead);
+                cellCounts = builder.importBuffer(describe(*m_cellCountBuffer), resourceName("cell-counts", "scan"));
+                blockSums = builder.importBuffer(describe(*m_blockSumBuffer), resourceName("block-sums", "scan"));
+            },
+            [this, dispatch](const FrameContext& ctx) {
+                dispatch(m_scan, ctx, ScanPushConstants{.storeSumBlocks = 1, .elementCount = m_numCells});
+            });
+
+        renderGraph.addPass(
+            passName("scan-block"),
+            PassType::Compute,
+            [this, &blockSums, &resourceName](rg::RenderGraph::Builder& builder) {
+                builder.readBuffer(blockSums, kComputeRead);
+                blockSums = builder.importBuffer(describe(*m_blockSumBuffer), resourceName("block-sums", "scan-block"));
+            },
+            [this, dispatch](const FrameContext& ctx) {
+                dispatch(m_scanBlock, ctx, ScanPushConstants{.storeSumBlocks = 0, .elementCount = m_scanBlockCount});
+            });
+
+        renderGraph.addPass(
+            passName("scan-combine"),
+            PassType::Compute,
+            [this, &cellCounts, &blockSums, &resourceName](rg::RenderGraph::Builder& builder) {
+                builder.readBuffer(blockSums, kComputeRead);
+                builder.readBuffer(cellCounts, kComputeRead);
+                cellCounts =
+                    builder.importBuffer(describe(*m_cellCountBuffer), resourceName("cell-counts", "scan-combine"));
+            },
+            [this, dispatch](const FrameContext& ctx) {
+                dispatch(
+                    m_scanCombine,
+                    ctx,
+                    ScanCombinePushConstants{.elementCount = m_numCells, .elementsPerBlock = m_scanElementsPerBlock});
+            });
+
+        renderGraph.addPass(
+            passName("reindex"),
+            PassType::Compute,
+            [this, &positions, &cellCounts, &cellIds, &sortedIndices, &sortedPositions, &resourceName](
+                rg::RenderGraph::Builder& builder) {
+                builder.readBuffer(positions, kComputeRead);
+                builder.readBuffer(cellCounts, kComputeRead);
+                builder.readBuffer(cellIds, kComputeRead);
+                sortedIndices =
+                    builder.importBuffer(describe(*m_sortedIndexBuffer), resourceName("sorted-indices", "reindex"));
+                sortedPositions = builder.importBuffer(
+                    describe(*m_sortedPositionBuffer), resourceName("sorted-positions", "reindex"));
+            },
+            [this, dispatch, grid](const FrameContext& ctx) {
+                dispatch(m_reindex, ctx, ParticlePushConstants{.grid = grid, .numParticles = m_numParticles});
+            });
+
+        renderGraph.addPass(
+            passName("density-pressure"),
+            PassType::Compute,
+            [this, &positions, &cellCounts, &sortedPositions, &densities, &pressures, &resourceName](
+                rg::RenderGraph::Builder& builder) {
+                builder.readBuffer(positions, kComputeRead);
+                builder.readBuffer(cellCounts, kComputeRead);
+                builder.readBuffer(sortedPositions, kComputeRead);
+                densities =
+                    builder.importBuffer(describe(*m_densityBuffer), resourceName("densities", "density-pressure"));
+                pressures =
+                    builder.importBuffer(describe(*m_pressureBuffer), resourceName("pressures", "density-pressure"));
+            },
+            [this, dispatch, grid](const FrameContext& ctx) {
+                dispatch(m_densityPressure, ctx, ParticlePushConstants{.grid = grid, .numParticles = m_numParticles});
+            });
+
+        renderGraph.addPass(
+            passName("forces"),
+            PassType::Compute,
+            [this, &positions, &cellCounts, &sortedIndices, &densities, &pressures, &velocities, &forces, &resourceName](
+                rg::RenderGraph::Builder& builder) {
+                builder.readBuffer(positions, kComputeRead);
+                builder.readBuffer(cellCounts, kComputeRead);
+                builder.readBuffer(sortedIndices, kComputeRead);
+                builder.readBuffer(densities, kComputeRead);
+                builder.readBuffer(pressures, kComputeRead);
+                velocities = builder.importBuffer(describe(*m_velocityBuffer), resourceName("velocities", "forces"));
+                builder.readBuffer(velocities, kComputeRead);
+                forces = builder.importBuffer(describe(*m_forceBuffer), resourceName("forces", "forces"));
+            },
+            [this, dispatch, grid](const FrameContext& ctx) {
+                dispatch(
+                    m_forces,
+                    ctx,
+                    ForcesPushConstants{
+                        .grid = grid,
+                        .gravity = m_params.gravity,
+                        .numParticles = m_numParticles,
+                        .viscosity = m_params.viscosity,
+                        .kappa = m_params.kappa,
+                    });
+            });
+
+        renderGraph.addPass(
+            passName("integrate"),
+            PassType::Compute,
+            [this, &positions, &velocities, &forces, &colors, &resourceName, isLastSubstep](
+                rg::RenderGraph::Builder& builder) {
+                builder.readBuffer(positions, kComputeRead);
+                builder.readBuffer(velocities, kComputeRead);
+                builder.readBuffer(forces, kComputeRead);
+                positions = builder.importBuffer(describe(*m_positionBuffer), resourceName("positions", "integrate"));
+                velocities = builder.importBuffer(describe(*m_velocityBuffer), resourceName("velocities", "integrate"));
+                colors = builder.importBuffer(describe(*m_colorBuffer), resourceName("colors", "integrate"));
+
+                if (isLastSubstep) {
+                    auto& data = builder.getBlackboard().insert<SphPassData>();
+                    data.positions = positions;
+                    data.colors = colors;
+                }
+            },
+            [this, dispatch, grid](const FrameContext& ctx) {
+                dispatch(
+                    m_integrate,
+                    ctx,
+                    IntegratePushConstants{.grid = grid, .timeDelta = m_substepTime, .numParticles = m_numParticles});
+            });
     }
-}
-
-void SPH::setGravityX(float value) {
-    m_gravity.x = value;
-}
-
-void SPH::setGravityY(float value) {
-    m_gravity.y = value;
-}
-
-void SPH::setGravityZ(float value) {
-    m_gravity.z = value;
-}
-
-void SPH::setViscosity(float value) {
-    m_viscosityFactor = value;
-}
-
-void SPH::setSurfaceTension(float value) {
-    m_kappa = value;
 }
 
 void SPH::reset() {
-    m_runSimulation = false;
-    m_renderer->finish();
+    m_renderer.finish();
 
-    const std::size_t vertexBufferSize = m_numParticles * sizeof(glm::vec4);
-    const auto positions = createInitialPositions(m_fluidDim, m_particleRadius);
-    fillDeviceBuffer(*m_renderer, m_vertexBuffer.get(), positions.data(), vertexBufferSize, 0);
+    const VkDeviceSize vec4BufferSize = m_numParticles * sizeof(glm::vec4);
+    const auto positions = createInitialPositions();
+    fillDeviceBuffer(m_renderer, m_positionBuffer.get(), positions.data(), vec4BufferSize);
 
-    const auto velocities = std::vector<glm::vec4>(m_numParticles, glm::vec4(glm::vec3(0.0f), 1.0f));
-    fillDeviceBuffer(*m_renderer, m_velocityBuffer.get(), positions.data(), vertexBufferSize, 0);
+    const std::vector<glm::vec4> velocities(m_numParticles, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    fillDeviceBuffer(m_renderer, m_velocityBuffer.get(), velocities.data(), vec4BufferSize);
 
-    m_currentSection = 0;
-    m_prevSection = 0;
+    const std::vector<glm::vec4> colors(m_numParticles, glm::vec4(0.5f, 0.5f, 1.0f, 1.0f));
+    fillDeviceBuffer(m_renderer, m_colorBuffer.get(), colors.data(), vec4BufferSize);
 }
 
-float SPH::getParticleRadius() const {
-    return m_particleRadius;
-}
-
-VulkanBuffer* SPH::getVertexBuffer(std::string_view key) const {
-    if (key == "position") {
-        return m_vertexBuffer.get();
-    }
-    if (key == "color") {
-        return m_colorBuffer.get();
-    }
-    return nullptr;
-}
-
-uint32_t SPH::getParticleCount() const {
-    return m_numParticles;
-}
-
-uint32_t SPH::getCurrentSection() const {
-    return m_currentSection;
-}
-
-std::vector<glm::vec4> SPH::createInitialPositions(const glm::uvec3 fluidDim, const float particleRadius) const {
+std::vector<glm::vec4> SPH::createInitialPositions() const {
     std::vector<glm::vec4> positions;
-    positions.reserve(fluidDim.z * fluidDim.y * fluidDim.x);
-    for (uint32_t z = 0; z < fluidDim.z; ++z) {
-        for (uint32_t y = 0; y < fluidDim.y; ++y) {
-            for (uint32_t x = 0; x < fluidDim.x; ++x) {
-                // glm::vec3 translation = glm::vec3(m_fluidDim) * m_particleRadius;
-                // translation.x = 0.0f;
-                // translation.y = 0.0f;
-                const glm::vec3 pos = glm::vec3(x, y, z) * 2.0f * particleRadius + particleRadius; // +translation;
+    positions.reserve(m_numParticles);
+    for (uint32_t z = 0; z < m_fluidDim.z; ++z) {
+        for (uint32_t y = 0; y < m_fluidDim.y; ++y) {
+            for (uint32_t x = 0; x < m_fluidDim.x; ++x) {
+                const glm::vec3 pos = glm::vec3(x, y, z) * 2.0f * m_particleRadius + m_particleRadius;
                 positions.emplace_back(pos, 1.0f);
             }
         }

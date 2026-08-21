@@ -1,26 +1,26 @@
 #version 450 core
 
-layout(set = 0, binding = 0) buffer PrevPositions {
+layout(std430, set = 0, binding = 0) buffer PrevPositions {
     vec4 prevPositions[];
 };
 
-layout(set = 0, binding = 1) buffer PrevVelocities {
+layout(std430, set = 0, binding = 1) buffer PrevVelocities {
     vec4 prevVelocities[];
 };
 
-layout(set = 0, binding = 2) buffer Forces {
+layout(std430, set = 0, binding = 2) buffer Forces {
     vec4 forces[];
 };
 
-layout(set = 0, binding = 3) buffer Positions {
+layout(std430, set = 0, binding = 3) buffer Positions {
     vec4 positions[];
 };
 
-layout(set = 0, binding = 4) buffer Velocities {
+layout(std430, set = 0, binding = 4) buffer Velocities {
     vec4 velocities[];
 };
 
-layout(set = 0, binding = 5) buffer Colors {
+layout(std430, set = 0, binding = 5) buffer Colors {
     vec4 colors[];
 };
 
@@ -42,7 +42,6 @@ uint getGlobalIndex() {
 }
 
 const float particleRadius = 0.01f;
-layout(constant_id = 0) const float timeStep = 0;
 
 void main() {
     uint threadIdx = getGlobalIndex();
