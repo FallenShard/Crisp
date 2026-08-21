@@ -48,6 +48,21 @@ TEST(GltfLoaderTest, AccumulatesParentNodeTransforms) {
     EXPECT_FLOAT_EQ(worldOrigin.z, 0.0f);
 }
 
+TEST(GltfLoaderTest, PreservesSkinningAcrossMultiplePrimitives) {
+    auto asset =
+        loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "MultiPrimitiveSkinnedTriangle.gltf");
+    ASSERT_THAT(asset, HasValue());
+
+    const auto loaded = asset.unwrap();
+    ASSERT_THAT(loaded.models, SizeIs(2));
+    for (const auto& model : loaded.models) {
+        EXPECT_THAT(model.skinningData.skeleton.joints, SizeIs(1));
+        EXPECT_THAT(model.skinningData.inverseBindTransforms, SizeIs(1));
+        ASSERT_TRUE(model.skinningData.modelNodeToLinearIdx.contains(1));
+        EXPECT_EQ(model.skinningData.modelNodeToLinearIdx.at(1), 0);
+    }
+}
+
 TEST(GltfLoaderTest, LoadsEmbeddedImagesInSourceOrder) {
     auto asset = loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "TexturedTriangle.gltf");
     ASSERT_THAT(asset, HasValue());

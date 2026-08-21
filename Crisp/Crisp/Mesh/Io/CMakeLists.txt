@@ -67,5 +67,6 @@ target_include_directories(CrispGltfLoaderTest PRIVATE "${CMAKE_CURRENT_BINARY_D
 target_add_test_file(CrispGltfLoaderTest "Test/Data/Triangle.gltf")
 target_add_test_file(CrispGltfLoaderTest "Test/Data/UnsignedByteIndicesTriangle.gltf")
 target_add_test_file(CrispGltfLoaderTest "Test/Data/ParentTransformTriangle.gltf")
+target_add_test_file(CrispGltfLoaderTest "Test/Data/MultiPrimitiveSkinnedTriangle.gltf")
 target_add_test_file(CrispGltfLoaderTest "Test/Data/TexturedTriangle.gltf")
 target_add_test_file(CrispGltfLoaderTest "Test/Data/DuplicateTexturedTriangle.gltf")

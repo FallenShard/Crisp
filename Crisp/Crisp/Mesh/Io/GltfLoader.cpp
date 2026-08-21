@@ -558,9 +558,9 @@ void createModelDataFromNode(
         CRISP_LOGT("Gltf contains camera information which will be unused.");
     }
 
-    ModelData modelData{};
+    std::optional<SkinningData> skinningData;
     if (isValidGltfIndex(node.skin)) {
-        modelData.skinningData = createSkinningData(model, model.skins.at(node.skin));
+        skinningData = createSkinningData(model, model.skins.at(node.skin));
     }
 
     const glm::mat4 worldTransform = parentTransform * getNodeTransform(node);
@@ -570,7 +570,11 @@ void createModelDataFromNode(
         CRISP_CHECK(node.weights.empty(), "Morph targets are not supported!");
 
         for (const auto& primitive : mesh.primitives) {
+            ModelData modelData{};
             modelData.transform = worldTransform;
+            if (skinningData) {
+                modelData.skinningData = *skinningData;
+            }
             modelData.mesh = createMeshFromPrimitive(model, primitive);
 
             modelData.mesh.setCustomAttribute(
