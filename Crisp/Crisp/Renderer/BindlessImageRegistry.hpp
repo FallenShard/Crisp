@@ -94,7 +94,7 @@ struct BindlessSlotDebugInfo {
 //   layout(set = 0, binding = 1, rgba8) uniform image2D    gStorageImages[];  // one array per format
 //   layout(set = 0, binding = 2) uniform sampler           gSamplers[];
 //
-//   texture(sampler2D(gTextures2D[nonuniformEXT(mat.albedoTex)], gSamplers[mat.samplerIdx]), uv)
+//   texture(sampler2D(gTextures2D[nonuniformEXT(mat.baseColorTex)], gSamplers[mat.samplerIndex]), uv)
 //
 // Indexing a slot through the wrong view type is undefined, and nonuniformEXT is mandatory wherever the index
 // can diverge across a wave - it is correct on NVIDIA and garbage on AMD without it.

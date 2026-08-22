@@ -9,7 +9,7 @@ PbrMaterialTable::PbrMaterialTable(VulkanDevice& device, const uint32_t capacity
     , m_buffer(
           std::make_unique<VulkanBuffer>(
               device,
-              capacity * sizeof(PbrParams),
+              capacity * sizeof(PbrMaterialParams),
               VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT |
                   VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT,
               BufferMemoryType::GpuOnly)) {
@@ -18,7 +18,7 @@ PbrMaterialTable::PbrMaterialTable(VulkanDevice& device, const uint32_t capacity
     device.setObjectName(m_buffer->getHandle(), "PBR Material Table");
 }
 
-PbrMaterialHandle PbrMaterialTable::add(const PbrParams& params) {
+PbrMaterialHandle PbrMaterialTable::add(const PbrMaterialParams& params) {
     CRISP_CHECK_LT(m_materialCount, m_materials.size(), "PBR material table capacity exhausted.");
     const PbrMaterialHandle handle{m_materialCount++};
     m_materials[handle.index] = params;
@@ -26,7 +26,7 @@ PbrMaterialHandle PbrMaterialTable::add(const PbrParams& params) {
     return handle;
 }
 
-void PbrMaterialTable::update(const PbrMaterialHandle handle, const PbrParams& params) {
+void PbrMaterialTable::update(const PbrMaterialHandle handle, const PbrMaterialParams& params) {
     CRISP_CHECK_LT(handle.index, m_materialCount);
     m_materials[handle.index] = params;
     m_isDirty = true;
@@ -46,7 +46,11 @@ void PbrMaterialTable::updateDeviceBuffer(VulkanStagingBelt& stagingBelt, const 
     }
 
     stagingBelt.uploadBuffer(
-        encoder, *m_buffer, 0, m_materials.data(), static_cast<VkDeviceSize>(m_materialCount) * sizeof(PbrParams));
+        encoder,
+        *m_buffer,
+        0,
+        m_materials.data(),
+        static_cast<VkDeviceSize>(m_materialCount) * sizeof(PbrMaterialParams));
     m_isDirty = false;
 }
 

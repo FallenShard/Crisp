@@ -556,11 +556,19 @@ PbrMaterial createPbrMaterialFromGltfMaterial(
         pbrMaterial.textureKeys[kPbrOrmMapIndex] = fmt::format("{}", ormImage->second);
     }
 
-    pbrMaterial.params.albedo = toGlm<glm::vec4>(material.pbrMetallicRoughness.baseColorFactor);
-    pbrMaterial.params.emissiveFactor = toGlm<glm::vec3>(material.emissiveFactor);
+    const glm::vec4 baseColorFactor = toGlm<glm::vec4>(material.pbrMetallicRoughness.baseColorFactor);
+    pbrMaterial.params.baseColor = glm::vec3(baseColorFactor);
+    pbrMaterial.params.geometryOpacity = baseColorFactor.a;
+
+    const glm::vec3 emissiveFactor = toGlm<glm::vec3>(material.emissiveFactor);
+    pbrMaterial.params.emissionLuminance = std::max({emissiveFactor.r, emissiveFactor.g, emissiveFactor.b});
+    pbrMaterial.params.emissionColor =
+        pbrMaterial.params.emissionLuminance > 0.0f
+            ? emissiveFactor / pbrMaterial.params.emissionLuminance
+            : glm::vec3(1.0f);
     pbrMaterial.params.normalScale = static_cast<float>(material.normalTexture.scale);
-    pbrMaterial.params.metallic = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
-    pbrMaterial.params.roughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
+    pbrMaterial.params.baseMetalness = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+    pbrMaterial.params.specularRoughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
     pbrMaterial.params.aoStrength = static_cast<float>(material.occlusionTexture.strength);
 
     return pbrMaterial;
@@ -683,6 +691,11 @@ void createModelDataFromNode(
                 }
 
                 modelData.material = *cachedMaterial;
+            } else {
+                // glTF's implicit material uses metallic-roughness defaults, not the OpenPBR constructor defaults.
+                modelData.material.params.baseColor = glm::vec3(1.0f);
+                modelData.material.params.baseMetalness = 1.0f;
+                modelData.material.params.specularRoughness = 1.0f;
             }
 
             models.push_back(std::move(modelData));

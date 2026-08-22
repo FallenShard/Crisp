@@ -5,6 +5,22 @@
 namespace crisp {
 namespace {
 
+TEST(PbrMaterialTest, UsesOpenPbrOpaqueProfileDefaults) {
+    const PbrMaterialParams params{};
+
+    EXPECT_EQ(params.baseColor, glm::vec3(0.8f));
+    EXPECT_FLOAT_EQ(params.baseWeight, 1.0f);
+    EXPECT_EQ(params.specularColor, glm::vec3(1.0f));
+    EXPECT_FLOAT_EQ(params.specularWeight, 1.0f);
+    EXPECT_FLOAT_EQ(params.specularRoughness, 0.3f);
+    EXPECT_FLOAT_EQ(params.specularIor, 1.5f);
+    EXPECT_FLOAT_EQ(params.baseMetalness, 0.0f);
+    EXPECT_FLOAT_EQ(params.baseDiffuseRoughness, 0.0f);
+    EXPECT_EQ(params.emissionColor, glm::vec3(1.0f));
+    EXPECT_FLOAT_EQ(params.emissionLuminance, 0.0f);
+    EXPECT_FLOAT_EQ(params.geometryOpacity, 1.0f);
+}
+
 TEST(PbrMaterialTest, PacksOrmChannels) {
     const Image occlusion{{17}, 1, 1, 1, 1};
     const Image roughness{{33}, 1, 1, 1, 1};

@@ -202,15 +202,23 @@ void MaterialExplorerScene::drawGui() {
     ImGui::Begin("Material Explorer");
 
     bool materialChanged = false;
-    materialChanged |= ImGui::ColorEdit3("Base Color", &m_shaderBallParams.albedo.x);
-    materialChanged |= ImGui::SliderFloat("Opacity", &m_shaderBallParams.albedo.a, 0.0f, 1.0f, "%.3f");
-    materialChanged |= ImGui::SliderFloat("Metallic", &m_shaderBallParams.metallic, 0.0f, 1.0f, "%.3f");
-    materialChanged |= ImGui::SliderFloat("Roughness", &m_shaderBallParams.roughness, 0.001f, 1.0f, "%.3f");
+    materialChanged |= ImGui::SliderFloat("Base Weight", &m_shaderBallParams.baseWeight, 0.0f, 1.0f, "%.3f");
+    materialChanged |= ImGui::ColorEdit3("Base Color", &m_shaderBallParams.baseColor.x);
+    materialChanged |= ImGui::SliderFloat("Geometry Opacity", &m_shaderBallParams.geometryOpacity, 0.0f, 1.0f, "%.3f");
+    materialChanged |= ImGui::SliderFloat("Base Metalness", &m_shaderBallParams.baseMetalness, 0.0f, 1.0f, "%.3f");
+    materialChanged |=
+        ImGui::SliderFloat("Base Diffuse Roughness", &m_shaderBallParams.baseDiffuseRoughness, 0.0f, 1.0f, "%.3f");
+    materialChanged |= ImGui::SliderFloat("Specular Weight", &m_shaderBallParams.specularWeight, 0.0f, 1.0f, "%.3f");
+    materialChanged |= ImGui::ColorEdit3("Specular Color", &m_shaderBallParams.specularColor.x);
+    materialChanged |=
+        ImGui::SliderFloat("Specular Roughness", &m_shaderBallParams.specularRoughness, 0.001f, 1.0f, "%.3f");
+    materialChanged |= ImGui::SliderFloat("Specular IOR", &m_shaderBallParams.specularIor, 1.0f, 3.0f, "%.3f");
     materialChanged |= ImGui::SliderFloat("Ambient Occlusion", &m_shaderBallParams.aoStrength, 0.0f, 1.0f, "%.3f");
     materialChanged |= ImGui::SliderFloat("Normal Strength", &m_shaderBallParams.normalScale, 0.0f, 2.0f, "%.3f");
     materialChanged |= ImGui::SliderFloat2("UV Scale", &m_shaderBallParams.uvScale.x, 0.1f, 10.0f, "%.2f");
-    materialChanged |= ImGui::ColorEdit3(
-        "Emissive", &m_shaderBallParams.emissiveFactor.x, ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+    materialChanged |= ImGui::ColorEdit3("Emission Color", &m_shaderBallParams.emissionColor.x);
+    materialChanged |=
+        ImGui::SliderFloat("Emission Luminance", &m_shaderBallParams.emissionLuminance, 0.0f, 20.0f, "%.3f");
 
     const uint32_t previousFlags = m_shaderBallParams.flags;
     bool alphaMasked = (m_shaderBallParams.flags & PbrMaterialAlphaMask) != 0;
@@ -332,9 +340,10 @@ void MaterialExplorerScene::createSceneObjects(const std::filesystem::path& shad
         for (auto&& [modelIndex, model] : std::views::enumerate(sceneData.models)) {
             const bool isEditableMaterial = model.material.name == kEditableGltfMaterialName;
             if (isEditableMaterial) {
-                model.material.params.albedo = glm::vec4(0.72f, 0.24f, 0.12f, 1.0f);
-                model.material.params.metallic = 0.0f;
-                model.material.params.roughness = 0.28f;
+                model.material.params.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
+                model.material.params.baseMetalness = 0.0f;
+                model.material.params.specularRoughness = 0.28f;
+                model.material.textureKeys[kPbrOrmMapIndex] = PbrImageKeyCreator{"material-explorer"}.createOrmMapKey(0);
             }
 
             const auto nodeId = fmt::format("{}-{}", kShaderBallNodeId, modelIndex);
@@ -368,9 +377,9 @@ void MaterialExplorerScene::createSceneObjects(const std::filesystem::path& shad
             keyCreator.createOrmMapKey(0),
             keyCreator.createEmissiveMapKey(0),
         };
-        shaderBallMaterial.params.albedo = glm::vec4(0.72f, 0.24f, 0.12f, 1.0f);
-        shaderBallMaterial.params.metallic = 0.0f;
-        shaderBallMaterial.params.roughness = 0.28f;
+        shaderBallMaterial.params.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
+        shaderBallMaterial.params.baseMetalness = 0.0f;
+        shaderBallMaterial.params.specularRoughness = 0.28f;
         m_shaderBallMaterialHandle =
             addPbrNode(kShaderBallNodeId, shaderBallMesh, shaderBallMaterial, shaderBallTransform, true);
         m_editableMaterialNode = m_renderNodes.at(std::string{kShaderBallNodeId}).get();
@@ -381,8 +390,8 @@ void MaterialExplorerScene::createSceneObjects(const std::filesystem::path& shad
     const auto floorMesh = createPlaneMesh(12.0f, 12.0f);
     const auto floorMaterialPath = m_renderer->getResourcesPath() / "Textures/PbrMaterials/Grass";
     auto [floorMaterial, floorImages] = loadPbrMaterial(floorMaterialPath);
-    floorMaterial.params.metallic = 0.0f;
-    floorMaterial.params.roughness = 0.85f;
+    floorMaterial.params.baseMetalness = 0.0f;
+    floorMaterial.params.specularRoughness = 0.85f;
     floorMaterial.params.uvScale = glm::vec2(8.0f);
     addPbrImageGroupToImageCache(floorImages, m_resourceContext->imageCache);
     addPbrNode(kFloorNodeId, floorMesh, floorMaterial, glm::mat4(1.0f), false);
@@ -457,20 +466,20 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
 
 void MaterialExplorerScene::resetMaterial() {
     const auto samplerIndex = m_shaderBallParams.samplerIndex;
-    const auto albedoTex = m_shaderBallParams.albedoTex;
+    const auto baseColorTex = m_shaderBallParams.baseColorTex;
     const auto normalTex = m_shaderBallParams.normalTex;
     const auto ormTex = m_shaderBallParams.ormTex;
-    const auto emissiveTex = m_shaderBallParams.emissiveTex;
+    const auto emissionTex = m_shaderBallParams.emissionTex;
 
     m_shaderBallParams = {};
-    m_shaderBallParams.albedo = glm::vec4(0.72f, 0.24f, 0.12f, 1.0f);
-    m_shaderBallParams.metallic = 0.0f;
-    m_shaderBallParams.roughness = 0.28f;
+    m_shaderBallParams.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
+    m_shaderBallParams.baseMetalness = 0.0f;
+    m_shaderBallParams.specularRoughness = 0.28f;
     m_shaderBallParams.samplerIndex = samplerIndex;
-    m_shaderBallParams.albedoTex = albedoTex;
+    m_shaderBallParams.baseColorTex = baseColorTex;
     m_shaderBallParams.normalTex = normalTex;
     m_shaderBallParams.ormTex = ormTex;
-    m_shaderBallParams.emissiveTex = emissiveTex;
+    m_shaderBallParams.emissionTex = emissionTex;
     m_pbrMaterialTable->update(m_shaderBallMaterialHandle, m_shaderBallParams);
     updateShaderBallShadowMaterials();
     rebuildDrawCommands();

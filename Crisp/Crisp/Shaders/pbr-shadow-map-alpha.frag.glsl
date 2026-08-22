@@ -9,19 +9,31 @@
 layout(location = 0) in vec2 inTexCoord;
 
 struct PbrMaterialParameters {
-    vec4 albedo;
-    vec3 emissiveFactor;
-    float normalScale;
+    vec3 baseColor;
+    float baseWeight;
+
+    vec3 specularColor;
+    float specularWeight;
+
+    vec3 emissionColor;
+    float emissionLuminance;
+
     vec2 uvScale;
-    float metallic;
-    float roughness;
+    float baseMetalness;
+    float baseDiffuseRoughness;
+
+    float specularRoughness;
+    float specularIor;
+    float normalScale;
     float aoStrength;
 
     uint samplerIndex;
-    uint albedoTex;
+    uint baseColorTex;
     uint normalTex;
     uint ormTex;
-    uint emissiveTex;
+
+    uint emissionTex;
+    float geometryOpacity;
     float alphaCutoff;
     uint flags;
 };
@@ -41,7 +53,8 @@ void main() {
     const PbrMaterialParameters material = drawParameters.materialTable.materials[drawParameters.materialIndex];
     const vec2 uv = inTexCoord * material.uvScale;
     const float alpha = texture(
-        sampler2D(gTextures2D[material.albedoTex], gSamplers[material.samplerIndex]), uv).a * material.albedo.a;
+        sampler2D(gTextures2D[material.baseColorTex], gSamplers[material.samplerIndex]), uv).a *
+        material.geometryOpacity;
     if (alpha < material.alphaCutoff) {
         discard;
     }

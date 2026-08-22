@@ -10,10 +10,10 @@ using PbrMaterialTableTest = VulkanTest;
 TEST_F(PbrMaterialTableTest, AssignsStableIndicesAndDrawParameters) {
     PbrMaterialTable table(*device_, 4);
 
-    PbrParams first{};
-    first.metallic = 0.25f;
-    PbrParams second{};
-    second.roughness = 0.75f;
+    PbrMaterialParams first{};
+    first.baseMetalness = 0.25f;
+    PbrMaterialParams second{};
+    second.specularRoughness = 0.75f;
 
     const auto firstHandle = table.add(first);
     const auto secondHandle = table.add(second);
@@ -32,12 +32,13 @@ TEST_F(PbrMaterialTableTest, AssignsStableIndicesAndDrawParameters) {
 TEST_F(PbrMaterialTableTest, UploadsPopulatedPrefixThroughStagingBelt) {
     PbrMaterialTable table(*device_, 4);
 
-    PbrParams first{};
-    first.albedo = glm::vec4(0.1f, 0.2f, 0.3f, 0.4f);
+    PbrMaterialParams first{};
+    first.baseColor = glm::vec3(0.1f, 0.2f, 0.3f);
+    first.geometryOpacity = 0.4f;
     first.samplerIndex = 3;
-    PbrParams second{};
-    second.albedoTex = 17;
-    second.emissiveTex = 23;
+    PbrMaterialParams second{};
+    second.baseColorTex = 17;
+    second.emissionTex = 23;
     table.add(first);
     table.add(second);
 
@@ -48,23 +49,24 @@ TEST_F(PbrMaterialTableTest, UploadsPopulatedPrefixThroughStagingBelt) {
         table.updateDeviceBuffer(stagingBelt, executor.cmdEncoder);
     }
 
-    const auto uploaded = toStdVec<PbrParams>(table.getDeviceBuffer());
+    const auto uploaded = toStdVec<PbrMaterialParams>(table.getDeviceBuffer());
     ASSERT_EQ(uploaded.size(), table.getCapacity());
-    EXPECT_FLOAT_EQ(uploaded[0].albedo.x, first.albedo.x);
-    EXPECT_FLOAT_EQ(uploaded[0].albedo.w, first.albedo.w);
+    EXPECT_FLOAT_EQ(uploaded[0].baseColor.x, first.baseColor.x);
+    EXPECT_FLOAT_EQ(uploaded[0].geometryOpacity, first.geometryOpacity);
     EXPECT_EQ(uploaded[0].samplerIndex, first.samplerIndex);
-    EXPECT_EQ(uploaded[1].albedoTex, second.albedoTex);
-    EXPECT_EQ(uploaded[1].emissiveTex, second.emissiveTex);
+    EXPECT_EQ(uploaded[1].baseColorTex, second.baseColorTex);
+    EXPECT_EQ(uploaded[1].emissionTex, second.emissionTex);
 }
 
 TEST_F(PbrMaterialTableTest, UpdatesAnExistingMaterialWithoutChangingItsHandle) {
     PbrMaterialTable table(*device_, 2);
-    const auto handle = table.add(PbrParams{});
+    const auto handle = table.add(PbrMaterialParams{});
 
-    PbrParams updated{};
-    updated.albedo = glm::vec4(0.2f, 0.4f, 0.6f, 0.8f);
-    updated.metallic = 0.75f;
-    updated.roughness = 0.15f;
+    PbrMaterialParams updated{};
+    updated.baseColor = glm::vec3(0.2f, 0.4f, 0.6f);
+    updated.geometryOpacity = 0.8f;
+    updated.baseMetalness = 0.75f;
+    updated.specularRoughness = 0.15f;
     table.update(handle, updated);
 
     VulkanStagingBelt stagingBelt(*device_, 4096);
@@ -74,12 +76,13 @@ TEST_F(PbrMaterialTableTest, UpdatesAnExistingMaterialWithoutChangingItsHandle) 
         table.updateDeviceBuffer(stagingBelt, executor.cmdEncoder);
     }
 
-    const auto uploaded = toStdVec<PbrParams>(table.getDeviceBuffer());
+    const auto uploaded = toStdVec<PbrMaterialParams>(table.getDeviceBuffer());
     EXPECT_EQ(table.getMaterialCount(), 1);
     EXPECT_EQ(table.createDrawParameters(handle).materialIndex, handle.index);
-    EXPECT_EQ(uploaded[handle.index].albedo, updated.albedo);
-    EXPECT_FLOAT_EQ(uploaded[handle.index].metallic, updated.metallic);
-    EXPECT_FLOAT_EQ(uploaded[handle.index].roughness, updated.roughness);
+    EXPECT_EQ(uploaded[handle.index].baseColor, updated.baseColor);
+    EXPECT_FLOAT_EQ(uploaded[handle.index].geometryOpacity, updated.geometryOpacity);
+    EXPECT_FLOAT_EQ(uploaded[handle.index].baseMetalness, updated.baseMetalness);
+    EXPECT_FLOAT_EQ(uploaded[handle.index].specularRoughness, updated.specularRoughness);
 }
 
 } // namespace

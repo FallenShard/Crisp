@@ -31,35 +31,61 @@ inline constexpr std::array<std::string_view, kPbrMapTypeCount> kPbrMapNames = {
 
 // Mirrors PbrMaterialParameters in Shaders/pbr.frag.glsl.
 // 0 is the registry's fallback, so an unauthored map samples the checkerboard.
-struct PbrParams {
-    glm::vec4 albedo{1.0f, 1.0f, 1.0f, 1.0f};
-    glm::vec3 emissiveFactor{0.0f, 0.0f, 0.0f};
-    float normalScale{1.0f};
+// Targets the supported opaque subset of OpenPBR Surface 1.1.1:
+// https://academysoftwarefoundation.github.io/OpenPBR/
+struct PbrMaterialParams {
+    glm::vec3 baseColor{0.8f, 0.8f, 0.8f};
+    float baseWeight{1.0f};
+
+    glm::vec3 specularColor{1.0f, 1.0f, 1.0f};
+    float specularWeight{1.0f};
+
+    glm::vec3 emissionColor{1.0f, 1.0f, 1.0f};
+    float emissionLuminance{0.0f};
+
     glm::vec2 uvScale{1.0f, 1.0f};
-    float metallic{1.0f};
-    float roughness{1.0f};
+    float baseMetalness{0.0f};
+    float baseDiffuseRoughness{0.0f};
+
+    float specularRoughness{0.3f};
+    float specularIor{1.5f};
+    float normalScale{1.0f};
     float aoStrength{1.0f};
 
     uint32_t samplerIndex{0};
-    uint32_t albedoTex{0};
+    uint32_t baseColorTex{0};
     uint32_t normalTex{0};
     uint32_t ormTex{0};
-    uint32_t emissiveTex{0};
+
+    uint32_t emissionTex{0};
+    float geometryOpacity{1.0f};
     float alphaCutoff{0.5f};
     uint32_t flags{0};
 };
 
-static_assert(sizeof(PbrParams) == 80);
-static_assert(std::is_standard_layout_v<PbrParams>);
-static_assert(offsetof(PbrParams, emissiveFactor) == 16);
-static_assert(offsetof(PbrParams, normalScale) == 28);
-static_assert(offsetof(PbrParams, uvScale) == 32);
-static_assert(offsetof(PbrParams, aoStrength) == 48);
-static_assert(offsetof(PbrParams, samplerIndex) == 52);
-static_assert(offsetof(PbrParams, ormTex) == 64);
-static_assert(offsetof(PbrParams, emissiveTex) == 68);
-static_assert(offsetof(PbrParams, alphaCutoff) == 72);
-static_assert(offsetof(PbrParams, flags) == 76);
+static_assert(sizeof(PbrMaterialParams) == 112);
+static_assert(std::is_standard_layout_v<PbrMaterialParams>);
+static_assert(offsetof(PbrMaterialParams, baseColor) == 0);
+static_assert(offsetof(PbrMaterialParams, baseWeight) == 12);
+static_assert(offsetof(PbrMaterialParams, specularColor) == 16);
+static_assert(offsetof(PbrMaterialParams, specularWeight) == 28);
+static_assert(offsetof(PbrMaterialParams, emissionColor) == 32);
+static_assert(offsetof(PbrMaterialParams, emissionLuminance) == 44);
+static_assert(offsetof(PbrMaterialParams, uvScale) == 48);
+static_assert(offsetof(PbrMaterialParams, baseMetalness) == 56);
+static_assert(offsetof(PbrMaterialParams, baseDiffuseRoughness) == 60);
+static_assert(offsetof(PbrMaterialParams, specularRoughness) == 64);
+static_assert(offsetof(PbrMaterialParams, specularIor) == 68);
+static_assert(offsetof(PbrMaterialParams, normalScale) == 72);
+static_assert(offsetof(PbrMaterialParams, aoStrength) == 76);
+static_assert(offsetof(PbrMaterialParams, samplerIndex) == 80);
+static_assert(offsetof(PbrMaterialParams, baseColorTex) == 84);
+static_assert(offsetof(PbrMaterialParams, normalTex) == 88);
+static_assert(offsetof(PbrMaterialParams, ormTex) == 92);
+static_assert(offsetof(PbrMaterialParams, emissionTex) == 96);
+static_assert(offsetof(PbrMaterialParams, geometryOpacity) == 100);
+static_assert(offsetof(PbrMaterialParams, alphaCutoff) == 104);
+static_assert(offsetof(PbrMaterialParams, flags) == 108);
 
 struct PbrImageKeyCreator {
     std::string name;
@@ -104,7 +130,7 @@ struct PbrImageGroup {
 
 struct PbrMaterial {
     std::string name;
-    PbrParams params;
+    PbrMaterialParams params;
     std::array<std::string, kPbrMapTypeCount> textureKeys;
 };
 

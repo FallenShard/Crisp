@@ -42,21 +42,33 @@ layout(set = 1, binding = 3) uniform samplerCube specularReflectanceMap;
 layout(set = 1, binding = 4) uniform sampler2D cascadedShadowMaps[4];
 layout(set = 1, binding = 5) uniform sampler2D brdfLut;
 
-// Material-specific parameters. Must match PbrParams in Materials/PbrMaterial.hpp.
+// Material-specific parameters. Must match PbrMaterialParams in Materials/PbrMaterial.hpp.
 struct PbrMaterialParameters {
-    vec4 albedo;
-    vec3 emissiveFactor;
-    float normalScale;
+    vec3 baseColor;
+    float baseWeight;
+
+    vec3 specularColor;
+    float specularWeight;
+
+    vec3 emissionColor;
+    float emissionLuminance;
+
     vec2 uvScale;
-    float metallic;
-    float roughness;
+    float baseMetalness;
+    float baseDiffuseRoughness;
+
+    float specularRoughness;
+    float specularIor;
+    float normalScale;
     float aoStrength;
 
     uint samplerIndex;
-    uint albedoTex;
+    uint baseColorTex;
     uint normalTex;
     uint ormTex;
-    uint emissiveTex;
+
+    uint emissionTex;
+    float geometryOpacity;
     float alphaCutoff;
     uint flags;
 };
@@ -181,6 +193,28 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
     return kD * diffuse * ao + specular;
 }
 
+float computeDielectricF0(const float ior, const float weight) {
+    const float eta = max(ior, 0.001f);
+    const float unweightedF0 = pow((1.0f - eta) / (1.0f + eta), 2.0f);
+    return clamp(max(weight, 0.0f) * unweightedF0, 0.0f, 0.9999f);
+}
+
+vec3 evaluateOrenNayarDiffuse(
+    const vec3 color,
+    const float roughness,
+    const vec3 eyeN,
+    const vec3 eyeL,
+    const vec3 eyeV,
+    const float NdotL,
+    const float NdotV) {
+    const float sigma2 = roughness * roughness;
+    const float A = 1.0f - 0.5f * sigma2 / (sigma2 + 0.33f);
+    const float B = 0.45f * sigma2 / (sigma2 + 0.09f);
+    const float s = dot(eyeL, eyeV) - NdotL * NdotV;
+    const float t = s > 0.0f ? max(NdotL, NdotV) : 1.0f;
+    return color * (A + B * s / max(t, 0.001f)) / PI;
+}
+
 vec3 decodeNormal(const PbrMaterialParameters material, in vec2 uv) {
     vec3 normal = normalize(eyeNormal);
     // Have to check this because without UVs, computed tangents will be NaN.
@@ -213,41 +247,52 @@ void main() {
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
     // Material properties.
-    const vec4 albedoSample = sampleMaterial(material, material.albedoTex, uvCoord) * material.albedo;
-    if ((material.flags & 1u) != 0u && albedoSample.a < material.alphaCutoff) {
+    const vec4 baseColorSample = sampleMaterial(material, material.baseColorTex, uvCoord);
+    const float opacity = baseColorSample.a * material.geometryOpacity;
+    if ((material.flags & 1u) != 0u && opacity < material.alphaCutoff) {
         discard;
     }
-    const vec3 albedo = albedoSample.rgb;
+    const vec3 baseColor = baseColorSample.rgb * material.baseColor;
     const vec3 orm = sampleMaterial(material, material.ormTex, uvCoord).rgb;
-    const float roughness = clamp(orm.g * material.roughness, 0.001f, 1.0f);
-    const float alpha = roughness * roughness;
-    const float metallic = orm.b * material.metallic;
+    const float specularRoughness = clamp(orm.g * material.specularRoughness, 0.001f, 1.0f);
+    const float alpha = specularRoughness * specularRoughness;
+    const float baseMetalness = clamp(orm.b * material.baseMetalness, 0.0f, 1.0f);
     const float ao = mix(1.0f, orm.r, clamp(material.aoStrength, 0.0f, 1.0f));
-    const vec3 emission = sampleMaterial(material, material.emissiveTex, uvCoord).rgb * material.emissiveFactor;
+    const vec3 emission = sampleMaterial(material, material.emissionTex, uvCoord).rgb * material.emissionColor *
+        max(material.emissionLuminance, 0.0f);
 
     // Environment BRDF.
-    const vec3 F0 = mix(vec3(0.04), albedo, metallic);
-    const vec3 envF = fresnelSchlickRoughness(NdotV, F0, roughness);
-    const vec3 envKd = (1.0f - envF) * (1.0f - metallic);
+    const vec3 dielectricF0 = computeDielectricF0(material.specularIor, material.specularWeight) *
+        clamp(material.specularColor, vec3(0.0f), vec3(1.0f));
+    const vec3 F0 = mix(dielectricF0, baseColor, baseMetalness);
+    const vec3 envF = fresnelSchlickRoughness(NdotV, F0, specularRoughness);
+    const vec3 envKd = (1.0f - envF) * (1.0f - baseMetalness);
 
     // Direct-light BRDF.
     const vec3 eyeH = normalize(eyeL + eyeV);
     const float NdotH = max(dot(eyeN, eyeH), 0.0f);
     const float VdotH = max(dot(eyeV, eyeH), 0.0f);
     const vec3 directF = fresnelSchlick(VdotH, F0);
-    const vec3 directKd = (1.0f - directF) * (1.0f - metallic);
-    const vec3 directDiffuse = directKd * albedo / PI;
+    const vec3 directKd = (1.0f - directF) * (1.0f - baseMetalness);
+    const vec3 directDiffuse = directKd * evaluateOrenNayarDiffuse(
+        baseColor,
+        clamp(material.baseDiffuseRoughness, 0.0f, 1.0f),
+        eyeN,
+        eyeL,
+        eyeV,
+        NdotL,
+        NdotV);
     const float D = distributionGGX(NdotH, alpha);
-    const float G = geometrySmith(NdotV, NdotL, roughness);
+    const float G = geometrySmith(NdotV, NdotL, specularRoughness);
     const vec3 directSpecular = D * G * directF / max(4.0f * NdotV * NdotL, 0.001);
 
     const vec3 geometricWorldN = normalize((view.invV * vec4(geometricEyeN, 0.0f)).xyz);
     const float shadowCoeff = evalCascadedShadow(worldPos, -eyePosition.z, geometricWorldN);
 
     const vec3 directRadiance = (directDiffuse + directSpecular) * Le * NdotL;
-    const vec3 environmentRadiance = computeEnvRadiance(eyeN, eyeV, envKd, albedo, envF, roughness, ao);
+    const vec3 environmentRadiance = computeEnvRadiance(eyeN, eyeV, envKd, baseColor, envF, specularRoughness, ao);
 
-    vec3 color = environmentRadiance + shadowCoeff * directRadiance + emission;
+    vec3 color = clamp(material.baseWeight, 0.0f, 1.0f) * (environmentRadiance + shadowCoeff * directRadiance) + emission;
     if (cascadedLight[0].position.w > 0.5f) {
         color = mix(color, getCascadeDebugColor(-eyePosition.z), 0.45f);
     }

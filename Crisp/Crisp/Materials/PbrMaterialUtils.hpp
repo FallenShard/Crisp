@@ -15,7 +15,7 @@ std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::pat
 
 void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& imageCache);
 
-PbrParams createGpuPbrParams(const PbrMaterial& pbrMaterial, const ImageCache& imageCache);
+PbrMaterialParams createGpuPbrParams(const PbrMaterial& pbrMaterial, const ImageCache& imageCache);
 
 void configureForwardLightingPassMaterial(
     Material& material,

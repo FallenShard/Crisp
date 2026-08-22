@@ -60,7 +60,7 @@ private:
     RenderNode* m_editableMaterialNode{nullptr};
     RenderNode* m_floorNode{nullptr};
     PbrMaterialHandle m_shaderBallMaterialHandle;
-    PbrParams m_shaderBallParams;
+    PbrMaterialParams m_shaderBallParams;
 
     std::vector<std::string> m_environmentMapNames;
     bool m_showFloor{true};

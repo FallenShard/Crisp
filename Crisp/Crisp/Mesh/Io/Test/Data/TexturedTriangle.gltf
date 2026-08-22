@@ -13,7 +13,10 @@
   "materials": [{
     "name": "TestMaterial",
     "pbrMetallicRoughness": {
+      "baseColorFactor": [0.2, 0.4, 0.6, 0.8],
       "baseColorTexture": { "index": 0 },
+      "metallicFactor": 0.35,
+      "roughnessFactor": 0.65,
       "metallicRoughnessTexture": { "index": 0 }
     },
     "normalTexture": { "index": 1, "scale": 0.25 },

@@ -42,7 +42,7 @@ private:
 
     FlatHashMap<std::string, std::unique_ptr<RenderNode>> m_renderNodes;
 
-    PbrParams m_uniformMaterialParams;
+    PbrMaterialParams m_uniformMaterialParams;
     std::unique_ptr<Skybox> m_skybox;
 
     SkinningData m_skinningData;

@@ -38,6 +38,14 @@ const std::vector<FlatStringHashSet> kTextureFileAliases = {
     {},
 };
 
+PbrMaterialParams createLegacyMaterialParams() {
+    PbrMaterialParams params{};
+    params.baseColor = glm::vec3(1.0f);
+    params.baseMetalness = 1.0f;
+    params.specularRoughness = 1.0f;
+    return params;
+}
+
 PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::string name) {
     const auto loadImageIfExists =
         [&materialDir](
@@ -102,7 +110,10 @@ PbrImageGroup loadPbrImageGroup(const std::filesystem::path& materialDir, std::s
 
 std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::path& materialDir) {
 
-    PbrMaterial material{.name = materialDir.stem().string()};
+    PbrMaterial material{
+        .name = materialDir.stem().string(),
+        .params = createLegacyMaterialParams(),
+    };
 
     auto group = loadPbrImageGroup(materialDir, material.name);
     const PbrImageKeyCreator keyCreator{group.name};
@@ -111,7 +122,7 @@ std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::pat
     material.textureKeys[2] = group.ormMaps.empty() ? "" : keyCreator.createOrmMapKey(0);
     material.textureKeys[3] = group.emissiveMaps.empty() ? "" : keyCreator.createEmissiveMapKey(0);
     if (!group.emissiveMaps.empty()) {
-        material.params.emissiveFactor = glm::vec3(1.0f);
+        material.params.emissionLuminance = 1.0f;
     }
 
     return {std::move(material), std::move(group)};
@@ -140,8 +151,8 @@ void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& i
     };
 }
 
-PbrParams createGpuPbrParams(const PbrMaterial& pbrMaterial, const ImageCache& imageCache) {
-    PbrParams params{pbrMaterial.params};
+PbrMaterialParams createGpuPbrParams(const PbrMaterial& pbrMaterial, const ImageCache& imageCache) {
+    PbrMaterialParams params{pbrMaterial.params};
     params.samplerIndex = imageCache.getSamplerIndex("linearRepeat");
 
     const auto textureSlot = [&imageCache, &pbrMaterial](const uint32_t index) {
@@ -149,10 +160,10 @@ PbrParams createGpuPbrParams(const PbrMaterial& pbrMaterial, const ImageCache& i
             .getImageHandle(pbrMaterial.textureKeys[index], fmt::format("default-{}-0", kPbrMapNames[index]))
             .index();
     };
-    params.albedoTex = textureSlot(0);
+    params.baseColorTex = textureSlot(0);
     params.normalTex = textureSlot(1);
     params.ormTex = textureSlot(2);
-    params.emissiveTex = textureSlot(3);
+    params.emissionTex = textureSlot(3);
 
     return params;
 }
