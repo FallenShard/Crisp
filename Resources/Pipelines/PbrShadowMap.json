@@ -1,0 +1,12 @@
+{
+    "shaders": { "vert": "pbr-shadow-map.vert", "frag": "pbr-shadow-map.frag" },
+    "vertexInputBindings": [
+        { "locations": [ 0 ], "inputRate": "vertex" }
+    ],
+    "descriptorSets": [
+        { "layout": "bindless" },
+        { "buffered": false, "dynamicBuffers": [ 0 ] }
+    ],
+    "rasterization": { "cullMode": "front" },
+    "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] }
+}
