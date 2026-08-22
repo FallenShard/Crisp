@@ -1,6 +1,9 @@
 #pragma once
 
 #include <array>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include <Crisp/Camera/TargetCameraController.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
@@ -35,6 +38,7 @@ private:
         bool castsShadow);
 
     void setEnvironmentMap(const std::string& environmentMapName);
+    void setMaterialPreset(const std::string& materialPresetName);
     void resetMaterial();
     void updateShaderBallShadowMaterials();
     void rebuildDrawCommands();
@@ -62,6 +66,9 @@ private:
     PbrMaterialHandle m_shaderBallMaterialHandle;
     PbrMaterialParams m_shaderBallParams;
 
+    std::vector<std::string> m_materialPresetNames;
+    std::unordered_map<std::string, PbrMaterial> m_materialPresets;
+    std::string m_materialPresetName{"(None)"};
     std::vector<std::string> m_environmentMapNames;
     bool m_showFloor{true};
 };

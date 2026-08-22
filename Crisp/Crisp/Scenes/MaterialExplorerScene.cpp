@@ -24,6 +24,7 @@ constexpr uint32_t kMaterialCapacity{5};
 constexpr std::string_view kShaderBallNodeId{"shader-ball"};
 constexpr std::string_view kFloorNodeId{"floor"};
 constexpr std::string_view kEditableGltfMaterialName{"material_surface"};
+constexpr std::string_view kNoMaterialPreset{"(None)"};
 
 struct ShadowMaterialVariant {
     std::string_view suffix;
@@ -148,6 +149,15 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
     createSceneObjects(shaderBallPath);
     rebuildDrawCommands();
 
+    m_materialPresetNames.emplace_back(kNoMaterialPreset);
+    const auto materialPresetsPath = m_renderer->getResourcesPath() / "Textures/PbrMaterials";
+    for (const auto& entry : std::filesystem::directory_iterator(materialPresetsPath)) {
+        if (entry.is_directory()) {
+            m_materialPresetNames.push_back(entry.path().stem().string());
+        }
+    }
+    std::sort(m_materialPresetNames.begin() + 1, m_materialPresetNames.end());
+
     const auto environmentMapsPath = m_renderer->getResourcesPath() / "Textures/EnvironmentMaps";
     for (const auto& entry : std::filesystem::directory_iterator(environmentMapsPath)) {
         if (entry.is_directory()) {
@@ -201,6 +211,12 @@ void MaterialExplorerScene::drawGui() {
 
     ImGui::Begin("Material Explorer");
 
+    gui::drawComboBox(
+        "Texture Set",
+        m_materialPresetName,
+        m_materialPresetNames,
+        [this](const std::string& selectedItem) { setMaterialPreset(selectedItem); });
+
     bool materialChanged = false;
     materialChanged |= ImGui::SliderFloat("Base Weight", &m_shaderBallParams.baseWeight, 0.0f, 1.0f, "%.3f");
     materialChanged |= ImGui::ColorEdit3("Base Color", &m_shaderBallParams.baseColor.x);
@@ -215,7 +231,20 @@ void MaterialExplorerScene::drawGui() {
     materialChanged |= ImGui::SliderFloat("Specular IOR", &m_shaderBallParams.specularIor, 1.0f, 3.0f, "%.3f");
     materialChanged |= ImGui::SliderFloat("Ambient Occlusion", &m_shaderBallParams.aoStrength, 0.0f, 1.0f, "%.3f");
     materialChanged |= ImGui::SliderFloat("Normal Strength", &m_shaderBallParams.normalScale, 0.0f, 2.0f, "%.3f");
-    materialChanged |= ImGui::SliderFloat2("UV Scale", &m_shaderBallParams.uvScale.x, 0.1f, 10.0f, "%.2f");
+    const glm::vec2 previousUvScale = m_shaderBallParams.uvScale;
+    if (ImGui::SliderFloat2("UV Scale", &m_shaderBallParams.uvScale.x, 0.1f, 10.0f, "%.2f")) {
+        if (ImGui::GetIO().KeyAlt) {
+            if (m_shaderBallParams.uvScale.x != previousUvScale.x) {
+                m_shaderBallParams.uvScale.y = m_shaderBallParams.uvScale.x;
+            } else {
+                m_shaderBallParams.uvScale.x = m_shaderBallParams.uvScale.y;
+            }
+        }
+        materialChanged = true;
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+        ImGui::SetTooltip("Hold Alt while editing to set both UV axes.");
+    }
     materialChanged |= ImGui::ColorEdit3("Emission Color", &m_shaderBallParams.emissionColor.x);
     materialChanged |=
         ImGui::SliderFloat("Emission Luminance", &m_shaderBallParams.emissionLuminance, 0.0f, 20.0f, "%.3f");
@@ -462,6 +491,54 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
     if (m_forwardPassMaterial) {
         configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
     }
+}
+
+void MaterialExplorerScene::setMaterialPreset(const std::string& materialPresetName) {
+    if (materialPresetName == m_materialPresetName) {
+        return;
+    }
+
+    PbrMaterial* preset{nullptr};
+    PbrMaterial parameterOnlyMaterial{.name = "material-explorer"};
+    if (materialPresetName == kNoMaterialPreset) {
+        const PbrImageKeyCreator keyCreator{parameterOnlyMaterial.name};
+        parameterOnlyMaterial.textureKeys = {
+            keyCreator.createAlbedoMapKey(0),
+            keyCreator.createNormalMapKey(0),
+            keyCreator.createOrmMapKey(0),
+            keyCreator.createEmissiveMapKey(0),
+        };
+        parameterOnlyMaterial.params.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
+        parameterOnlyMaterial.params.specularRoughness = 0.28f;
+        preset = &parameterOnlyMaterial;
+    } else {
+        auto found = m_materialPresets.find(materialPresetName);
+        if (found == m_materialPresets.end()) {
+            const auto materialPath =
+                m_renderer->getResourcesPath() / "Textures/PbrMaterials" / materialPresetName;
+            auto [material, images] = loadPbrMaterial(materialPath);
+            addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
+            found = m_materialPresets.emplace(materialPresetName, std::move(material)).first;
+        }
+        preset = &found->second;
+    }
+
+    auto params = createGpuPbrParams(*preset, m_resourceContext->imageCache);
+
+    // Texture sets author these values; the remaining OpenPBR controls stay under the explorer sliders.
+    params.baseWeight = m_shaderBallParams.baseWeight;
+    params.baseDiffuseRoughness = m_shaderBallParams.baseDiffuseRoughness;
+    params.specularColor = m_shaderBallParams.specularColor;
+    params.specularWeight = m_shaderBallParams.specularWeight;
+    params.specularIor = m_shaderBallParams.specularIor;
+    params.uvScale = m_shaderBallParams.uvScale;
+    params.geometryOpacity = m_shaderBallParams.geometryOpacity;
+    params.alphaCutoff = m_shaderBallParams.alphaCutoff;
+    params.flags = m_shaderBallParams.flags;
+
+    m_shaderBallParams = params;
+    m_materialPresetName = materialPresetName;
+    m_pbrMaterialTable->update(m_shaderBallMaterialHandle, m_shaderBallParams);
 }
 
 void MaterialExplorerScene::resetMaterial() {
