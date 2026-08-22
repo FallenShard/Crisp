@@ -101,7 +101,8 @@ void Application::run() {
             m_window, ImGui::GetIO().WantCaptureMouse ? EventType::AllMouseEvents : EventType::None);
 
         Window::pollEvents();
-        resizeIfNeeded();
+        applyPendingResize();
+        m_sceneContainer->applyPendingSceneSelection();
 
         while (timeSinceLastUpdate > kTimePerFrame) {
             m_sceneContainer->update({
@@ -182,7 +183,7 @@ void Application::onRestore() {
     m_isMinimized = false;
 }
 
-void Application::resizeIfNeeded() {
+void Application::applyPendingResize() {
     if (m_isResizing) {
         if (const auto size = m_window.getSize(); size.x != 0 && size.y != 0) {
             m_renderer->resize(size.x, size.y);

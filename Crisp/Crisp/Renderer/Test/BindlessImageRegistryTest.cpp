@@ -196,6 +196,22 @@ TEST_F(BindlessImageRegistryTest, SamplersAreAppendOnly) {
     registry.flush();
 }
 
+TEST_F(BindlessImageRegistryTest, SamplersCanBeResetAtAnIdleSceneBoundary) {
+    BindlessImageRegistry registry(*device_, *physicalDevice_, kSmallConfig);
+    const auto linear = createLinearClampSampler(*device_);
+    const auto nearest = createNearestClampSampler(*device_);
+
+    EXPECT_EQ(registry.addSampler(*linear, "linearClamp"), 0);
+    EXPECT_EQ(registry.addSampler(*nearest, "nearestClamp"), 1);
+
+    registry.resetSamplers(*linear);
+
+    EXPECT_EQ(registry.getSamplerCount(), 0);
+    EXPECT_EQ(registry.getPendingWriteCount(), kSmallConfig.samplerCapacity);
+    EXPECT_EQ(registry.addSampler(*nearest, "nearestClamp"), 0);
+    registry.flush();
+}
+
 TEST_F(BindlessImageRegistryTest, CapacityIsClampedToDeviceLimits) {
     const BindlessImageRegistryConfig hugeConfig{
         .sampledImageCapacity = ~0U,

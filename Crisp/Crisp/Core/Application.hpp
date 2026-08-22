@@ -39,7 +39,7 @@ private:
     void onMinimize();
     void onRestore();
     void onResize(int width, int height);
-    void resizeIfNeeded();
+    void applyPendingResize();
 
     void drawGui();
 

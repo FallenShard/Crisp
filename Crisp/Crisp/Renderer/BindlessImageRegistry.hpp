@@ -10,9 +10,9 @@
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPhysicalDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
-class VulkanCommandEncoder;
 namespace detail {
 struct SampledImageTag;
 struct StorageImageTag;
@@ -84,7 +84,7 @@ struct BindlessSlotDebugInfo {
 //
 //   set 0, binding 0  SAMPLED_IMAGE [16384]   slot 0 = fallback, 1.. = registered views
 //   set 0, binding 1  STORAGE_IMAGE [1024]    slot 0 = fallback, 1.. = registered views
-//   set 0, binding 2  SAMPLER       [16]      append-only, no recycling
+//   set 0, binding 2  SAMPLER       [16]      append-only within a scene
 //
 // A shader declares only the slice it uses. Several view types may share one binding as long as they agree on
 // the descriptor type, which is what keeps every sampled image in a single index space:
@@ -136,8 +136,9 @@ public:
     void remove(SampledImageHandle handle);
     void remove(StorageImageHandle handle);
 
-    // Samplers are a fixed, tiny set - no allocator, no recycling.
+    // Samplers are a fixed, tiny set and remain stable until an idle scene boundary resets the array.
     uint32_t addSampler(const VulkanSampler& sampler, std::string_view name);
+    void resetSamplers(const VulkanSampler& fallbackSampler);
 
     // Retirement clock, mirroring VulkanResourceDeallocator. A released slot is not reusable until the GPU
     // has passed the value that was current when it was released.

@@ -5,7 +5,6 @@
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
-#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 
 namespace crisp {
 namespace {
@@ -230,6 +229,22 @@ uint32_t BindlessImageRegistry::addSampler(const VulkanSampler& sampler, const s
         VK_DESCRIPTOR_TYPE_SAMPLER,
         {.sampler = sampler.getHandle(), .imageView = VK_NULL_HANDLE, .imageLayout = VK_IMAGE_LAYOUT_UNDEFINED});
     return index;
+}
+
+void BindlessImageRegistry::resetSamplers(const VulkanSampler& fallbackSampler) {
+    std::erase_if(m_pendingWrites, [](const PendingWrite& write) { return write.binding == kSamplerBinding; });
+    m_samplerCount = 0;
+    std::ranges::fill(m_samplerDebugInfo, BindlessSlotDebugInfo{});
+
+    for (uint32_t i = 0; i < m_samplerCapacity; ++i) {
+        queueWrite(
+            kSamplerBinding,
+            i,
+            VK_DESCRIPTOR_TYPE_SAMPLER,
+            {.sampler = fallbackSampler.getHandle(),
+             .imageView = VK_NULL_HANDLE,
+             .imageLayout = VK_IMAGE_LAYOUT_UNDEFINED});
+    }
 }
 
 void BindlessImageRegistry::setRetirementValue(const uint64_t value) {

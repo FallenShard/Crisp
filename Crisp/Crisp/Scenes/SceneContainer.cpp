@@ -77,10 +77,36 @@ void SceneContainer::render(const FrameContext& frameContext) const {
 }
 
 void SceneContainer::onSceneSelected(const std::string& sceneName) {
+    if (sceneName == m_sceneName) {
+        return;
+    }
+    m_pendingSceneName = sceneName;
+}
+
+void SceneContainer::applyPendingSceneSelection() {
+    if (!m_pendingSceneName) {
+        return;
+    }
+    const std::string sceneName{std::move(*m_pendingSceneName)};
+    m_pendingSceneName.reset();
+
+    m_renderer->flushResourceUpdates(true);
     m_renderer->finish();
     m_renderer->setSceneImageView(nullptr);
     m_scene.reset();
-    m_scene = createScene(sceneName, m_renderer, m_window, m_outputDir, m_scenes.at(sceneName));
+
+    m_renderer->collectAllDeferredResources();
+
+    auto scene = createScene(sceneName, m_renderer, m_window, m_outputDir, m_scenes.at(sceneName));
+    scene->update({
+        .frameIdx = static_cast<uint32_t>(m_renderer->getCurrentFrameIndex()),
+        .frameInFlightIdx = m_renderer->getCurrentVirtualFrameIndex(),
+        .dt = 0.0f,
+        .totalTimeSec = 0.0f,
+    });
+    m_renderer->flushResourceUpdates(true);
+
+    m_scene = std::move(scene);
     m_sceneName = sceneName;
 }
 

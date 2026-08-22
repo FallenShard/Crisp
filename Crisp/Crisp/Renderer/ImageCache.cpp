@@ -7,6 +7,12 @@ namespace crisp {
 ImageCache::ImageCache(Renderer* renderer)
     : m_renderer{renderer} {}
 
+ImageCache::~ImageCache() {
+    for (const auto& entry : m_imageHandles) {
+        m_renderer->getBindlessImageRegistry().remove(entry.second);
+    }
+}
+
 void ImageCache::addImage(const std::string& key, std::unique_ptr<VulkanImage> image) {
     auto& cachedImage = m_images[key];
     if (!cachedImage) {
@@ -55,9 +61,12 @@ VulkanImageView& ImageCache::getImageView(const std::string& key, const std::str
 }
 
 void ImageCache::addSampler(const std::string& key, std::unique_ptr<VulkanSampler> sampler) {
-    auto& cachedSampler = m_samplers[key];
-    cachedSampler = std::move(sampler);
-    m_samplerIndices[key] = m_renderer->getBindlessImageRegistry().addSampler(*cachedSampler, key);
+    if (m_samplers.contains(key)) {
+        return;
+    }
+
+    auto& cachedSampler = m_samplers.emplace(key, std::move(sampler)).first->second;
+    m_samplerIndices.emplace(key, m_renderer->getBindlessImageRegistry().addSampler(*cachedSampler, key));
 }
 
 VulkanSampler& ImageCache::getSampler(const std::string& key) const {

@@ -11,6 +11,7 @@ class Renderer;
 class ImageCache {
 public:
     explicit ImageCache(Renderer* renderer);
+    ~ImageCache();
 
     void addImage(const std::string& key, std::unique_ptr<VulkanImage> image);
     VulkanImage& getImage(const std::string& key) const;

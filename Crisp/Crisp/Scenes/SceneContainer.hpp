@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,7 @@ public:
     void render(const FrameContext& frameContext) const;
 
     void onSceneSelected(const std::string& sceneName);
+    void applyPendingSceneSelection();
 
     const std::string& getSceneName() const;
 
@@ -34,6 +36,7 @@ private:
 
     std::unique_ptr<Scene> m_scene;
     std::string m_sceneName;
+    std::optional<std::string> m_pendingSceneName;
     nlohmann::json m_scenes;
     std::vector<std::string> m_sceneNames;
 

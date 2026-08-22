@@ -86,6 +86,8 @@ public:
     void endFrame(const FrameContext& frameContext);
 
     void finish();
+    // Requires the device to be idle because this bypasses timeline retirement.
+    void collectAllDeferredResources();
 
     // The producer must leave the image in SHADER_READ_ONLY_OPTIMAL.
     void setSceneImageView(const VulkanImageView* imageView);

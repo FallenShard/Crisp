@@ -1,5 +1,7 @@
 #include <Crisp/Renderer/Renderer.hpp>
 
+#include <limits>
+
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/ChromeEventTracer.hpp>
 #include <Crisp/Core/Timer.hpp>
@@ -374,6 +376,15 @@ void Renderer::endFrame(const FrameContext& frameContext) {
 void Renderer::finish() {
     CRISP_LOGW("Calling vkDeviceWaitIdle()");
     m_device->waitIdle();
+}
+
+void Renderer::collectAllDeferredResources() {
+    constexpr auto kAllWorkCompleted = std::numeric_limits<uint64_t>::max();
+    m_bindlessImageRegistry->collect(kAllWorkCompleted);
+    m_bindlessImageRegistry->resetSamplers(*m_linearClampSampler);
+    m_bindlessImageRegistry->flush();
+    m_device->getResourceDeallocator().collect(kAllWorkCompleted);
+    m_stagingBelt->collect(kAllWorkCompleted);
 }
 
 void Renderer::setSceneImageView(const VulkanImageView* imageView) {
