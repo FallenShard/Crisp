@@ -274,6 +274,12 @@ __pycache__/
 Resources/*
 !Resources/Pipelines/
 !Resources/Pipelines/*.json
+!Resources/glTFSamples/
+Resources/glTFSamples/*
+!Resources/glTFSamples/2.0/
+Resources/glTFSamples/2.0/*
+!Resources/glTFSamples/2.0/USDShaderBallForGltf/
+!Resources/glTFSamples/2.0/USDShaderBallForGltf/**
 *.exr
 
 # Ignore binary and intermediate folders

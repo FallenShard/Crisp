@@ -52,10 +52,12 @@ private:
     std::unique_ptr<Skybox> m_skybox;
 
     std::array<std::vector<DrawCommand>, kDefaultCascadeCount> m_shadowDrawCommands;
-    std::vector<DrawCommand> m_forwardDrawCommands;
+    std::vector<DrawCommand> m_shaderBallForwardDrawCommands;
+    std::vector<DrawCommand> m_floorForwardDrawCommands;
     DrawCommand m_skyboxDrawCommand;
 
-    RenderNode* m_shaderBallNode{nullptr};
+    std::vector<RenderNode*> m_shaderBallNodes;
+    RenderNode* m_editableMaterialNode{nullptr};
     RenderNode* m_floorNode{nullptr};
     PbrMaterialHandle m_shaderBallMaterialHandle;
     PbrParams m_shaderBallParams;

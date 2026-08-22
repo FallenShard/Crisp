@@ -1,6 +1,8 @@
 #include <Crisp/Scenes/MaterialExplorerScene.hpp>
 
 #include <algorithm>
+#include <limits>
+#include <ranges>
 #include <span>
 
 #include <imgui.h>
@@ -18,9 +20,10 @@ namespace crisp {
 namespace {
 
 constexpr uint32_t kShadowMapSize{2048};
-constexpr uint32_t kMaterialCapacity{2};
+constexpr uint32_t kMaterialCapacity{5};
 constexpr std::string_view kShaderBallNodeId{"shader-ball"};
 constexpr std::string_view kFloorNodeId{"floor"};
+constexpr std::string_view kEditableGltfMaterialName{"material_surface"};
 
 struct ShadowMaterialVariant {
     std::string_view suffix;
@@ -96,7 +99,7 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
     addCascadedShadowMapPasses(
         *m_renderGraph, kShadowMapSize, [this](const FrameContext& frameContext, const uint32_t cascadeIndex) {
             const auto& commands = m_shadowDrawCommands[cascadeIndex];
-            if (commands.empty() || !m_shaderBallNode->isVisible) {
+            if (commands.empty() || !m_shaderBallNodes.front()->isVisible) {
                 return;
             }
             const auto& layout = *commands.front().pipeline->getPipelineLayout();
@@ -117,12 +120,11 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
             BindlessImageRegistry::kGlobalSetIndex);
         frameContext.commandEncoder.bindDescriptorSets(m_forwardPassMaterial->getDescriptorSetBinding());
 
-        CRISP_CHECK_EQ(m_forwardDrawCommands.size(), 2);
-        if (m_shaderBallNode->isVisible) {
-            executeDrawCommands(std::span<const DrawCommand>(&m_forwardDrawCommands[0], 1), frameContext.commandEncoder);
+        if (m_shaderBallNodes.front()->isVisible) {
+            executeDrawCommands(m_shaderBallForwardDrawCommands, frameContext.commandEncoder);
         }
         if (m_floorNode->isVisible) {
-            executeDrawCommands(std::span<const DrawCommand>(&m_forwardDrawCommands[1], 1), frameContext.commandEncoder);
+            executeDrawCommands(m_floorForwardDrawCommands, frameContext.commandEncoder);
         }
         executeDrawCommands(std::span<const DrawCommand>(&m_skyboxDrawCommand, 1), frameContext.commandEncoder);
     });
@@ -141,7 +143,8 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
     const std::string environmentMapName = args.value("environmentMap", std::string{"NewportLoft"});
     createRenderResources(environmentMapName);
 
-    const std::filesystem::path shaderBallPath = args.value("modelPath", std::string{"Meshes/ShaderBall_FWVN_PosX.obj"});
+    const std::filesystem::path shaderBallPath = args.value(
+        "modelPath", std::string{"glTFSamples/2.0/USDShaderBallForGltf/glTF-Binary/USDShaderBallForGltf.glb"});
     createSceneObjects(shaderBallPath);
     rebuildDrawCommands();
 
@@ -304,27 +307,74 @@ void MaterialExplorerScene::createRenderResources(const std::string& environment
 void MaterialExplorerScene::createSceneObjects(const std::filesystem::path& shaderBallPath) {
     const auto absoluteShaderBallPath =
         shaderBallPath.is_absolute() ? shaderBallPath : m_renderer->getResourcesPath() / shaderBallPath;
-    const auto shaderBallMesh = loadTriangleMesh(absoluteShaderBallPath).unwrap();
-    const auto& bounds = shaderBallMesh.getBoundingBox();
-    const glm::vec3 size = bounds.max - bounds.min;
-    const float scale = 2.0f / std::max({size.x, size.y, size.z});
-    const glm::vec3 centerXZ((bounds.min.x + bounds.max.x) * 0.5f, bounds.min.y, (bounds.min.z + bounds.max.z) * 0.5f);
-    const glm::mat4 shaderBallTransform = glm::scale(glm::vec3(scale)) * glm::translate(-centerXZ);
+    const auto extension = absoluteShaderBallPath.extension().string();
+    if (extension == ".gltf" || extension == ".glb") {
+        auto sceneData = loadGltfAsset(absoluteShaderBallPath).unwrap();
+        CRISP_CHECK_LE(sceneData.models.size(), kMaterialCapacity - 1);
+        addPbrImageGroupToImageCache(sceneData.images, m_resourceContext->imageCache);
 
-    PbrMaterial shaderBallMaterial{.name = "shader-ball"};
-    const auto keyCreator = PbrImageKeyCreator{"material-explorer"};
-    shaderBallMaterial.textureKeys = {
-        keyCreator.createAlbedoMapKey(0),
-        keyCreator.createNormalMapKey(0),
-        keyCreator.createOrmMapKey(0),
-        keyCreator.createEmissiveMapKey(0),
-    };
-    shaderBallMaterial.params.albedo = glm::vec4(0.72f, 0.24f, 0.12f, 1.0f);
-    shaderBallMaterial.params.metallic = 0.0f;
-    shaderBallMaterial.params.roughness = 0.28f;
-    m_shaderBallMaterialHandle =
-        addPbrNode(kShaderBallNodeId, shaderBallMesh, shaderBallMaterial, shaderBallTransform, true);
-    m_shaderBallParams = createGpuPbrParams(shaderBallMaterial, m_resourceContext->imageCache);
+        glm::vec3 boundsMin{std::numeric_limits<float>::max()};
+        glm::vec3 boundsMax{std::numeric_limits<float>::lowest()};
+        for (const auto& model : sceneData.models) {
+            for (const auto& position : model.mesh.getPositions()) {
+                const glm::vec3 transformedPosition{model.transform * glm::vec4(position, 1.0f)};
+                boundsMin = glm::min(boundsMin, transformedPosition);
+                boundsMax = glm::max(boundsMax, transformedPosition);
+            }
+        }
+        const glm::vec3 size = boundsMax - boundsMin;
+        const float scale = 2.0f / std::max({size.x, size.y, size.z});
+        const glm::vec3 centerXZ((boundsMin.x + boundsMax.x) * 0.5f, boundsMin.y, (boundsMin.z + boundsMax.z) * 0.5f);
+        const glm::mat4 normalizationTransform = glm::scale(glm::vec3(scale)) * glm::translate(-centerXZ);
+
+        for (auto&& [modelIndex, model] : std::views::enumerate(sceneData.models)) {
+            const bool isEditableMaterial = model.material.name == kEditableGltfMaterialName;
+            if (isEditableMaterial) {
+                model.material.params.albedo = glm::vec4(0.72f, 0.24f, 0.12f, 1.0f);
+                model.material.params.metallic = 0.0f;
+                model.material.params.roughness = 0.28f;
+            }
+
+            const auto nodeId = fmt::format("{}-{}", kShaderBallNodeId, modelIndex);
+            const auto materialHandle =
+                addPbrNode(nodeId, model.mesh, model.material, normalizationTransform * model.transform, true);
+            auto* node = m_renderNodes.at(nodeId).get();
+            m_shaderBallNodes.push_back(node);
+            if (isEditableMaterial) {
+                CRISP_CHECK(m_editableMaterialNode == nullptr, "The shader ball has multiple editable surfaces.");
+                m_editableMaterialNode = node;
+                m_shaderBallMaterialHandle = materialHandle;
+                m_shaderBallParams = createGpuPbrParams(model.material, m_resourceContext->imageCache);
+            }
+        }
+        CRISP_CHECK(
+            m_editableMaterialNode != nullptr, "The GLTF shader ball has no '{}' material.", kEditableGltfMaterialName);
+    } else {
+        const auto shaderBallMesh = loadTriangleMesh(absoluteShaderBallPath).unwrap();
+        const auto& bounds = shaderBallMesh.getBoundingBox();
+        const glm::vec3 size = bounds.max - bounds.min;
+        const float scale = 2.0f / std::max({size.x, size.y, size.z});
+        const glm::vec3 centerXZ(
+            (bounds.min.x + bounds.max.x) * 0.5f, bounds.min.y, (bounds.min.z + bounds.max.z) * 0.5f);
+        const glm::mat4 shaderBallTransform = glm::scale(glm::vec3(scale)) * glm::translate(-centerXZ);
+
+        PbrMaterial shaderBallMaterial{.name = "shader-ball"};
+        const auto keyCreator = PbrImageKeyCreator{"material-explorer"};
+        shaderBallMaterial.textureKeys = {
+            keyCreator.createAlbedoMapKey(0),
+            keyCreator.createNormalMapKey(0),
+            keyCreator.createOrmMapKey(0),
+            keyCreator.createEmissiveMapKey(0),
+        };
+        shaderBallMaterial.params.albedo = glm::vec4(0.72f, 0.24f, 0.12f, 1.0f);
+        shaderBallMaterial.params.metallic = 0.0f;
+        shaderBallMaterial.params.roughness = 0.28f;
+        m_shaderBallMaterialHandle =
+            addPbrNode(kShaderBallNodeId, shaderBallMesh, shaderBallMaterial, shaderBallTransform, true);
+        m_editableMaterialNode = m_renderNodes.at(std::string{kShaderBallNodeId}).get();
+        m_shaderBallNodes.push_back(m_editableMaterialNode);
+        m_shaderBallParams = createGpuPbrParams(shaderBallMaterial, m_resourceContext->imageCache);
+    }
 
     const auto floorMesh = createPlaneMesh(12.0f, 12.0f);
     const auto floorMaterialPath = m_renderer->getResourcesPath() / "Textures/PbrMaterials/Grass";
@@ -375,9 +425,7 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
         }
     }
 
-    if (nodeId == kShaderBallNodeId) {
-        m_shaderBallNode = &node;
-    } else if (nodeId == kFloorNodeId) {
+    if (nodeId == kFloorNodeId) {
         m_floorNode = &node;
     }
     return materialHandle;
@@ -429,13 +477,13 @@ void MaterialExplorerScene::resetMaterial() {
 void MaterialExplorerScene::updateShaderBallShadowMaterials() {
     const auto& variant = getShadowMaterialVariant(m_shaderBallParams.flags);
     const bool alphaMasked = (m_shaderBallParams.flags & PbrMaterialAlphaMask) != 0;
-    m_shaderBallNode->pass(kForwardLightingPass).material =
+    m_editableMaterialNode->pass(kForwardLightingPass).material =
         (m_shaderBallParams.flags & PbrMaterialDoubleSided) != 0
             ? m_pbrDoubleSidedDrawMaterial.get()
             : m_pbrDrawMaterial.get();
     for (uint32_t cascadeIndex = 0; cascadeIndex < kDefaultCascadeCount; ++cascadeIndex) {
-        auto& shadowPass = m_shaderBallNode->pass(kCsmPasses[cascadeIndex]);
-        shadowPass.setGeometry(m_shaderBallNode->geometry, 0, alphaMasked ? 2 : 1);
+        auto& shadowPass = m_editableMaterialNode->pass(kCsmPasses[cascadeIndex]);
+        shadowPass.setGeometry(m_editableMaterialNode->geometry, 0, alphaMasked ? 2 : 1);
         shadowPass.material = m_resourceContext->getMaterial(createShadowMaterialKey(cascadeIndex, variant.suffix));
     }
 }
@@ -444,13 +492,20 @@ void MaterialExplorerScene::rebuildDrawCommands() {
     for (uint32_t cascadeIndex = 0; cascadeIndex < kDefaultCascadeCount; ++cascadeIndex) {
         auto& commands = m_shadowDrawCommands[cascadeIndex];
         commands.clear();
-        appendDrawCommands(commands, *m_shaderBallNode, kCsmPasses[cascadeIndex]);
+        for (const auto* node : m_shaderBallNodes) {
+            appendDrawCommands(commands, *node, kCsmPasses[cascadeIndex]);
+        }
     }
 
-    m_forwardDrawCommands.clear();
-    appendDrawCommands(m_forwardDrawCommands, *m_shaderBallNode, kForwardLightingPass);
-    appendDrawCommands(m_forwardDrawCommands, *m_floorNode, kForwardLightingPass);
-    CRISP_CHECK_EQ(m_forwardDrawCommands.size(), 2);
+    m_shaderBallForwardDrawCommands.clear();
+    for (const auto* node : m_shaderBallNodes) {
+        appendDrawCommands(m_shaderBallForwardDrawCommands, *node, kForwardLightingPass);
+    }
+    CRISP_CHECK_EQ(m_shaderBallForwardDrawCommands.size(), m_shaderBallNodes.size());
+
+    m_floorForwardDrawCommands.clear();
+    appendDrawCommands(m_floorForwardDrawCommands, *m_floorNode, kForwardLightingPass);
+    CRISP_CHECK_EQ(m_floorForwardDrawCommands.size(), 1);
 
     std::vector<DrawCommand> skyboxCommands;
     appendDrawCommands(skyboxCommands, m_skybox->getRenderNode(), kForwardLightingPass);

@@ -135,6 +135,23 @@ TEST(GltfLoaderTest, DeduplicatesEmbeddedImagesByContent) {
     EXPECT_EQ(loaded.models[1].material.textureKeys[0], "DuplicateTexturedTriangle-albedo-0");
 }
 
+TEST(GltfLoaderTest, LoadsUsdShaderBallForMaterialExplorer) {
+    const auto path =
+        std::filesystem::path{CRISP_RESOURCE_DIR} / "glTFSamples" / "2.0" / "USDShaderBallForGltf" / "glTF-Binary" /
+        "USDShaderBallForGltf.glb";
+    auto asset = loadGltfAsset(path);
+    ASSERT_THAT(asset, HasValue());
+
+    const auto loaded = asset.unwrap();
+    ASSERT_THAT(loaded.models, SizeIs(4));
+    EXPECT_EQ(loaded.models[0].material.name, "core");
+    EXPECT_EQ(loaded.models[1].material.name, "core");
+    EXPECT_EQ(loaded.models[2].material.name, "material_surface");
+    EXPECT_EQ(loaded.models[3].material.name, "sss_bars");
+    EXPECT_THAT(loaded.images.albedoMaps, SizeIs(1));
+    EXPECT_THAT(loaded.images.ormMaps, SizeIs(2));
+}
+
 TEST(GltfLoaderTest, LoadsAvocadoFromExternalAssetPack) {
     if (test::kExternalAssetDir.empty()) {
         GTEST_SKIP() << "Set CRISP_EXTERNAL_ASSET_DIR to the full Crisp Resources directory";
