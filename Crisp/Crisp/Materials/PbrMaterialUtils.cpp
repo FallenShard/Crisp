@@ -4,7 +4,6 @@
 #include <ranges>
 
 #include <Crisp/Core/Logger.hpp>
-#include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
@@ -141,23 +140,6 @@ void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& i
     };
 }
 
-std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir) {
-    const auto exr = loadExr(assetDir / "Textures/Sheen_E.exr").unwrap();
-    VkImageCreateInfo createInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-    createInfo.flags = 0;
-    createInfo.imageType = VK_IMAGE_TYPE_2D;
-    createInfo.format = VK_FORMAT_R32_SFLOAT;
-    createInfo.extent = {exr.width, exr.height, 1};
-    createInfo.mipLevels = 1;
-    createInfo.arrayLayers = 1;
-    createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    createInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    return createVulkanImage(renderer, exr.pixelData.size() * sizeof(float), exr.pixelData.data(), createInfo);
-}
-
 PbrParams createGpuPbrParams(const PbrMaterial& pbrMaterial, const ImageCache& imageCache) {
     PbrParams params{pbrMaterial.params};
     params.samplerIndex = imageCache.getSamplerIndex("linearRepeat");
@@ -187,7 +169,6 @@ void configureForwardLightingPassMaterial(
     material.writeDescriptor(1, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
     material.writeDescriptor(1, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
     material.writeDescriptor(1, 5, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
-    material.writeDescriptor(1, 6, imageCache.getImageView("sheenLut"), imageCache.getSampler("linearClamp"));
     for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
         const auto& shadowMapView{rg.getImageView(kCsmPasses[i], 0)};
         material.writeBindlessDescriptor(1, 4, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));

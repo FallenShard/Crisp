@@ -262,7 +262,6 @@ void GltfViewerScene::createCommonTextures() {
         loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / environmentMap).unwrap(),
         environmentMap);
     imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
-    imageCache.addImageWithView("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
 }
 
 void GltfViewerScene::loadGltf(const std::string& gltfAsset) {

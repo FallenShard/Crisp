@@ -15,8 +15,6 @@ std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::pat
 
 void addPbrImageGroupToImageCache(const PbrImageGroup& imageGroup, ImageCache& imageCache);
 
-std::unique_ptr<VulkanImage> createSheenLookup(Renderer& renderer, const std::filesystem::path& assetDir);
-
 PbrParams createGpuPbrParams(const PbrMaterial& pbrMaterial, const ImageCache& imageCache);
 
 void configureForwardLightingPassMaterial(

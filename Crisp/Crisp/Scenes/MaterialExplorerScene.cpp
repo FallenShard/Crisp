@@ -276,7 +276,6 @@ void MaterialExplorerScene::createRenderResources(const std::string& environment
 
     setEnvironmentMap(environmentMapName);
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
-    imageCache.addImage("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
 
     m_forwardPassMaterial = std::make_unique<Material>(
         pbrPipeline, pbrPipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 1, 1);
