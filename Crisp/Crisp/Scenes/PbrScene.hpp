@@ -8,6 +8,7 @@
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
+#include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 
 namespace crisp {
@@ -35,6 +36,7 @@ private:
         std::string_view nodeId, const TriangleMesh& mesh, const PbrMaterial& material, const glm::mat4& modelMatrix);
     void createPlane();
     void createMeshletTestNode();
+    void rebuildDrawCommandCache();
 
     void setupInput();
 
@@ -43,10 +45,14 @@ private:
 
     std::unique_ptr<TargetCameraController> m_cameraController;
     std::unique_ptr<LightSystem> m_lightSystem;
+    float m_cascadeBlendFraction{0.1f};
+    float m_casterDepthExtrusion{50.0f};
+    bool m_visualizeCascades{true};
 
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
     FlatStringHashMap<std::unique_ptr<RenderNode>> m_renderNodes;
+    FlatHashMap<const RenderNode*, BoundingBox3> m_renderNodeWorldBounds;
 
     std::unique_ptr<Material> m_forwardPassMaterial;
     std::unique_ptr<Material> m_pbrDrawMaterial;
@@ -60,5 +66,14 @@ private:
 
     bool m_drawMeshlets{false};
     MeshletData m_meshletData;
+
+    struct CachedDrawCommand {
+        const RenderNode* renderNode{nullptr};
+        uint32_t nodeIndex{0};
+        BoundingBox3 worldBounds;
+        DrawCommand command;
+    };
+
+    std::array<std::vector<CachedDrawCommand>, kDefaultCascadeCount + 1> m_drawCommandCache{};
 };
 } // namespace crisp

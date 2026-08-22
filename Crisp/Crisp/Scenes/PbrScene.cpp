@@ -1,5 +1,7 @@
 #include <Crisp/Scenes/PbrScene.hpp>
 
+#include <algorithm>
+
 #include <Crisp/Gui/ImGuiCameraUtils.hpp>
 #include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
@@ -16,9 +18,42 @@ const auto logger = createLoggerMt("PbrScene");
 constexpr uint32_t kShadowMapSize = 4096;
 constexpr float kFloorHeight = -1.0f;
 
+struct ShadowMaterialVariant {
+    std::string_view suffix;
+    std::string_view pipelineConfig;
+};
+
+constexpr std::array kShadowMaterialVariants{
+    ShadowMaterialVariant{"Opaque", "PbrShadowMap.json"},
+    ShadowMaterialVariant{"DoubleSided", "PbrShadowMapDoubleSided.json"},
+    ShadowMaterialVariant{"Alpha", "PbrShadowMapAlpha.json"},
+    ShadowMaterialVariant{"AlphaDoubleSided", "PbrShadowMapAlphaDoubleSided.json"},
+};
+
+const ShadowMaterialVariant& getShadowMaterialVariant(const uint32_t materialFlags) {
+    const bool alphaMasked = (materialFlags & PbrMaterialAlphaMask) != 0;
+    const bool doubleSided = (materialFlags & PbrMaterialDoubleSided) != 0;
+    return kShadowMaterialVariants[static_cast<size_t>(alphaMasked) * 2 + static_cast<size_t>(doubleSided)];
+}
+
+std::string createShadowMaterialKey(const uint32_t cascadeIndex, const std::string_view suffix) {
+    return fmt::format("cascadedShadowMap{}{}", cascadeIndex, suffix);
+}
+
+BoundingBox3 transformBoundingBox(const BoundingBox3& localBounds, const glm::mat4& transform) {
+    BoundingBox3 worldBounds;
+    for (int cornerIndex = 0; cornerIndex < 8; ++cornerIndex) {
+        worldBounds.expandBy(glm::vec3(transform * glm::vec4(localBounds.getCorner(cornerIndex), 1.0f)));
+    }
+    return worldBounds;
+}
+
 void createDrawCommand(
-    std::vector<DrawCommand>& drawCommands, const RenderNode& renderNode, const std::string_view renderPass) {
-    if (!renderNode.isVisible) {
+    std::vector<DrawCommand>& drawCommands,
+    const RenderNode& renderNode,
+    const std::string_view renderPass,
+    const bool includeInvisible = false) {
+    if (!includeInvisible && !renderNode.isVisible) {
         return;
     }
 
@@ -32,14 +67,23 @@ void createDrawCommand(
     }
 }
 
+struct DrawCommandRecordingState {
+    const VulkanPipeline* pipeline{nullptr};
+};
+
 void executeDrawCommand(
-    const DrawCommand& command, const Renderer& renderer, const VulkanCommandEncoder& commandEncoder) {
-    commandEncoder.bindPipeline(*command.pipeline);
-    if (command.pipeline->getDynamicStateFlags() & PipelineDynamicState::Viewport) {
-        commandEncoder.setViewport(command.viewport.width != 0.0f ? command.viewport : renderer.getDefaultViewport());
+    const DrawCommand& command,
+    const VulkanCommandEncoder& commandEncoder,
+    DrawCommandRecordingState& state) {
+    if (state.pipeline != command.pipeline) {
+        commandEncoder.bindPipeline(*command.pipeline);
+        state.pipeline = command.pipeline;
     }
-    if (command.pipeline->getDynamicStateFlags() & PipelineDynamicState::Scissor) {
-        commandEncoder.setScissor(command.scissor.extent.width != 0 ? command.scissor : renderer.getDefaultScissor());
+    if ((command.pipeline->getDynamicStateFlags() & PipelineDynamicState::Viewport) && command.viewport.width != 0.0f) {
+        commandEncoder.setViewport(command.viewport);
+    }
+    if ((command.pipeline->getDynamicStateFlags() & PipelineDynamicState::Scissor) && command.scissor.extent.width != 0) {
+        commandEncoder.setScissor(command.scissor);
     }
 
     commandEncoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
@@ -65,27 +109,44 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 
     addCascadedShadowMapPasses(
         *m_renderGraph, kShadowMapSize, [this](const FrameContext& ctx, const uint32_t cascadeIndex) {
-            std::vector<DrawCommand> drawCommands{};
-            for (int32_t idx = 0; const auto& [id, renderNode] : m_renderNodes.values()) {
-                if (idx++ >= m_nodesToDraw) {
-                    break;
-                }
-                createDrawCommand(drawCommands, *renderNode, kCsmPasses[cascadeIndex]);
-            }
+            const auto& drawCommands = m_drawCommandCache[cascadeIndex];
+            const uint32_t nodeCount =
+                std::min(static_cast<uint32_t>(m_nodesToDraw), static_cast<uint32_t>(m_renderNodes.size()));
 
-            for (const auto& drawCommand : drawCommands) {
-                executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
+            const auto& shadowPipelineLayout =
+                *m_resourceContext->getMaterial(createShadowMaterialKey(cascadeIndex, "Opaque"))
+                     ->getPipeline()
+                     ->getPipelineLayout();
+            auto& bindlessRegistry = m_renderer->getBindlessImageRegistry();
+            CRISP_CHECK_EQ(
+                shadowPipelineLayout.getDescriptorSetLayout(BindlessImageRegistry::kGlobalSetIndex),
+                bindlessRegistry.getSetLayout(),
+                "The PBR shadow pipelines must expose the global bindless layout at set 0.");
+            bindlessRegistry.bind(
+                ctx.commandEncoder,
+                shadowPipelineLayout.getHandle(),
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                BindlessImageRegistry::kGlobalSetIndex);
+
+            DrawCommandRecordingState recordingState{};
+            for (const auto& cached : drawCommands) {
+                if (cached.nodeIndex >= nodeCount) {
+                    continue;
+                }
+                if (!cached.renderNode->isVisible) {
+                    continue;
+                }
+                if (!m_lightSystem->isCascadeCasterVisible(cascadeIndex, cached.worldBounds)) {
+                    continue;
+                }
+                executeDrawCommand(cached.command, ctx.commandEncoder, recordingState);
             }
         });
 
     addForwardLightingPass(*m_renderGraph, [this](const FrameContext& ctx) {
-        std::vector<DrawCommand> drawCommands{};
-        for (int32_t idx = 0; const auto& [id, renderNode] : m_renderNodes) {
-            if (idx++ >= m_nodesToDraw) {
-                break;
-            }
-            createDrawCommand(drawCommands, *renderNode, kForwardLightingPass);
-        }
+        const auto& drawCommands = m_drawCommandCache.back();
+        const uint32_t nodeCount =
+            std::min(static_cast<uint32_t>(m_nodesToDraw), static_cast<uint32_t>(m_renderNodes.size()));
         const auto& pbrPipelineLayout = *m_forwardPassMaterial->getPipeline()->getPipelineLayout();
         auto& bindlessRegistry = m_renderer->getBindlessImageRegistry();
         CRISP_CHECK_EQ(
@@ -98,18 +159,25 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
             VK_PIPELINE_BIND_POINT_GRAPHICS,
             BindlessImageRegistry::kGlobalSetIndex);
         ctx.commandEncoder.bindDescriptorSets(m_forwardPassMaterial->getDescriptorSetBinding());
-        for (const auto& drawCommand : drawCommands) {
+        DrawCommandRecordingState recordingState{};
+        for (const auto& cached : drawCommands) {
+            if (cached.nodeIndex >= nodeCount) {
+                break;
+            }
+            if (!cached.renderNode->isVisible) {
+                continue;
+            }
             CRISP_CHECK_EQ(
-                drawCommand.pipeline->getPipelineLayout(),
+                cached.command.pipeline->getPipelineLayout(),
                 &pbrPipelineLayout,
                 "Every draw in the bindless PBR batch must use its pipeline layout; draw special pipelines afterward.");
-            executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
+            executeDrawCommand(cached.command, ctx.commandEncoder, recordingState);
         }
 
         std::vector<DrawCommand> specialDrawCommands{};
         createDrawCommand(specialDrawCommands, m_skybox->getRenderNode(), kForwardLightingPass);
         for (const auto& drawCommand : specialDrawCommands) {
-            executeDrawCommand(drawCommand, *m_renderer, ctx.commandEncoder);
+            executeDrawCommand(drawCommand, ctx.commandEncoder, recordingState);
         }
 
         if (m_drawMeshlets) {
@@ -129,18 +197,26 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         DirectionalLight(-glm::vec3(1, 1, 0), glm::vec3(3.0f), glm::vec3(-5), glm::vec3(5)),
         kShadowMapSize,
         kDefaultCascadeCount);
+    m_cascadeBlendFraction = args.value("cascadeBlendFraction", m_cascadeBlendFraction);
+    m_casterDepthExtrusion = args.value("casterDepthExtrusion", m_casterDepthExtrusion);
+    m_visualizeCascades = args.value("visualizeCascades", m_visualizeCascades);
+    m_lightSystem->setCascadeBlendFraction(m_cascadeBlendFraction);
+    m_lightSystem->setCasterDepthExtrusion(m_casterDepthExtrusion);
+    m_lightSystem->setVisualizeCascades(m_visualizeCascades);
 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, kMaximumObjectCount);
 
     createCommonTextures();
 
     for (uint32_t i = 0; i < kCsmPasses.size(); ++i) {
-        const std::string key = fmt::format("cascadedShadowMap{}", i);
-        auto* csmPipeline = m_resourceContext->createPipeline(
-            key, "ShadowMap.json", m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[i]));
-        auto* csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
-        csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
-        csmMaterial->writeDescriptor(0, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(i));
+        for (const auto& variant : kShadowMaterialVariants) {
+            const std::string key = createShadowMaterialKey(i, variant.suffix);
+            auto* csmPipeline = m_resourceContext->createPipeline(
+                key, variant.pipelineConfig, m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[i]));
+            auto* csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
+            csmMaterial->writeDescriptor(1, 0, m_transformBuffer->getDescriptorInfo());
+            csmMaterial->writeDescriptor(1, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(i));
+        }
     }
 
     createPlane();
@@ -152,6 +228,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     }
 
     m_nodesToDraw = static_cast<int32_t>(m_renderNodes.size());
+    rebuildDrawCommandCache();
 
     for (const auto& dir :
          std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps")) {
@@ -207,11 +284,24 @@ void PbrScene::drawGui() {
     if (ImGui::CollapsingHeader("Light")) {
         DirectionalLight light = m_lightSystem->getDirectionalLight();
         glm::vec3 direction = light.getDirection();
-        ImGui::SliderFloat("Direction X", &direction.x, -1.0, 1.0);
-        ImGui::SliderFloat("Direction Y", &direction.y, -1.0, 1.0);
-        ImGui::SliderFloat("Direction Z", &direction.z, -1.0, 1.0);
-        light.setDirection(glm::normalize(direction));
-        m_lightSystem->setDirectionalLight(light);
+        const bool directionChanged =
+            ImGui::SliderFloat("Direction X", &direction.x, -1.0, 1.0) |
+            ImGui::SliderFloat("Direction Y", &direction.y, -1.0, 1.0) |
+            ImGui::SliderFloat("Direction Z", &direction.z, -1.0, 1.0);
+        if (directionChanged && glm::length2(direction) > 0.0f) {
+            light.setDirection(direction);
+            m_lightSystem->setDirectionalLight(light);
+        }
+
+        if (ImGui::SliderFloat("Cascade Blend", &m_cascadeBlendFraction, 0.0f, 0.3f, "%.3f")) {
+            m_lightSystem->setCascadeBlendFraction(m_cascadeBlendFraction);
+        }
+        if (ImGui::SliderFloat("Caster Extrusion", &m_casterDepthExtrusion, 0.0f, 200.0f, "%.1f")) {
+            m_lightSystem->setCasterDepthExtrusion(m_casterDepthExtrusion);
+        }
+        if (ImGui::Checkbox("Visualize Cascades", &m_visualizeCascades)) {
+            m_lightSystem->setVisualizeCascades(m_visualizeCascades);
+        }
 
         gui::drawComboBox(
             "Environment Light",
@@ -239,6 +329,44 @@ void PbrScene::drawGui() {
     ImGui::End();
 }
 
+void PbrScene::rebuildDrawCommandCache() {
+    for (auto& cache : m_drawCommandCache) {
+        cache.clear();
+        cache.reserve(m_renderNodes.size());
+    }
+
+    std::vector<DrawCommand> commands;
+    for (uint32_t nodeIndex = 0; const auto& [id, renderNode] : m_renderNodes) {
+        for (size_t passIndex = 0; passIndex < m_drawCommandCache.size(); ++passIndex) {
+            commands.clear();
+            createDrawCommand(
+                commands,
+                *renderNode,
+                passIndex < kCsmPasses.size() ? kCsmPasses[passIndex] : kForwardLightingPass,
+                /*includeInvisible=*/true);
+            auto& cache = m_drawCommandCache[passIndex];
+            for (auto& command : commands) {
+                const auto boundsIt = m_renderNodeWorldBounds.find(renderNode.get());
+                cache.push_back({
+                    .renderNode = renderNode.get(),
+                    .nodeIndex = nodeIndex,
+                    .worldBounds = boundsIt != m_renderNodeWorldBounds.end() ? boundsIt->second : BoundingBox3{},
+                    .command = std::move(command),
+                });
+            }
+        }
+        ++nodeIndex;
+    }
+
+    // Variant pipelines are shared by many objects; grouping the shadow commands avoids switching among the
+    // opaque, alpha-mask, and double-sided states for every node.
+    for (size_t passIndex = 0; passIndex < kCsmPasses.size(); ++passIndex) {
+        std::ranges::stable_sort(m_drawCommandCache[passIndex], {}, [](const CachedDrawCommand& cached) {
+            return cached.command.pipeline;
+        });
+    }
+}
+
 RenderNode& PbrScene::createRenderNode(const std::string_view id, const bool hasTransform) {
     if (!hasTransform) {
         return *m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second;
@@ -263,7 +391,6 @@ void PbrScene::createCommonTextures() {
 
     setEnvironmentMap("GreenwichPark");
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
-    imageCache.addImage("sheenLut", createSheenLookup(*m_renderer, m_renderer->getResourcesPath()));
 
     m_forwardPassMaterial =
         std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 1, 1);
@@ -325,26 +452,30 @@ void PbrScene::createObjSceneObject(const std::filesystem::path& path) {
 }
 
 void PbrScene::addSceneObject(
-    const std::string_view nodeId,
-    const TriangleMesh& mesh,
-    const PbrMaterial& material,
-    const glm::mat4& modelMatrix) {
+    const std::string_view nodeId, const TriangleMesh& mesh, const PbrMaterial& material, const glm::mat4& modelMatrix) {
     auto& geometry = m_resourceContext->addGeometry(nodeId, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
 
     auto& node = createRenderNode(nodeId);
     node.geometry = &geometry;
     node.transformPack->M = modelMatrix;
+    m_renderNodeWorldBounds.emplace(&node, transformBoundingBox(mesh.getBoundingBox(), modelMatrix));
 
     auto& forwardPass = node.pass(kForwardLightingPass);
     forwardPass.material = m_pbrDrawMaterial.get();
     forwardPass.transformBufferDynamicIndex = 0;
-    const auto materialHandle = m_pbrMaterialTable->add(createGpuPbrParams(material, m_resourceContext->imageCache));
-    forwardPass.setPushConstants(m_pbrMaterialTable->createDrawParameters(materialHandle));
+    const auto gpuMaterial = createGpuPbrParams(material, m_resourceContext->imageCache);
+    const auto materialHandle = m_pbrMaterialTable->add(gpuMaterial);
+    const auto drawParameters = m_pbrMaterialTable->createDrawParameters(materialHandle);
+    forwardPass.setPushConstants(drawParameters);
+
+    const auto& shadowVariant = getShadowMaterialVariant(gpuMaterial.flags);
+    const bool alphaMasked = (gpuMaterial.flags & PbrMaterialAlphaMask) != 0;
 
     for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
         auto& subpass = node.pass(kCsmPasses[c]);
-        subpass.setGeometry(&geometry, 0, 1);
-        subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
+        subpass.setGeometry(&geometry, 0, alphaMasked ? 2 : 1);
+        subpass.material = m_resourceContext->getMaterial(createShadowMaterialKey(c, shadowVariant.suffix));
+        subpass.setPushConstants(drawParameters);
         CRISP_CHECK(subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
     }
 }
