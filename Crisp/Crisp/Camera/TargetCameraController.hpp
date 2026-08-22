@@ -57,6 +57,10 @@ public:
         return glm::degrees(m_pitch);
     }
 
+    bool isOrbiting() const {
+        return m_dragMode == DragMode::Orbit;
+    }
+
 private:
     enum class DragMode {
         None,

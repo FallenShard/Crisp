@@ -1,6 +1,7 @@
 #include <Crisp/Scenes/GltfViewerScene.hpp>
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Gui/ImGuiCameraUtils.hpp>
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/ComputePipeline.hpp>
@@ -213,6 +214,8 @@ void GltfViewerScene::render() {
 }
 
 void GltfViewerScene::renderGui() {
+    drawCameraPivot(*m_cameraController);
+
     static std::vector<std::string> paths =
         enumerateDirectories(m_renderer->getAssetPaths().resourceDir / "glTFSamples/2.0");
     static int32_t selectedIdx{0};

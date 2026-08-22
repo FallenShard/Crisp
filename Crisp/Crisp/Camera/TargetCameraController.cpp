@@ -10,7 +10,7 @@ TargetCameraController::TargetCameraController(Window& window)
     , m_target(0.0f)
     , m_distance(10.0f)
     , m_panSpeed(5.0f)
-    , m_angularSpeed(glm::radians(90.0f))
+    , m_angularSpeed(glm::radians(0.15f))
     , m_yaw(0.0f)
     , m_pitch(0.0f)
     , m_prevMousePos(0.0f) {
@@ -19,7 +19,7 @@ TargetCameraController::TargetCameraController(Window& window)
     m_window->mouseMoved.subscribe<&TargetCameraController::onMouseMoved>(this);
     m_window->mouseWheelScrolled.subscribe<&TargetCameraController::onMouseWheelScrolled>(this);
 
-    updateOrientation(glm::radians(30.0f), -glm::radians(15.0f));
+    setOrientation(glm::radians(30.0f), -glm::radians(15.0f));
 }
 
 TargetCameraController::~TargetCameraController() {
@@ -64,7 +64,10 @@ void TargetCameraController::setOrientation(float yaw, float pitch) {
 }
 
 void TargetCameraController::pan(const float dx, const float dy) {
-    m_target += -m_camera.getRightDir() * m_panSpeed * dx - m_camera.getUpDir() * m_panSpeed * dy;
+    const float viewportHeight = std::max(static_cast<float>(m_window->getSize().y), 1.0f);
+    const float verticalFov = glm::radians(m_camera.getVerticalFov());
+    const float worldUnitsPerPixel = 2.0f * m_distance * std::tan(verticalFov * 0.5f) / viewportHeight;
+    m_target += (-m_camera.getRightDir() * dx - m_camera.getUpDir() * dy) * worldUnitsPerPixel;
     const glm::dquat orientation =
         glm::angleAxis(m_yaw, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::angleAxis(m_pitch, glm::vec3(1.0f, 0.0f, 0.0f));
     m_camera.setPosition(m_target + glm::quat(orientation) * glm::vec3(0.0f, 0.0f, m_distance));
@@ -155,8 +158,7 @@ void TargetCameraController::onMouseReleased(const MouseEventArgs& mouseEventArg
 void TargetCameraController::onMouseMoved(const double xPos, const double yPos) {
     const glm::vec2 mousePos(static_cast<float>(xPos), static_cast<float>(yPos));
 
-    // In [-1, 1] range
-    const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_window->getSize()) * 2.0f;
+    const glm::vec2 delta = mousePos - m_prevMousePos;
     if (m_dragMode == DragMode::Look) {
         look(-delta.x, -delta.y);
     } else if (m_dragMode == DragMode::Orbit) {

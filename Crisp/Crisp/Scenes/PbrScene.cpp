@@ -278,6 +278,8 @@ void PbrScene::render(const FrameContext& frameContext) {
 }
 
 void PbrScene::drawGui() {
+    drawCameraPivot(*m_cameraController);
+
     ImGui::Begin("Scene");
     if (ImGui::CollapsingHeader("Camera")) {
         drawCameraControllerUi(*m_cameraController, /*isSeparateWindow=*/false);

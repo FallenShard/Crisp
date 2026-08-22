@@ -197,6 +197,8 @@ void MaterialExplorerScene::render(const FrameContext& frameContext) {
 }
 
 void MaterialExplorerScene::drawGui() {
+    drawCameraPivot(*m_cameraController);
+
     ImGui::Begin("Material Explorer");
 
     bool materialChanged = false;
