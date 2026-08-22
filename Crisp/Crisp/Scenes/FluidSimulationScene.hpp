@@ -37,6 +37,7 @@ private:
     };
 
     void setupInput();
+    void drawStageTimings() const;
     void buildRenderGraph();
     void resetCamera();
 
@@ -51,7 +52,7 @@ private:
     TransformPack m_transforms{};
     ParticleParams m_particleParams{};
 
-    // The simulation box is a metre or so across; the scene is drawn at this magnification.
+    float m_vizTimeDelta{0.0f};
     float m_vizScale{10.0f};
 };
 } // namespace crisp

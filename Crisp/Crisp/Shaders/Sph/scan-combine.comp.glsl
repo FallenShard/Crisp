@@ -12,8 +12,6 @@ layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 layout(push_constant) uniform PushConstant {
     uint numCells;
-    // Elements one scan.comp workgroup covered. Carried explicitly so this dispatch's workgroup size
-    // is free to differ from the scan's.
     uint elementsPerBlock;
 }
 pushConst;

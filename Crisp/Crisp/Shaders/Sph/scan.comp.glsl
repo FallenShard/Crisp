@@ -10,8 +10,6 @@ layout(std430, set = 0, binding = 1) buffer BlockSums {
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
-// Blelloch scan over 2 * gl_WorkGroupSize.x elements per workgroup. That count must be a power of
-// two; a workgroup whose slice runs past elementCount pads with zeros instead.
 shared uint temp[gl_WorkGroupSize.x * 2];
 
 layout(push_constant) uniform PushConstant {

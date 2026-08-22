@@ -49,7 +49,7 @@ void FluidSimulationScene::buildRenderGraph() {
         kParticlePass,
         PassType::Rasterizer,
         [](rg::RenderGraph::Builder& builder) {
-            const auto& sphData = builder.getBlackboard().get<SphPassData>();
+            const auto& sphData = builder.getBlackboard().get<WcsphPassData>();
             builder.readBuffer(sphData.positions, kVertexInputRead);
             builder.readBuffer(sphData.colors, kVertexInputRead);
 
@@ -104,6 +104,7 @@ void FluidSimulationScene::resize(const int width, const int height) {
 void FluidSimulationScene::update(const UpdateParams& updateParams) {
     m_cameraController->update(updateParams.dt);
     m_fluidSimulation->update(updateParams.dt);
+    m_vizTimeDelta = m_vizTimeDelta == 0.0f ? updateParams.dt : glm::mix(m_vizTimeDelta, updateParams.dt, 0.05f);
 
     const auto& camera = m_cameraController->getCamera();
     m_transforms.M = glm::scale(glm::vec3(m_vizScale));
@@ -133,6 +134,59 @@ void FluidSimulationScene::render(const FrameContext& frameContext) {
     m_renderGraph->execute(frameContext);
 }
 
+void FluidSimulationScene::drawStageTimings() const {
+    const auto names = SPH::getStageNames();
+    const auto timings = m_fluidSimulation->getStageTimingsMs();
+    const auto substeps = m_fluidSimulation->getActiveSubstepCount();
+
+    double frameTotal = 0.0;
+    for (size_t i = 0; i < names.size() && i < timings.size(); ++i) {
+        frameTotal += timings[i].value_or(0.0) * substeps;
+    }
+
+    constexpr auto kFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp;
+    if (!ImGui::BeginTable("##SolverStages", 4, kFlags)) {
+        return;
+    }
+
+    ImGui::TableSetupColumn("Stage", ImGuiTableColumnFlags_WidthStretch, 2.0f);
+    ImGui::TableSetupColumn("ms/substep", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+    ImGui::TableSetupColumn("ms/frame", ImGuiTableColumnFlags_WidthStretch, 1.0f);
+    ImGui::TableSetupColumn("%", ImGuiTableColumnFlags_WidthStretch, 0.7f);
+    ImGui::TableHeadersRow();
+
+    for (size_t i = 0; i < names.size() && i < timings.size(); ++i) {
+        const double perSubstep = timings[i].value_or(0.0);
+        const double perFrame = perSubstep * substeps;
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextUnformatted(names[i]);
+        ImGui::TableNextColumn();
+        if (timings[i]) {
+            ImGui::Text("%.4f", perSubstep); // NOLINT
+        } else {
+            ImGui::TextDisabled("-"); // NOLINT
+        }
+        ImGui::TableNextColumn();
+        ImGui::Text("%.3f", perFrame); // NOLINT
+        ImGui::TableNextColumn();
+        ImGui::Text("%.1f", frameTotal > 0.0 ? 100.0 * perFrame / frameTotal : 0.0); // NOLINT
+    }
+
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::TextUnformatted("total");
+    ImGui::TableNextColumn();
+    ImGui::TextDisabled("x%u", substeps); // NOLINT
+    ImGui::TableNextColumn();
+    ImGui::Text("%.3f", frameTotal); // NOLINT
+    ImGui::TableNextColumn();
+    ImGui::TextUnformatted("100.0");
+
+    ImGui::EndTable();
+}
+
 void FluidSimulationScene::drawGui() {
     ImGui::SetNextWindowSize(ImVec2(440.0f, 360.0f), ImGuiCond_FirstUseEver);
     if (ImGui::Begin("Fluid Simulation")) {
@@ -152,22 +206,43 @@ void FluidSimulationScene::drawGui() {
         ImGui::SliderFloat("Surface tension", &params.kappa, 0.0f, 50.0f, "%.2f");
 
         ImGui::Separator();
-        ImGui::Checkbox("Advance by real frame time", &params.useRealFrameTime);
-        if (!params.useRealFrameTime) {
+        ImGui::Checkbox("Fixed frame time", &params.useFixedFrameTime);
+        if (params.useFixedFrameTime) {
             float rateHz = 1.0f / std::max(params.simulatedTimePerFrame, 1e-4f);
             if (ImGui::SliderFloat("Simulated rate", &rateHz, 15.0f, 240.0f, "%.0f Hz")) {
                 params.simulatedTimePerFrame = 1.0f / rateHz;
             }
+        } else {
+            ImGui::SliderFloat("Time scale", &params.timeScale, 0.05f, 2.0f, "%.2fx");
         }
-        // The chain is baked into the graph once per substep, so changing the count rebuilds it.
-        int substepCount = static_cast<int>(m_fluidSimulation->getSubstepCount());
-        if (ImGui::SliderInt("Substeps per frame", &substepCount, 1, 32)) {
+        ImGui::SliderFloat(
+            "Target substep", &params.targetSubstepTime, 1e-4f, 5e-3f, "%.4f s", ImGuiSliderFlags_Logarithmic);
+
+        int maxSubstepCount = static_cast<int>(m_fluidSimulation->getMaxSubstepCount());
+        if (ImGui::SliderInt("Max substeps", &maxSubstepCount, 1, 64)) {
             m_renderer->finish();
-            m_fluidSimulation->setSubstepCount(static_cast<uint32_t>(substepCount));
+            m_fluidSimulation->setMaxSubstepCount(static_cast<uint32_t>(maxSubstepCount));
             buildRenderGraph();
         }
-        ImGui::SliderFloat("Max substep", &params.maxSubstepTime, 1e-4f, 5e-3f, "%.4f s", ImGuiSliderFlags_Logarithmic);
-        ImGui::TextDisabled("Substep: %.4f s", m_fluidSimulation->getSubstepTime()); // NOLINT
+        ImGui::TextDisabled( // NOLINT
+            "Substeps: %u of %u at %.4f s",
+            m_fluidSimulation->getActiveSubstepCount(),
+            m_fluidSimulation->getMaxSubstepCount(),
+            m_fluidSimulation->getSubstepTime());
+
+        const float simulated = m_fluidSimulation->getSimulatedTimePerFrame();
+        const float realTimeFraction = m_vizTimeDelta > 0.0f ? simulated / m_vizTimeDelta : 0.0f;
+        ImGui::TextDisabled( // NOLINT
+            "Simulated: %.2f ms/frame  (%.0f%% of real time)", simulated * 1000.0f, 100.0f * realTimeFraction);
+        if (realTimeFraction < 0.95f && !params.useFixedFrameTime) {
+            ImGui::TextDisabled("  substep ceiling is capping it: raise Max substeps"); // NOLINT
+        }
+        if (realTimeFraction > 1.05f) {
+            ImGui::TextDisabled("  faster than real time by choice"); // NOLINT
+        }
+        if (ImGui::CollapsingHeader("Solver stages")) {
+            drawStageTimings();
+        }
 
         ImGui::Separator();
         ImGui::SliderFloat("Visualization scale", &m_vizScale, 1.0f, 50.0f, "%.1f");

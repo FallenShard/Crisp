@@ -1,7 +1,9 @@
 #include <Crisp/Models/SPH.hpp>
 
 #include <algorithm>
+#include <array>
 #include <bit>
+#include <cmath>
 
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Renderer/ComputePipeline.hpp>
@@ -12,6 +14,20 @@ constexpr uint32_t kScanBlockSize = 256;
 constexpr uint32_t kScanElementsPerThread = 2;
 
 constexpr float kSmoothingRadiusInParticleRadii = 4.0f;
+
+// Order matters: it is the order recordSolve dispatches them in, and the order the timings and the
+// ui report them in.
+constexpr std::array<const char*, 9> kStageNames{
+    "clear-hash-grid",
+    "cell-count",
+    "scan",
+    "scan-block",
+    "scan-combine",
+    "reindex",
+    "density-pressure",
+    "forces",
+    "integrate",
+};
 
 struct GridPushConstants {
     glm::uvec3 dim;
@@ -103,17 +119,13 @@ SPH::SPH(Renderer& renderer, const SphConfig& config)
     , m_numParticles(config.fluidDim.x * config.fluidDim.y * config.fluidDim.z)
     , m_particleRadius(config.particleRadius)
     , m_fluidDim(config.fluidDim)
-    , m_substepCount(config.substepCount) {
+    , m_fluidSpaceSize(glm::vec3(m_fluidDim.x, m_fluidDim.y / 2, m_fluidDim.z / 2) * 4.0f * m_particleRadius)
+    , m_cellSize(kSmoothingRadiusInParticleRadii * m_particleRadius)
+    , m_gridDim(glm::uvec3(glm::ceil(m_fluidSpaceSize / m_cellSize)))
+    , m_numCells(m_gridDim.x * m_gridDim.y * m_gridDim.z)
+    , m_maxSubstepCount(config.maxSubstepCount) {
     CRISP_CHECK_GT(m_numParticles, 0);
-    CRISP_CHECK_GT(m_substepCount, 0);
-
-    // The block of particles fills the box in x but only a quarter of it in y and z, so it has room
-    // to collapse and spread instead of starting flush against the walls.
-    m_fluidSpaceSize = glm::vec3(m_fluidDim.x, m_fluidDim.y / 2, m_fluidDim.z / 2) * 4.0f * m_particleRadius;
-
-    m_cellSize = kSmoothingRadiusInParticleRadii * m_particleRadius;
-    m_gridDim = glm::uvec3(glm::ceil(m_fluidSpaceSize / m_cellSize));
-    m_numCells = m_gridDim.x * m_gridDim.y * m_gridDim.z;
+    CRISP_CHECK_GT(m_maxSubstepCount, 0);
 
     m_scanElementsPerBlock = kScanBlockSize * kScanElementsPerThread;
     m_scanBlockCount = (m_numCells + m_scanElementsPerBlock - 1) / m_scanElementsPerBlock;
@@ -147,41 +159,41 @@ SPH::SPH(Renderer& renderer, const SphConfig& config)
     const auto perParticle = linearDispatch(m_numParticles, kScanBlockSize);
     const auto perCell = linearDispatch(m_numCells, kScanBlockSize);
 
-    m_clearHashGrid = createDispatch("clear-hash-grid.comp", kLinearWorkGroup, perCell);
+    m_clearHashGrid = createDispatch("Sph/clear-hash-grid.comp", kLinearWorkGroup, perCell);
     m_clearHashGrid.material->writeDescriptor(0, 0, *m_cellCountBuffer);
 
-    m_cellCount = createDispatch("compute-cell-count.comp", kLinearWorkGroup, perParticle);
+    m_cellCount = createDispatch("Sph/compute-cell-count.comp", kLinearWorkGroup, perParticle);
     m_cellCount.material->writeDescriptor(0, 0, *m_positionBuffer);
     m_cellCount.material->writeDescriptor(0, 1, *m_cellCountBuffer);
     m_cellCount.material->writeDescriptor(0, 2, *m_cellIdBuffer);
 
-    m_scan = createDispatch("scan.comp", kLinearWorkGroup, VkExtent3D{m_scanBlockCount, 1, 1});
+    m_scan = createDispatch("Sph/scan.comp", kLinearWorkGroup, VkExtent3D{m_scanBlockCount, 1, 1});
     m_scan.material->writeDescriptor(0, 0, *m_cellCountBuffer);
     m_scan.material->writeDescriptor(0, 1, *m_blockSumBuffer);
 
-    m_scanBlock = createDispatch("scan.comp", {scanBlockWorkGroupSize, 1, 1}, VkExtent3D{1, 1, 1});
+    m_scanBlock = createDispatch("Sph/scan.comp", {scanBlockWorkGroupSize, 1, 1}, VkExtent3D{1, 1, 1});
     m_scanBlock.material->writeDescriptor(0, 0, *m_blockSumBuffer);
     m_scanBlock.material->writeDescriptor(0, 1, *m_blockSumBuffer);
 
-    m_scanCombine = createDispatch("scan-combine.comp", kLinearWorkGroup, perCell);
+    m_scanCombine = createDispatch("Sph/scan-combine.comp", kLinearWorkGroup, perCell);
     m_scanCombine.material->writeDescriptor(0, 0, *m_cellCountBuffer);
     m_scanCombine.material->writeDescriptor(0, 1, *m_blockSumBuffer);
 
-    m_reindex = createDispatch("reindex-particles.comp", kLinearWorkGroup, perParticle);
+    m_reindex = createDispatch("Sph/reindex-particles.comp", kLinearWorkGroup, perParticle);
     m_reindex.material->writeDescriptor(0, 0, *m_positionBuffer);
     m_reindex.material->writeDescriptor(0, 1, *m_cellCountBuffer);
     m_reindex.material->writeDescriptor(0, 2, *m_cellIdBuffer);
     m_reindex.material->writeDescriptor(0, 3, *m_sortedIndexBuffer);
     m_reindex.material->writeDescriptor(0, 4, *m_sortedPositionBuffer);
 
-    m_densityPressure = createDispatch("compute-density-and-pressure.comp", kLinearWorkGroup, perParticle);
+    m_densityPressure = createDispatch("Sph/compute-density-and-pressure.comp", kLinearWorkGroup, perParticle);
     m_densityPressure.material->writeDescriptor(0, 0, *m_positionBuffer);
     m_densityPressure.material->writeDescriptor(0, 1, *m_cellCountBuffer);
     m_densityPressure.material->writeDescriptor(0, 2, *m_sortedPositionBuffer);
     m_densityPressure.material->writeDescriptor(0, 3, *m_densityBuffer);
     m_densityPressure.material->writeDescriptor(0, 4, *m_pressureBuffer);
 
-    m_forces = createDispatch("compute-forces.comp", kLinearWorkGroup, perParticle);
+    m_forces = createDispatch("Sph/compute-forces.comp", kLinearWorkGroup, perParticle);
     m_forces.material->writeDescriptor(0, 0, *m_positionBuffer);
     m_forces.material->writeDescriptor(0, 1, *m_cellCountBuffer);
     m_forces.material->writeDescriptor(0, 2, *m_sortedIndexBuffer);
@@ -190,7 +202,7 @@ SPH::SPH(Renderer& renderer, const SphConfig& config)
     m_forces.material->writeDescriptor(0, 5, *m_velocityBuffer);
     m_forces.material->writeDescriptor(0, 6, *m_forceBuffer);
 
-    m_integrate = createDispatch("integrate.comp", kLinearWorkGroup, perParticle);
+    m_integrate = createDispatch("Sph/integrate.comp", kLinearWorkGroup, perParticle);
     m_integrate.material->writeDescriptor(0, 0, *m_positionBuffer);
     m_integrate.material->writeDescriptor(0, 1, *m_velocityBuffer);
     m_integrate.material->writeDescriptor(0, 2, *m_forceBuffer);
@@ -198,31 +210,44 @@ SPH::SPH(Renderer& renderer, const SphConfig& config)
     m_integrate.material->writeDescriptor(0, 4, *m_velocityBuffer);
     m_integrate.material->writeDescriptor(0, 5, *m_colorBuffer);
 
+    m_stageProfiler.initialize(device, kStageNames.size(), "SPH Solver Stages");
+
     device.flushDescriptorUpdates();
 }
 
 SPH::~SPH() = default;
 
 void SPH::update(const float dt) {
-    const float frameTime = m_params.useRealFrameTime ? dt : m_params.simulatedTimePerFrame;
-    m_substepTime = std::min(frameTime / static_cast<float>(m_substepCount), m_params.maxSubstepTime);
+    const float frameTime = m_params.useFixedFrameTime ? m_params.simulatedTimePerFrame : dt * m_params.timeScale;
+    const auto requiredSubsteps = static_cast<uint32_t>(std::ceil(frameTime / m_params.targetSubstepTime));
+    m_activeSubstepCount = std::clamp(requiredSubsteps, 1u, m_maxSubstepCount);
+    m_substepTime = std::min(frameTime / static_cast<float>(m_activeSubstepCount), m_params.targetSubstepTime);
+}
+
+std::span<const char* const> SPH::getStageNames() {
+    return kStageNames;
 }
 
 void SPH::addComputePasses(rg::RenderGraph& renderGraph) {
-    // Each writing pass re-imports the buffer it modifies, producing a fresh handle that resolves to
-    // the same VkBuffer. The graph keys its access history by VkBuffer, so threading the latest
-    // handle forward is all the ordering the solver needs -- between substeps, and across frames.
-    RenderGraphResourceHandle positions{};
-    RenderGraphResourceHandle colors{};
-    RenderGraphResourceHandle velocities{};
-    RenderGraphResourceHandle forces{};
-    RenderGraphResourceHandle densities{};
-    RenderGraphResourceHandle pressures{};
-    RenderGraphResourceHandle cellCounts{};
-    RenderGraphResourceHandle cellIds{};
-    RenderGraphResourceHandle sortedIndices{};
-    RenderGraphResourceHandle sortedPositions{};
-    RenderGraphResourceHandle blockSums{};
+    renderGraph.addPass(
+        "sph-solve",
+        PassType::Compute,
+        [this](rg::RenderGraph::Builder& builder) {
+            auto& data = builder.getBlackboard().insert<WcsphPassData>();
+            data.positions = builder.importBuffer(describe(*m_positionBuffer), "sph-positions");
+            data.colors = builder.importBuffer(describe(*m_colorBuffer), "sph-colors");
+        },
+        [this](const FrameContext& ctx) { recordSolve(ctx); });
+}
+
+void SPH::recordSolve(const FrameContext& ctx) {
+    if (m_isPaused || m_activeSubstepCount == 0) {
+        return;
+    }
+
+    const auto& encoder = ctx.commandEncoder;
+    constexpr auto kStageBarrier = kComputeWrite >> (kComputeRead | kComputeWrite);
+    encoder.insertBarrier((kComputeWrite | kVertexInputRead) >> (kComputeRead | kComputeWrite));
 
     const GridPushConstants grid{
         .dim = m_gridDim,
@@ -231,177 +256,50 @@ void SPH::addComputePasses(rg::RenderGraph& renderGraph) {
         .cellSize = m_cellSize,
     };
 
-    const auto dispatch = [this](const Dispatch& d, const FrameContext& ctx, const auto& pushConstants) {
-        if (m_isPaused) {
-            return;
-        }
-        d.bind(ctx);
-        ctx.commandEncoder.setPushConstants(
-            *d.pipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, pushConstants);
-        ctx.commandEncoder.dispatchCompute(d.dispatchSize);
-    };
-
-    for (uint32_t substep = 0; substep < m_substepCount; ++substep) {
-        const auto passName = [substep](const std::string_view stage) {
-            return fmt::format("sph-{}-{}", substep, stage);
+    m_stageProfiler.beginFrame(ctx.virtualFrameIndex);
+    for (uint32_t substep = 0; substep < m_activeSubstepCount; ++substep) {
+        const bool isTimed = substep == 0;
+        uint32_t stage = 0;
+        const auto runStage = [&](const Dispatch& dispatch, const auto& pushConstants) {
+            if (isTimed) {
+                m_stageProfiler.beginPass(encoder, stage);
+            }
+            dispatch.bind(ctx);
+            encoder.setPushConstants(
+                *dispatch.pipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, pushConstants);
+            encoder.dispatchCompute(dispatch.dispatchSize);
+            if (isTimed) {
+                m_stageProfiler.endPass(encoder, stage);
+            }
+            encoder.insertBarrier(kStageBarrier);
+            ++stage;
         };
-        const auto resourceName = [substep](const std::string_view buffer, const std::string_view stage) {
-            return fmt::format("sph-{}@{}-{}", buffer, substep, stage);
-        };
-        const bool isLastSubstep = substep + 1 == m_substepCount;
 
-        renderGraph.addPass(
-            passName("clear-hash-grid"),
-            PassType::Compute,
-            [this, &cellCounts, &resourceName](rg::RenderGraph::Builder& builder) {
-                cellCounts =
-                    builder.importBuffer(describe(*m_cellCountBuffer), resourceName("cell-counts", "clear-hash-grid"));
-            },
-            [this, dispatch](const FrameContext& ctx) { dispatch(m_clearHashGrid, ctx, m_numCells); });
-
-        renderGraph.addPass(
-            passName("cell-count"),
-            PassType::Compute,
-            [this, &positions, &cellCounts, &cellIds, &resourceName](rg::RenderGraph::Builder& builder) {
-                positions = builder.importBuffer(describe(*m_positionBuffer), resourceName("positions", "cell-count"));
-                builder.readBuffer(positions, kComputeRead);
-                builder.readBuffer(cellCounts, kComputeRead);
-                cellCounts =
-                    builder.importBuffer(describe(*m_cellCountBuffer), resourceName("cell-counts", "cell-count"));
-                cellIds = builder.importBuffer(describe(*m_cellIdBuffer), resourceName("cell-ids", "cell-count"));
-            },
-            [this, dispatch, grid](const FrameContext& ctx) {
-                dispatch(
-                    m_cellCount,
-                    ctx,
-                    CellCountPushConstants{.dim = grid.dim, .cellSize = grid.cellSize, .numParticles = m_numParticles});
+        runStage(m_clearHashGrid, m_numCells);
+        runStage(
+            m_cellCount,
+            CellCountPushConstants{.dim = grid.dim, .cellSize = grid.cellSize, .numParticles = m_numParticles});
+        runStage(m_scan, ScanPushConstants{.storeSumBlocks = 1, .elementCount = m_numCells});
+        runStage(m_scanBlock, ScanPushConstants{.storeSumBlocks = 0, .elementCount = m_scanBlockCount});
+        runStage(
+            m_scanCombine,
+            ScanCombinePushConstants{.elementCount = m_numCells, .elementsPerBlock = m_scanElementsPerBlock});
+        runStage(m_reindex, ParticlePushConstants{.grid = grid, .numParticles = m_numParticles});
+        runStage(m_densityPressure, ParticlePushConstants{.grid = grid, .numParticles = m_numParticles});
+        runStage(
+            m_forces,
+            ForcesPushConstants{
+                .grid = grid,
+                .gravity = m_params.gravity,
+                .numParticles = m_numParticles,
+                .viscosity = m_params.viscosity,
+                .kappa = m_params.kappa,
             });
-
-        renderGraph.addPass(
-            passName("scan"),
-            PassType::Compute,
-            [this, &cellCounts, &blockSums, &resourceName](rg::RenderGraph::Builder& builder) {
-                builder.readBuffer(cellCounts, kComputeRead);
-                cellCounts = builder.importBuffer(describe(*m_cellCountBuffer), resourceName("cell-counts", "scan"));
-                blockSums = builder.importBuffer(describe(*m_blockSumBuffer), resourceName("block-sums", "scan"));
-            },
-            [this, dispatch](const FrameContext& ctx) {
-                dispatch(m_scan, ctx, ScanPushConstants{.storeSumBlocks = 1, .elementCount = m_numCells});
-            });
-
-        renderGraph.addPass(
-            passName("scan-block"),
-            PassType::Compute,
-            [this, &blockSums, &resourceName](rg::RenderGraph::Builder& builder) {
-                builder.readBuffer(blockSums, kComputeRead);
-                blockSums = builder.importBuffer(describe(*m_blockSumBuffer), resourceName("block-sums", "scan-block"));
-            },
-            [this, dispatch](const FrameContext& ctx) {
-                dispatch(m_scanBlock, ctx, ScanPushConstants{.storeSumBlocks = 0, .elementCount = m_scanBlockCount});
-            });
-
-        renderGraph.addPass(
-            passName("scan-combine"),
-            PassType::Compute,
-            [this, &cellCounts, &blockSums, &resourceName](rg::RenderGraph::Builder& builder) {
-                builder.readBuffer(blockSums, kComputeRead);
-                builder.readBuffer(cellCounts, kComputeRead);
-                cellCounts =
-                    builder.importBuffer(describe(*m_cellCountBuffer), resourceName("cell-counts", "scan-combine"));
-            },
-            [this, dispatch](const FrameContext& ctx) {
-                dispatch(
-                    m_scanCombine,
-                    ctx,
-                    ScanCombinePushConstants{.elementCount = m_numCells, .elementsPerBlock = m_scanElementsPerBlock});
-            });
-
-        renderGraph.addPass(
-            passName("reindex"),
-            PassType::Compute,
-            [this, &positions, &cellCounts, &cellIds, &sortedIndices, &sortedPositions, &resourceName](
-                rg::RenderGraph::Builder& builder) {
-                builder.readBuffer(positions, kComputeRead);
-                builder.readBuffer(cellCounts, kComputeRead);
-                builder.readBuffer(cellIds, kComputeRead);
-                sortedIndices =
-                    builder.importBuffer(describe(*m_sortedIndexBuffer), resourceName("sorted-indices", "reindex"));
-                sortedPositions = builder.importBuffer(
-                    describe(*m_sortedPositionBuffer), resourceName("sorted-positions", "reindex"));
-            },
-            [this, dispatch, grid](const FrameContext& ctx) {
-                dispatch(m_reindex, ctx, ParticlePushConstants{.grid = grid, .numParticles = m_numParticles});
-            });
-
-        renderGraph.addPass(
-            passName("density-pressure"),
-            PassType::Compute,
-            [this, &positions, &cellCounts, &sortedPositions, &densities, &pressures, &resourceName](
-                rg::RenderGraph::Builder& builder) {
-                builder.readBuffer(positions, kComputeRead);
-                builder.readBuffer(cellCounts, kComputeRead);
-                builder.readBuffer(sortedPositions, kComputeRead);
-                densities =
-                    builder.importBuffer(describe(*m_densityBuffer), resourceName("densities", "density-pressure"));
-                pressures =
-                    builder.importBuffer(describe(*m_pressureBuffer), resourceName("pressures", "density-pressure"));
-            },
-            [this, dispatch, grid](const FrameContext& ctx) {
-                dispatch(m_densityPressure, ctx, ParticlePushConstants{.grid = grid, .numParticles = m_numParticles});
-            });
-
-        renderGraph.addPass(
-            passName("forces"),
-            PassType::Compute,
-            [this, &positions, &cellCounts, &sortedIndices, &densities, &pressures, &velocities, &forces, &resourceName](
-                rg::RenderGraph::Builder& builder) {
-                builder.readBuffer(positions, kComputeRead);
-                builder.readBuffer(cellCounts, kComputeRead);
-                builder.readBuffer(sortedIndices, kComputeRead);
-                builder.readBuffer(densities, kComputeRead);
-                builder.readBuffer(pressures, kComputeRead);
-                velocities = builder.importBuffer(describe(*m_velocityBuffer), resourceName("velocities", "forces"));
-                builder.readBuffer(velocities, kComputeRead);
-                forces = builder.importBuffer(describe(*m_forceBuffer), resourceName("forces", "forces"));
-            },
-            [this, dispatch, grid](const FrameContext& ctx) {
-                dispatch(
-                    m_forces,
-                    ctx,
-                    ForcesPushConstants{
-                        .grid = grid,
-                        .gravity = m_params.gravity,
-                        .numParticles = m_numParticles,
-                        .viscosity = m_params.viscosity,
-                        .kappa = m_params.kappa,
-                    });
-            });
-
-        renderGraph.addPass(
-            passName("integrate"),
-            PassType::Compute,
-            [this, &positions, &velocities, &forces, &colors, &resourceName, isLastSubstep](
-                rg::RenderGraph::Builder& builder) {
-                builder.readBuffer(positions, kComputeRead);
-                builder.readBuffer(velocities, kComputeRead);
-                builder.readBuffer(forces, kComputeRead);
-                positions = builder.importBuffer(describe(*m_positionBuffer), resourceName("positions", "integrate"));
-                velocities = builder.importBuffer(describe(*m_velocityBuffer), resourceName("velocities", "integrate"));
-                colors = builder.importBuffer(describe(*m_colorBuffer), resourceName("colors", "integrate"));
-
-                if (isLastSubstep) {
-                    auto& data = builder.getBlackboard().insert<SphPassData>();
-                    data.positions = positions;
-                    data.colors = colors;
-                }
-            },
-            [this, dispatch, grid](const FrameContext& ctx) {
-                dispatch(
-                    m_integrate,
-                    ctx,
-                    IntegratePushConstants{.grid = grid, .timeDelta = m_substepTime, .numParticles = m_numParticles});
-            });
+        runStage(
+            m_integrate,
+            IntegratePushConstants{.grid = grid, .timeDelta = m_substepTime, .numParticles = m_numParticles});
     }
+    m_stageProfiler.endFrame();
 }
 
 void SPH::reset() {

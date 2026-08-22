@@ -1,17 +1,20 @@
 #pragma once
 
 #include <memory>
+#include <optional>
+#include <span>
 #include <vector>
 
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Renderer/Material.hpp>
+#include <Crisp/Renderer/PassProfiler.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 
 namespace crisp {
 
-struct SphPassData {
+struct WcsphPassData {
     RenderGraphResourceHandle positions;
     RenderGraphResourceHandle colors;
 };
@@ -21,21 +24,20 @@ struct SphParameters {
     float viscosity{5.0f};
     float kappa{1.0f}; // Surface tension coefficient.
 
-    // Simulated seconds one rendered frame advances, split evenly across the substeps.
-    float simulatedTimePerFrame{1.0f / 60.0f};
-    // Take that from the real frame time instead, so the fluid tracks wall clock rather than frames.
-    bool useRealFrameTime{false};
+    // Simulated seconds per real second. 1 tracks the wall clock; lower is slow motion.
+    float timeScale{1.0f};
 
-    // Ceiling on a single substep, so a hitch costs simulated time rather than the solver. The
-    // Courant bound for the hardcoded stiffness is 0.4h/sqrt(stiffness) = 1.6 ms; stay under it.
-    float maxSubstepTime{0.0015f};
+    bool useFixedFrameTime{false};
+    float simulatedTimePerFrame{1.0f / 60.0f};
+
+    // Can be lower depending on how many substeps are needed to reach the target frame time.
+    float targetSubstepTime{0.001f};
 };
 
 struct SphConfig {
     glm::uvec3 fluidDim{32, 64, 32};
     float particleRadius{0.01f};
-    // Solver iterations per rendered frame. 16 puts the default substep near 1 ms.
-    uint32_t substepCount{16};
+    uint32_t maxSubstepCount{32};
 };
 
 class SPH {
@@ -55,18 +57,30 @@ public:
 
     void reset();
 
-    uint32_t getSubstepCount() const {
-        return m_substepCount;
+    uint32_t getMaxSubstepCount() const {
+        return m_maxSubstepCount;
     }
 
-    // Takes effect only once the render graph is rebuilt: the substep count is how many times the
-    // solver chain is baked into it.
-    void setSubstepCount(const uint32_t substepCount) {
-        m_substepCount = substepCount;
+    void setMaxSubstepCount(const uint32_t maxSubstepCount) {
+        m_maxSubstepCount = maxSubstepCount;
+    }
+
+    uint32_t getActiveSubstepCount() const {
+        return m_activeSubstepCount;
+    }
+
+    static std::span<const char* const> getStageNames();
+
+    std::span<const std::optional<double>> getStageTimingsMs() const {
+        return m_stageProfiler.getPassTimingsMs();
     }
 
     float getSubstepTime() const {
         return m_substepTime;
+    }
+
+    float getSimulatedTimePerFrame() const {
+        return m_substepTime * static_cast<float>(m_activeSubstepCount);
     }
 
     bool isPaused() const {
@@ -98,6 +112,10 @@ public:
         return *m_colorBuffer;
     }
 
+    VulkanBuffer& getDensityBuffer() const {
+        return *m_densityBuffer;
+    }
+
     SphParameters& getParameters() {
         return m_params;
     }
@@ -117,6 +135,8 @@ private:
 
     Dispatch createDispatch(
         const std::string& shaderName, const VkExtent3D& workGroupSize, VkExtent3D dispatchSize) const;
+
+    void recordSolve(const FrameContext& ctx);
     std::vector<glm::vec4> createInitialPositions() const;
 
     Renderer& m_renderer;
@@ -125,10 +145,10 @@ private:
     float m_particleRadius;
     glm::uvec3 m_fluidDim;
     glm::vec3 m_fluidSpaceSize;
+    float m_cellSize;
 
     glm::uvec3 m_gridDim;
     uint32_t m_numCells;
-    float m_cellSize;
 
     // Elements one `scan` workgroup reduces, and therefore the number of partial sums `scan-block`
     // has to scan in a single workgroup.
@@ -136,7 +156,8 @@ private:
     uint32_t m_scanBlockCount;
 
     SphParameters m_params;
-    uint32_t m_substepCount;
+    uint32_t m_maxSubstepCount;
+    uint32_t m_activeSubstepCount{1};
     float m_substepTime{0.0f};
     bool m_isPaused{false};
 
@@ -152,6 +173,8 @@ private:
     std::unique_ptr<VulkanBuffer> m_sortedIndexBuffer;
     std::unique_ptr<VulkanBuffer> m_sortedPositionBuffer;
     std::unique_ptr<VulkanBuffer> m_blockSumBuffer;
+
+    PassProfiler m_stageProfiler;
 
     Dispatch m_clearHashGrid;
     Dispatch m_cellCount;
