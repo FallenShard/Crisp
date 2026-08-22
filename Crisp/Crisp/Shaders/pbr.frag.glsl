@@ -4,8 +4,7 @@
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_nonuniform_qualifier : require
 
-#define PI 3.1415926535897932384626433832795
-
+#include "Common/math-constants.part.glsl"
 #include "Brdf/microfacet.part.glsl"
 #include "Common/bindless.part.glsl"
 #include "Common/view.part.glsl"
@@ -60,8 +59,8 @@ struct PbrMaterialParameters {
     uint normalTex;
     uint ormTex;
     uint emissiveTex;
-    uint padding0;
-    uint padding1;
+    float alphaCutoff;
+    uint flags;
 };
 
 layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer PbrMaterialTable {
@@ -87,34 +86,25 @@ vec3 evalDirectionalLightRadiance(out vec3 eyeL) {
 }
 
 // ----- Cascaded Shadow Mapping
-bool isInCascade(in vec3 worldPos, in mat4 lightVP) {
-    const vec4 lightSpacePos = lightVP * vec4(worldPos, 1.0f);
-    return all(greaterThan(lightSpacePos.xyz, NdcMin * lightSpacePos.w)) &&
-           all(lessThan(lightSpacePos.xyz, NdcMax * lightSpacePos.w));
-}
-
-// Check-in-bounds based
-float evalCascadedShadow(vec3 worldPos, float bias) {
-    int cascadeIndex = 3;
-    if (isInCascade(worldPos, cascadedLight[0].VP)) {
-        cascadeIndex = 0;
-    } else if (isInCascade(worldPos, cascadedLight[1].VP)) {
-        cascadeIndex = 1;
-    } else if (isInCascade(worldPos, cascadedLight[2].VP)) {
-        cascadeIndex = 2;
-    }
-
-    vec4 lightSpacePos = cascadedLight[cascadeIndex].VP * vec4(worldPos, 1.0f);
-    vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
+float sampleCascadeShadow(const int cascadeIndex, const vec3 worldPos, const vec3 worldNormal) {
+    const vec4 lightSpacePos = cascadedLight[cascadeIndex].VP * vec4(worldPos, 1.0f);
+    const vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 
     if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax))) {
         return 1.0f;
     }
 
-    vec3 texCoord = vec3(ndcPos.xy * 0.5f + 0.5f, cascadeIndex);
+    const vec2 texCoord = ndcPos.xy * 0.5f + 0.5f;
 
-    ivec2 size = textureSize(cascadedShadowMaps[cascadeIndex], 0).xy;
-    vec2 texelSize = vec2(1) / size;
+    const ivec2 size = textureSize(cascadedShadowMaps[cascadeIndex], 0).xy;
+    const vec2 texelSize = vec2(1) / size;
+
+    // Express the bias in shadow texels, then convert world distance to the cascade's normalized depth.
+    const vec3 worldLightDirection = normalize(cascadedLight[cascadeIndex].direction.xyz);
+    const float NdotL = clamp(dot(worldNormal, worldLightDirection), 0.0f, 1.0f);
+    const float biasInTexels = mix(2.5f, 0.75f, NdotL);
+    const float worldBias = biasInTexels * cascadedLight[cascadeIndex].params.w;
+    const float depthBias = worldBias * abs(cascadedLight[cascadeIndex].P[2][2]);
 
     const int pcfRadius = 2;
     const float numSamples = (2 * pcfRadius + 1) * (2 * pcfRadius + 1);
@@ -122,13 +112,58 @@ float evalCascadedShadow(vec3 worldPos, float bias) {
     float amount = 0.0f;
     for (int i = -pcfRadius; i <= pcfRadius; i++) {
         for (int j = -pcfRadius; j <= pcfRadius; j++) {
-            vec2 tc = texCoord.xy + vec2(i, j) * texelSize;
-            float shadowMapDepth = texture(cascadedShadowMaps[cascadeIndex], tc).r;
-            amount += shadowMapDepth < (lightSpacePos.z - bias) / lightSpacePos.w ? 0.0f : 1.0f;
+            const vec2 tc = texCoord + vec2(i, j) * texelSize;
+            const float shadowMapDepth = texture(cascadedShadowMaps[cascadeIndex], tc).r;
+            amount += shadowMapDepth < ndcPos.z - depthBias ? 0.0f : 1.0f;
         }
     }
 
     return amount / numSamples;
+}
+
+int selectCascade(const float viewDepth) {
+    for (int i = 0; i < 4; ++i) {
+        if (viewDepth <= cascadedLight[i].params.y) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+float evalCascadedShadow(const vec3 worldPos, const float viewDepth, const vec3 worldNormal) {
+    const int cascadeIndex = selectCascade(viewDepth);
+    if (cascadeIndex < 0) {
+        return 1.0f;
+    }
+
+    const float currentShadow = sampleCascadeShadow(cascadeIndex, worldPos, worldNormal);
+    if (cascadeIndex == 3 || viewDepth <= cascadedLight[cascadeIndex].params.z) {
+        return currentShadow;
+    }
+
+    const float blend = smoothstep(
+        cascadedLight[cascadeIndex].params.z, cascadedLight[cascadeIndex].params.y, viewDepth);
+    return mix(currentShadow, sampleCascadeShadow(cascadeIndex + 1, worldPos, worldNormal), blend);
+}
+
+vec3 getCascadeDebugColor(const float viewDepth) {
+    const vec3 cascadeColors[4] = vec3[4](
+        vec3(1.0f, 0.15f, 0.12f),
+        vec3(0.15f, 1.0f, 0.20f),
+        vec3(0.15f, 0.35f, 1.0f),
+        vec3(1.0f, 0.25f, 0.90f));
+
+    const int cascadeIndex = selectCascade(viewDepth);
+    if (cascadeIndex < 0) {
+        return vec3(0.25f);
+    }
+    if (cascadeIndex == 3 || viewDepth <= cascadedLight[cascadeIndex].params.z) {
+        return cascadeColors[cascadeIndex];
+    }
+
+    const float blend = smoothstep(
+        cascadedLight[cascadeIndex].params.z, cascadedLight[cascadeIndex].params.y, viewDepth);
+    return mix(cascadeColors[cascadeIndex], cascadeColors[cascadeIndex + 1], blend);
 }
 
 vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao, float shadow) {
@@ -313,7 +348,11 @@ void main() {
     const float NdotL = max(dot(eyeN, eyeL), 0.0f);
 
     // Material properties.
-    const vec3 albedo = sampleMaterial(material, material.albedoTex, uvCoord).rgb * material.albedo.rgb;
+    const vec4 albedoSample = sampleMaterial(material, material.albedoTex, uvCoord) * material.albedo;
+    if ((material.flags & 1u) != 0u && albedoSample.a < material.alphaCutoff) {
+        discard;
+    }
+    const vec3 albedo = albedoSample.rgb;
     const vec3 orm = sampleMaterial(material, material.ormTex, uvCoord).rgb;
     const float roughness = clamp(orm.g * material.roughness, 0.001f, 1.0f);
     const float alpha = roughness * roughness;
@@ -335,7 +374,8 @@ void main() {
     const float G = geometrySmith(NdotV, NdotL, roughness);
     const vec3 specularity = D * G * F / max(4.0f * NdotV * NdotL, 0.001);
 
-    const float shadowCoeff = evalCascadedShadow(worldPos, 0.005f);
+    const vec3 worldNormal = normalize((view.invV * vec4(eyeN, 0.0f)).xyz);
+    const float shadowCoeff = evalCascadedShadow(worldPos, -eyePosition.z, worldNormal);
 
     const vec3 Li = (diffuse + specularity) * Le * NdotL;
     const vec3 Lenv = computeEnvRadiance(eyeN, eyeV, kD, albedo, F, roughness, ao, shadowCoeff);
@@ -343,5 +383,9 @@ void main() {
     const vec3 shadowColor = vec3(0.05f, 0.1f, 0.3f);
     const vec3 shadowCoeffColor = shadowColor + (vec3(1.0f) - shadowColor) * shadowCoeff;
 
-    fragColor = vec4(Lenv + Li * shadowCoeffColor + emission, 1.0f);
+    vec3 color = Lenv + Li * shadowCoeffColor + emission;
+    if (cascadedLight[0].position.w > 0.5f) {
+        color = mix(color, getCascadeDebugColor(-eyePosition.z), 0.45f);
+    }
+    fragColor = vec4(color, 1.0f);
 }

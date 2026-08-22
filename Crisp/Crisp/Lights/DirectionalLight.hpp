@@ -12,13 +12,15 @@ public:
         const glm::vec3& direction, const glm::vec3& radiance, const glm::vec3& extentMin, const glm::vec3& extentMax);
 
     void setDirection(glm::vec3 direction);
-    void fitProjectionToBoundingSphere(const glm::vec3& center, float radius, uint32_t shadowMapSize);
+    void fitProjectionToBoundingSphere(
+        const glm::vec3& center, float radius, uint32_t shadowMapSize, float casterDepthExtrusion = 0.0f);
 
     LightDescriptor createDescriptor() const;
 
     const glm::vec3& getDirection() const;
     const glm::mat4& getViewMatrix() const;
     const glm::mat4& getProjectionMatrix() const;
+    float getWorldUnitsPerTexel() const;
 
 private:
     glm::vec3 m_direction;
@@ -27,5 +29,6 @@ private:
 
     glm::mat4 m_view;
     glm::mat4 m_projection;
+    float m_worldUnitsPerTexel{0.0f};
 };
 } // namespace crisp

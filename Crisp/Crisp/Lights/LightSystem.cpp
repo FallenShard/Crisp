@@ -1,5 +1,6 @@
 #include <Crisp/Lights/LightSystem.hpp>
 
+#include <algorithm>
 #include <random>
 
 #include <Crisp/Camera/Camera.hpp>
@@ -13,7 +14,7 @@ LightSystem::LightSystem(
     : m_renderer(renderer)
     , m_directionalLight(dirLight)
     , m_directionalLightBuffer(createUniformRingBuffer(&renderer->getDevice(), sizeof(LightDescriptor)))
-    , m_lightDepthRange(glm::vec2(1.0f, 100.0f))
+    , m_lightDepthRange(glm::vec2(0.0f, 100.0f))
     , m_shadowMapSize(shadowMapSize) {
     if (cascadeCount > 0) {
         m_cascadedShadowMapping.configure(&renderer->getDevice(), m_directionalLight, cascadeCount);
@@ -21,7 +22,9 @@ LightSystem::LightSystem(
 }
 
 void LightSystem::update(const Camera& camera, const uint32_t regionIndex) {
-    const auto [zNear, zFar] = m_lightDepthRange;
+    const auto cameraDepthRange = camera.getViewDepthRange();
+    const float zNear = std::max(cameraDepthRange.x, m_lightDepthRange.x);
+    const float zFar = std::min(cameraDepthRange.y, m_lightDepthRange.y);
     m_cascadedShadowMapping.updateSplitIntervals(zNear, zFar);
     m_cascadedShadowMapping.updateTransforms(camera, m_shadowMapSize, regionIndex);
 
@@ -47,6 +50,18 @@ void LightSystem::setSplitLambda(const float splitLambda) {
     m_cascadedShadowMapping.splitLambda = splitLambda;
 }
 
+void LightSystem::setCascadeBlendFraction(const float blendFraction) {
+    m_cascadedShadowMapping.splitBlendFraction = blendFraction;
+}
+
+void LightSystem::setCasterDepthExtrusion(const float extrusion) {
+    m_cascadedShadowMapping.casterDepthExtrusion = extrusion;
+}
+
+void LightSystem::setVisualizeCascades(const bool enabled) {
+    m_cascadedShadowMapping.visualizeCascades = enabled;
+}
+
 VulkanRingBuffer* LightSystem::getDirectionalLightBuffer() const {
     return m_directionalLightBuffer.get();
 }
@@ -70,6 +85,10 @@ float LightSystem::getCascadeSplitLo(uint32_t cascadeIndex) const {
 
 float LightSystem::getCascadeSplitHi(uint32_t cascadeIndex) const {
     return m_cascadedShadowMapping.cascades.at(cascadeIndex).zFar;
+}
+
+bool LightSystem::isCascadeCasterVisible(const uint32_t cascadeIndex, const BoundingBox3& worldBounds) const {
+    return m_cascadedShadowMapping.isCasterVisible(cascadeIndex, worldBounds);
 }
 
 void LightSystem::createPointLightBuffer(std::vector<PointLight>&& pointLights) {

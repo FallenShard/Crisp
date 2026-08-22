@@ -5,6 +5,29 @@
 #include <Crisp/Core/Checks.hpp>
 
 namespace crisp {
+namespace {
+bool intersectsClipVolume(const glm::mat4& viewProjection, const BoundingBox3& bounds) {
+    if (!bounds.isValid()) {
+        return true;
+    }
+
+    constexpr uint32_t kAllClipPlanes{0x3fu};
+    uint32_t commonOutsidePlanes{kAllClipPlanes};
+    for (int cornerIndex = 0; cornerIndex < 8; ++cornerIndex) {
+        const glm::vec4 clip = viewProjection * glm::vec4(bounds.getCorner(cornerIndex), 1.0f);
+        uint32_t outsidePlanes{0};
+        outsidePlanes |= clip.x < -clip.w ? 1u << 0 : 0u;
+        outsidePlanes |= clip.x > +clip.w ? 1u << 1 : 0u;
+        outsidePlanes |= clip.y < -clip.w ? 1u << 2 : 0u;
+        outsidePlanes |= clip.y > +clip.w ? 1u << 3 : 0u;
+        outsidePlanes |= clip.z < 0.0f ? 1u << 4 : 0u;
+        outsidePlanes |= clip.z > clip.w ? 1u << 5 : 0u;
+        commonOutsidePlanes &= outsidePlanes;
+    }
+    return commonOutsidePlanes == 0;
+}
+} // namespace
+
 void CascadedShadowMapping::configure(
     const gsl::not_null<VulkanDevice*> device, const DirectionalLight& light, const uint32_t cascadeCount) {
     cascades.resize(cascadeCount);
@@ -30,6 +53,9 @@ void CascadedShadowMapping::updateSplitIntervals(const float zNear, const float 
     CRISP_CHECK(
         std::isfinite(splitLambda) && splitLambda >= 0.0f && splitLambda <= 1.0f,
         "The cascade split lambda must be finite and in [0, 1].");
+    CRISP_CHECK(
+        std::isfinite(splitBlendFraction) && splitBlendFraction >= 0.0f && splitBlendFraction < 1.0f,
+        "The cascade blend fraction must be finite and in [0, 1).");
 
     const float range = zFar - zNear;
     const float ratio = zFar / zNear;
@@ -44,6 +70,12 @@ void CascadedShadowMapping::updateSplitIntervals(const float zNear, const float 
         cascades[i].zFar = splitPos;
         cascades[i + 1].zNear = splitPos;
     }
+
+    for (uint32_t i = 0; i < cascades.size(); ++i) {
+        auto& cascade = cascades[i];
+        cascade.blendStart =
+            i + 1 < cascades.size() ? cascade.zFar - splitBlendFraction * (cascade.zFar - cascade.zNear) : cascade.zFar;
+    }
 }
 
 void CascadedShadowMapping::updateTransforms(
@@ -51,10 +83,13 @@ void CascadedShadowMapping::updateTransforms(
     for (uint32_t i = 0; i < cascades.size(); ++i) {
         auto& cascade = cascades[i];
 
-        glm::vec4 centerRadius = viewCamera.computeFrustumBoundingSphere(cascade.zNear, cascade.zFar);
-        cascade.light.fitProjectionToBoundingSphere(centerRadius, centerRadius.w, shadowMapSize);
+        const float fitNear = i == 0 ? cascade.zNear : cascades[i - 1].blendStart;
+        const glm::vec4 centerRadius = viewCamera.computeFrustumBoundingSphere(fitNear, cascade.zFar);
+        cascade.light.fitProjectionToBoundingSphere(centerRadius, centerRadius.w, shadowMapSize, casterDepthExtrusion);
 
-        const auto desc = cascade.light.createDescriptor();
+        auto desc = cascade.light.createDescriptor();
+        desc.position.w = visualizeCascades ? 1.0f : 0.0f;
+        desc.params = glm::vec4(cascade.zNear, cascade.zFar, cascade.blendStart, cascade.light.getWorldUnitsPerTexel());
         cascadedLightBuffer->updateStagingBuffer(
             {
                 .data = &desc,
@@ -63,6 +98,10 @@ void CascadedShadowMapping::updateTransforms(
             },
             regionIndex);
     }
+}
+
+bool CascadedShadowMapping::isCasterVisible(const uint32_t cascadeIndex, const BoundingBox3& worldBounds) const {
+    return intersectsClipVolume(cascades.at(cascadeIndex).light.createDescriptor().VP, worldBounds);
 }
 
 std::array<glm::vec3, Camera::kFrustumPointCount> CascadedShadowMapping::getFrustumPoints(uint32_t cascadeIndex) const {

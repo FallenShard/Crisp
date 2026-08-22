@@ -31,8 +31,12 @@ public:
     // Cascaded shadow mapping for directional light.
     std::array<glm::vec3, Camera::kFrustumPointCount> getCascadeFrustumPoints(uint32_t cascadeIndex) const;
     void setSplitLambda(float splitLambda);
+    void setCascadeBlendFraction(float blendFraction);
+    void setCasterDepthExtrusion(float extrusion);
+    void setVisualizeCascades(bool enabled);
     float getCascadeSplitLo(uint32_t cascadeIndex) const;
     float getCascadeSplitHi(uint32_t cascadeIndex) const;
+    bool isCascadeCasterVisible(uint32_t cascadeIndex, const BoundingBox3& worldBounds) const;
 
     VulkanRingBuffer* getDirectionalLightBuffer() const;
     VulkanRingBuffer* getCascadedDirectionalLightBuffer() const;

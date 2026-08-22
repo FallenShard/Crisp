@@ -125,8 +125,7 @@ struct AccessorBufferView {
 };
 
 struct MaterialWarningCounts {
-    uint32_t nonOpaqueMaterialCount{0};
-    uint32_t doubleSidedMaterialCount{0};
+    uint32_t blendMaterialCount{0};
     uint32_t unsupportedTexCoordMaterialCount{0};
     uint32_t customSamplerMaterialCount{0};
 };
@@ -477,11 +476,14 @@ PbrMaterial createPbrMaterialFromGltfMaterial(
     GltfImageLoader& loader,
     MaterialWarningCounts& warningCounts) {
     PbrMaterial pbrMaterial{.name = material.name};
-    if (material.alphaMode != "OPAQUE") {
-        ++warningCounts.nonOpaqueMaterialCount;
+    if (material.alphaMode == "MASK") {
+        pbrMaterial.params.flags |= PbrMaterialAlphaMask;
+        pbrMaterial.params.alphaCutoff = static_cast<float>(material.alphaCutoff);
+    } else if (material.alphaMode == "BLEND") {
+        ++warningCounts.blendMaterialCount;
     }
     if (material.doubleSided) {
-        ++warningCounts.doubleSidedMaterialCount;
+        pbrMaterial.params.flags |= PbrMaterialDoubleSided;
     }
 
     const std::array textureCoordinateSets{
@@ -903,14 +905,13 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
         totalDuration.count(),
         imageDuration.count(),
         modelDuration.count());
-    if (materialWarningCounts.nonOpaqueMaterialCount != 0 || materialWarningCounts.doubleSidedMaterialCount != 0 ||
-        materialWarningCounts.unsupportedTexCoordMaterialCount != 0 ||
+    if (materialWarningCounts.blendMaterialCount != 0 || materialWarningCounts.unsupportedTexCoordMaterialCount != 0 ||
         materialWarningCounts.customSamplerMaterialCount != 0) {
         CRISP_LOGW(
-            "GLTF referenced-material limitations: {} non-opaque, {} double-sided, {} using texture coordinates "
-            "other than TEXCOORD_0, {} using custom samplers. These features are currently ignored.",
-            materialWarningCounts.nonOpaqueMaterialCount,
-            materialWarningCounts.doubleSidedMaterialCount,
+            "GLTF referenced-material limitations: {} alpha-blended, {} using texture coordinates "
+            "other than TEXCOORD_0, {} using custom samplers. These features are currently ignored; alpha-mask and "
+            "double-sided shadow materials are supported.",
+            materialWarningCounts.blendMaterialCount,
             materialWarningCounts.unsupportedTexCoordMaterialCount,
             materialWarningCounts.customSamplerMaterialCount);
     }

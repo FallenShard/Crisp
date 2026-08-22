@@ -83,14 +83,22 @@ const glm::mat4& DirectionalLight::getProjectionMatrix() const {
     return m_projection;
 }
 
+float DirectionalLight::getWorldUnitsPerTexel() const {
+    return m_worldUnitsPerTexel;
+}
+
 void DirectionalLight::fitProjectionToBoundingSphere(
-    const glm::vec3& center, const float radius, const uint32_t shadowMapSize) {
+    const glm::vec3& center, const float radius, const uint32_t shadowMapSize, const float casterDepthExtrusion) {
     CRISP_CHECK(
         std::isfinite(center.x) && std::isfinite(center.y) && std::isfinite(center.z),
         "The cascade bounding-sphere center must be finite.");
     CRISP_CHECK(std::isfinite(radius) && radius > 0.0f, "The cascade bounding-sphere radius must be positive.");
+    CRISP_CHECK(
+        std::isfinite(casterDepthExtrusion) && casterDepthExtrusion >= 0.0f,
+        "The cascade caster-depth extrusion must be finite and non-negative.");
 
-    constexpr uint32_t kGuardTexelCount{1};
+    // One half-texel covers center snapping; the remaining texels protect the 5x5 receiver PCF footprint.
+    constexpr uint32_t kGuardTexelCount{3};
     CRISP_CHECK_GT(shadowMapSize, 2 * kGuardTexelCount, "The shadow map must have room for the guard band.");
 
     const auto [right, up] = calculateLightBasis(m_direction, m_up);
@@ -98,14 +106,15 @@ void DirectionalLight::fitProjectionToBoundingSphere(
 
     // A fixed guard band keeps the receiver sphere inside the projection after snapping its center.
     const float xyExtent = radius / (1.0f - 2.0f * static_cast<float>(kGuardTexelCount) / mapResolution);
-    const float worldUnitsPerTexel = 2.0f * xyExtent / mapResolution;
-    const float snappedRight = std::round(glm::dot(center, right) / worldUnitsPerTexel) * worldUnitsPerTexel;
-    const float snappedUp = std::round(glm::dot(center, up) / worldUnitsPerTexel) * worldUnitsPerTexel;
+    m_worldUnitsPerTexel = 2.0f * xyExtent / mapResolution;
+    const float snappedRight = std::round(glm::dot(center, right) / m_worldUnitsPerTexel) * m_worldUnitsPerTexel;
+    const float snappedUp = std::round(glm::dot(center, up) / m_worldUnitsPerTexel) * m_worldUnitsPerTexel;
     const glm::vec3 snappedCenter = right * snappedRight + up * snappedUp + m_direction * glm::dot(center, m_direction);
 
-    const glm::vec3 origin = snappedCenter - m_direction * radius;
+    // Pull the near plane toward the light so objects outside the receiver slice can still cast into it.
+    const glm::vec3 origin = snappedCenter - m_direction * (radius + casterDepthExtrusion);
     m_view = calculateViewMatrix(m_direction, up, origin);
-    m_projection = glm::ortho(-xyExtent, xyExtent, -xyExtent, xyExtent, 0.0f, 2.0f * radius);
+    m_projection = glm::ortho(-xyExtent, xyExtent, -xyExtent, xyExtent, 0.0f, 2.0f * radius + casterDepthExtrusion);
 }
 
 LightDescriptor DirectionalLight::createDescriptor() const {

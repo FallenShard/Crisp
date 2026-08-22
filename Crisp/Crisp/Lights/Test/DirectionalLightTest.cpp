@@ -67,7 +67,7 @@ TEST(DirectionalLightTest, PreservesBasisContinuityAcrossVerticalDirection) {
 TEST(DirectionalLightTest, KeepsBoundingSphereInsideSnappedProjection) {
     constexpr float kRadius{10.0f};
     constexpr uint32_t kShadowMapSize{1024};
-    const float xyExtent = kRadius / (1.0f - 2.0f / static_cast<float>(kShadowMapSize));
+    const float xyExtent = kRadius / (1.0f - 6.0f / static_cast<float>(kShadowMapSize));
     const float worldUnitsPerTexel = 2.0f * xyExtent / static_cast<float>(kShadowMapSize);
     const glm::vec3 center(0.51f * worldUnitsPerTexel, -0.51f * worldUnitsPerTexel, 3.0f);
 
@@ -92,7 +92,7 @@ TEST(DirectionalLightTest, KeepsBoundingSphereInsideSnappedProjection) {
 TEST(DirectionalLightTest, IgnoresSubTexelReceiverMotion) {
     constexpr float kRadius{10.0f};
     constexpr uint32_t kShadowMapSize{1024};
-    const float xyExtent = kRadius / (1.0f - 2.0f / static_cast<float>(kShadowMapSize));
+    const float xyExtent = kRadius / (1.0f - 6.0f / static_cast<float>(kShadowMapSize));
     const float worldUnitsPerTexel = 2.0f * xyExtent / static_cast<float>(kShadowMapSize);
 
     auto light = createLight(glm::vec3(0.0f, 0.0f, -1.0f));

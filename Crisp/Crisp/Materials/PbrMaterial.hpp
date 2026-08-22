@@ -17,6 +17,11 @@ inline constexpr uint32_t kPbrOrmMapIndex = 2;
 inline constexpr uint32_t kPbrEmissiveMapIndex = 3;
 inline constexpr uint32_t kPbrMapTypeCount = 4;
 
+enum PbrMaterialFlagBits : uint32_t {
+    PbrMaterialAlphaMask = 1u << 0,
+    PbrMaterialDoubleSided = 1u << 1,
+};
+
 inline constexpr std::array<std::string_view, kPbrMapTypeCount> kPbrMapNames = {
     "albedo",
     "normal",
@@ -40,8 +45,8 @@ struct PbrParams {
     uint32_t normalTex{0};
     uint32_t ormTex{0};
     uint32_t emissiveTex{0};
-    uint32_t padding0{0};
-    uint32_t padding1{0};
+    float alphaCutoff{0.5f};
+    uint32_t flags{0};
 };
 
 static_assert(sizeof(PbrParams) == 80);
@@ -53,6 +58,8 @@ static_assert(offsetof(PbrParams, aoStrength) == 48);
 static_assert(offsetof(PbrParams, samplerIndex) == 52);
 static_assert(offsetof(PbrParams, ormTex) == 64);
 static_assert(offsetof(PbrParams, emissiveTex) == 68);
+static_assert(offsetof(PbrParams, alphaCutoff) == 72);
+static_assert(offsetof(PbrParams, flags) == 76);
 
 struct PbrImageKeyCreator {
     std::string name;

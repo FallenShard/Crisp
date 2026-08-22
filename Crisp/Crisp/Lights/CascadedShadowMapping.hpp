@@ -2,16 +2,23 @@
 
 #include <Crisp/Camera/Camera.hpp>
 #include <Crisp/Lights/DirectionalLight.hpp>
+#include <Crisp/Math/BoundingBox.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
 namespace crisp {
 struct CascadedShadowMapping {
     // Balances logarithmic and linear splitting of the cascade depths.
     float splitLambda{0.5f};
+    // Fraction of each cascade interval blended into the next cascade. Zero disables blending.
+    float splitBlendFraction{0.1f};
+    // Extends the cascade toward the light to retain off-slice shadow casters.
+    float casterDepthExtrusion{50.0f};
+    bool visualizeCascades{false};
 
     struct Cascade {
-        float zNear;
-        float zFar;
+        float zNear{};
+        float zFar{};
+        float blendStart{};
 
         DirectionalLight light;
     };
@@ -27,6 +34,7 @@ struct CascadedShadowMapping {
     void updateTransforms(const Camera& viewCamera, uint32_t shadowMapSize, uint32_t regionIndex);
 
     std::array<glm::vec3, Camera::kFrustumPointCount> getFrustumPoints(uint32_t cascadeIndex) const;
+    bool isCasterVisible(uint32_t cascadeIndex, const BoundingBox3& worldBounds) const;
 };
 
 } // namespace crisp
