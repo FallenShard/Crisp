@@ -16,6 +16,9 @@ add_cpp_static_library(CrispModels
 
     "SPH.cpp"
     "SPH.hpp"
+
+    "Pbf.cpp"
+    "Pbf.hpp"
 )
 target_link_libraries(CrispModels
     PUBLIC Crisp::Renderer
@@ -32,6 +35,16 @@ add_cpp_static_library(CrispAtmosphereGui
 target_link_libraries(CrispAtmosphereGui
     PUBLIC ImGui
     PUBLIC Crisp::Models
+)
+
+add_cpp_test(CrispPbfTest
+    "Test/PbfTest.cpp"
+)
+target_link_libraries(CrispPbfTest
+    PRIVATE Crisp::Models
+    PRIVATE Crisp::Renderer
+    PRIVATE Crisp::RenderGraph
+    PRIVATE Crisp::Application
 )
 
 add_cpp_test(CrispOceanTest
