@@ -22,6 +22,7 @@ public:
     void setPanSpeed(float panSpeed);
     void setTarget(const glm::vec3& target);
     void setDistance(float distance);
+    void setOrbitDistance(float distance);
     void setOrientation(float yaw, float pitch);
 
     void pan(float dx, float dy);
@@ -57,6 +58,15 @@ public:
     }
 
 private:
+    enum class DragMode {
+        None,
+        Look,
+        Orbit,
+        Pan,
+    };
+
+    void look(float dYaw, float dPitch);
+
     gsl::not_null<Window*> m_window;
     Camera m_camera;
 
@@ -69,8 +79,7 @@ private:
     float m_yaw;
     float m_pitch;
 
-    bool m_isDraggingLeftClick{false};
-    bool m_isDraggingRightClick{false};
+    DragMode m_dragMode{DragMode::None};
     glm::vec2 m_prevMousePos;
 };
 } // namespace crisp

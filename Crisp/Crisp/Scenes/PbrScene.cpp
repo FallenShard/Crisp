@@ -103,6 +103,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     setupInput();
 
     m_cameraController = std::make_unique<TargetCameraController>(*m_window);
+    m_cameraController->setOrbitDistance(1.0f);
     m_resourceContext->createUniformRingBuffer("camera", sizeof(CameraParameters));
 
     m_renderGraph = std::make_unique<rg::RenderGraph>();
@@ -279,6 +280,7 @@ void PbrScene::render(const FrameContext& frameContext) {
 void PbrScene::drawGui() {
     ImGui::Begin("Scene");
     if (ImGui::CollapsingHeader("Camera")) {
+        drawCameraControllerUi(*m_cameraController, /*isSeparateWindow=*/false);
         drawCameraUi(m_cameraController->getCamera(), /*isSeparateWindow=*/false);
     }
     if (ImGui::CollapsingHeader("Light")) {
