@@ -1,15 +1,9 @@
 #include <Crisp/Scenes/SceneContainer.hpp>
 
-// #include <Crisp/Scenes/AmbientOcclusionScene.hpp>
 #include <Crisp/Scenes/AtmosphereScene.hpp>
-// #include <Crisp/Scenes/ClusteredLightingScene.hpp>
 #include <Crisp/Scenes/FluidSimulationScene.hpp>
-// #include <Crisp/Scenes/GltfViewerScene.hpp>
-// #include <Crisp/Scenes/NormalMappingScene.hpp>
 #include <Crisp/Scenes/OceanScene.hpp>
 #include <Crisp/Scenes/PbrScene.hpp>
-// #include <Crisp/Scenes/RayTracerScene.hpp>
-// #include <Crisp/Scenes/ShadowMappingScene.hpp>
 #include <Crisp/Scenes/TestScene.hpp>
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
@@ -19,20 +13,6 @@ namespace crisp {
 namespace {
 const auto logger = createLoggerSt("SceneContainer");
 
-const std::vector<std::string> kSceneNames = {
-    "ambient-occlusion",
-    "fluid-simulation",
-    "shadow-mapping",
-    "ray-tracer",
-    "pbr",
-    "clustered-lighting",
-    "normal-mapping",
-    "vulkan-ray-tracer",
-    "ocean",
-    "gltf-viewer",
-    "atmosphere",
-    "null"};
-
 std::unique_ptr<Scene> createScene(
     const std::string& name,
     Renderer* renderer,
@@ -40,37 +20,19 @@ std::unique_ptr<Scene> createScene(
     const std::filesystem::path& outputDir,
     const nlohmann::json& args) {
     CRISP_LOGI("Creating Scene: {}", name);
-    // if (name == kSceneNames[0]) {
-    //     return std::make_unique<AmbientOcclusionScene>(renderer, window);
-    // }
-    if (name == kSceneNames[1]) {
+    if (name == "fluid-simulation") {
         return std::make_unique<FluidSimulationScene>(renderer, window);
     }
-    // if (name == kSceneNames[2]) {
-    //     return std::make_unique<ShadowMappingScene>(renderer, window);
-    // }
-    // if (name == kSceneNames[3]) {
-    //     return std::make_unique<RayTracerScene>(renderer, window);
-    // }
-    if (name == kSceneNames[4]) {
+    if (name == "pbr") {
         return std::make_unique<PbrScene>(renderer, window, args);
     }
-    // if (name == kSceneNames[5]) {
-    //     return std::make_unique<ClusteredLightingScene>(renderer, window);
-    // }
-    // if (name == kSceneNames[6]) {
-    //     return std::make_unique<NormalMappingScene>(renderer, window);
-    // }
-    if (name == kSceneNames[7]) {
+    if (name == "vulkan-ray-tracer") {
         return std::make_unique<VulkanRayTracingScene>(renderer, window, outputDir, args);
     }
-    if (name == kSceneNames[8]) {
+    if (name == "ocean") {
         return std::make_unique<OceanScene>(renderer, window);
     }
-    // if (name == kSceneNames[9]) {
-    //     return std::make_unique<GltfViewerScene>(renderer, window);
-    // }
-    if (name == kSceneNames[10]) {
+    if (name == "atmosphere") {
         return std::make_unique<AtmosphereScene>(renderer, window);
     }
 
@@ -84,16 +46,21 @@ SceneContainer::SceneContainer(
     Window* window,
     std::filesystem::path outputDir,
     const std::string& sceneName,
-    const nlohmann::json& sceneArgs)
+    nlohmann::json scenes)
     : m_outputDir(std::move(outputDir))
     , m_sceneName(sceneName)
+    , m_scenes(std::move(scenes))
     , m_renderer(renderer)
     , m_window(window) {
-    m_scene = createScene(sceneName, m_renderer, m_window, m_outputDir, sceneArgs);
+    m_sceneNames.reserve(m_scenes.size());
+    for (const auto& item : m_scenes.items()) {
+        m_sceneNames.push_back(item.key());
+    }
+    m_scene = createScene(sceneName, m_renderer, m_window, m_outputDir, m_scenes.at(sceneName));
 }
 
-const std::vector<std::string>& SceneContainer::getSceneNames() {
-    return kSceneNames;
+const std::vector<std::string>& SceneContainer::getSceneNames() const {
+    return m_sceneNames;
 }
 
 void SceneContainer::update(const UpdateParams& updateParams) {
@@ -113,7 +80,7 @@ void SceneContainer::onSceneSelected(const std::string& sceneName) {
     m_renderer->finish();
     m_renderer->setSceneImageView(nullptr);
     m_scene.reset();
-    m_scene = createScene(sceneName, m_renderer, m_window, m_outputDir, m_sceneArgs);
+    m_scene = createScene(sceneName, m_renderer, m_window, m_outputDir, m_scenes.at(sceneName));
     m_sceneName = sceneName;
 }
 

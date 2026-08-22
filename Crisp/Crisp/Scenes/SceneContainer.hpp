@@ -17,9 +17,9 @@ public:
         Window* window,
         std::filesystem::path outputDir,
         const std::string& sceneName,
-        const nlohmann::json& sceneArgs);
+        nlohmann::json scenes);
 
-    static const std::vector<std::string>& getSceneNames();
+    const std::vector<std::string>& getSceneNames() const;
 
     void resize(int width, int height);
     void update(const UpdateParams& updateParams);
@@ -34,7 +34,8 @@ private:
 
     std::unique_ptr<Scene> m_scene;
     std::string m_sceneName;
-    nlohmann::json m_sceneArgs;
+    nlohmann::json m_scenes;
+    std::vector<std::string> m_sceneNames;
 
     Renderer* m_renderer;
     Window* m_window;

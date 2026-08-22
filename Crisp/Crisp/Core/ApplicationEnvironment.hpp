@@ -9,6 +9,11 @@ class ApplicationEnvironment // NOLINT
 {
 public:
     struct ConfigParams {
+        struct VulkanParams {
+            bool forceValidationLayers{true};
+            bool enableRayTracing{false};
+        };
+
         std::string logLevel{"info"};
 
         std::filesystem::path resourcesPath{"D:/Projects/Crisp/Resources"};
@@ -16,11 +21,10 @@ public:
         std::filesystem::path outputDir{"D:/Projects/Crisp/Output"};
         std::optional<std::filesystem::path> imGuiFontPath{std::nullopt};
 
-        bool enableValidationLayers{true};
-        bool enableRayTracingExtension{false};
+        VulkanParams vulkan;
 
-        std::string scene{"ocean"};
-        nlohmann::json sceneArgs{nlohmann::json::object()};
+        std::string activeScene{"ocean"};
+        nlohmann::json scenes{{"ocean", nlohmann::json::object()}};
     };
 
     explicit ApplicationEnvironment(ConfigParams&& configParams);

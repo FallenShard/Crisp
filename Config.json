@@ -1,0 +1,33 @@
+{
+  "resourcesPath": "D:/Projects/Crisp/Resources",
+  "shaderSourcesPath": "D:/Projects/Crisp/Crisp/Crisp/Shaders",
+  "outputDir": "D:/Projects/Crisp/Output",
+  "imguiFontPath": "D:/Projects/Crisp/Resources/Fonts/Barlow-SemiBold.ttf",
+  "logLevel": "info",
+  "vulkan": {
+    "forceValidationLayers": true,
+    "enableRayTracing": true
+  },
+
+  "activeScene": "pbr",
+  "scenes": {
+    "material-explorer": {},
+    "gltf-viewer": {},
+    "pbr": {
+      "modelPath"  : "D:/Downloads/3D Models/bistro/bistro.gltf",
+      "meshletTest": false
+    },
+
+    "vulkan-ray-tracer": {},
+    "ray-tracer": {},
+
+    "atmosphere": {},
+    "ocean": {},
+    "fluid-simulation": {},
+
+    "normal-mapping": {},
+    "shadow-mapping": {},
+    "ambient-occlusion": {},
+    "clustered-lighting": {}
+  }
+}

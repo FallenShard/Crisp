@@ -22,10 +22,15 @@ TEST(ApplicationEnvironmentTest, AppliesSelectedCommandLineOverridesAfterConfigF
             "shaderSourcesPath": "shaders-from-config",
             "outputDir": "output-from-config",
             "imguiFontPath": "font-from-config.ttf",
-            "enableValidationLayers": false,
-            "enableVulkanRayTracing": false,
-            "scene": "ocean",
-            "sceneArgs": {"windSpeed": 12}
+            "vulkan": {
+                "forceValidationLayers": false,
+                "enableRayTracing": false
+            },
+            "activeScene": "ocean",
+            "scenes": {
+                "atmosphere": {"rayMarchSteps": 32},
+                "ocean": {"windSpeed": 12}
+            }
         })json";
     }
 
@@ -54,10 +59,11 @@ TEST(ApplicationEnvironmentTest, AppliesSelectedCommandLineOverridesAfterConfigF
     EXPECT_EQ(params.shaderSourcesPath, "shaders-from-config");
     EXPECT_EQ(params.outputDir, "output-from-config");
     EXPECT_EQ(params.imGuiFontPath, std::filesystem::path("font-from-config.ttf"));
-    EXPECT_FALSE(params.enableValidationLayers);
-    EXPECT_TRUE(params.enableRayTracingExtension);
-    EXPECT_EQ(params.scene, "atmosphere");
-    EXPECT_EQ(params.sceneArgs, nlohmann::json({{"windSpeed", 12}}));
+    EXPECT_FALSE(params.vulkan.forceValidationLayers);
+    EXPECT_TRUE(params.vulkan.enableRayTracing);
+    EXPECT_EQ(params.activeScene, "atmosphere");
+    EXPECT_EQ(params.scenes.at("ocean"), nlohmann::json({{"windSpeed", 12}}));
+    EXPECT_EQ(params.scenes.at("atmosphere"), nlohmann::json({{"rayMarchSteps", 32}}));
 }
 
 TEST(ApplicationEnvironmentTest, SupportsPartialConfigurationFiles) {
@@ -65,16 +71,38 @@ TEST(ApplicationEnvironmentTest, SupportsPartialConfigurationFiles) {
     {
         std::ofstream output(configFile.getPath(), std::ios::trunc);
         ASSERT_TRUE(output);
-        output << R"json({"scene": "atmosphere"})json";
+        output << R"json({"logLevel": "debug"})json";
     }
 
     auto result = parseConfig(configFile.getPath());
     ASSERT_TRUE(result.hasValue());
     const auto params = result.extract();
 
-    EXPECT_EQ(params.scene, "atmosphere");
-    EXPECT_EQ(params.logLevel, "info");
-    EXPECT_TRUE(params.sceneArgs.empty());
+    EXPECT_EQ(params.activeScene, "ocean");
+    EXPECT_EQ(params.logLevel, "debug");
+    EXPECT_EQ(params.scenes, nlohmann::json({{"ocean", nlohmann::json::object()}}));
+}
+
+TEST(ApplicationEnvironmentTest, RejectsActiveSceneMissingFromCatalog) {
+    UniqueTemporaryFile configFile("json", "application-environment-");
+    {
+        std::ofstream output(configFile.getPath(), std::ios::trunc);
+        ASSERT_TRUE(output);
+        output << R"json({"activeScene": "pbr", "scenes": {"ocean": {}}})json";
+    }
+
+    EXPECT_FALSE(parseConfig(configFile.getPath()).hasValue());
+}
+
+TEST(ApplicationEnvironmentTest, RejectsNonObjectSceneParameters) {
+    UniqueTemporaryFile configFile("json", "application-environment-");
+    {
+        std::ofstream output(configFile.getPath(), std::ios::trunc);
+        ASSERT_TRUE(output);
+        output << R"json({"activeScene": "pbr", "scenes": {"pbr": true}})json";
+    }
+
+    EXPECT_FALSE(parseConfig(configFile.getPath()).hasValue());
 }
 
 } // namespace

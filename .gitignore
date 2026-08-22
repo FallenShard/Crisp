@@ -295,7 +295,7 @@ CMakeUserPresets.json
 
 # ImGui
 imgui.ini
-Args.json
+Config.json
 profile.json
 
 # RenderDoc

@@ -44,10 +44,10 @@ Application::Application(const ApplicationEnvironment& environment)
         .requiredInstanceExtensions = ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
         .deviceFeatureRequests = createDefaultFeatureRequests(),
         .presentationMode = PresentationMode::DoubleBuffered,
-        .includeValidation = environment.getConfigParams().enableValidationLayers,
+        .includeValidation = environment.getConfigParams().vulkan.forceValidationLayers,
     };
     addPageableMemoryFeatures(vulkanCoreParams.deviceFeatureRequests);
-    if (environment.getConfigParams().enableRayTracingExtension) {
+    if (environment.getConfigParams().vulkan.enableRayTracing) {
         addRayTracingFeatures(vulkanCoreParams.deviceFeatureRequests);
     }
     addRayQueryFeatures(vulkanCoreParams.deviceFeatureRequests);
@@ -66,8 +66,8 @@ Application::Application(const ApplicationEnvironment& environment)
         m_renderer.get(),
         &m_window,
         m_outputDir,
-        environment.getConfigParams().scene,
-        environment.getConfigParams().sceneArgs);
+        environment.getConfigParams().activeScene,
+        environment.getConfigParams().scenes);
     m_sceneContainer->update({.frameIdx = 0, .frameInFlightIdx = 0, .dt = 0.0f, .totalTimeSec = 0.0f});
 
     gui::initImGui(
@@ -257,7 +257,7 @@ void Application::drawGui() {
     gui::drawComboBox(
         "Scene",
         m_sceneContainer->getSceneName(),
-        SceneContainer::getSceneNames(),
+        m_sceneContainer->getSceneNames(),
         [this](const std::string& selectedItem) { m_sceneContainer->onSceneSelected(selectedItem); });
 
     ImGui::End();

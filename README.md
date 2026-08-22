@@ -37,7 +37,7 @@ The equivalent cmuck workflow is:
 ```powershell
 cmuck @mode/dev configure
 cmuck @mode/dev build CrispMain
-cmuck @mode/dev run CrispMain -- --config_path Args.json
+cmuck @mode/dev run CrispMain -- --config_path Config.json
 ```
 
 The configuration file is selected with `--config_path`. Ray tracing, log level,

@@ -13,8 +13,8 @@ CRISP_MAKE_LOGGER_ST("ApplicationEnvironment");
 struct CliParams {
     std::filesystem::path configPath;
     std::optional<std::string> logLevel;
-    std::optional<bool> enableRayTracingExtension;
-    std::optional<std::string> scene;
+    std::optional<bool> enableRayTracing;
+    std::optional<std::string> activeScene;
 };
 
 template <typename T>
@@ -28,9 +28,9 @@ Result<CliParams> parseCommandLine(const int32_t argc, char** argv) {
     CliParams params{};
     CommandLineParser parser{};
     parser.addOption("config_path", params.configPath, /*isRequired=*/true);
-    parser.addOption("enable_ray_tracing", params.enableRayTracingExtension);
+    parser.addOption("enable_ray_tracing", params.enableRayTracing);
     parser.addOption("log_level", params.logLevel);
-    parser.addOption("scene", params.scene);
+    parser.addOption("scene", params.activeScene);
 
     if (!parser.parse(argc, argv).isValid()) {
         return resultError("Failed to parse command-line arguments");
@@ -47,19 +47,27 @@ Result<> validateConfig(const ApplicationEnvironment::ConfigParams& params) {
     if (!isValidLogLevel(params.logLevel)) {
         return resultError("Invalid log level: {}", params.logLevel);
     }
-    if (params.scene.empty()) {
+    if (params.activeScene.empty()) {
         return resultError("The active scene must not be empty");
     }
-    if (!params.sceneArgs.is_object()) {
-        return resultError("sceneArgs must be a JSON object");
+    if (!params.scenes.is_object()) {
+        return resultError("scenes must be a JSON object");
+    }
+    if (!params.scenes.contains(params.activeScene)) {
+        return resultError("The active scene '{}' is not present in scenes", params.activeScene);
+    }
+    for (const auto& [sceneName, sceneArgs] : params.scenes.items()) {
+        if (!sceneArgs.is_object()) {
+            return resultError("Parameters for scene '{}' must be a JSON object", sceneName);
+        }
     }
     return {};
 }
 
 Result<> applyCliOverrides(ApplicationEnvironment::ConfigParams& params, CliParams& cliParams) {
     applyOverride(params.logLevel, cliParams.logLevel);
-    applyOverride(params.enableRayTracingExtension, cliParams.enableRayTracingExtension);
-    applyOverride(params.scene, cliParams.scene);
+    applyOverride(params.vulkan.enableRayTracing, cliParams.enableRayTracing);
+    applyOverride(params.activeScene, cliParams.activeScene);
 
     return validateConfig(params);
 }
@@ -150,10 +158,14 @@ Result<ApplicationEnvironment::ConfigParams> parseConfig(const std::filesystem::
             params.imGuiFontPath = config["imguiFontPath"].get<std::string>();
         }
 
-        CRISP_PARSE_OPT(params.enableValidationLayers, config, "enableValidationLayers");
-        CRISP_PARSE_OPT(params.enableRayTracingExtension, config, "enableVulkanRayTracing");
-        CRISP_PARSE_OPT_TYPED(params.scene, config, "scene", std::string);
-        CRISP_PARSE_OPT(params.sceneArgs, config, "sceneArgs");
+        if (config.contains("vulkan")) {
+            const auto& vulkan = config.at("vulkan");
+            CRISP_CHECK(vulkan.is_object(), "vulkan must be a JSON object");
+            CRISP_PARSE_OPT(params.vulkan.forceValidationLayers, vulkan, "forceValidationLayers");
+            CRISP_PARSE_OPT(params.vulkan.enableRayTracing, vulkan, "enableRayTracing");
+        }
+        CRISP_PARSE_OPT_TYPED(params.activeScene, config, "activeScene", std::string);
+        CRISP_PARSE_OPT(params.scenes, config, "scenes");
     } catch (const nlohmann::json::exception& exception) {
         return resultError("Invalid application configuration in {}: {}", configPath.string(), exception.what());
     }
