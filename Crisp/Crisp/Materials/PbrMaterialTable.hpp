@@ -35,6 +35,7 @@ public:
     PbrMaterialTable(VulkanDevice& device, uint32_t capacity);
 
     PbrMaterialHandle add(const PbrParams& params);
+    void update(PbrMaterialHandle handle, const PbrParams& params);
     PbrDrawParameters createDrawParameters(PbrMaterialHandle handle) const;
 
     // Uploads only the populated prefix when the CPU table changed. The staging belt keeps the upload alive until

@@ -11,7 +11,10 @@
 
   "activeScene": "pbr",
   "scenes": {
-    "material-explorer": {},
+    "material-explorer": {
+      "modelPath": "Meshes/ShaderBall_FWVN_PosX.obj",
+      "environmentMap": "NewportLoft"
+    },
     "gltf-viewer": {},
     "pbr": {
       "modelPath"  : "D:/Downloads/3D Models/bistro/bistro.gltf",

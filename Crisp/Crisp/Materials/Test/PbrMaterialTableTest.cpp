@@ -57,5 +57,30 @@ TEST_F(PbrMaterialTableTest, UploadsPopulatedPrefixThroughStagingBelt) {
     EXPECT_EQ(uploaded[1].emissiveTex, second.emissiveTex);
 }
 
+TEST_F(PbrMaterialTableTest, UpdatesAnExistingMaterialWithoutChangingItsHandle) {
+    PbrMaterialTable table(*device_, 2);
+    const auto handle = table.add(PbrParams{});
+
+    PbrParams updated{};
+    updated.albedo = glm::vec4(0.2f, 0.4f, 0.6f, 0.8f);
+    updated.metallic = 0.75f;
+    updated.roughness = 0.15f;
+    table.update(handle, updated);
+
+    VulkanStagingBelt stagingBelt(*device_, 4096);
+    stagingBelt.setRetirementValue(1);
+    {
+        ScopeCommandExecutor executor(*device_);
+        table.updateDeviceBuffer(stagingBelt, executor.cmdEncoder);
+    }
+
+    const auto uploaded = toStdVec<PbrParams>(table.getDeviceBuffer());
+    EXPECT_EQ(table.getMaterialCount(), 1);
+    EXPECT_EQ(table.createDrawParameters(handle).materialIndex, handle.index);
+    EXPECT_EQ(uploaded[handle.index].albedo, updated.albedo);
+    EXPECT_FLOAT_EQ(uploaded[handle.index].metallic, updated.metallic);
+    EXPECT_FLOAT_EQ(uploaded[handle.index].roughness, updated.roughness);
+}
+
 } // namespace
 } // namespace crisp

@@ -1,0 +1,15 @@
+{
+    "shaders"            : { "vert": "pbr.vert", "frag": "pbr.frag" },
+    "vertexInputBindings": [
+        { "locations": [ 0       ], "inputRate": "vertex" },
+        { "locations": [ 1, 2, 3 ], "inputRate": "vertex" }
+    ],
+    "descriptorSets"     : [
+        { "layout": "bindless"                                             },
+        {                       "buffered": false                          },
+        {                       "buffered": false, "dynamicBuffers": [ 0 ] }
+    ],
+    "rasterization"      : { "cullMode": "none" },
+    "depthStencil"       : { "reverseDepth": true },
+    "multisample"        : { "sampleCount": 4 }
+}

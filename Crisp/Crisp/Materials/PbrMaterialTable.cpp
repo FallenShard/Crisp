@@ -26,6 +26,12 @@ PbrMaterialHandle PbrMaterialTable::add(const PbrParams& params) {
     return handle;
 }
 
+void PbrMaterialTable::update(const PbrMaterialHandle handle, const PbrParams& params) {
+    CRISP_CHECK_LT(handle.index, m_materialCount);
+    m_materials[handle.index] = params;
+    m_isDirty = true;
+}
+
 PbrDrawParameters PbrMaterialTable::createDrawParameters(const PbrMaterialHandle handle) const {
     CRISP_CHECK_LT(handle.index, m_materialCount);
     return {

@@ -31,6 +31,7 @@ target_link_libraries(CrispScenes
     PUBLIC Crisp::Lights
 
     PRIVATE Crisp::PbrScene
+    PRIVATE Crisp::MaterialExplorerScene
     PRIVATE Crisp::OceanScene
     PRIVATE Crisp::FluidSimulationScene
     PRIVATE Crisp::VulkanRayTracingScene
@@ -63,6 +64,23 @@ target_link_libraries(CrispScene
 add_cpp_static_library(CrispPbrScene
     "PbrScene.cpp"
     "PbrScene.hpp"
+)
+
+add_cpp_static_library(CrispMaterialExplorerScene
+    "MaterialExplorerScene.cpp"
+    "MaterialExplorerScene.hpp"
+)
+target_link_libraries(CrispMaterialExplorerScene
+    PUBLIC Crisp::Scene
+    PUBLIC Crisp::Camera
+    PUBLIC Crisp::Lights
+    PUBLIC Crisp::Models
+    PUBLIC Crisp::MeshIo
+    PUBLIC Crisp::MaterialUtils
+    PUBLIC Crisp::JsonUtils
+    PRIVATE Crisp::RenderGraph
+    PRIVATE Crisp::ImGuiCameraUtils
+    PRIVATE ImGui
 )
 
 add_cpp_static_library(CrispOceanScene

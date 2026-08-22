@@ -2,6 +2,7 @@
 
 #include <Crisp/Scenes/AtmosphereScene.hpp>
 #include <Crisp/Scenes/FluidSimulationScene.hpp>
+#include <Crisp/Scenes/MaterialExplorerScene.hpp>
 #include <Crisp/Scenes/OceanScene.hpp>
 #include <Crisp/Scenes/PbrScene.hpp>
 #include <Crisp/Scenes/TestScene.hpp>
@@ -25,6 +26,9 @@ std::unique_ptr<Scene> createScene(
     }
     if (name == "pbr") {
         return std::make_unique<PbrScene>(renderer, window, args);
+    }
+    if (name == "material-explorer") {
+        return std::make_unique<MaterialExplorerScene>(renderer, window, args);
     }
     if (name == "vulkan-ray-tracer") {
         return std::make_unique<VulkanRayTracingScene>(renderer, window, outputDir, args);
