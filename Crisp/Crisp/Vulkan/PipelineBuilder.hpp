@@ -33,6 +33,7 @@ public:
     PipelineBuilder& setFrontFace(VkFrontFace frontFace);
     PipelineBuilder& setCullMode(VkCullModeFlags cullMode);
     PipelineBuilder& setLineWidth(float lineWidth);
+    PipelineBuilder& setDepthBias(float constantFactor, float slopeFactor, float clamp = 0.0f);
 
     PipelineBuilder& setSampleCount(VkSampleCountFlagBits sampleCount);
     PipelineBuilder& setAlphaToCoverage(VkBool32 alphaToCoverageEnabled);

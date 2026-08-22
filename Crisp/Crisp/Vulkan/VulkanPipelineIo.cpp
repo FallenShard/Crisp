@@ -229,6 +229,17 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
         CRISP_CHECK(json["lineWidth"].is_number());
         builder.setLineWidth(json["lineWidth"].get<float>());
     }
+    if (json.contains("depthBias")) {
+        const auto& depthBias = json["depthBias"];
+        CRISP_CHECK(depthBias.is_object());
+        CRISP_CHECK(depthBias.contains("constantFactor") && depthBias["constantFactor"].is_number());
+        CRISP_CHECK(depthBias.contains("slopeFactor") && depthBias["slopeFactor"].is_number());
+        CRISP_CHECK(!depthBias.contains("clamp") || depthBias["clamp"].is_number());
+        builder.setDepthBias(
+            depthBias["constantFactor"].get<float>(),
+            depthBias["slopeFactor"].get<float>(),
+            depthBias.value("clamp", 0.0f));
+    }
     return {};
 }
 

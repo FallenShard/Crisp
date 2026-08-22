@@ -216,6 +216,15 @@ PipelineBuilder& PipelineBuilder::setLineWidth(float lineWidth) {
     return *this;
 }
 
+PipelineBuilder& PipelineBuilder::setDepthBias(
+    const float constantFactor, const float slopeFactor, const float clamp) {
+    m_rasterizationState.depthBiasEnable = VK_TRUE;
+    m_rasterizationState.depthBiasConstantFactor = constantFactor;
+    m_rasterizationState.depthBiasSlopeFactor = slopeFactor;
+    m_rasterizationState.depthBiasClamp = clamp;
+    return *this;
+}
+
 PipelineBuilder& PipelineBuilder::setSampleCount(VkSampleCountFlagBits sampleCount) {
     m_multisampleState.rasterizationSamples = sampleCount;
     return *this;
