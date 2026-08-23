@@ -7,6 +7,9 @@
         { "layout": "bindless" },
         { "buffered": false, "dynamicBuffers": [ 0 ] }
     ],
-    "rasterization": { "cullMode": "none" },
+    "rasterization": {
+        "cullMode": "none",
+        "depthBias": { "constantFactor": 1.0, "slopeFactor": 1.5 }
+    },
     "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] }
 }
