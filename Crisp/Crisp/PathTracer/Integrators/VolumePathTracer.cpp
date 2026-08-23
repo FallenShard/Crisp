@@ -45,7 +45,7 @@ Spectrum evalTransmittance(
 
     while (distance > 0.0f) {
         bool intersected = scene->rayIntersect(shadowRay, its);
-        if (intersected && !(its.shape->getBSDF()->getLobeType() & Lobe::Passthrough)) {
+        if (intersected && !its.shape->getBSDF()->getLobeType().contains(Lobe::Passthrough)) {
             return Spectrum(0.0f);
         }
 
@@ -123,7 +123,8 @@ Spectrum findLight(
             break;
         }
 
-        if (hasIntersected && !(its->shape->getBSDF()->getLobeType() & Lobe::Passthrough) && !(its->shape->getLight())) {
+        if (hasIntersected && !its->shape->getBSDF()->getLobeType().contains(Lobe::Passthrough) &&
+            !(its->shape->getLight())) {
             break;
         }
 

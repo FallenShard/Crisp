@@ -79,10 +79,12 @@ void executeDrawCommand(
         commandEncoder.bindPipeline(*command.pipeline);
         state.pipeline = command.pipeline;
     }
-    if ((command.pipeline->getDynamicStateFlags() & PipelineDynamicState::Viewport) && command.viewport.width != 0.0f) {
+    if (command.pipeline->getDynamicStateFlags().contains(PipelineDynamicState::Viewport) &&
+        command.viewport.width != 0.0f) {
         commandEncoder.setViewport(command.viewport);
     }
-    if ((command.pipeline->getDynamicStateFlags() & PipelineDynamicState::Scissor) && command.scissor.extent.width != 0) {
+    if (command.pipeline->getDynamicStateFlags().contains(PipelineDynamicState::Scissor) &&
+        command.scissor.extent.width != 0) {
         commandEncoder.setScissor(command.scissor);
     }
 

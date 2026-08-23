@@ -8,7 +8,7 @@
 
 namespace crisp {
 MicrofacetBSDF::MicrofacetBSDF(const VariantMap& params)
-    : BSDF(LobeFlags(Lobe::Diffuse | Lobe::Glossy)) {
+    : BSDF(Lobe::Diffuse | Lobe::Glossy) {
     auto distribType = params.get<std::string>("microfacetDistribution", "beckmann");
     m_distrib = MicrofacetDistributionFactory::create(distribType, params);
 

@@ -137,11 +137,11 @@ void Window::enableEvents(BitFlags<EventType> eventMask) {
 }
 
 void Window::disableEvents(BitFlags<EventType> eventMask) {
-    m_activeEventMask.disable(eventMask);
+    m_activeEventMask.reset(eventMask);
 }
 
 bool Window::isEventEnabled(EventType eventType) const {
-    return m_activeEventMask & eventType;
+    return m_activeEventMask.contains(eventType);
 }
 
 void Window::resizeCallback(GLFWwindow* window, int width, int height) {
@@ -175,7 +175,7 @@ void Window::mouseButtonCallback(GLFWwindow* window, const int button, const int
             glfwGetCursorPos(window, &xPos, &yPos);
             dispatcher->mouseButtonPressed(
                 {.button = translateGlfwToMouseButton(button),
-                 .modifiers = ModifierFlags(static_cast<uint8_t>(mods)),
+                 .modifiers = ModifierFlags::fromMask(static_cast<uint8_t>(mods)),
                  .x = xPos,
                  .y = yPos});
         }
@@ -186,7 +186,7 @@ void Window::mouseButtonCallback(GLFWwindow* window, const int button, const int
             glfwGetCursorPos(window, &xPos, &yPos);
             dispatcher->mouseButtonReleased(
                 {.button = translateGlfwToMouseButton(button),
-                 .modifiers = ModifierFlags(static_cast<uint8_t>(mods)),
+                 .modifiers = ModifierFlags::fromMask(static_cast<uint8_t>(mods)),
                  .x = xPos,
                  .y = yPos});
         }

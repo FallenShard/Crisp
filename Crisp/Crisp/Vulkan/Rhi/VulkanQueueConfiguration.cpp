@@ -39,8 +39,7 @@ Result<uint32_t> findQueueFamilyIndex(
         for (uint32_t i = 0; i < exposedQueueFamilies.size(); ++i) {
             const auto& family = exposedQueueFamilies.at(i);
             const auto familyType = getQueueFamilyType(instance, physicalDevice, i, family.queueFlags);
-            if (((familyType & QueueType::AsyncCompute) == QueueType::AsyncCompute) &&
-                !(familyType & QueueType::Graphics)) {
+            if (familyType.containsAll(QueueType::AsyncCompute) && !familyType.contains(QueueType::Graphics)) {
                 return i;
             }
         }
@@ -59,7 +58,7 @@ Result<uint32_t> findQueueFamilyIndex(
     for (uint32_t i = 0; i < exposedQueueFamilies.size(); ++i) {
         const auto& family = exposedQueueFamilies.at(i);
         const auto familyType = getQueueFamilyType(instance, physicalDevice, i, family.queueFlags);
-        if ((familyType & queueType) && family.queueCount > usedQueueFamilyCounts[i]) {
+        if (familyType.containsAll(queueType) && family.queueCount > usedQueueFamilyCounts[i]) {
             return i;
         }
     }

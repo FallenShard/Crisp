@@ -1,126 +1,182 @@
 #pragma once
 
-#include <bitset>
-#include <iostream>
 #include <type_traits>
+#include <utility>
 
 namespace crisp {
+
 template <typename Enum>
 struct IsBitFlag : public std::false_type {};
 
 template <typename Enum>
-concept EnumBitFlagType = IsBitFlag<Enum>::value;
+concept EnumBitFlagType = std::is_enum_v<Enum> && IsBitFlag<Enum>::value;
 
-template <EnumBitFlagType EnumType, typename MaskType = std::underlying_type_t<EnumType>>
-constexpr MaskType operator|(EnumType bit1, EnumType bit2) {
-    return static_cast<MaskType>(bit1) | static_cast<MaskType>(bit2);
-}
-
-template <EnumBitFlagType EnumType, typename MaskType = std::underlying_type_t<EnumType>>
-constexpr MaskType operator|(std::underlying_type_t<EnumType> bits, EnumType bit) {
-    return bits | static_cast<MaskType>(bit);
-}
-
-template <EnumBitFlagType EnumType, typename MaskType = std::underlying_type_t<EnumType>>
+template <EnumBitFlagType EnumType>
 class BitFlags {
+    using MaskType = std::make_unsigned_t<std::underlying_type_t<EnumType>>;
+
 public:
-    BitFlags()
-        : m_mask(MaskType(0)) {}
+    using BitType = EnumType;
+    using Mask = MaskType;
 
-    BitFlags(EnumType bits) // NOLINT
-        : m_mask(static_cast<MaskType>(bits)) {}
+    constexpr BitFlags() noexcept = default;
 
-    explicit BitFlags(MaskType mask)
-        : m_mask(mask) {}
+    // A bit enumerator is intentionally convertible to its corresponding flag set.
+    constexpr BitFlags(const EnumType bit) noexcept // NOLINT
+        : m_mask(toMask(bit)) {}
 
-    BitFlags& operator|=(const BitFlags& rhs) {
+    [[nodiscard]] static constexpr BitFlags fromMask(const MaskType mask) noexcept {
+        return BitFlags(mask, FromMaskTag{});
+    }
+
+    [[nodiscard]] constexpr MaskType getMask() const noexcept {
+        return m_mask;
+    }
+
+    [[nodiscard]] constexpr bool empty() const noexcept {
+        return m_mask == 0;
+    }
+
+    [[nodiscard]] constexpr bool contains(const BitFlags flags) const noexcept {
+        return containsAll(flags);
+    }
+
+    [[nodiscard]] constexpr bool contains(const EnumType bit) const noexcept {
+        return containsAll(bit);
+    }
+
+    [[nodiscard]] constexpr bool containsAny(const BitFlags flags) const noexcept {
+        return (m_mask & flags.m_mask) != 0;
+    }
+
+    [[nodiscard]] constexpr bool containsAny(const EnumType bit) const noexcept {
+        return containsAny(BitFlags(bit));
+    }
+
+    [[nodiscard]] constexpr bool containsAll(const BitFlags flags) const noexcept {
+        return (m_mask & flags.m_mask) == flags.m_mask;
+    }
+
+    [[nodiscard]] constexpr bool containsAll(const EnumType bits) const noexcept {
+        return containsAll(BitFlags(bits));
+    }
+
+    constexpr BitFlags& set(const BitFlags flags, const bool enabled = true) noexcept {
+        return enabled ? (*this |= flags) : reset(flags);
+    }
+
+    constexpr BitFlags& set(const EnumType bit, const bool enabled = true) noexcept {
+        return set(BitFlags(bit), enabled);
+    }
+
+    constexpr BitFlags& reset(const BitFlags flags) noexcept {
+        m_mask &= static_cast<MaskType>(~flags.m_mask);
+        return *this;
+    }
+
+    constexpr BitFlags& reset(const EnumType bit) noexcept {
+        return reset(BitFlags(bit));
+    }
+
+    constexpr BitFlags& toggle(const BitFlags flags) noexcept {
+        m_mask ^= flags.m_mask;
+        return *this;
+    }
+
+    constexpr BitFlags& toggle(const EnumType bit) noexcept {
+        return toggle(BitFlags(bit));
+    }
+
+    constexpr BitFlags& clear() noexcept {
+        m_mask = 0;
+        return *this;
+    }
+
+    constexpr BitFlags& operator|=(const BitFlags rhs) noexcept {
         m_mask |= rhs.m_mask;
         return *this;
     }
 
-    BitFlags& operator|=(const EnumType bit) {
-        m_mask |= static_cast<MaskType>(bit);
-        return *this;
+    constexpr BitFlags& operator|=(const EnumType bit) noexcept {
+        return *this |= BitFlags(bit);
     }
 
-    BitFlags operator|(EnumType bits) {
-        return BitFlags(m_mask | static_cast<MaskType>(bits));
-    }
-
-    BitFlags operator|(const BitFlags& rhs) {
-        return BitFlags(m_mask | rhs.m_mask);
-    }
-
-    bool operator==(const BitFlags& rhs) const {
-        return m_mask == rhs.m_mask;
-    }
-
-    bool operator==(const EnumType bit) const {
-        return m_mask == static_cast<MaskType>(bit);
-    }
-
-    bool operator==(const MaskType mask) const {
-        return m_mask == mask;
-    }
-
-    bool operator!=(const BitFlags& rhs) const {
-        return m_mask != rhs.m_mask;
-    }
-
-    bool operator!=(const EnumType bit) const {
-        return m_mask != static_cast<MaskType>(bit);
-    }
-
-    bool operator!=(const MaskType mask) const {
-        return m_mask != mask;
-    }
-
-    bool operator!() const {
-        return m_mask == 0;
-    }
-
-    BitFlags& operator&=(const BitFlags& rhs) {
+    constexpr BitFlags& operator&=(const BitFlags rhs) noexcept {
         m_mask &= rhs.m_mask;
         return *this;
     }
 
-    BitFlags& operator&=(const EnumType bits) {
-        m_mask &= static_cast<MaskType>(bits);
+    constexpr BitFlags& operator&=(const EnumType bits) noexcept {
+        return *this &= BitFlags(bits);
+    }
+
+    constexpr BitFlags& operator^=(const BitFlags rhs) noexcept {
+        m_mask ^= rhs.m_mask;
         return *this;
     }
 
-    BitFlags operator&(const EnumType bits) const {
-        return BitFlags(m_mask & static_cast<MaskType>(bits));
+    constexpr BitFlags& operator^=(const EnumType bits) noexcept {
+        return *this ^= BitFlags(bits);
     }
 
-    BitFlags operator&(const BitFlags& rhs) const {
-        return BitFlags(m_mask & rhs.m_mask);
+    [[nodiscard]] explicit constexpr operator bool() const noexcept {
+        return !empty();
     }
 
-    /*implicit*/ operator bool() const // NOLINT
-    {
-        return m_mask != 0;
+    [[nodiscard]] constexpr bool operator!() const noexcept {
+        return empty();
     }
 
-    MaskType getMask() const {
-        return m_mask;
+    friend constexpr bool operator==(const BitFlags&, const BitFlags&) noexcept = default;
+
+    [[nodiscard]] friend constexpr BitFlags operator|(BitFlags lhs, const BitFlags rhs) noexcept {
+        lhs |= rhs;
+        return lhs;
     }
 
-    void print() {
-        std::cout << std::bitset<sizeof(MaskType)>(m_mask);
+    [[nodiscard]] friend constexpr BitFlags operator&(BitFlags lhs, const BitFlags rhs) noexcept {
+        lhs &= rhs;
+        return lhs;
     }
 
-    void disable(const EnumType bit) {
-        m_mask &= ~(static_cast<MaskType>(bit));
-    }
-
-    void disable(const BitFlags& rhs) {
-        m_mask &= ~rhs.m_mask;
+    [[nodiscard]] friend constexpr BitFlags operator^(BitFlags lhs, const BitFlags rhs) noexcept {
+        lhs ^= rhs;
+        return lhs;
     }
 
 private:
-    MaskType m_mask;
+    struct FromMaskTag {};
+
+    constexpr BitFlags(const MaskType mask, FromMaskTag) noexcept
+        : m_mask(mask) {}
+
+    [[nodiscard]] static constexpr MaskType toMask(const EnumType bit) noexcept {
+        return static_cast<MaskType>(std::to_underlying(bit));
+    }
+
+    MaskType m_mask{0};
 };
+
+template <EnumBitFlagType EnumType>
+[[nodiscard]] constexpr BitFlags<EnumType> operator|(const EnumType lhs, const EnumType rhs) noexcept {
+    BitFlags<EnumType> result(lhs);
+    result |= rhs;
+    return result;
+}
+
+template <EnumBitFlagType EnumType>
+[[nodiscard]] constexpr BitFlags<EnumType> operator&(const EnumType lhs, const EnumType rhs) noexcept {
+    BitFlags<EnumType> result(lhs);
+    result &= rhs;
+    return result;
+}
+
+template <EnumBitFlagType EnumType>
+[[nodiscard]] constexpr BitFlags<EnumType> operator^(const EnumType lhs, const EnumType rhs) noexcept {
+    BitFlags<EnumType> result(lhs);
+    result ^= rhs;
+    return result;
+}
 
 } // namespace crisp
 

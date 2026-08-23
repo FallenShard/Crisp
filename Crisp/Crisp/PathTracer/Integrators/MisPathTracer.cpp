@@ -17,7 +17,7 @@ inline float miWeight(float pdf1, float pdf2) {
 
 Spectrum estimateDirect(
     const pt::Scene& scene, Sampler& sampler, const Ray3& ray, const Intersection& its, const Light& light, bool specular) {
-    LobeFlags lobe = specular ? LobeFlags(Lobe::Delta | Lobe::Smooth) : LobeFlags(Lobe::Smooth);
+    const LobeFlags lobe = specular ? Lobe::Delta | Lobe::Smooth : LobeFlags{Lobe::Smooth};
     Spectrum Ld(0.0f);
 
     Light::Sample lightSample(its.p);
@@ -141,7 +141,7 @@ Spectrum MisPathTracerIntegrator::Li(
             break;
         }
 
-        if (!(its.shape->getBSDF()->getLobeType() & Lobe::Delta)) {
+        if (!its.shape->getBSDF()->getLobeType().contains(Lobe::Delta)) {
             Spectrum lightMis = uniformSampleOneLight(*scene, sampler, ray, its);
             // L += path.throughput * lightImportanceSample(scene, sampler, ray, its);
             L += throughput * lightMis;
