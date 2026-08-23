@@ -24,9 +24,10 @@ TEST_F(PbrMaterialTableTest, AssignsStableIndicesAndDrawParameters) {
     EXPECT_EQ(table.getCapacity(), 4);
     EXPECT_NE(table.getDeviceAddress(), 0);
 
-    const auto drawParameters = table.createDrawParameters(secondHandle);
+    const auto drawParameters = table.createDrawParameters(secondHandle, PbrDrawFlag::RayTracedShadows);
     EXPECT_EQ(drawParameters.materialTableAddress, table.getDeviceAddress());
     EXPECT_EQ(drawParameters.materialIndex, secondHandle.index);
+    EXPECT_EQ(drawParameters.flags, PbrDrawFlagFlags{PbrDrawFlag::RayTracedShadows}.getMask());
 }
 
 TEST_F(PbrMaterialTableTest, UploadsPopulatedPrefixThroughStagingBelt) {

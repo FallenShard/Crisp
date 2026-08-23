@@ -14,6 +14,7 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Scenes/Scene.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
 
 namespace crisp {
 
@@ -29,6 +30,7 @@ public:
 private:
     void createRenderResources(const std::string& environmentMapName);
     void createSceneObjects(const std::filesystem::path& shaderBallPath);
+    void createRayTracedShadowResources();
     RenderNode& createRenderNode(std::string_view nodeId);
     PbrMaterialHandle addPbrNode(
         std::string_view nodeId,
@@ -41,6 +43,7 @@ private:
     void setMaterialPreset(const std::string& materialPresetName);
     void resetMaterial();
     void updateShaderBallShadowMaterials();
+    void updateForwardDrawParameters();
     void rebuildDrawCommands();
     void setupInput();
 
@@ -54,6 +57,8 @@ private:
     std::unique_ptr<Material> m_pbrDoubleSidedDrawMaterial;
     std::unique_ptr<PbrMaterialTable> m_pbrMaterialTable;
     std::unique_ptr<Skybox> m_skybox;
+    std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_shadowBlases;
+    std::unique_ptr<VulkanAccelerationStructure> m_shadowTlas;
 
     std::array<std::vector<DrawCommand>, kDefaultCascadeCount> m_shadowDrawCommands;
     std::vector<DrawCommand> m_shaderBallForwardDrawCommands;
@@ -65,12 +70,15 @@ private:
     RenderNode* m_floorNode{nullptr};
     PbrMaterialHandle m_shaderBallMaterialHandle;
     PbrMaterialParams m_shaderBallParams;
+    std::unordered_map<RenderNode*, PbrMaterialHandle> m_pbrMaterialHandles;
 
     std::vector<std::string> m_materialPresetNames;
     std::unordered_map<std::string, PbrMaterial> m_materialPresets;
     std::string m_materialPresetName{"(None)"};
     std::vector<std::string> m_environmentMapNames;
     bool m_showFloor{true};
+    bool m_rayTracedShadowsSupported{false};
+    bool m_useRayTracedShadows{false};
 };
 
 } // namespace crisp

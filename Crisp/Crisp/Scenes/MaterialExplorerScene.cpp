@@ -14,6 +14,7 @@
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 
 namespace crisp {
@@ -88,6 +89,7 @@ PbrImageGroup createMaterialExplorerImageGroup() {
 MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window, const nlohmann::json& args)
     : Scene(renderer, window) {
     setupInput();
+    m_rayTracedShadowsSupported = m_renderer->getDevice().getEnabledFeatures().rayQuery;
 
     m_cameraController = std::make_unique<TargetCameraController>(*m_window);
     m_cameraController->setTarget(glm::vec3(0.0f, 1.0f, 0.0f));
@@ -100,7 +102,7 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
     addCascadedShadowMapPasses(
         *m_renderGraph, kShadowMapSize, [this](const FrameContext& frameContext, const uint32_t cascadeIndex) {
             const auto& commands = m_shadowDrawCommands[cascadeIndex];
-            if (commands.empty() || !m_shaderBallNodes.front()->isVisible) {
+            if (m_useRayTracedShadows || commands.empty() || !m_shaderBallNodes.front()->isVisible) {
                 return;
             }
             const auto& layout = *commands.front().pipeline->getPipelineLayout();
@@ -147,6 +149,7 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
     const std::filesystem::path shaderBallPath = args.value(
         "modelPath", std::string{"glTFSamples/2.0/USDShaderBallForGltf/glTF-Binary/USDShaderBallForGltf.glb"});
     createSceneObjects(shaderBallPath);
+    createRayTracedShadowResources();
     rebuildDrawCommands();
 
     m_materialPresetNames.emplace_back(kNoMaterialPreset);
@@ -277,6 +280,17 @@ void MaterialExplorerScene::drawGui() {
     }
 
     ImGui::Separator();
+    if (m_rayTracedShadowsSupported) {
+        if (ImGui::Checkbox("Ray-traced shadows", &m_useRayTracedShadows)) {
+            updateForwardDrawParameters();
+            rebuildDrawCommands();
+        }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+            ImGui::SetTooltip("Compare hard, opaque-geometry BVH visibility rays against cascaded shadow maps with PCF.");
+        }
+    } else {
+        ImGui::TextDisabled("Ray-traced shadows unavailable (ray queries unsupported)");
+    }
     if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
         m_floorNode->isVisible = m_showFloor;
     }
@@ -294,6 +308,12 @@ void MaterialExplorerScene::drawGui() {
             m_cameraController->setDistance(4.5f);
             m_cameraController->setOrientation(glm::radians(45.0f), glm::radians(-24.0f));
         }
+    }
+    ImGui::End();
+
+    ImGui::SetNextWindowSize(ImVec2(440.0f, 500.0f), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Render Graph")) {
+        drawRenderGraphGui(*m_renderGraph);
     }
     ImGui::End();
 }
@@ -426,6 +446,32 @@ void MaterialExplorerScene::createSceneObjects(const std::filesystem::path& shad
     addPbrNode(kFloorNodeId, floorMesh, floorMaterial, glm::mat4(1.0f), false);
 }
 
+void MaterialExplorerScene::createRayTracedShadowResources() {
+    if (!m_rayTracedShadowsSupported) {
+        return;
+    }
+
+    CRISP_CHECK(!m_shadowBlases.empty(), "Ray-traced shadows require at least one shadow-casting mesh.");
+    std::vector<VulkanAccelerationStructure*> blases;
+    blases.reserve(m_shadowBlases.size());
+    for (const auto& blas : m_shadowBlases) {
+        blases.push_back(blas.get());
+    }
+
+    m_shadowTlas = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
+    m_shadowTlas->setDebugName(m_renderer->getDevice(), "Material Explorer Shadow TLAS");
+    m_forwardPassMaterial->writeDescriptor(1, 6, m_shadowTlas->getDescriptorInfo());
+
+    m_renderer->enqueueResourceUpdate([this](const VulkanCommandEncoder& encoder) {
+        for (auto& blas : m_shadowBlases) {
+            encoder.buildAccelerationStructure(*blas);
+        }
+        encoder.insertBarrier(kAccelerationStructureWrite >> kAccelerationStructureRead);
+        encoder.buildAccelerationStructure(*m_shadowTlas);
+        encoder.insertBarrier(kAccelerationStructureWrite >> kFragmentAccelerationStructureRead);
+    });
+}
+
 RenderNode& MaterialExplorerScene::createRenderNode(const std::string_view nodeId) {
     const auto transformHandle = m_transformBuffer->getNextIndex();
     return *m_renderNodes.emplace(nodeId, std::make_unique<RenderNode>(*m_transformBuffer, transformHandle)).first->second;
@@ -437,10 +483,24 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
     const PbrMaterial& material,
     const glm::mat4& modelMatrix,
     const bool castsShadow) {
-    auto& geometry = m_resourceContext->addGeometry(nodeId, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
+    const VkBufferUsageFlags2 accelerationStructureUsage = castsShadow && m_rayTracedShadowsSupported
+        ? VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT |
+            VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
+        : 0;
+    auto& geometry = m_resourceContext->addGeometry(
+        nodeId, createGeometry(*m_renderer, mesh, kPbrVertexFormat, accelerationStructureUsage));
     auto& node = createRenderNode(nodeId);
     node.geometry = &geometry;
     node.transformPack->M = modelMatrix;
+
+    if (castsShadow && m_rayTracedShadowsSupported) {
+        m_shadowBlases.push_back(std::make_unique<VulkanAccelerationStructure>(
+            m_renderer->getDevice(),
+            createAccelerationStructureGeometry(geometry, 0),
+            mesh.getTriangleCount(),
+            modelMatrix));
+        m_shadowBlases.back()->setDebugName(m_renderer->getDevice(), fmt::format("Material Explorer {} BLAS", nodeId));
+    }
 
     auto& forwardPass = node.pass(kForwardLightingPass);
     forwardPass.material =
@@ -451,7 +511,10 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
 
     const auto gpuParams = createGpuPbrParams(material, m_resourceContext->imageCache);
     const auto materialHandle = m_pbrMaterialTable->add(gpuParams);
-    const auto drawParameters = m_pbrMaterialTable->createDrawParameters(materialHandle);
+    m_pbrMaterialHandles.emplace(&node, materialHandle);
+    const PbrDrawFlagFlags drawFlags =
+        m_useRayTracedShadows ? PbrDrawFlagFlags{PbrDrawFlag::RayTracedShadows} : PbrDrawFlagFlags{};
+    const auto drawParameters = m_pbrMaterialTable->createDrawParameters(materialHandle, drawFlags);
     forwardPass.setPushConstants(drawParameters);
 
     if (castsShadow) {
@@ -469,6 +532,15 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
         m_floorNode = &node;
     }
     return materialHandle;
+}
+
+void MaterialExplorerScene::updateForwardDrawParameters() {
+    const PbrDrawFlagFlags drawFlags =
+        m_useRayTracedShadows ? PbrDrawFlagFlags{PbrDrawFlag::RayTracedShadows} : PbrDrawFlagFlags{};
+    for (const auto& [node, materialHandle] : m_pbrMaterialHandles) {
+        node->pass(kForwardLightingPass)
+            .setPushConstants(m_pbrMaterialTable->createDrawParameters(materialHandle, drawFlags));
+    }
 }
 
 void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapName) {

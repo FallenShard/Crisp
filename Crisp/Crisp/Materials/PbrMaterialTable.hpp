@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <Crisp/Materials/PbrMaterial.hpp>
+#include <Crisp/Utils/BitFlags.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/VulkanStagingBelt.hpp>
 
@@ -16,19 +17,27 @@ struct PbrMaterialHandle {
     uint32_t index{0};
 };
 
+enum class PbrDrawFlag : uint32_t { // NOLINT
+    RayTracedShadows = 1u << 0,
+};
+DECLARE_BITFLAG(PbrDrawFlag);
+
+static_assert(sizeof(PbrDrawFlagFlags) == sizeof(uint32_t));
+static_assert(std::is_trivially_copyable_v<PbrDrawFlagFlags>);
+
 // Passed per draw. The shader follows materialTableAddress as a physical-storage-buffer pointer and selects
 // materials[materialIndex], so the table needs no descriptor set.
 struct PbrDrawParameters {
     VkDeviceAddress materialTableAddress{0};
     uint32_t materialIndex{0};
-    uint32_t padding{0};
+    uint32_t flags{0};
 };
 
 static_assert(sizeof(PbrDrawParameters) == 16);
 static_assert(std::is_standard_layout_v<PbrDrawParameters>);
 static_assert(offsetof(PbrDrawParameters, materialTableAddress) == 0);
 static_assert(offsetof(PbrDrawParameters, materialIndex) == 8);
-static_assert(offsetof(PbrDrawParameters, padding) == 12);
+static_assert(offsetof(PbrDrawParameters, flags) == 12);
 
 class PbrMaterialTable {
 public:
@@ -36,7 +45,7 @@ public:
 
     PbrMaterialHandle add(const PbrMaterialParams& params);
     void update(PbrMaterialHandle handle, const PbrMaterialParams& params);
-    PbrDrawParameters createDrawParameters(PbrMaterialHandle handle) const;
+    PbrDrawParameters createDrawParameters(PbrMaterialHandle handle, PbrDrawFlagFlags flags = {}) const;
 
     // Uploads only the populated prefix when the CPU table changed. The staging belt keeps the upload alive until
     // the frame's timeline value retires it.

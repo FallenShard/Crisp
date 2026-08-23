@@ -32,11 +32,13 @@ void PbrMaterialTable::update(const PbrMaterialHandle handle, const PbrMaterialP
     m_isDirty = true;
 }
 
-PbrDrawParameters PbrMaterialTable::createDrawParameters(const PbrMaterialHandle handle) const {
+PbrDrawParameters PbrMaterialTable::createDrawParameters(
+    const PbrMaterialHandle handle, const PbrDrawFlagFlags flags) const {
     CRISP_CHECK_LT(handle.index, m_materialCount);
     return {
         .materialTableAddress = getDeviceAddress(),
         .materialIndex = handle.index,
+        .flags = flags.getMask(),
     };
 }
 

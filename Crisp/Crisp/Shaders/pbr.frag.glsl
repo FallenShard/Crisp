@@ -1,8 +1,9 @@
-#version 450 core
+#version 460 core
 
 #extension GL_GOOGLE_include_directive : require
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_ray_query : require
 
 #include "Common/math-constants.part.glsl"
 #include "Brdf/microfacet.part.glsl"
@@ -11,6 +12,7 @@
 
 const vec3 NdcMin = vec3(-1.0f, -1.0f, 0.0f);
 const vec3 NdcMax = vec3(+1.0f, +1.0f, 1.0f);
+const uint PbrDrawRayTracedShadows = 1u << 0;
 
 layout(location = 0) in vec3 eyeNormal;
 layout(location = 1) in vec2 inTexCoord;
@@ -41,6 +43,7 @@ layout(set = 1, binding = 2) uniform samplerCube diffuseIrradianceMap;
 layout(set = 1, binding = 3) uniform samplerCube specularReflectanceMap;
 layout(set = 1, binding = 4) uniform sampler2D cascadedShadowMaps[4];
 layout(set = 1, binding = 5) uniform sampler2D brdfLut;
+layout(set = 1, binding = 6) uniform accelerationStructureEXT shadowSceneBvh;
 
 // Material-specific parameters. Must match PbrMaterialParams in Materials/PbrMaterial.hpp.
 struct PbrMaterialParameters {
@@ -80,7 +83,7 @@ layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer Pb
 layout(push_constant) uniform DrawParameters {
     PbrMaterialTable materialTable;
     uint materialIndex;
-    uint padding;
+    uint flags;
 }
 drawParameters;
 
@@ -97,7 +100,15 @@ vec3 evalDirectionalLightRadiance(out vec3 eyeL) {
 
 // ----- Cascaded Shadow Mapping
 float sampleCascadeShadow(const int cascadeIndex, const vec3 worldPos, const vec3 worldNormal) {
-    const vec4 lightSpacePos = cascadedLight[cascadeIndex].VP * vec4(worldPos, 1.0f);
+    const vec3 worldLightDirection = normalize(cascadedLight[cascadeIndex].direction.xyz);
+    const float NdotL = clamp(dot(worldNormal, worldLightDirection), 0.0f, 1.0f);
+
+    const float sinTheta = sqrt(max(1.0f - NdotL * NdotL, 0.0f));
+    const float normalBiasInTexels = 1.5f;
+    const float normalBias = normalBiasInTexels * cascadedLight[cascadeIndex].params.w * sinTheta;
+    const vec3 biasedWorldPos = worldPos + worldNormal * normalBias;
+
+    const vec4 lightSpacePos = cascadedLight[cascadeIndex].VP * vec4(biasedWorldPos, 1.0f);
     const vec3 ndcPos = lightSpacePos.xyz / lightSpacePos.w;
 
     if (any(lessThan(ndcPos, NdcMin)) || any(greaterThan(ndcPos, NdcMax))) {
@@ -109,10 +120,7 @@ float sampleCascadeShadow(const int cascadeIndex, const vec3 worldPos, const vec
     const ivec2 size = textureSize(cascadedShadowMaps[nonuniformEXT(cascadeIndex)], 0).xy;
     const vec2 texelSize = vec2(1) / size;
 
-    // Express the bias in shadow texels, then convert world distance to the cascade's normalized depth.
-    const vec3 worldLightDirection = normalize(cascadedLight[cascadeIndex].direction.xyz);
-    const float NdotL = clamp(dot(worldNormal, worldLightDirection), 0.0f, 1.0f);
-    const float biasInTexels = mix(2.5f, 0.75f, NdotL);
+    const float biasInTexels = mix(1.25f, 0.35f, NdotL);
     const float worldBias = biasInTexels * cascadedLight[cascadeIndex].params.w;
     const float depthBias = worldBias * abs(cascadedLight[cascadeIndex].P[2][2]);
 
@@ -154,6 +162,29 @@ float evalCascadedShadow(const vec3 worldPos, const float viewDepth, const vec3 
     const float blend = smoothstep(
         cascadedLight[cascadeIndex].params.z, cascadedLight[cascadeIndex].params.y, viewDepth);
     return mix(currentShadow, sampleCascadeShadow(cascadeIndex + 1, worldPos, worldNormal), blend);
+}
+
+float evalRayTracedShadow(const vec3 worldPos, const vec3 worldNormal) {
+    const vec3 worldLightDirection = normalize(cascadedLight[0].direction.xyz);
+    if (dot(worldNormal, worldLightDirection) <= 0.0f) {
+        return 1.0f;
+    }
+
+    
+    const float originOffset = 0.0005f;
+    rayQueryEXT query;
+    rayQueryInitializeEXT(
+        query,
+        shadowSceneBvh,
+        gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT,
+        0xff,
+        worldPos + worldNormal * originOffset,
+        0.0f,
+        worldLightDirection,
+        1000000.0f);
+    rayQueryProceedEXT(query);
+
+    return rayQueryGetIntersectionTypeEXT(query, true) == gl_RayQueryCommittedIntersectionNoneEXT ? 1.0f : 0.0f;
 }
 
 vec3 getCascadeDebugColor(const float viewDepth) {
@@ -287,7 +318,12 @@ void main() {
     const vec3 directSpecular = D * G * directF / max(4.0f * NdotV * NdotL, 0.001);
 
     const vec3 geometricWorldN = normalize((view.invV * vec4(geometricEyeN, 0.0f)).xyz);
-    const float shadowCoeff = evalCascadedShadow(worldPos, -eyePosition.z, geometricWorldN);
+    float shadowCoeff = 1.0f;
+    if ((drawParameters.flags & PbrDrawRayTracedShadows) != 0u) {
+        shadowCoeff = evalRayTracedShadow(worldPos, geometricWorldN);
+    } else {
+        shadowCoeff = evalCascadedShadow(worldPos, -eyePosition.z, geometricWorldN);
+    }
 
     const vec3 directRadiance = (directDiffuse + directSpecular) * Le * NdotL;
     const vec3 environmentRadiance = computeEnvRadiance(eyeN, eyeV, envKd, baseColor, envF, specularRoughness, ao);
