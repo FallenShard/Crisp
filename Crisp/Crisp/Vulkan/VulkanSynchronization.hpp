@@ -192,6 +192,16 @@ inline constexpr VulkanSynchronizationStage kAccelerationStructureWrite = {
     .access = VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
 };
 
+inline constexpr VulkanSynchronizationStage kAccelerationStructureRead = {
+    .stage = VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+    .access = VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR,
+};
+
+inline constexpr VulkanSynchronizationStage kFragmentAccelerationStructureRead = {
+    .stage = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT,
+    .access = VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR,
+};
+
 inline constexpr VulkanSynchronizationStage kRayTracingResourceHeapRead = {
     .stage = VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
     .access = VK_ACCESS_2_RESOURCE_HEAP_READ_BIT_EXT,

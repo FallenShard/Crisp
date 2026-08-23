@@ -446,7 +446,7 @@ void VulkanCommandEncoder::buildAccelerationStructure(VulkanAccelerationStructur
     if (accelerationStructure.isTopLevel()) {
         const auto instances = accelerationStructure.getInstances();
         updateBuffer(accelerationStructure.getInstanceBuffer(), std::as_bytes(instances));
-        insertBarrier(kTransferWrite >> kAccelerationStructureWrite);
+        insertBarrier(kTransferWrite >> (kAccelerationStructureRead | kAccelerationStructureWrite));
     }
 
     const auto& buildInfo = accelerationStructure.getBuildInfo();
