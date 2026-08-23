@@ -1,4 +1,4 @@
-#version 450 core
+#version 460 core
 
 layout(quads, fractional_even_spacing, cw) in;
 

@@ -1,4 +1,4 @@
-#version 450 core
+#version 460 core
 
 #extension GL_GOOGLE_include_directive : require
 
@@ -210,7 +210,7 @@ void main() {
     finalColor = vec4(reflectionColor, 1.0f);
 }
 
-// #version 450 core
+// #version 460 core
 
 // layout(location = 0) in	vec3 eyePos;
 // layout(location = 1) in	vec3 eyeNormal;

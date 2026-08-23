@@ -1,7 +1,7 @@
 // Unsized arrays index the bound resource heap directly, so no declaration carries a set or binding. glslang
 // emits this against SPV_KHR_untyped_pointers, which is what spirv-reflect cannot currently parse — see the
 // DescriptorHeapReflectionTest case that pins the failure.
-#version 450
+#version 460 core
 #extension GL_EXT_descriptor_heap : require
 #extension GL_EXT_nonuniform_qualifier : require
 

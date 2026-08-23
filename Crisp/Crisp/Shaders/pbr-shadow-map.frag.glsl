@@ -1,4 +1,4 @@
-#version 450 core
+#version 460 core
 
 layout(push_constant) uniform DrawParameters {
     uvec2 materialTableAddress;

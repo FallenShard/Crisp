@@ -8,7 +8,7 @@ using namespace crisp::sl;
 namespace {
 const std::string testSource =
     ""
-    "#version 450 core\n"
+    "#version 460 core\n"
     "\n"
     "layout(location = 0) in vec2 position;\n"
     "\n"
@@ -22,7 +22,7 @@ const std::string testSource =
 
 const std::string testSourceVertexShader =
     ""
-    "#version 450 core\n"
+    "#version 460 core\n"
     "\n"
     "layout(location = 0) in vec3 position;\n"
     "layout(location = 1) in vec3 normal;\n"

@@ -1,4 +1,4 @@
-#version 450 core
+#version 460 core
 
 layout(set = 0, binding = 0) buffer RestPositions {
     float restPositions[];

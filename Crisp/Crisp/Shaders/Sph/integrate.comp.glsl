@@ -1,4 +1,4 @@
-#version 450 core
+#version 460 core
 
 layout(std430, set = 0, binding = 0) buffer PrevPositions {
     vec4 prevPositions[];

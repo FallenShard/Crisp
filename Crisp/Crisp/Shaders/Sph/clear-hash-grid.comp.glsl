@@ -1,4 +1,4 @@
-#version 450 core
+#version 460 core
 
 // Output: all cell counts will be 0
 layout(std430, set = 0, binding = 0) buffer CellCounts {
