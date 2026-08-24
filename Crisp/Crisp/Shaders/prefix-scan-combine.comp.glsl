@@ -1,5 +1,9 @@
 #version 460 core
 
+#extension GL_GOOGLE_include_directive : require
+
+#include "Common/particle-grid.part.glsl"
+
 layout(std430, set = 0, binding = 0) buffer CellCounts {
     uint cellCounts[];
 };
@@ -16,13 +20,8 @@ layout(push_constant) uniform PushConstant {
 }
 pushConst;
 
-uint getGlobalIndex() {
-    uvec3 dim = gl_WorkGroupSize * gl_NumWorkGroups;
-    return gl_GlobalInvocationID.z * dim.x * dim.y + gl_GlobalInvocationID.y * dim.x + gl_GlobalInvocationID.x;
-}
-
 void main() {
-    uint globalIdx = getGlobalIndex();
+    uint globalIdx = particleGlobalIndex();
     if (globalIdx >= pushConst.numCells) {
         return;
     }
