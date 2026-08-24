@@ -3,8 +3,6 @@ add_cpp_static_library(CrispModels
     "Atmosphere.cpp"
     "Atmosphere.hpp"
 
-    # "BoxVisualizer.cpp"
-    # "BoxVisualizer.hpp"
     "Skybox.cpp"
     "Skybox.hpp"
 

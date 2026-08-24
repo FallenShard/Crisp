@@ -2,8 +2,6 @@ add_cpp_static_library(CrispScenes
     "SceneContainer.cpp"
     "SceneContainer.hpp"
 
-    # "AmbientOcclusionScene.cpp"
-    # "AmbientOcclusionScene.hpp"
     "AtmosphereScene.cpp"
     "AtmosphereScene.hpp"
 
@@ -11,16 +9,6 @@ add_cpp_static_library(CrispScenes
     # "ClusteredLightingScene.hpp"
     # "GltfViewerScene.cpp"
     # "GltfViewerScene.hpp"
-    # "NormalMappingScene.cpp"
-    # "NormalMappingScene.hpp"
-    # "OceanScene.cpp"
-    # "OceanScene.hpp"
-    # "PbrScene.cpp"
-    # "PbrScene.hpp"
-    # "RaytracedImage.cpp"
-    # "RaytracedImage.hpp"
-    # "RayTracerScene.cpp"
-    # "RayTracerScene.hpp"
 
     # "ShadowMappingScene.cpp"
     # "ShadowMappingScene.hpp"
