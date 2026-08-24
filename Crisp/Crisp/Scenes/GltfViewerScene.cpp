@@ -1,121 +1,153 @@
 #include <Crisp/Scenes/GltfViewerScene.hpp>
 
-#include <Crisp/Core/Checks.hpp>
+#include <algorithm>
+#include <ranges>
+
 #include <Crisp/Gui/ImGuiCameraUtils.hpp>
+#include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
-#include <Crisp/Mesh/Io/MeshLoader.hpp>
-#include <Crisp/Renderer/ComputePipeline.hpp>
+#include <Crisp/Mesh/Io/GltfLoader.hpp>
+#include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
-#include <Crisp/Renderer/VulkanImageUtils.hpp>
-#include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
-#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
-
-#include <imgui.h>
 
 namespace crisp {
 namespace {
 const auto logger = createLoggerMt("GltfViewerScene");
 
-constexpr uint32_t kShadowMapSize = 1024;
+constexpr uint32_t kShadowMapSize = 4096;
 
-std::unique_ptr<VulkanPipeline> createSkinningPipeline(Renderer* renderer, const VkExtent3D& workGroupSize) {
-    return createComputePipeline(
-        renderer->getDevice(),
-        renderer->getAssetPaths().getShaderSpvPath("linear-blend-skinning.comp"),
-        workGroupSize,
-        [](PipelineLayoutBuilder& builder) {
-            builder.setDescriptorDynamic(0, 3, true);
-        });
+struct ShadowMaterialVariant {
+    std::string_view suffix;
+    std::string_view pipelineConfig;
+};
+
+constexpr std::array kShadowMaterialVariants{
+    ShadowMaterialVariant{"Opaque", "PbrShadowMap.json"},
+    ShadowMaterialVariant{"DoubleSided", "PbrShadowMapDoubleSided.json"},
+    ShadowMaterialVariant{"Alpha", "PbrShadowMapAlpha.json"},
+    ShadowMaterialVariant{"AlphaDoubleSided", "PbrShadowMapAlphaDoubleSided.json"},
+};
+
+const ShadowMaterialVariant& getShadowMaterialVariant(const uint32_t materialFlags) {
+    const bool alphaMasked = (materialFlags & PbrMaterialAlphaMask) != 0;
+    const bool doubleSided = (materialFlags & PbrMaterialDoubleSided) != 0;
+    return kShadowMaterialVariants[static_cast<size_t>(alphaMasked) * 2 + static_cast<size_t>(doubleSided)];
+}
+
+std::string createShadowMaterialKey(const uint32_t cascadeIndex, const std::string_view suffix) {
+    return fmt::format("cascadedShadowMap{}{}", cascadeIndex, suffix);
+}
+
+BoundingBox3 transformBoundingBox(const BoundingBox3& localBounds, const glm::mat4& transform) {
+    BoundingBox3 worldBounds;
+    for (int cornerIndex = 0; cornerIndex < 8; ++cornerIndex) {
+        worldBounds.expandBy(glm::vec3(transform * glm::vec4(localBounds.getCorner(cornerIndex), 1.0f)));
+    }
+    return worldBounds;
 }
 
 void createDrawCommand(
-    std::vector<DrawCommand>& drawCommands,
-    const RenderNode& renderNode,
-    const std::string_view renderPass,
-    const uint32_t virtualFrameIndex) {
-    if (!renderNode.isVisible) {
-        return;
-    }
-
+    std::vector<DrawCommand>& drawCommands, const RenderNode& renderNode, const std::string_view renderPass) {
     for (const auto& [key, materialMap] : renderNode.materials) {
+        if (key.renderPassName != renderPass) {
+            continue;
+        }
         for (const auto& [part, material] : materialMap) {
-            if (key.renderPassName == renderPass) {
-                drawCommands.push_back(material.createDrawCommand(virtualFrameIndex, renderNode));
-            }
+            drawCommands.push_back(material.createDrawCommand(renderNode));
         }
     }
 }
 
+struct DrawCommandRecordingState {
+    const VulkanPipeline* pipeline{nullptr};
+};
+
+void executeDrawCommand(
+    const DrawCommand& command, const VulkanCommandEncoder& commandEncoder, DrawCommandRecordingState& state) {
+    if (state.pipeline != command.pipeline) {
+        commandEncoder.bindPipeline(*command.pipeline);
+        state.pipeline = command.pipeline;
+    }
+    if (command.pipeline->getDynamicStateFlags().contains(PipelineDynamicState::Viewport) &&
+        command.viewport.width != 0.0f) {
+        commandEncoder.setViewport(command.viewport);
+    }
+    if (command.pipeline->getDynamicStateFlags().contains(PipelineDynamicState::Scissor) &&
+        command.scissor.extent.width != 0) {
+        commandEncoder.setScissor(command.scissor);
+    }
+
+    commandEncoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
+
+    if (command.material) {
+        commandEncoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.dynamicBufferOffsets));
+    }
+
+    command.geometry->bindVertexBuffers(commandEncoder, command.firstBuffer, command.bufferCount);
+    command.drawFunc(commandEncoder, command.geometryView);
+}
 } // namespace
 
-GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
+GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window, const nlohmann::json& args)
     : Scene(renderer, window) {
     setupInput();
 
+    m_rayTracedShadowsSupported = m_renderer->getDevice().getEnabledFeatures().rayQuery;
+
     m_cameraController = std::make_unique<TargetCameraController>(*m_window);
-    m_cameraController->setDistance(3.0f);
-    m_resourceContext->createUniformBuffer("camera", sizeof(CameraParameters), BufferUpdatePolicy::PerFrame);
+    m_cameraController->setOrbitDistance(1.0f);
+    m_resourceContext->createUniformRingBuffer("camera", sizeof(CameraParameters));
+
+    m_renderGraph = std::make_unique<rg::RenderGraph>();
 
     addCascadedShadowMapPasses(
-        *m_renderGraph, kShadowMapSize, [this](const RenderPassExecutionContext& ctx, const uint32_t cascadeIndex) {
-            const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
-            std::vector<DrawCommand> drawCommands{};
-            for (const auto& [id, renderNode] : m_renderNodes) {
-                createDrawCommand(drawCommands, *renderNode, kCsmPasses[cascadeIndex], virtualFrameIndex);
-            }
+        *m_renderGraph, kShadowMapSize, [this](const FrameContext& ctx, const uint32_t cascadeIndex) {
+            const auto& drawCommands = m_drawCommandCache[cascadeIndex];
+            const auto& shadowPipelineLayout =
+                *m_resourceContext->getMaterial(createShadowMaterialKey(cascadeIndex, "Opaque"))
+                     ->getPipeline()
+                     ->getPipelineLayout();
+            auto& bindlessRegistry = m_renderer->getBindlessImageRegistry();
+            bindlessRegistry.bind(
+                ctx.commandEncoder,
+                shadowPipelineLayout.getHandle(),
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                BindlessImageRegistry::kGlobalSetIndex);
 
-            const VulkanCommandBuffer commandBuffer(ctx.cmdBuffer);
-            for (const auto& drawCommand : drawCommands) {
-                RenderGraph::executeDrawCommand(drawCommand, *m_renderer, commandBuffer, virtualFrameIndex);
+            DrawCommandRecordingState recordingState{};
+            for (const auto& cached : drawCommands) {
+                if (!m_lightSystem->isCascadeCasterVisible(cascadeIndex, cached.worldBounds)) {
+                    continue;
+                }
+                executeDrawCommand(cached.command, ctx.commandEncoder, recordingState);
             }
         });
 
-    addForwardLightingPass(*m_renderGraph, [this](const RenderPassExecutionContext& ctx) {
-        const uint32_t virtualFrameIndex = m_renderer->getCurrentVirtualFrameIndex();
-        std::vector<DrawCommand> drawCommands{};
-        for (const auto& [id, renderNode] : m_renderNodes) {
-            createDrawCommand(drawCommands, *renderNode, kForwardLightingPass, virtualFrameIndex);
+    addForwardLightingPass(*m_renderGraph, [this](const FrameContext& ctx) {
+        const auto& pbrPipelineLayout = *m_forwardPassMaterial->getPipeline()->getPipelineLayout();
+        auto& bindlessRegistry = m_renderer->getBindlessImageRegistry();
+        bindlessRegistry.bind(
+            ctx.commandEncoder,
+            pbrPipelineLayout.getHandle(),
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            BindlessImageRegistry::kGlobalSetIndex);
+        ctx.commandEncoder.bindDescriptorSets(m_forwardPassMaterial->getDescriptorSetBinding());
+
+        DrawCommandRecordingState recordingState{};
+        for (const auto& cached : m_drawCommandCache.back()) {
+            executeDrawCommand(cached.command, ctx.commandEncoder, recordingState);
         }
 
-        createDrawCommand(drawCommands, m_skybox->getRenderNode(), kForwardLightingPass, virtualFrameIndex);
-
-        const VulkanCommandBuffer commandBuffer(ctx.cmdBuffer);
-        for (const auto& drawCommand : drawCommands) {
-            RenderGraph::executeDrawCommand(drawCommand, *m_renderer, commandBuffer, virtualFrameIndex);
+        std::vector<DrawCommand> specialDrawCommands{};
+        createDrawCommand(specialDrawCommands, m_skybox->getRenderNode(), kForwardLightingPass);
+        for (const auto& drawCommand : specialDrawCommands) {
+            executeDrawCommand(drawCommand, ctx.commandEncoder, recordingState);
         }
     });
 
-    m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
-        m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
-
-        const auto& data = m_renderGraph->getBlackboard().get<ForwardLightingData>();
-        m_sceneImageViews.resize(kRendererVirtualFrameCount);
-        for (auto& sv : m_sceneImageViews) {
-            sv = m_renderGraph->createViewFromResource(m_renderer->getDevice(), data.hdrImage);
-        }
-
-        m_renderer->setSceneImageViews(m_sceneImageViews);
-    });
-    m_renderer->flushResourceUpdates(true);
-
-    auto& imageCache = m_resourceContext->imageCache;
-    imageCache.addImageView(
-        "csmFrame0",
-        createView(
-            m_renderer->getDevice(),
-            *m_resourceContext->renderTargetCache.get("ShadowMap")->image,
-            VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-            0,
-            kDefaultCascadeCount));
-    imageCache.addImageView(
-        "csmFrame1",
-        createView(
-            m_renderer->getDevice(),
-            *m_resourceContext->renderTargetCache.get("ShadowMap")->image,
-            VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-            kDefaultCascadeCount,
-            kDefaultCascadeCount));
+    m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&ForwardLightingPassData::hdrImage>());
 
     m_lightSystem = std::make_unique<LightSystem>(
         m_renderer,
@@ -123,243 +155,370 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window)
         kShadowMapSize,
         kDefaultCascadeCount);
 
-    // Object transforms
-    m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 100);
-    m_renderer->getDevice().setObjectName(m_transformBuffer->getUniformBuffer()->getHandle(), "transformBuffer");
+    m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, kMaximumObjectCount);
 
     createCommonTextures();
 
-    for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
-        std::string key = "cascadedShadowMap" + std::to_string(i);
-        auto csmPipeline =
-            m_resourceContext->createPipeline(key, "ShadowMap.json", m_renderGraph->getRenderPass(kCsmPasses[i]), 0);
-        auto csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
-        csmMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
-        csmMaterial->writeDescriptor(0, 1, *m_lightSystem->getCascadedDirectionalLightBuffer(i));
+    for (uint32_t i = 0; i < kCsmPasses.size(); ++i) {
+        for (const auto& variant : kShadowMaterialVariants) {
+            const std::string key = createShadowMaterialKey(i, variant.suffix);
+            auto* csmPipeline = m_resourceContext->createPipeline(
+                key, variant.pipelineConfig, m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[i]));
+            auto* csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
+            csmMaterial->writeDescriptor(1, 0, m_transformBuffer->getDescriptorInfo());
+            csmMaterial->writeDescriptor(1, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(i));
+        }
     }
 
-    loadGltf("CesiumMan");
+    loadAsset(args.value("modelPath", std::string{}));
+    createRayTracedShadowResources();
+    rebuildDrawCommandCache();
 
-    m_skybox = m_lightSystem->getEnvironmentLight()->createSkybox(
-        *m_renderer, m_renderGraph->getRenderPass(kForwardLightingPass), m_resourceContext->imageCache.getSampler("linearClamp"));
-
-    m_renderer->getDevice().flushDescriptorUpdates();
+    for (const auto& dir :
+         std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps")) {
+        m_environmentMapNames.push_back(dir.path().stem().string());
+    }
 }
 
-void GltfViewerScene::resize(int width, int height) {
+void GltfViewerScene::resize(const int width, const int height) {
     m_cameraController->onViewportResized(width, height);
 
-    m_renderer->enqueueResourceUpdate([this](const VkCommandBuffer cmdBuffer) {
-        m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent(), cmdBuffer);
-        const auto& imageCache = m_resourceContext->imageCache;
-        for (auto&& [name, node] : m_renderNodes) {
-            auto& material = node->pass(kForwardLightingPass).material;
-            for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
-                for (uint32_t k = 0; k < kRendererVirtualFrameCount; ++k) {
-                    const auto& shadowMapView{m_renderGraph->getRenderPass(kCsmPasses[i]).getAttachmentView(0, k)};
-                    material->writeDescriptor(1, 6, k, i, shadowMapView, &imageCache.getSampler("nearestNeighbor"));
-                }
-            }
-        }
-
-        const auto& data = m_renderGraph->getBlackboard().get<ForwardLightingData>();
-        m_sceneImageViews.resize(kRendererVirtualFrameCount);
-        for (auto& sv : m_sceneImageViews) {
-            sv = m_renderGraph->createViewFromResource(m_renderer->getDevice(), data.hdrImage);
-        }
-
-        m_renderer->setSceneImageViews(m_sceneImageViews);
-    });
-    m_renderer->flushResourceUpdates(true);
+    m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
+    configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
+    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&ForwardLightingPassData::hdrImage>());
 }
 
-void GltfViewerScene::update(float dt) {
-    static float totalT = 0.0f;
-
-    // Camera
-    m_cameraController->update(dt);
-    const auto camParams = m_cameraController->getCameraParameters();
-    m_resourceContext->getUniformBuffer("camera")->updateStagingBuffer2(camParams);
-
-    // Object transforms
+void GltfViewerScene::update(const UpdateParams& updateParams) {
+    m_cameraController->update(updateParams.dt);
+    const auto& camParams = m_cameraController->getCameraParameters();
     m_transformBuffer->update(camParams.V, camParams.P);
-    m_lightSystem->update(m_cameraController->getCamera(), dt);
-    m_skybox->updateTransforms(camParams.V, camParams.P);
-
-    if (m_skinningData.skeleton.joints.empty()) {
-        return;
-    }
-
-    m_animation.updateJoints(m_skinningData.skeleton.joints, totalT);
-    m_skinningData.skeleton.updateJointTransforms(m_skinningData.inverseBindTransforms);
-
-    m_resourceContext->getRingBuffer("jointMatrices")
-        ->updateStagingBuffer(
-            {
-                .data = m_skinningData.skeleton.jointTransforms.data(),
-                .size = m_skinningData.skeleton.jointTransforms.size() * sizeof(glm::mat4),
-            },
-            m_renderer->getCurrentVirtualFrameIndex());
-
-    totalT += dt;
-    if (totalT >= 2.0f) {
-        totalT = 0.0f;
-    }
 }
 
-void GltfViewerScene::render() {
-    m_renderer->enqueueDrawCommand([this](VkCommandBuffer cmdBuffer) {
-        m_renderGraph->execute(cmdBuffer, m_renderer->getCurrentVirtualFrameIndex());
-    });
+void GltfViewerScene::render(const FrameContext& frameContext) {
+    frameContext.commandEncoder.insertBarrier(
+        (kVertexUniformRead | kFragmentUniformRead | kFragmentRead) >> kTransferWrite);
+
+    const auto& camParams = m_cameraController->getCameraParameters();
+    m_lightSystem->update(m_cameraController->getCamera(), frameContext.virtualFrameIndex);
+    m_lightSystem->getCascadedDirectionalLightBuffer()->updateDeviceBuffer(frameContext.commandEncoder);
+
+    m_skybox->updateTransforms(camParams.V, camParams.P, frameContext.virtualFrameIndex);
+    m_skybox->updateDeviceBuffer(frameContext.commandEncoder);
+
+    m_resourceContext->getRingBuffer("camera")->updateStagingBufferFromStruct(camParams, frameContext.virtualFrameIndex);
+    m_resourceContext->getRingBuffer("camera")->updateDeviceBuffer(frameContext.commandEncoder);
+
+    m_transformBuffer->updateStagingBuffer(frameContext.virtualFrameIndex);
+    m_transformBuffer->getUniformBuffer()->updateDeviceBuffer(frameContext.commandEncoder);
+    m_pbrMaterialTable->updateDeviceBuffer(*frameContext.stagingBelt, frameContext.commandEncoder);
+
+    frameContext.commandEncoder.insertBarrier(
+        kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead | kFragmentRead));
+
+    m_renderGraph->execute(frameContext);
 }
 
-void GltfViewerScene::renderGui() {
+void GltfViewerScene::drawGui() {
     drawCameraPivot(*m_cameraController);
 
-    static std::vector<std::string> paths =
-        enumerateDirectories(m_renderer->getAssetPaths().resourceDir / "glTFSamples/2.0");
-    static int32_t selectedIdx{0};
-    ImGui::Begin("Hi");
-    ImGui::Text("GLTF Examples"); // NOLINT
-    if (ImGui::BeginListBox("##", ImVec2(0, 500))) {
-        for (int32_t i = 0; i < std::ssize(paths); ++i) {
-            const bool isSelected{selectedIdx == i};
-            if (ImGui::Selectable(paths[i].c_str(), isSelected)) {
-                selectedIdx = i;
-                m_renderer->finish();
-                loadGltf(paths.at(selectedIdx));
-            }
+    ImGui::Begin("glTF Viewer");
 
-            if (isSelected) {
-                ImGui::SetItemDefaultFocus();
+    if (m_report.path.empty()) {
+        ImGui::TextWrapped("No modelPath in the scene args. Point it at a .gltf or .glb to load one.");
+    } else {
+        ImGui::TextWrapped("%s", m_report.path.filename().string().c_str()); // NOLINT
+        ImGui::Separator();
+
+        if (m_report.succeeded) {
+            ImGui::TextColored(ImVec4(0.4f, 0.8f, 0.4f, 1.0f), "Loaded");
+        } else {
+            ImGui::TextColored(ImVec4(0.9f, 0.4f, 0.4f, 1.0f), "Failed");
+            ImGui::TextWrapped("%s", m_report.error.c_str()); // NOLINT
+        }
+    }
+
+    if (m_report.succeeded && ImGui::CollapsingHeader("Contents", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Models      %u", m_report.modelCount);    // NOLINT
+        ImGui::Text("Submeshes   %u", m_report.submeshCount);  // NOLINT
+        ImGui::Text("Vertices    %u", m_report.vertexCount);   // NOLINT
+        ImGui::Text("Triangles   %u", m_report.triangleCount); // NOLINT
+        ImGui::Text("Images      %u", m_report.imageCount);    // NOLINT
+
+        const glm::vec3 extent = m_report.bounds.max - m_report.bounds.min;
+        ImGui::Text("Extent      %.3f %.3f %.3f", extent.x, extent.y, extent.z); // NOLINT
+    }
+
+    if (m_report.succeeded && ImGui::CollapsingHeader("Feature coverage", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Text("Alpha masked    %u", m_report.alphaMaskedCount);  // NOLINT
+        ImGui::Text("Double sided    %u", m_report.doubleSidedCount);  // NOLINT
+        ImGui::Text("Skinned models  %u", m_report.skinnedModelCount); // NOLINT
+        ImGui::Text("Animations      %u", m_report.animationCount);    // NOLINT
+
+        if (m_report.skinnedModelCount != 0 || m_report.animationCount != 0) {
+            ImGui::TextWrapped("Skinning and animation data is parsed but not yet played back.");
+        }
+    }
+
+    if (m_rayTracedShadowsSupported && m_shadowTlas != nullptr &&
+        ImGui::Checkbox("Ray-traced shadows", &m_useRayTracedShadows)) {
+        updateForwardDrawParameters();
+    }
+
+    if (ImGui::CollapsingHeader("Camera")) {
+        drawCameraControllerUi(*m_cameraController, /*isSeparateWindow=*/false);
+        drawCameraUi(m_cameraController->getCamera(), /*isSeparateWindow=*/false);
+    }
+
+    if (ImGui::CollapsingHeader("Environment")) {
+        for (const auto& envMapName : m_environmentMapNames) {
+            if (ImGui::Button(envMapName.c_str())) {
+                setEnvironmentMap(envMapName);
             }
         }
-        ImGui::EndListBox();
     }
+
     ImGui::End();
+
+    drawRenderGraphGui(*m_renderGraph);
 }
 
-RenderNode* GltfViewerScene::createRenderNode(std::string id, bool hasTransform) {
+RenderNode& GltfViewerScene::createRenderNode(const std::string_view id, const bool hasTransform) {
     if (!hasTransform) {
-        return m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second.get();
+        return *m_renderNodes.emplace(id, std::make_unique<RenderNode>()).first->second;
     }
-    const auto transformIndex{m_transformBuffer->getNextIndex()};
-    return m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformIndex))
-        .first->second.get();
+
+    const auto transformHandle{m_transformBuffer->getNextIndex()};
+    return *m_renderNodes.emplace(id, std::make_unique<RenderNode>(*m_transformBuffer, transformHandle)).first->second;
 }
 
 void GltfViewerScene::createCommonTextures() {
-    constexpr float Anisotropy{16.0f};
-    constexpr float MaxLod{9.0f};
+    constexpr float kAnisotropy{16.0f};
+    constexpr float kMaxLod{9.0f};
     auto& imageCache = m_resourceContext->imageCache;
     imageCache.addSampler("nearestNeighbor", createNearestClampSampler(m_renderer->getDevice()));
-    imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice(), Anisotropy));
-    imageCache.addSampler("linearMipmap", createLinearClampSampler(m_renderer->getDevice(), Anisotropy, MaxLod));
-    imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), Anisotropy));
+    imageCache.addSampler("linearRepeat", createLinearRepeatSampler(m_renderer->getDevice(), kAnisotropy));
+    imageCache.addSampler("linearMipmap", createLinearClampSampler(m_renderer->getDevice(), kAnisotropy, kMaxLod));
+    imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), kAnisotropy));
     addPbrImageGroupToImageCache(createDefaultPbrImageGroup(), imageCache);
 
-    m_resourceContext->createPipeline("pbrTex", "PbrTex.json", m_renderGraph->getRenderPass(kForwardLightingPass), 0);
+    auto pipeline = m_resourceContext->createPipeline(
+        "pbr", "PbrTex.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
 
-    const std::string environmentMap = "TableMountain";
-    m_lightSystem->setEnvironmentMap(
-        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / environmentMap).unwrap(),
-        environmentMap);
-    imageCache.addImageWithView("brdfLut", integrateBrdfLut(m_renderer));
+    setEnvironmentMap("GreenwichPark");
+    imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
+
+    m_forwardPassMaterial =
+        std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 1, 1);
+    configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
+
+    m_pbrMaterialTable = std::make_unique<PbrMaterialTable>(m_renderer->getDevice(), kMaximumObjectCount);
+    m_pbrDrawMaterial =
+        std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 2, 1);
+    m_pbrDrawMaterial->writeDescriptor(2, 0, m_transformBuffer->getDescriptorInfo());
 }
 
-void GltfViewerScene::loadGltf(const std::string& gltfAsset) {
-    const std::string gltfRelativePath{fmt::format("glTFSamples/2.0/{}/glTF/{}.gltf", gltfAsset, gltfAsset)};
-    auto [images, renderObjects] = loadGltfAsset(m_renderer->getResourcesPath() / gltfRelativePath).unwrap();
+void GltfViewerScene::setEnvironmentMap(const std::string& envMapName) {
+    m_lightSystem->setEnvironmentMap(
+        loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / envMapName).unwrap(),
+        envMapName);
+    m_skybox = std::make_unique<Skybox>(
+        m_renderer,
+        m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass),
+        m_lightSystem->getEnvironmentLight()->getCubeMapView(),
+        m_resourceContext->imageCache.getSampler("linearClamp"));
+}
 
-    auto& renderObject = renderObjects.at(0);
-    // renderObject.material.name = gltfAsset;
-
-    // m_cameraController->setTarget(renderObject.mesh.getBoundingBox().getCenter());
-    // // m_cameraController->setOrientation(glm::pi<float>() * 0.25f, -glm::pi<float>() * 0.25f);
-    // m_cameraController->setDistance(glm::length(renderObject.mesh.getBoundingBox().getExtents()) * 2.0f);
-
-    const std::string entityName{"gltfNode"};
-    auto gltfNode = createRenderNode(entityName, true);
-    // gltfNode->transformPack->M = renderObject.transform;
-
-    // addPbrTexturesToImageCache(
-    //     renderObject.material.textures, renderObject.material.name, m_resourceContext->imageCache);
-
-    // m_resourceContext->addGeometry(entityName, createGeometry(*m_renderer, renderObject.mesh, kPbrVertexFormat));
-    // gltfNode->geometry = m_resourceContext->getGeometry(entityName);
-    // gltfNode->pass(kForwardLightingPass).material = createPbrMaterial(
-    //     entityName, renderObject.material.name, *m_resourceContext, renderObject.material.params,
-    //     *m_transformBuffer);
-    // setPbrMaterialSceneParams(*gltfNode->pass(kForwardLightingPass).material, *m_resourceContext, *m_lightSystem);
-
-    for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
-        auto& subpass = gltfNode->pass(kCsmPasses[c]);
-        subpass.setGeometry(m_resourceContext->getGeometry(entityName), 0, 1);
-        subpass.material = m_resourceContext->getMaterial("cascadedShadowMap" + std::to_string(c));
-        CRISP_CHECK(subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
+void GltfViewerScene::loadAsset(const std::filesystem::path& path) {
+    if (path.empty()) {
+        logger->warn("No modelPath in the scene args; nothing to validate.");
+        return;
     }
 
-    m_renderer->getDevice().flushDescriptorUpdates();
+    const std::filesystem::path absPath{path.is_absolute() ? path : m_renderer->getResourcesPath() / path};
+    m_report = {};
+    m_report.path = absPath;
 
-    const bool hasSkinning{renderObject.mesh.hasCustomAttribute("weights0")};
-    if (hasSkinning) {
-        m_skinningData = renderObject.skinningData;
-        if (!renderObject.animations.empty()) {
-            m_animation = renderObject.animations.at(0);
+    if (absPath.extension() != ".gltf" && absPath.extension() != ".glb") {
+        m_report.error =
+            fmt::format("Not a glTF asset: expected .gltf or .glb, got '{}'.", absPath.extension().string());
+        logger->error("{}", m_report.error);
+        return;
+    }
+
+    auto assetResult = loadGltfAsset(absPath);
+    if (!assetResult.hasValue()) {
+        m_report.error = assetResult.getError();
+        logger->error("Failed to load {}: {}", absPath.generic_string(), m_report.error);
+        return;
+    }
+
+    auto [images, models] = std::move(assetResult).unwrap();
+
+    addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
+
+    m_report.succeeded = true;
+    m_report.modelCount = static_cast<uint32_t>(models.size());
+    m_report.imageCount = static_cast<uint32_t>(images.size());
+
+    const auto modelName = absPath.stem().string();
+    for (auto&& [idx, model] : std::views::enumerate(models)) {
+        addSceneObject(fmt::format("{}_{}", modelName, idx), model.mesh, model.material, model.transform);
+
+        m_report.vertexCount += model.mesh.getVertexCount();
+        m_report.triangleCount += model.mesh.getTriangleCount();
+        m_report.submeshCount += static_cast<uint32_t>(model.mesh.getViews().size());
+        m_report.animationCount += static_cast<uint32_t>(model.animations.size());
+        if (!model.skinningData.skeleton.joints.empty()) {
+            ++m_report.skinnedModelCount;
         }
 
-        const auto& restPositions = renderObject.mesh.getPositions();
-        const auto vertexCount = static_cast<uint32_t>(restPositions.size());
-        auto restVertexBuffer = m_resourceContext->createStorageBuffer("restPositions", restPositions);
-        const auto& weightsData = renderObject.mesh.getCustomAttribute("weights0");
-        auto weightsBuffer = m_resourceContext->createStorageBuffer("weights", weightsData.buffer);
-        const auto& jointIndices = renderObject.mesh.getCustomAttribute("indices0");
-        auto indicesBuffer = m_resourceContext->createStorageBuffer("indices", jointIndices.buffer);
-        auto jointMatrices =
-            m_resourceContext->createStorageBuffer("jointMatrices", m_skinningData.skeleton.jointTransforms);
-        auto& skinningPass = m_renderGraphLegacy->addComputePass("SkinningPass");
-        skinningPass.workGroupSize = {256, 1, 1};
-        skinningPass.numWorkGroups = {(vertexCount + 256 - 1) / 256, 1, 1};
-        skinningPass.pipeline = createSkinningPipeline(m_renderer, skinningPass.workGroupSize);
-        skinningPass.material = std::make_unique<Material>(skinningPass.pipeline.get());
-        skinningPass.material->writeDescriptor(0, 0, *restVertexBuffer);
-        skinningPass.material->writeDescriptor(0, 1, *weightsBuffer);
-        skinningPass.material->writeDescriptor(0, 2, *indicesBuffer);
-        skinningPass.material->writeDescriptor(0, 3, *jointMatrices);
-        skinningPass.material->writeDescriptor(
-            0, 4, VkDescriptorBufferInfo{gltfNode->geometry->getVertexBuffer()->getHandle(), 0, VK_WHOLE_SIZE});
+        const auto gpuFlags = createGpuPbrParams(model.material, m_resourceContext->imageCache).flags;
+        if ((gpuFlags & PbrMaterialAlphaMask) != 0) {
+            ++m_report.alphaMaskedCount;
+        }
+        if ((gpuFlags & PbrMaterialDoubleSided) != 0) {
+            ++m_report.doubleSidedCount;
+        }
 
-        skinningPass.preDispatchCallback =
-            [gltfNode, vertexCount](RenderGraph::Node& node, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIndex*/) {
-                VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarrier(
-                    gltfNode->geometry->getVertexBuffer()->createDescriptorInfo(),
-                    kVertexRead >> (kComputeStorageRead | kComputeStorageWrite));
+        m_report.bounds.expandBy(transformBoundingBox(model.mesh.getBoundingBox(), model.transform));
+    }
 
-                struct SkinningParams {
-                    uint32_t vertexCount;
-                    uint32_t jointsPerVertex;
-                };
-                SkinningParams params{vertexCount, SkinningData::JointsPerVertex};
-                node.pipeline->setPushConstants(cmdBuffer.getHandle(), VK_SHADER_STAGE_COMPUTE_BIT, params);
-            };
+    logger->info("Loaded {} models from {}.", m_report.modelCount, absPath.generic_string());
+    frameCameraOnBounds(m_report.bounds);
+}
 
-        m_renderGraphLegacy->addDependency(
-            "SkinningPass",
-            kForwardLightingPass,
-            [gltfNode](const VulkanRenderPass& /*renderPass*/, VulkanCommandBuffer& cmdBuffer, uint32_t /*frameIdx*/) {
-                VulkanCommandEncoder{cmdBuffer.getHandle()}.insertBufferMemoryBarrier(
-                    gltfNode->geometry->getVertexBuffer()->createDescriptorInfo(),
-                    kComputeWrite >> kVertexRead);
-            });
+void GltfViewerScene::addSceneObject(
+    const std::string_view nodeId, const TriangleMesh& mesh, const PbrMaterial& material, const glm::mat4& modelMatrix) {
+    const VkBufferUsageFlags2 accelerationStructureUsage =
+        m_rayTracedShadowsSupported
+            ? VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT |
+                  VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
+            : 0;
+    auto& geometry = m_resourceContext->addGeometry(
+        nodeId, createGeometry(*m_renderer, mesh, kPbrVertexFormat, accelerationStructureUsage));
+
+    auto& node = createRenderNode(nodeId);
+    node.geometry = &geometry;
+    node.transformPack->M = modelMatrix;
+    m_renderNodeWorldBounds.emplace(&node, transformBoundingBox(mesh.getBoundingBox(), modelMatrix));
+
+    if (m_rayTracedShadowsSupported) {
+        m_shadowBlases.push_back(
+            std::make_unique<VulkanAccelerationStructure>(
+                m_renderer->getDevice(),
+                createAccelerationStructureGeometry(geometry, 0),
+                mesh.getTriangleCount(),
+                modelMatrix));
+        m_shadowBlases.back()->setDebugName(m_renderer->getDevice(), fmt::format("glTF Viewer {} BLAS", nodeId));
+    }
+
+    auto& forwardPass = node.pass(kForwardLightingPass);
+    forwardPass.material = m_pbrDrawMaterial.get();
+    forwardPass.transformBufferDynamicIndex = 0;
+    const auto gpuMaterial = createGpuPbrParams(material, m_resourceContext->imageCache);
+    const auto materialHandle = m_pbrMaterialTable->add(gpuMaterial);
+    m_pbrMaterialHandles.emplace(&node, materialHandle);
+    const PbrDrawFlagFlags drawFlags =
+        m_useRayTracedShadows ? PbrDrawFlagFlags{PbrDrawFlag::RayTracedShadows} : PbrDrawFlagFlags{};
+    const auto drawParameters = m_pbrMaterialTable->createDrawParameters(materialHandle, drawFlags);
+    forwardPass.setPushConstants(drawParameters);
+
+    const auto& shadowVariant = getShadowMaterialVariant(gpuMaterial.flags);
+    const bool alphaMasked = (gpuMaterial.flags & PbrMaterialAlphaMask) != 0;
+
+    for (uint32_t c = 0; c < kDefaultCascadeCount; ++c) {
+        auto& subpass = node.pass(kCsmPasses[c]);
+        subpass.setGeometry(&geometry, 0, alphaMasked ? 2 : 1);
+        subpass.material = m_resourceContext->getMaterial(createShadowMaterialKey(c, shadowVariant.suffix));
+        subpass.setPushConstants(drawParameters);
+    }
+}
+
+void GltfViewerScene::createRayTracedShadowResources() {
+    if (!m_rayTracedShadowsSupported || m_shadowBlases.empty()) {
+        return;
+    }
+
+    std::vector<VulkanAccelerationStructure*> blases;
+    blases.reserve(m_shadowBlases.size());
+    for (const auto& blas : m_shadowBlases) {
+        blases.push_back(blas.get());
+    }
+
+    m_shadowTlas = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
+    m_shadowTlas->setDebugName(m_renderer->getDevice(), "glTF Viewer Shadow TLAS");
+    m_forwardPassMaterial->writeDescriptor(1, 6, m_shadowTlas->getDescriptorInfo());
+
+    m_renderer->enqueueResourceUpdate([this](const VulkanCommandEncoder& encoder) {
+        for (auto& blas : m_shadowBlases) {
+            encoder.buildAccelerationStructure(*blas);
+        }
+        encoder.insertBarrier(kAccelerationStructureWrite >> kAccelerationStructureRead);
+        encoder.buildAccelerationStructure(*m_shadowTlas);
+        encoder.insertBarrier(kAccelerationStructureWrite >> kFragmentAccelerationStructureRead);
+    });
+}
+
+void GltfViewerScene::updateForwardDrawParameters() {
+    const PbrDrawFlagFlags drawFlags =
+        m_useRayTracedShadows ? PbrDrawFlagFlags{PbrDrawFlag::RayTracedShadows} : PbrDrawFlagFlags{};
+    for (const auto& [node, materialHandle] : m_pbrMaterialHandles) {
+        node->pass(kForwardLightingPass)
+            .setPushConstants(m_pbrMaterialTable->createDrawParameters(materialHandle, drawFlags));
+    }
+    rebuildDrawCommandCache();
+}
+
+void GltfViewerScene::frameCameraOnBounds(const BoundingBox3& bounds) {
+    const glm::vec3 extent{bounds.max - bounds.min};
+    const float radius = 0.5f * glm::length(extent);
+    if (radius <= 0.0f) {
+        return;
+    }
+
+    m_cameraController->setTarget(0.5f * (bounds.min + bounds.max));
+    m_cameraController->setOrbitDistance(2.5f * radius);
+}
+
+void GltfViewerScene::rebuildDrawCommandCache() {
+    for (auto& cache : m_drawCommandCache) {
+        cache.clear();
+        cache.reserve(m_renderNodes.size());
+    }
+
+    std::vector<DrawCommand> commands;
+    for (const auto& [id, renderNode] : m_renderNodes) {
+        for (size_t passIndex = 0; passIndex < m_drawCommandCache.size(); ++passIndex) {
+            commands.clear();
+            createDrawCommand(
+                commands, *renderNode, passIndex < kCsmPasses.size() ? kCsmPasses[passIndex] : kForwardLightingPass);
+            auto& cache = m_drawCommandCache[passIndex];
+            for (auto& command : commands) {
+                const auto boundsIt = m_renderNodeWorldBounds.find(renderNode.get());
+                cache.push_back({
+                    .renderNode = renderNode.get(),
+                    .worldBounds = boundsIt != m_renderNodeWorldBounds.end() ? boundsIt->second : BoundingBox3{},
+                    .command = std::move(command),
+                });
+            }
+        }
+    }
+
+    for (size_t passIndex = 0; passIndex < kCsmPasses.size(); ++passIndex) {
+        std::ranges::stable_sort(m_drawCommandCache[passIndex], {}, [](const CachedDrawCommand& cached) {
+            return cached.command.pipeline;
+        });
     }
 }
 
 void GltfViewerScene::setupInput() {
-    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe([this](Key key, int) {
-        switch (key) {
-        case Key::F5:
+    m_connectionHandlers.emplace_back(m_window->keyPressed.subscribe([this](const Key key, int) {
+        switch (key) // NOLINT
+        {
+        case Key::F5: {
             m_resourceContext->recreatePipelines();
             break;
+        }
         default: {
         }
         }
