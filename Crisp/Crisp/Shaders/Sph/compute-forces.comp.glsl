@@ -1,13 +1,13 @@
 #version 460 core
 
-// Input buffers
-// ==========================================
-// Particle positions
+#extension GL_GOOGLE_include_directive : require
+
+#include "sph.part.glsl"
+
 layout(std430, set = 0, binding = 0) buffer Positions {
     vec4 positions[];
 };
 
-// Prefix sum of cell counts
 layout(std430, set = 0, binding = 1) buffer CellCounts {
     uint cellCounts[];
 };
@@ -18,39 +18,31 @@ layout(std430, set = 0, binding = 2) buffer Indices {
     uint indices[];
 };
 
-// Particle densities
 layout(std430, set = 0, binding = 3) buffer Densities {
     float densities[];
 };
 
-// Particle pressures
 layout(std430, set = 0, binding = 4) buffer Pressures {
     float pressures[];
 };
 
-// Particle velocities
 layout(std430, set = 0, binding = 5) buffer Velocities {
     vec4 velocities[];
 };
 
-// Output buffers
-// ==========================================
-// Particle densities
 layout(std430, set = 0, binding = 6) buffer Forces {
     vec4 forces[];
 };
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
+// Must match ForcesPushConstants in Crisp/Crisp/Models/SPH.cpp, field for field. Nothing checks it.
 layout(push_constant) uniform PushConstant {
-    layout(offset = 0) uvec3 dim;
-    layout(offset = 12) uint numCells;
-    layout(offset = 16) vec3 spaceSize;
-    layout(offset = 28) float cellSize;
-    layout(offset = 32) vec3 gravity;
-    layout(offset = 44) uint numParticles;
-    layout(offset = 48) float viscosity;
-    layout(offset = 52) float kappa;
+    SphGridParams grid;
+    vec3 gravity;
+    uint numParticles;
+    float viscosity;
+    float kappa;
 }
 pc;
 
@@ -68,11 +60,6 @@ const float h3 = h2 * h;
 
 const float spikyGradConst = -45.0f / (PI * h2 * h2 * h2);
 const float viscosityLaplaceConst = 45.0f / (PI * h3 * h3);
-
-uint getGlobalIndex() {
-    uvec3 dim = gl_WorkGroupSize * gl_NumWorkGroups;
-    return gl_GlobalInvocationID.z * dim.x * dim.y + gl_GlobalInvocationID.y * dim.x + gl_GlobalInvocationID.x;
-}
 
 float cubicSpline(float x) {
     if (x >= h) {
@@ -98,20 +85,8 @@ float viscoLaplacian(float x) {
     return viscosityLaplaceConst * (h - x);
 }
 
-ivec3 calculateGridPosition(vec3 position, float cellSize) {
-    ivec3 gridPosition;
-    gridPosition.x = int(position.x / cellSize);
-    gridPosition.y = int(position.y / cellSize);
-    gridPosition.z = int(position.z / cellSize);
-    return gridPosition;
-}
-
-uint getGridLinearIndex(uvec3 gridPosition, uvec3 gridDims) {
-    return gridPosition.z * gridDims.x * gridDims.y + gridPosition.y * gridDims.x + gridPosition.x;
-}
-
 void main() {
-    uint threadIdx = getGlobalIndex();
+    uint threadIdx = particleGlobalIndex();
     uint numParticles = pc.numParticles;
     if (threadIdx >= numParticles) {
         return;
@@ -119,9 +94,9 @@ void main() {
 
     vec3 position = positions[threadIdx].xyz;
 
-    ivec3 gridPosition = calculateGridPosition(position, pc.cellSize);
+    ivec3 gridPosition = sphCellUnclamped(position, pc.grid.cellSize);
     ivec3 lo = max(ivec3(0), gridPosition - ivec3(1));
-    ivec3 hi = min(ivec3(pc.dim) - ivec3(1), gridPosition + ivec3(1));
+    ivec3 hi = min(ivec3(pc.grid.dim) - ivec3(1), gridPosition + ivec3(1));
 
     vec3 velI = velocities[threadIdx].xyz;
     float pressureI = pressures[threadIdx];
@@ -133,9 +108,9 @@ void main() {
     for (uint cellZ = lo.z; cellZ <= hi.z; cellZ++) {
         for (uint cellY = lo.y; cellY <= hi.y; cellY++) {
             for (uint cellX = lo.x; cellX <= hi.x; cellX++) {
-                uint cellIdx = getGridLinearIndex(uvec3(cellX, cellY, cellZ), pc.dim);
+                uint cellIdx = particleGridLinearIndex(uvec3(cellX, cellY, cellZ), pc.grid.dim);
                 uint cellStart = cellCounts[cellIdx];
-                uint cellEnd = cellIdx == pc.numCells - 1 ? pc.numParticles : cellCounts[cellIdx + 1];
+                uint cellEnd = cellIdx == pc.grid.numCells - 1 ? pc.numParticles : cellCounts[cellIdx + 1];
                 for (uint k = cellStart; k < cellEnd; k++) {
                     uint j = indices[k];
                     vec3 posJ = positions[j].xyz;

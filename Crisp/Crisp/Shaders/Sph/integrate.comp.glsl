@@ -1,5 +1,9 @@
 #version 460 core
 
+#extension GL_GOOGLE_include_directive : require
+
+#include "sph.part.glsl"
+
 layout(std430, set = 0, binding = 0) buffer PrevPositions {
     vec4 prevPositions[];
 };
@@ -26,30 +30,23 @@ layout(std430, set = 0, binding = 5) buffer Colors {
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
+// Must match IntegratePushConstants in Crisp/Crisp/Models/SPH.cpp, field for field. Nothing checks it.
 layout(push_constant) uniform PushConstant {
-    layout(offset = 0) uvec3 dim;
-    layout(offset = 12) uint numCells;
-    layout(offset = 16) vec3 spaceSize;
-    layout(offset = 28) float cellSize;
-    layout(offset = 32) float timeDelta;
-    layout(offset = 36) uint numParticles;
+    SphGridParams grid;
+    float timeDelta;
+    uint numParticles;
 }
 pushConst;
-
-uint getGlobalIndex() {
-    uvec3 dim = gl_WorkGroupSize * gl_NumWorkGroups;
-    return gl_GlobalInvocationID.z * dim.x * dim.y + gl_GlobalInvocationID.y * dim.x + gl_GlobalInvocationID.x;
-}
 
 const float particleRadius = 0.01f;
 
 void main() {
-    uint threadIdx = getGlobalIndex();
+    uint threadIdx = particleGlobalIndex();
     if (threadIdx >= pushConst.numParticles) {
         return;
     }
 
-    vec3 fluidSpace = pushConst.spaceSize;
+    vec3 fluidSpace = pushConst.grid.spaceSize;
 
     vec4 force = forces[threadIdx];
     vec3 a = force.xyz / force.w;

@@ -2,7 +2,7 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#include "../Common/pbf.part.glsl"
+#include "pbf.part.glsl"
 
 layout(std430, set = 0, binding = 0) buffer Positions {
     vec4 positions[];
@@ -23,13 +23,13 @@ layout(push_constant) uniform PushConstant {
 };
 
 void main() {
-    uint i = pbfGlobalIndex();
+    uint i = particleGlobalIndex();
     if (i >= pc.numParticles) {
         return;
     }
 
-    uvec3 gridPosition = pbfGridPosition(positions[i].xyz, pc.cellSize, pc.gridDim);
-    uint linearGridIdx = pbfGridLinearIndex(gridPosition, pc.gridDim);
+    uvec3 gridPosition = particleGridPosition(positions[i].xyz, pc.cellSize, pc.gridDim);
+    uint linearGridIdx = particleGridLinearIndex(gridPosition, pc.gridDim);
 
     cellIds[i] = atomicAdd(cellCounts[linearGridIdx], 1);
 }

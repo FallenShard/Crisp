@@ -1,6 +1,8 @@
 #ifndef PBF_PART_GLSL
 #define PBF_PART_GLSL
 
+#include "../Common/particle-grid.part.glsl"
+
 // Shared by every pass of the position-based fluid solver. Nothing here hardcodes a particle size:
 // the solver's scale lives in PbfParams, which C++ owns and pushes, so changing PbfConfig cannot
 // silently disagree with the shaders.
@@ -40,22 +42,6 @@ struct PbfParams {
     float _pad;
 };
 
-uint pbfGridLinearIndex(uvec3 gridPosition, uvec3 gridDims) {
-    return gridPosition.z * gridDims.x * gridDims.y + gridPosition.y * gridDims.x + gridPosition.x;
-}
-
-// Clamped, so a particle that escapes the box cannot index outside the hash grid.
-uvec3 pbfGridPosition(vec3 position, float cellSize, uvec3 gridDims) {
-    return min(uvec3(max(position, vec3(0.0f)) / cellSize), gridDims - uvec3(1));
-}
-
-// Every solver dispatch is one-dimensional, so this is just the x lane. It also has to stay clear of
-// gl_WorkGroupSize: this header is included above the layout declaration that fixes it, and glslang
-// rejects reading it before then.
-uint pbfGlobalIndex() {
-    return gl_GlobalInvocationID.x;
-}
-
 // Poly6, in terms of the squared distance: the kernel never needs the root, and most of what a
 // 3x3x3 cell sweep produces falls outside the support anyway.
 float pbfPoly6(float dist2, float h) {
@@ -81,7 +67,7 @@ vec3 pbfSpikyGrad(vec3 diff, float dist, float h) {
 
 // The 3x3x3 block of cells covering one particle's kernel support.
 void pbfNeighbourCellRange(vec3 position, PbfParams pc, out ivec3 lo, out ivec3 hi) {
-    ivec3 gridPosition = ivec3(pbfGridPosition(position, pc.cellSize, pc.gridDim));
+    ivec3 gridPosition = ivec3(particleGridPosition(position, pc.cellSize, pc.gridDim));
     lo = max(ivec3(0), gridPosition - ivec3(1));
     hi = min(ivec3(pc.gridDim) - ivec3(1), gridPosition + ivec3(1));
 }

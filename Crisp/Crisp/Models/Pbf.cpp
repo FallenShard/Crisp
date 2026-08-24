@@ -32,7 +32,7 @@ constexpr std::array<const char*, 11> kStageNames{
     "viscosity",
 };
 
-// Must match PbfParams in Shaders/Common/pbf.part.glsl, field for field. Nothing checks it.
+// Must match PbfParams in Shaders/Pbf/pbf.part.glsl, field for field. Nothing checks it.
 struct PbfPushConstants {
     glm::uvec3 gridDim;
     uint32_t numCells;
@@ -94,7 +94,7 @@ std::unique_ptr<VulkanBuffer> createParticleBuffer(
         BufferMemoryType::GpuOnly);
 }
 
-// Must match sphPoly6 in Shaders/Common/pbf.part.glsl.
+// Must match sphPoly6 in Shaders/Pbf/pbf.part.glsl.
 double poly6(const double dist2, const double h) {
     const double h2 = h * h;
     if (dist2 >= h2) {

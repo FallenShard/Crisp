@@ -2,7 +2,7 @@
 
 #extension GL_GOOGLE_include_directive : require
 
-#include "../Common/pbf.part.glsl"
+#include "pbf.part.glsl"
 
 layout(std430, set = 0, binding = 0) buffer SortedPositions {
     vec4 sortedPositions[];
@@ -31,7 +31,7 @@ layout(push_constant) uniform PushConstant {
 };
 
 void main() {
-    uint k = pbfGlobalIndex();
+    uint k = particleGlobalIndex();
     if (k >= pc.numParticles) {
         return;
     }
