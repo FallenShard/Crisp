@@ -18,7 +18,11 @@ VkRenderingAttachmentInfo createRenderingAttachmentInfo(
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .imageView = imageView.getHandle(),
         .imageLayout = imageLayout,
-        .loadOp = imageDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .loadOp =
+            imageDescription.clearValue ? VK_ATTACHMENT_LOAD_OP_CLEAR
+            : resource.previousVersionIndex != RenderGraphResource::kInvalidIndex
+                ? VK_ATTACHMENT_LOAD_OP_LOAD
+                : VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .storeOp = resource.readPasses.empty() ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE,
         .clearValue = imageDescription.clearValue.value_or(VkClearValue{}),
     };
@@ -223,12 +227,26 @@ RenderGraphResourceHandle RenderGraph::Builder::createBuffer(
 
 RenderGraphResourceHandle RenderGraph::Builder::writeAttachment(RenderGraphResourceHandle handle) {
     readAttachment(handle);
-    const auto& inputResource = m_renderGraph.getResource(handle);
-    const auto& inputDesc = m_renderGraph.getImageDescription(handle);
+    const RenderGraphImageDescription inputDesc{m_renderGraph.getImageDescription(handle)};
+    std::string inputName{m_renderGraph.getResource(handle).name};
 
-    const auto modifiedHandle = createAttachment(inputDesc, std::string(inputResource.name));
+    const auto modifiedHandle = createAttachment(inputDesc, std::move(inputName));
     m_renderGraph.getResource(modifiedHandle).producer = m_passHandle;
     m_renderGraph.getResource(modifiedHandle).version++;
+    return modifiedHandle;
+}
+
+RenderGraphResourceHandle RenderGraph::Builder::readWriteAttachment(const RenderGraphResourceHandle handle) {
+    m_renderGraph.getResource(handle).readPasses.push_back(m_passHandle);
+
+    const RenderGraphImageDescription inputDesc{m_renderGraph.getImageDescription(handle)};
+    std::string inputName{m_renderGraph.getResource(handle).name};
+    const uint16_t previousVersion{m_renderGraph.getResource(handle).version};
+
+    const auto modifiedHandle = createAttachment(inputDesc, std::move(inputName));
+    auto& modified = m_renderGraph.getResource(modifiedHandle);
+    modified.version = static_cast<uint16_t>(previousVersion + 1);
+    modified.previousVersionIndex = static_cast<uint16_t>(handle.id);
     return modifiedHandle;
 }
 
@@ -704,10 +722,17 @@ void RenderGraph::determineAliasedResurces() {
             continue;
         }
 
+        if (resource.previousVersionIndex != RenderGraphResource::kInvalidIndex) {
+            continue;
+        }
+
         const auto findResourcesToAlias = [&](const auto& descriptions, auto& physicalResource) {
             uint32_t lastReadPassIdx = timelines[idx].lastRead;
             for (uint32_t j = static_cast<uint32_t>(idx) + 1; j < m_resources.size(); ++j) {
                 if (m_resources[j].isExternal) {
+                    continue;
+                }
+                if (m_resources[j].previousVersionIndex != RenderGraphResource::kInvalidIndex) {
                     continue;
                 }
                 if (lastReadPassIdx >= timelines[j].firstWrite) {
@@ -738,6 +763,20 @@ void RenderGraph::determineAliasedResurces() {
             desc.aliasedResourceIndices.push_back(static_cast<uint32_t>(idx));
             findResourcesToAlias(m_imageDescriptions, desc);
         }
+    }
+
+    for (auto&& [idx, resource] : std::views::enumerate(m_resources)) {
+        if (resource.previousVersionIndex == RenderGraphResource::kInvalidIndex) {
+            continue;
+        }
+
+        const auto& source = m_resources[resource.previousVersionIndex];
+        resource.physicalResourceIndex = source.physicalResourceIndex;
+        CRISP_CHECK_EQ(resource.type, ResourceType::Image, "Only attachments can be continued.");
+
+        m_imageDescriptions[source.descriptionIndex].imageUsageFlags |=
+            m_imageDescriptions[resource.descriptionIndex].imageUsageFlags;
+        m_physicalImages.at(resource.physicalResourceIndex).aliasedResourceIndices.push_back(static_cast<uint32_t>(idx));
     }
 
     for (const auto& pass : m_passes) {

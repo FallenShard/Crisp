@@ -42,6 +42,7 @@ public:
         RenderGraphResourceHandle createBuffer(const RenderGraphBufferDescription& description, std::string&& name);
 
         RenderGraphResourceHandle writeAttachment(RenderGraphResourceHandle handle);
+        RenderGraphResourceHandle readWriteAttachment(RenderGraphResourceHandle handle);
 
         RenderGraphBlackboard& getBlackboard();
 

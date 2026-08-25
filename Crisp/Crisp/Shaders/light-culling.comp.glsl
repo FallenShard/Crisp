@@ -4,6 +4,7 @@
 
 #include "Common/view.part.glsl"
 
+// Must match kMaxLightsPerTile in Crisp/Lights/LightClustering.hpp.
 const uint kMaxLightsPerTile = 1024;
 
 struct TileFrustum {
@@ -42,6 +43,8 @@ layout(set = 0, binding = 4) writeonly buffer LightIndexList {
 
 layout(set = 1, binding = 0, rg32ui) uniform writeonly uimage2D lightGrid;
 
+layout(set = 1, binding = 1) uniform sampler2D depthTexture;
+
 layout(push_constant) uniform PushConstant {
     uint lightCount;
 };
@@ -52,6 +55,9 @@ shared uint tileLightCount;
 shared uint tileIndexOffset;
 shared uint tileLightList[kMaxLightsPerTile];
 shared TileFrustum tileFrustum;
+
+shared uint tileDepthMinBits;
+shared uint tileDepthMaxBits;
 
 uint getTileIndex() {
     return gl_WorkGroupID.y * gl_NumWorkGroups.x + gl_WorkGroupID.x;
@@ -70,22 +76,57 @@ bool isSphereInsideFrustum(const vec3 center, const float radius, in TileFrustum
     return true;
 }
 
+float viewDepthFromReverseZ(const float depth, const float zNear) {
+    return depth > 0.0f ? -zNear / depth : -1.0f / 0.0f;
+}
+
+bool isSphereInsideDepthRange(const vec3 center, const float radius, const float tileNearZ, const float tileFarZ) {
+    return center.z - radius <= tileNearZ && center.z + radius >= tileFarZ;
+}
+
 void main() {
     if (gl_LocalInvocationIndex == 0) {
         tileLightCount = 0;
         tileIndexOffset = 0;
+        tileDepthMinBits = 0xFFFFFFFFu;
+        tileDepthMaxBits = 0u;
         tileFrustum = frusta[getTileIndex()];
     }
     barrier();
 
+    const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    if (all(lessThan(pixel, ivec2(view.screenSize)))) {
+        const uint depthBits = floatBitsToUint(texelFetch(depthTexture, pixel, 0).r);
+        atomicMin(tileDepthMinBits, depthBits);
+        atomicMax(tileDepthMaxBits, depthBits);
+    }
+    barrier();
+
+    if (tileDepthMaxBits == 0u) {
+        if (gl_LocalInvocationIndex == 0) {
+            imageStore(lightGrid, ivec2(gl_WorkGroupID.xy), uvec4(0, 0, 0, 0));
+        }
+        return;
+    }
+
+    const float zNear = view.nearFar.x;
+    const float tileNearZ = viewDepthFromReverseZ(uintBitsToFloat(tileDepthMaxBits), zNear);
+    const float tileFarZ = viewDepthFromReverseZ(uintBitsToFloat(tileDepthMinBits), zNear);
+
     const uint threadCount = gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z;
     for (uint i = gl_LocalInvocationIndex; i < lightCount; i += threadCount) {
         const vec3 eyeCenter = (view.V * vec4(lights[i].position.xyz, 1.0f)).xyz;
-        if (isSphereInsideFrustum(eyeCenter, lights[i].params.r, tileFrustum)) {
-            const uint slot = atomicAdd(tileLightCount, 1);
-            if (slot < kMaxLightsPerTile) {
-                tileLightList[slot] = i;
-            }
+        const float radius = lights[i].params.r;
+        if (!isSphereInsideDepthRange(eyeCenter, radius, tileNearZ, tileFarZ)) {
+            continue;
+        }
+        if (!isSphereInsideFrustum(eyeCenter, radius, tileFrustum)) {
+            continue;
+        }
+
+        const uint slot = atomicAdd(tileLightCount, 1);
+        if (slot < kMaxLightsPerTile) {
+            tileLightList[slot] = i;
         }
     }
     barrier();

@@ -33,6 +33,10 @@ struct RenderGraphResource {
     // Buffer, Image, or something else in the future. Determines the array to index into with description index.
     ResourceType type{ResourceType::Unknown};
     uint16_t version{0};                           // Version to keep track of read-modify-write resources.
+
+    // Set when this resource continues an earlier one instead of starting fresh. Both versions resolve to
+    // the same physical image, and this one loads its contents rather than discarding them.
+    uint16_t previousVersionIndex{kInvalidIndex};
     std::vector<RenderGraphPassHandle> readPasses; // Render pass handles where this resource is read.
 
     // Index into resource description - a minimal set of input parameters to describe the resource.

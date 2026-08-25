@@ -182,6 +182,50 @@ TEST_F(RenderGraphTest, ExportedTextureIsNotAliasedWithLaterResource) {
         renderGraph.getResources()[laterImage.id].physicalResourceIndex);
 }
 
+TEST_F(RenderGraphTest, ContinuedAttachmentSharesOnePhysicalImage) {
+    rg::RenderGraph renderGraph;
+    constexpr RenderGraphImageDescription kDepthDescription{
+        .sizePolicy = SizePolicy::Absolute,
+        .width = 16,
+        .height = 16,
+        .format = VK_FORMAT_D32_SFLOAT,
+    };
+
+    RenderGraphResourceHandle prepassDepth;
+    renderGraph.addPass(
+        "depth-prepass",
+        PassType::Rasterizer,
+        [&](rg::RenderGraph::Builder& builder) {
+            prepassDepth = builder.createAttachment(kDepthDescription, "depth", VkClearValue{.depthStencil{0.0f, 0}});
+        },
+        [](const FrameContext&) {});
+
+    RenderGraphResourceHandle continuedDepth;
+    RenderGraphResourceHandle color;
+    renderGraph.addPass(
+        "forward-pass",
+        PassType::Rasterizer,
+        [&](rg::RenderGraph::Builder& builder) {
+            color = builder.createAttachment(
+                {.sizePolicy = SizePolicy::Absolute, .width = 16, .height = 16, .format = VK_FORMAT_R8G8B8A8_UNORM},
+                "color");
+            continuedDepth = builder.readWriteAttachment(prepassDepth);
+        },
+        [](const FrameContext&) {});
+
+    renderGraph.compile(*device_, {16, 16});
+
+    // Depth and colour, with the two depth versions collapsed onto one image.
+    EXPECT_EQ(renderGraph.getPhysicalImageCount(), 2);
+    EXPECT_EQ(
+        renderGraph.getResources()[continuedDepth.id].physicalResourceIndex,
+        renderGraph.getResources()[prepassDepth.id].physicalResourceIndex);
+    EXPECT_EQ(renderGraph.getResources()[continuedDepth.id].version, 1);
+
+    // The producing pass has to store rather than discard, or the continuation loads nothing.
+    EXPECT_FALSE(renderGraph.getResources()[prepassDepth.id].readPasses.empty());
+}
+
 TEST_F(RenderGraphTest, ResourceNamesDoNotAffectAliasing) {
     rg::RenderGraph renderGraph;
     const RenderGraphImageDescription description{
