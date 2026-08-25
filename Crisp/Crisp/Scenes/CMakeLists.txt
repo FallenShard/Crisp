@@ -5,11 +5,6 @@ add_cpp_static_library(CrispScenes
     "AtmosphereScene.cpp"
     "AtmosphereScene.hpp"
 
-    # "ClusteredLightingScene.cpp"
-    # "ClusteredLightingScene.hpp"
-
-    # "ShadowMappingScene.cpp"
-    # "ShadowMappingScene.hpp"
 )
 target_link_libraries(CrispScenes
     PUBLIC Crisp::Scene
@@ -17,6 +12,7 @@ target_link_libraries(CrispScenes
     PUBLIC Crisp::Lights
 
     PRIVATE Crisp::PbrScene
+    PRIVATE Crisp::ShadowMappingScene
     PRIVATE Crisp::MaterialExplorerScene
     PRIVATE Crisp::GltfViewerScene
     PRIVATE Crisp::ClusteredLightingScene
@@ -52,6 +48,23 @@ target_link_libraries(CrispScene
 add_cpp_static_library(CrispPbrScene
     "PbrScene.cpp"
     "PbrScene.hpp"
+)
+
+add_cpp_static_library(CrispShadowMappingScene
+    "ShadowMappingScene.cpp"
+    "ShadowMappingScene.hpp"
+)
+target_link_libraries(CrispShadowMappingScene
+    PUBLIC Crisp::Scene
+    PUBLIC Crisp::Camera
+    PUBLIC Crisp::Lights
+    PUBLIC Crisp::Models
+    PUBLIC Crisp::MaterialUtils
+    PUBLIC Crisp::JsonUtils
+    PRIVATE Crisp::RenderGraph
+    PRIVATE Crisp::RenderGraphGui
+    PRIVATE Crisp::ImGuiCameraUtils
+    PRIVATE ImGui
 )
 
 add_cpp_static_library(CrispGltfViewerScene

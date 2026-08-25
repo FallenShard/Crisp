@@ -1,11 +1,13 @@
 #include <Crisp/Scenes/SceneContainer.hpp>
 
 #include <Crisp/Scenes/AtmosphereScene.hpp>
+#include <Crisp/Scenes/ClusteredLightingScene.hpp>
 #include <Crisp/Scenes/FluidSimulationScene.hpp>
 #include <Crisp/Scenes/GltfViewerScene.hpp>
 #include <Crisp/Scenes/MaterialExplorerScene.hpp>
 #include <Crisp/Scenes/OceanScene.hpp>
 #include <Crisp/Scenes/PbrScene.hpp>
+#include <Crisp/Scenes/ShadowMappingScene.hpp>
 #include <Crisp/Scenes/TestScene.hpp>
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
@@ -27,6 +29,9 @@ std::unique_ptr<Scene> createScene(
     }
     if (name == "pbr") {
         return std::make_unique<PbrScene>(renderer, window, args);
+    }
+    if (name == "shadow-mapping") {
+        return std::make_unique<ShadowMappingScene>(renderer, window, args);
     }
     if (name == "gltf-viewer") {
         return std::make_unique<GltfViewerScene>(renderer, window, args);
