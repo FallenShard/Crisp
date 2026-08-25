@@ -5,7 +5,8 @@
 #include "Common/math-constants.part.glsl"
 #include "Common/view.part.glsl"
 
-const int kTileSize = 16;
+const int kClusterTileSize = 64;
+const int kClusterDepthSliceCount = 24;
 
 const float kMaxReflectionLod = 4.0f;
 
@@ -28,7 +29,7 @@ layout(set = 0, binding = 2) uniform Material {
 mat;
 
 const int kDebugModeShaded = 0;
-const int kDebugModeTileHeatmap = 1;
+const int kDebugModeClusterHeatmap = 1;
 
 const float kHeatmapRange = 64.0f;
 
@@ -62,7 +63,9 @@ layout(set = 2, binding = 1) uniform samplerCube refMap;
 layout(set = 2, binding = 2) uniform sampler2D brdfLut;
 
 // x = offset into lightIndexList, y = number of lights this tile kept.
-layout(set = 3, binding = 0, rg32ui) uniform readonly uimage2D lightGrid;
+layout(set = 3, binding = 0) readonly buffer LightGrid {
+    uvec2 lightGrid[];
+};
 
 float distributionGGX(const float NdotH, const float roughness) {
     const float a = roughness * roughness;
@@ -112,6 +115,21 @@ vec3 evalPointLightRadiance(const LightDescriptor light, out vec3 eyeL) {
     return light.spectrum.rgb * window / max(dist * dist, 1e-4f);
 }
 
+uint clusterSliceFromViewDepth(const float viewDepth, const float zNear, const float zFar) {
+    if (viewDepth <= zNear) {
+        return 0;
+    }
+    const float slice = log(viewDepth / zNear) / log(zFar / zNear) * float(kClusterDepthSliceCount);
+    return uint(clamp(int(slice), 0, kClusterDepthSliceCount - 1));
+}
+
+uint getClusterIndex() {
+    const uvec2 tileGridDims = (uvec2(view.screenSize) + uint(kClusterTileSize) - 1u) / uint(kClusterTileSize);
+    const uvec2 tile = min(uvec2(gl_FragCoord.xy) / uint(kClusterTileSize), tileGridDims - 1u);
+    const uint slice = clusterSliceFromViewDepth(-eyePosition.z, view.nearFar.x, view.nearFar.y);
+    return (slice * tileGridDims.y + tile.y) * tileGridDims.x + tile.x;
+}
+
 void main() {
     const vec3 eyeN = normalize(eyeNormal);
     const vec3 eyeV = normalize(-eyePosition);
@@ -124,16 +142,16 @@ void main() {
     const vec3 F0 = mix(vec3(0.04f), albedo, metallic);
     const vec3 diffuseAlbedo = albedo * (1.0f - metallic);
 
-    const uvec2 tileData = imageLoad(lightGrid, ivec2(gl_FragCoord.xy) / kTileSize).xy;
+    const uvec2 clusterData = lightGrid[getClusterIndex()];
 
-    if (mat.debugMode == kDebugModeTileHeatmap) {
-        fragColor = vec4(heatmap(clamp(float(tileData.y) / kHeatmapRange, 0.0f, 1.0f)), 1.0f);
+    if (mat.debugMode == kDebugModeClusterHeatmap) {
+        fragColor = vec4(heatmap(clamp(float(clusterData.y) / kHeatmapRange, 0.0f, 1.0f)), 1.0f);
         return;
     }
 
     vec3 Lo = vec3(0.0f);
-    for (uint i = 0; i < tileData.y; ++i) {
-        const LightDescriptor light = pointLights[lightIndexList[tileData.x + i]];
+    for (uint i = 0; i < clusterData.y; ++i) {
+        const LightDescriptor light = pointLights[lightIndexList[clusterData.x + i]];
 
         vec3 eyeL;
         const vec3 Le = evalPointLightRadiance(light, eyeL);

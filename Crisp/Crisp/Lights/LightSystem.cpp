@@ -116,8 +116,8 @@ VulkanRingBuffer* LightSystem::getLightIndexBuffer() const {
     return m_lightClustering.m_lightIndexListBuffer.get();
 }
 
-const VulkanImageView& LightSystem::getTileGridView() const {
-    return *m_lightClustering.m_lightGridView;
+VulkanRingBuffer* LightSystem::getLightGridBuffer() const {
+    return m_lightClustering.m_lightGridBuffer.get();
 }
 
 void LightSystem::setEnvironmentMap(ImageBasedLightingData&& iblData, const std::string& name) {

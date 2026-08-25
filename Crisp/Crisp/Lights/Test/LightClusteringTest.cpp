@@ -8,137 +8,128 @@
 namespace crisp {
 namespace {
 
-constexpr glm::ivec2 kScreenSize{128, 64};
-constexpr glm::ivec2 kTileSize{16, 16};
-
-glm::vec3 tileCenterRayPoint(const glm::mat4& projection, const glm::ivec2 tileCoord, const float depth) {
-    const glm::vec2 pixel{
-        (static_cast<float>(tileCoord.x) + 0.5f) * static_cast<float>(kTileSize.x),
-        (static_cast<float>(tileCoord.y) + 0.5f) * static_cast<float>(kTileSize.y)};
-    glm::vec4 ndc{
-        pixel.x / static_cast<float>(kScreenSize.x) * 2.0f - 1.0f,
-        pixel.y / static_cast<float>(kScreenSize.y) * 2.0f - 1.0f,
-        1.0f,
-        1.0f};
-    const glm::vec4 view = glm::inverse(projection) * ndc;
-    const glm::vec3 nearPoint{glm::vec3(view) / view.w};
-    return nearPoint * (depth / -nearPoint.z);
-}
+constexpr glm::ivec2 kScreenSize{256, 128};
+constexpr int32_t kTileSize{64};
+constexpr int32_t kSliceCount{16};
+constexpr float kZNear{0.1f};
+constexpr float kZFar{1000.0f};
 
 glm::mat4 createProjection() {
     return Camera(kScreenSize.x, kScreenSize.y).getProjectionMatrix();
 }
 
+std::vector<ClusterAabb> createTestClusters() {
+    return createClusterAabbs(kTileSize, kSliceCount, kScreenSize, createProjection(), kZNear, kZFar);
+}
+
+size_t clusterIndex(const glm::ivec3 gridDims, const int32_t i, const int32_t j, const int32_t k) {
+    return (static_cast<size_t>(k) * gridDims.y + j) * gridDims.x + i;
+}
+
 TEST(LightClusteringTest, TileGridCoversPartialTiles) {
-    EXPECT_EQ(calculateTileGridDims(kTileSize, {128, 64}), glm::ivec2(8, 4));
+    EXPECT_EQ(calculateTileGridDims({16, 16}, {128, 64}), glm::ivec2(8, 4));
     // A viewport that does not divide evenly still needs a tile for the remainder.
-    EXPECT_EQ(calculateTileGridDims(kTileSize, {129, 65}), glm::ivec2(9, 5));
-    EXPECT_EQ(calculateTileGridDims(kTileSize, {1920, 1080}), glm::ivec2(120, 68));
+    EXPECT_EQ(calculateTileGridDims({16, 16}, {129, 65}), glm::ivec2(9, 5));
+    EXPECT_EQ(calculateTileGridDims({16, 16}, {1920, 1080}), glm::ivec2(120, 68));
 }
 
-TEST(LightClusteringTest, ProducesOneFrustumPerTile) {
-    const auto frusta = createTileFrusta(kTileSize, kScreenSize, createProjection());
-    EXPECT_EQ(frusta.size(), 8u * 4u);
+TEST(LightClusteringTest, ClusterGridIsTilesTimesSlices) {
+    EXPECT_EQ(calculateClusterGridDims(64, 24, {1920, 1080}), glm::ivec3(30, 17, 24));
+    EXPECT_EQ(calculateClusterGridDims(kTileSize, kSliceCount, kScreenSize), glm::ivec3(4, 2, kSliceCount));
 }
 
-TEST(LightClusteringTest, TilePlanesPassThroughTheViewOrigin) {
-    const auto frusta = createTileFrusta(kTileSize, kScreenSize, createProjection());
-    for (const auto& frustum : frusta) {
-        for (const auto& plane : frustum.frustumPlanes) {
-            EXPECT_NEAR(plane.w, 0.0f, 1e-5f);
-            EXPECT_NEAR(glm::length(glm::vec3(plane)), 1.0f, 1e-5f);
-        }
+TEST(LightClusteringTest, ProducesOneAabbPerCluster) {
+    const auto clusters = createTestClusters();
+    EXPECT_EQ(clusters.size(), 4u * 2u * static_cast<size_t>(kSliceCount));
+}
+
+TEST(LightClusteringTest, SlicesAreDistributedExponentially) {
+    EXPECT_FLOAT_EQ(clusterSliceViewDepth(0, kSliceCount, kZNear, kZFar), kZNear);
+    EXPECT_FLOAT_EQ(clusterSliceViewDepth(kSliceCount, kSliceCount, kZNear, kZFar), kZFar);
+
+    const float firstRatio =
+        clusterSliceViewDepth(1, kSliceCount, kZNear, kZFar) / clusterSliceViewDepth(0, kSliceCount, kZNear, kZFar);
+    for (int32_t k = 1; k < kSliceCount; ++k) {
+        const float ratio =
+            clusterSliceViewDepth(k + 1, kSliceCount, kZNear, kZFar) /
+            clusterSliceViewDepth(k, kSliceCount, kZNear, kZFar);
+        EXPECT_NEAR(ratio, firstRatio, 1e-4f);
+    }
+
+    const float nearSpan = clusterSliceViewDepth(1, kSliceCount, kZNear, kZFar) - kZNear;
+    const float farSpan = kZFar - clusterSliceViewDepth(kSliceCount - 1, kSliceCount, kZNear, kZFar);
+    EXPECT_GT(farSpan, nearSpan);
+}
+
+TEST(LightClusteringTest, SliceLookupInvertsSliceBounds) {
+    for (int32_t k = 0; k < kSliceCount; ++k) {
+        const float sliceNear = clusterSliceViewDepth(k, kSliceCount, kZNear, kZFar);
+        const float sliceFar = clusterSliceViewDepth(k + 1, kSliceCount, kZNear, kZFar);
+        const float middle = std::sqrt(sliceNear * sliceFar);
+        EXPECT_EQ(clusterSliceFromViewDepth(middle, kSliceCount, kZNear, kZFar), k);
     }
 }
 
-TEST(LightClusteringTest, TilePlaneNormalsPointOutOfTheFrustum) {
-    const auto projection = createProjection();
-    const auto frusta = createTileFrusta(kTileSize, kScreenSize, projection);
-    const glm::ivec2 gridDims{calculateTileGridDims(kTileSize, kScreenSize)};
+TEST(LightClusteringTest, SliceLookupClampsOutsideTheRange) {
+    EXPECT_EQ(clusterSliceFromViewDepth(0.0f, kSliceCount, kZNear, kZFar), 0);
+    EXPECT_EQ(clusterSliceFromViewDepth(kZNear * 0.5f, kSliceCount, kZNear, kZFar), 0);
+    EXPECT_EQ(clusterSliceFromViewDepth(kZFar * 10.0f, kSliceCount, kZNear, kZFar), kSliceCount - 1);
+}
 
-    for (int32_t y = 0; y < gridDims.y; ++y) {
-        for (int32_t x = 0; x < gridDims.x; ++x) {
-            const auto& frustum = frusta[y * gridDims.x + x];
-            const glm::vec3 interior{tileCenterRayPoint(projection, {x, y}, 10.0f)};
-            for (const auto& plane : frustum.frustumPlanes) {
-                EXPECT_LT(glm::dot(glm::vec3(plane), interior) - plane.w, 0.0f)
-                    << "Tile (" << x << ", " << y << ") centre landed outside one of its own planes.";
+TEST(LightClusteringTest, ClusterBoundsSpanTheirSlice) {
+    const auto clusters = createTestClusters();
+    const glm::ivec3 gridDims{calculateClusterGridDims(kTileSize, kSliceCount, kScreenSize)};
+
+    for (int32_t k = 0; k < gridDims.z; ++k) {
+        const float sliceNear = clusterSliceViewDepth(k, kSliceCount, kZNear, kZFar);
+        const float sliceFar = clusterSliceViewDepth(k + 1, kSliceCount, kZNear, kZFar);
+        for (int32_t j = 0; j < gridDims.y; ++j) {
+            for (int32_t i = 0; i < gridDims.x; ++i) {
+                const auto& aabb = clusters[clusterIndex(gridDims, i, j, k)];
+                EXPECT_NEAR(aabb.maxPoint.z, -sliceNear, 1e-3f);
+                EXPECT_NEAR(aabb.minPoint.z, -sliceFar, 1e-3f);
+                EXPECT_LE(aabb.minPoint.x, aabb.maxPoint.x);
+                EXPECT_LE(aabb.minPoint.y, aabb.maxPoint.y);
             }
         }
     }
 }
 
-TEST(LightClusteringTest, AcceptsAPointLightOnTheTileAxis) {
-    const auto projection = createProjection();
-    const auto frusta = createTileFrusta(kTileSize, kScreenSize, projection);
-    const glm::ivec2 gridDims{calculateTileGridDims(kTileSize, kScreenSize)};
+TEST(LightClusteringTest, AcceptsALightSittingInsideTheCluster) {
+    const auto clusters = createTestClusters();
+    const glm::ivec3 gridDims{calculateClusterGridDims(kTileSize, kSliceCount, kScreenSize)};
 
-    for (int32_t y = 0; y < gridDims.y; ++y) {
-        for (int32_t x = 0; x < gridDims.x; ++x) {
-            const glm::vec3 center{tileCenterRayPoint(projection, {x, y}, 10.0f)};
-            EXPECT_TRUE(isSphereInsideTileFrustum(center, 1.0f, frusta[y * gridDims.x + x]));
-        }
+    for (size_t index = 0; index < clusters.size(); ++index) {
+        const auto& aabb = clusters[index];
+        const glm::vec3 center{(glm::vec3(aabb.minPoint) + glm::vec3(aabb.maxPoint)) * 0.5f};
+        EXPECT_TRUE(isSphereInsideClusterAabb(center, 0.001f, aabb)) << "cluster " << index;
     }
+    EXPECT_EQ(clusters.size(), static_cast<size_t>(gridDims.x * gridDims.y * gridDims.z));
 }
 
-TEST(LightClusteringTest, AcceptsALightWhoseRadiusDwarfsTheTile) {
-    const auto projection = createProjection();
-    const auto frusta = createTileFrusta(kTileSize, kScreenSize, projection);
-    const glm::ivec2 gridDims{calculateTileGridDims(kTileSize, kScreenSize)};
+TEST(LightClusteringTest, RejectsALightInTheSameTileButADifferentSlice) {
+    const auto clusters = createTestClusters();
+    const glm::ivec3 gridDims{calculateClusterGridDims(kTileSize, kSliceCount, kScreenSize)};
 
-    const glm::ivec2 tile{gridDims.x / 2, gridDims.y / 2};
-    const glm::vec3 center{tileCenterRayPoint(projection, tile, 50.0f)};
-    EXPECT_TRUE(isSphereInsideTileFrustum(center, 100.0f, frusta[tile.y * gridDims.x + tile.x]));
+    const auto& nearCluster = clusters[clusterIndex(gridDims, 2, 1, 2)];
+    const auto& farCluster = clusters[clusterIndex(gridDims, 2, 1, gridDims.z - 1)];
+
+    const glm::vec3 farCenter{(glm::vec3(farCluster.minPoint) + glm::vec3(farCluster.maxPoint)) * 0.5f};
+    EXPECT_TRUE(isSphereInsideClusterAabb(farCenter, 0.001f, farCluster));
+    EXPECT_FALSE(isSphereInsideClusterAabb(farCenter, 0.001f, nearCluster));
 }
 
-TEST(LightClusteringTest, RejectsALightBehindTheOppositeEdge) {
-    const auto projection = createProjection();
-    const auto frusta = createTileFrusta(kTileSize, kScreenSize, projection);
-    const glm::ivec2 gridDims{calculateTileGridDims(kTileSize, kScreenSize)};
+TEST(LightClusteringTest, RejectsALightBeyondItsRadius) {
+    const auto clusters = createTestClusters();
+    const glm::ivec3 gridDims{calculateClusterGridDims(kTileSize, kSliceCount, kScreenSize)};
+    const auto& cluster = clusters[clusterIndex(gridDims, 0, 0, 4)];
 
-    const glm::vec3 farRight{tileCenterRayPoint(projection, {gridDims.x - 1, gridDims.y / 2}, 10.0f)};
-    const auto& leftTile = frusta[(gridDims.y / 2) * gridDims.x];
-    EXPECT_FALSE(isSphereInsideTileFrustum(farRight, 0.01f, leftTile));
-    EXPECT_TRUE(isSphereInsideTileFrustum(farRight, 100.0f, leftTile));
-}
+    const glm::vec3 center{(glm::vec3(cluster.minPoint) + glm::vec3(cluster.maxPoint)) * 0.5f};
+    const glm::vec3 extents{glm::vec3(cluster.maxPoint) - glm::vec3(cluster.minPoint)};
+    const glm::vec3 outside{center + glm::vec3(extents.x + 10.0f, 0.0f, 0.0f)};
 
-TEST(LightClusteringTest, InvertsReverseZDepthBackToViewSpace) {
-    const Camera camera(kScreenSize.x, kScreenSize.y);
-    const glm::mat4 projection{camera.getProjectionMatrix()};
-    const float zNear{camera.getViewDepthRange().x};
-
-    for (const float viewZ : {-0.5f, -1.0f, -10.0f, -250.0f, -5000.0f}) {
-        const glm::vec4 clip{projection * glm::vec4(0.0f, 0.0f, viewZ, 1.0f)};
-        const float depth{clip.z / clip.w};
-        EXPECT_NEAR(viewDepthFromReverseZ(depth, zNear), viewZ, std::abs(viewZ) * 1e-3f);
-    }
-}
-
-TEST(LightClusteringTest, MapsTheNearPlaneToDepthOne) {
-    const Camera camera(kScreenSize.x, kScreenSize.y);
-    const float zNear{camera.getViewDepthRange().x};
-    EXPECT_FLOAT_EQ(viewDepthFromReverseZ(1.0f, zNear), -zNear);
-}
-
-TEST(LightClusteringTest, TreatsClearedDepthAsInfinitelyFar) {
-    EXPECT_TRUE(std::isinf(viewDepthFromReverseZ(0.0f, 0.1f)));
-    EXPECT_LT(viewDepthFromReverseZ(0.0f, 0.1f), 0.0f);
-}
-
-TEST(LightClusteringTest, RejectsLightsOutsideTheTileDepthRange) {
-    constexpr float kTileNearZ = -10.0f;
-    constexpr float kTileFarZ = -20.0f;
-
-    EXPECT_FALSE(isSphereInsideTileDepthRange({0.0f, 0.0f, -5.0f}, 1.0f, kTileNearZ, kTileFarZ));
-    EXPECT_FALSE(isSphereInsideTileDepthRange({0.0f, 0.0f, -30.0f}, 1.0f, kTileNearZ, kTileFarZ));
-    EXPECT_TRUE(isSphereInsideTileDepthRange({0.0f, 0.0f, -15.0f}, 1.0f, kTileNearZ, kTileFarZ));
-    EXPECT_TRUE(isSphereInsideTileDepthRange({0.0f, 0.0f, -5.0f}, 5.0f, kTileNearZ, kTileFarZ));
-    EXPECT_TRUE(isSphereInsideTileDepthRange({0.0f, 0.0f, -30.0f}, 10.0f, kTileNearZ, kTileFarZ));
-}
-
-TEST(LightClusteringTest, KeepsLightsWhenTheTileHasNoFarBound) {
-    const float farZ{viewDepthFromReverseZ(0.0f, 0.1f)};
-    EXPECT_TRUE(isSphereInsideTileDepthRange({0.0f, 0.0f, -1000.0f}, 1.0f, -10.0f, farZ));
+    EXPECT_FALSE(isSphereInsideClusterAabb(outside, 1.0f, cluster));
+    EXPECT_TRUE(isSphereInsideClusterAabb(outside, extents.x + 20.0f, cluster));
 }
 
 } // namespace

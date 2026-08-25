@@ -4,13 +4,12 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Renderer/ResourceContext.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 namespace crisp {
 namespace {
 constexpr const char* kLightCullingPass = "lightCullingPass";
-constexpr const char* kDepthSamplerId = "lightCullingDepthSampler";
+
+constexpr VkExtent3D kWorkGroupSize{64, 1, 1};
 } // namespace
 
 void addLightCullingPass(
@@ -18,24 +17,18 @@ void addLightCullingPass(
     Renderer& renderer,
     ResourceContext& resourceContext,
     LightSystem& lightSystem,
-    const RenderGraphResourceHandle depthImage,
     const std::string& viewBufferId) {
-    resourceContext.imageCache.addSampler(kDepthSamplerId, createNearestClampSampler(renderer.getDevice()));
-
     renderGraph.addPass(
         kLightCullingPass,
         PassType::Compute,
-        [depthImage](rg::RenderGraph::Builder& builder) { builder.readTexture(depthImage); },
+        [](rg::RenderGraph::Builder&) {},
         [&renderer,
          &resourceContext,
-         &renderGraph,
          &lightSystem,
-         depthImage,
          viewBufferId,
          pipeline = std::shared_ptr<VulkanPipeline>{},
          material = std::shared_ptr<Material>{},
-         boundGridView = VkImageView{VK_NULL_HANDLE},
-         boundDepthView = VkImageView{VK_NULL_HANDLE}](const FrameContext& ctx) mutable {
+         boundAabbBuffer = VkBuffer{VK_NULL_HANDLE}](const FrameContext& ctx) mutable {
             const auto& clustering = lightSystem.getLightClustering();
             const uint32_t lightCount = lightSystem.getPointLightCount();
             if (lightCount == 0) {
@@ -43,27 +36,22 @@ void addLightCullingPass(
             }
 
             if (pipeline == nullptr) {
-                const VkExtent3D workGroupSize{
-                    static_cast<uint32_t>(clustering.m_tileSize.x), static_cast<uint32_t>(clustering.m_tileSize.y), 1u};
                 pipeline = createComputePipeline(
-                    renderer.getDevice(), renderer.getAssetPaths().getShaderSpvPath("light-culling.comp"), workGroupSize);
+                    renderer.getDevice(),
+                    renderer.getAssetPaths().getShaderSpvPath("light-culling.comp"),
+                    kWorkGroupSize);
                 material = std::make_shared<Material>(pipeline.get());
             }
 
-            const VkImageView gridView = clustering.m_lightGridView->getHandle();
-            const VulkanImageView& depthView = renderGraph.getResourceImageView(depthImage);
-            if (gridView != boundGridView || depthView.getHandle() != boundDepthView) {
-                boundGridView = gridView;
-                boundDepthView = depthView.getHandle();
-
-                material->writeDescriptor(0, 0, *clustering.m_tilePlaneBuffer);
+            const VkBuffer aabbBuffer = clustering.m_clusterAabbBuffer->getHandle();
+            if (aabbBuffer != boundAabbBuffer) {
+                boundAabbBuffer = aabbBuffer;
+                material->writeDescriptor(0, 0, *clustering.m_clusterAabbBuffer);
                 material->writeDescriptor(0, 1, *clustering.m_lightIndexCountBuffer);
                 material->writeDescriptor(0, 2, *lightSystem.getPointLightBuffer());
                 material->writeDescriptor(0, 3, *resourceContext.getRingBuffer(viewBufferId));
                 material->writeDescriptor(0, 4, *clustering.m_lightIndexListBuffer);
-                material->writeDescriptor(
-                    1, 0, clustering.m_lightGridView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
-                material->writeDescriptor(1, 1, depthView, resourceContext.imageCache.getSampler(kDepthSamplerId));
+                material->writeDescriptor(0, 5, *clustering.m_lightGridBuffer);
                 renderer.getDevice().flushDescriptorUpdates();
             }
 
@@ -76,8 +64,13 @@ void addLightCullingPass(
             ctx.commandEncoder.bindPipeline(*pipeline);
             ctx.commandEncoder.bindDescriptorSets(material->getDescriptorSetBinding());
             ctx.commandEncoder.setPushConstants(*pipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, lightCount);
-            ctx.commandEncoder.dispatchCompute(
-                {static_cast<uint32_t>(clustering.m_gridSize.x), static_cast<uint32_t>(clustering.m_gridSize.y), 1u});
+
+            const glm::ivec3 gridSize{clustering.m_clusterGridSize};
+            ctx.commandEncoder.dispatchCompute({
+                static_cast<uint32_t>(gridSize.x),
+                static_cast<uint32_t>(gridSize.y),
+                static_cast<uint32_t>(gridSize.z),
+            });
 
             ctx.commandEncoder.insertBarrier(kComputeStorageWrite >> kFragmentRead);
         });

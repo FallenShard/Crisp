@@ -52,6 +52,6 @@ private:
 
     ClusteredMaterialParams m_materialParams{};
     int32_t m_pointLightCount{1024};
-    bool m_showTileHeatmap{false};
+    bool m_showClusterHeatmap{false};
 };
 } // namespace crisp

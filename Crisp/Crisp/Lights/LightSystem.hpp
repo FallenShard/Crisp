@@ -46,7 +46,7 @@ public:
     void createTileGridBuffers(const CameraParameters& cameraParams);
     VulkanRingBuffer* getPointLightBuffer() const;
     VulkanRingBuffer* getLightIndexBuffer() const;
-    const VulkanImageView& getTileGridView() const;
+    VulkanRingBuffer* getLightGridBuffer() const;
 
     uint32_t getPointLightCount() const {
         return static_cast<uint32_t>(m_pointLights.size());

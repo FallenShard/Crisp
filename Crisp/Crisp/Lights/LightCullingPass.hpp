@@ -14,7 +14,6 @@ void addLightCullingPass(
     Renderer& renderer,
     ResourceContext& resourceContext,
     LightSystem& lightSystem,
-    RenderGraphResourceHandle depthImage,
     const std::string& viewBufferId);
 
 } // namespace crisp

@@ -118,7 +118,7 @@ ClusteredLightingScene::ClusteredLightingScene(Renderer* renderer, Window* windo
             }
         });
 
-    addLightCullingPass(*m_renderGraph, *m_renderer, *m_resourceContext, *m_lightSystem, depthImage, kCameraBufferId);
+    addLightCullingPass(*m_renderGraph, *m_renderer, *m_resourceContext, *m_lightSystem, kCameraBufferId);
 
     m_renderGraph->addPass(
         kForwardLightingPass,
@@ -182,7 +182,7 @@ void ClusteredLightingScene::render(const FrameContext& frameContext) {
     m_skybox->updateTransforms(camParams.V, camParams.P, frameContext.virtualFrameIndex);
     m_skybox->updateDeviceBuffer(frameContext.commandEncoder);
 
-    m_materialParams.debugMode = m_showTileHeatmap ? 1 : 0;
+    m_materialParams.debugMode = m_showClusterHeatmap ? 1 : 0;
     auto* materialBuffer = m_resourceContext->getRingBuffer(kMaterialBufferId);
     materialBuffer->updateStagingBufferFromStruct(m_materialParams, frameContext.virtualFrameIndex);
     materialBuffer->updateDeviceBuffer(frameContext.commandEncoder);
@@ -212,12 +212,13 @@ void ClusteredLightingScene::drawGui() {
     }
     if (ImGui::CollapsingHeader("Light Clustering")) {
         const auto& clustering = m_lightSystem->getLightClustering();
-        ImGui::Text("Tile size: %d x %d", clustering.m_tileSize.x, clustering.m_tileSize.y);
-        ImGui::Text("Tile grid: %d x %d", clustering.m_gridSize.x, clustering.m_gridSize.y);
-        ImGui::Text("Max lights per tile: %u", kMaxLightsPerTile);
-        ImGui::Checkbox("Tile Light Count Heatmap", &m_showTileHeatmap);
+        const glm::ivec3 grid{clustering.m_clusterGridSize};
+        ImGui::Text("Cluster tile: %d px, %d depth slices", kClusterTileSize, kClusterDepthSliceCount);
+        ImGui::Text("Cluster grid: %d x %d x %d (%u clusters)", grid.x, grid.y, grid.z, clustering.getClusterCount());
+        ImGui::Text("Max lights per cluster: %u", kMaxLightsPerCluster);
+        ImGui::Checkbox("Cluster Light Count Heatmap", &m_showClusterHeatmap);
 
-        ImGui::SliderInt("Point Lights", &m_pointLightCount, 1, static_cast<int32_t>(kMaxLightsPerTile));
+        ImGui::SliderInt("Point Lights", &m_pointLightCount, 1, 4096);
         if (ImGui::Button("Regenerate Lights")) {
             m_renderer->finish();
             regeneratePointLights();
@@ -241,8 +242,7 @@ void ClusteredLightingScene::recreateLightClustering() {
     if (m_material != nullptr) {
         m_material->writeDescriptor(1, 0, *m_lightSystem->getPointLightBuffer());
         m_material->writeDescriptor(1, 1, *m_lightSystem->getLightIndexBuffer());
-        m_material->writeDescriptor(
-            3, 0, m_lightSystem->getTileGridView().getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+        m_material->writeDescriptor(3, 0, *m_lightSystem->getLightGridBuffer());
         m_renderer->getDevice().flushDescriptorUpdates();
     }
 }
@@ -281,8 +281,7 @@ void ClusteredLightingScene::createCommonTextures() {
     m_material->writeDescriptor(2, 1, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
     m_material->writeDescriptor(2, 2, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
 
-    m_material->writeDescriptor(
-        3, 0, m_lightSystem->getTileGridView().getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
+    m_material->writeDescriptor(3, 0, *m_lightSystem->getLightGridBuffer());
 
     m_skybox = std::make_unique<Skybox>(
         m_renderer,

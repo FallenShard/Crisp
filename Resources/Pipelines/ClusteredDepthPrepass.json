@@ -1,0 +1,10 @@
+{
+    "shaders"            : { "vert": "depth-map.vert", "frag": "depth-map.frag" },
+    "vertexInputBindings": [
+        { "locations": [ 0 ], "inputRate": "vertex" }
+    ],
+    "descriptorSets"     : [
+        { "buffered": false, "dynamicBuffers": [ 0 ] }
+    ],
+    "depthStencil"       : { "reverseDepth": true }
+}
