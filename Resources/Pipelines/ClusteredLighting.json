@@ -1,0 +1,17 @@
+{
+    "shaders"            : {
+        "vert": "physically-based-clustered-lights.vert",
+        "frag": "physically-based-clustered-lights.frag"
+    },
+    "vertexInputBindings": [
+        { "locations": [ 0       ], "inputRate": "vertex" },
+        { "locations": [ 1, 2, 3 ], "inputRate": "vertex" }
+    ],
+    "descriptorSets"     : [
+        { "buffered": false, "dynamicBuffers": [ 0 ] },
+        { "buffered": false                          },
+        { "buffered": false                          },
+        { "buffered": false                          }
+    ],
+    "depthStencil"       : { "reverseDepth": true }
+}

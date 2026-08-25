@@ -105,7 +105,7 @@ void LightSystem::createPointLightBuffer(std::vector<PointLight>&& pointLights) 
 }
 
 void LightSystem::createTileGridBuffers(const CameraParameters& cameraParams) {
-    m_lightClustering.configure(m_renderer, cameraParams, static_cast<uint32_t>(m_pointLights.size()));
+    m_lightClustering.configure(m_renderer, cameraParams);
 }
 
 VulkanRingBuffer* LightSystem::getPointLightBuffer() const {
@@ -133,35 +133,20 @@ void LightSystem::setEnvironmentMap(ImageBasedLightingData&& iblData, const std:
 }
 
 std::vector<PointLight> createRandomPointLights(const uint32_t count) {
-    constexpr float kWidth = 32.0f * 5.0f;
-    constexpr float kDepth = 15.0f * 5.0f;
-    constexpr float kHeight = 15.0f * 5.0f;
-    constexpr glm::vec3 kDomainExtent{kWidth, kHeight, kDepth};
-    const int32_t gridX = 16;
-    const int32_t gridZ = 8;
-    const int32_t gridY = static_cast<int32_t>(count) / gridX / gridZ;
+    constexpr glm::vec3 kDomainExtent{32.0f * 5.0f, 15.0f * 5.0f, 15.0f * 5.0f};
 
     std::vector<PointLight> pointLights{};
     pointLights.reserve(count);
 
     std::default_random_engine eng{};
     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-    for (int32_t i = 0; i < gridX; ++i) {
-        // const float normI = static_cast<float>(i) / static_cast<float>(gridX - 1);
-        for (int32_t j = 0; j < gridZ; ++j) {
-            // const float normJ = static_cast<float>(j) / static_cast<float>(gridZ - 1);
-            for (int32_t k = 0; k < gridY; ++k) {
-                // const float normK = static_cast<float>(k) / static_cast<float>(gridY - 1);
-                const glm::vec3 spectrum = 5.0f * dist(eng) * glm::vec3(dist(eng), dist(eng), dist(eng));
-                /*const glm::vec3 position =
-                    glm::vec3((normJ - 0.5f) * width, 1.0f + normK * height, (normI - 0.5f) * depth);*/
-
-                const glm::vec3 stratifiedPos = glm::vec3(dist(eng) - 0.5f, dist(eng), dist(eng) - 0.5f) * kDomainExtent;
-                pointLights.emplace_back(spectrum, stratifiedPos, glm::vec3(0.0f, 1.0f, 0.0f)).calculateRadius();
-            }
-        }
+    for (uint32_t i = 0; i < count; ++i) {
+        const glm::vec3 spectrum = 5.0f * dist(eng) * glm::vec3(dist(eng), dist(eng), dist(eng));
+        const glm::vec3 position = glm::vec3(dist(eng) - 0.5f, dist(eng), dist(eng) - 0.5f) * kDomainExtent;
+        pointLights.emplace_back(spectrum, position, glm::vec3(0.0f, 1.0f, 0.0f)).calculateRadius();
     }
 
     return pointLights;
 }
+
 } // namespace crisp

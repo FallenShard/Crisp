@@ -60,8 +60,25 @@ std::vector<TileFrustum> createTileFrusta(
     return tilePlanes;
 }
 
-void LightClustering::configure(
-    Renderer* renderer, const CameraParameters& cameraParameters, const uint32_t maximumLightCount) {
+bool isSphereInsideTileFrustum(const glm::vec3& eyeCenter, const float radius, const TileFrustum& frustum) {
+    for (const auto& plane : frustum.frustumPlanes) {
+        if (glm::dot(glm::vec3(plane), eyeCenter) - plane.w > radius) {
+            return false;
+        }
+    }
+    return true;
+}
+
+float viewDepthFromReverseZ(const float depth, const float zNear) {
+    return depth > 0.0f ? -zNear / depth : -std::numeric_limits<float>::infinity();
+}
+
+bool isSphereInsideTileDepthRange(
+    const glm::vec3& eyeCenter, const float radius, const float tileNearZ, const float tileFarZ) {
+    return eyeCenter.z - radius <= tileNearZ && eyeCenter.z + radius >= tileFarZ;
+}
+
+void LightClustering::configure(Renderer* renderer, const CameraParameters& cameraParameters) {
     m_tileSize = glm::ivec2(16);
     m_gridSize = calculateTileGridDims(m_tileSize, cameraParameters.screenSize);
     const auto tileFrusta{createTileFrusta(m_tileSize, cameraParameters.screenSize, cameraParameters.P)};
@@ -71,7 +88,7 @@ void LightClustering::configure(
         createStorageRingBuffer(&renderer->getDevice(), tileCount * sizeof(TileFrustum), tileFrusta.data());
     m_lightIndexCountBuffer = createStorageRingBuffer(&renderer->getDevice(), sizeof(uint32_t));
     m_lightIndexListBuffer =
-        createStorageRingBuffer(&renderer->getDevice(), tileCount * sizeof(uint32_t) * maximumLightCount);
+        createStorageRingBuffer(&renderer->getDevice(), tileCount * sizeof(uint32_t) * kMaxLightsPerTile);
 
     m_lightGrid = createSampledStorageImage(
         *renderer,

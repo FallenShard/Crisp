@@ -43,6 +43,9 @@ std::unique_ptr<Scene> createScene(
     if (name == "atmosphere") {
         return std::make_unique<AtmosphereScene>(renderer, window);
     }
+    if (name == "clustered-lighting") {
+        return std::make_unique<ClusteredLightingScene>(renderer, window, args);
+    }
 
     logger->warn("Scene with the name {} is invalid/disabled", name);
     return std::make_unique<TestScene>(renderer, window);

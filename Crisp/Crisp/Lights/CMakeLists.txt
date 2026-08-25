@@ -36,6 +36,16 @@ target_link_libraries(
     PRIVATE Crisp::DirectionalLight
 )
 
+add_cpp_test(
+    CrispLightClusteringTest
+    "Test/LightClusteringTest.cpp"
+)
+target_link_libraries(
+    CrispLightClusteringTest
+    PRIVATE Crisp::Lights
+    PRIVATE Crisp::Camera
+)
+
 add_cpp_static_library(CrispLights
     "EnvironmentLight.cpp"
     "EnvironmentLight.hpp"
@@ -43,6 +53,8 @@ add_cpp_static_library(CrispLights
     "EnvironmentLightIo.hpp"
     "LightClustering.cpp"
     "LightClustering.hpp"
+    "LightCullingPass.cpp"
+    "LightCullingPass.hpp"
     "LightSystem.cpp"
     "LightSystem.hpp"
     "PointLight.cpp"
@@ -53,6 +65,7 @@ add_cpp_static_library(CrispLights
 )
 target_link_libraries(CrispLights
     PUBLIC Crisp::Renderer
+    PUBLIC Crisp::RenderGraph
     PUBLIC Crisp::Geometry
     PUBLIC Crisp::CascadedShadowMapping
     PUBLIC Crisp::DirectionalLight

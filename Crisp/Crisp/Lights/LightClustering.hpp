@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <vector>
 
 #include <Crisp/Camera/Camera.hpp>
@@ -10,6 +11,8 @@
 namespace crisp {
 class Renderer;
 
+inline constexpr uint32_t kMaxLightsPerTile = 1024;
+
 struct TileFrustum {
     std::array<glm::vec4, 4> frustumPlanes;
 };
@@ -17,8 +20,12 @@ struct TileFrustum {
 glm::ivec2 calculateTileGridDims(glm::ivec2 tileSize, glm::ivec2 screenSize);
 std::vector<TileFrustum> createTileFrusta(glm::ivec2 tileSize, glm::ivec2 screenSize, const glm::mat4& projectionMatrix);
 
+bool isSphereInsideTileFrustum(const glm::vec3& eyeCenter, float radius, const TileFrustum& frustum);
+float viewDepthFromReverseZ(float depth, float zNear);
+bool isSphereInsideTileDepthRange(const glm::vec3& eyeCenter, float radius, float tileNearZ, float tileFarZ);
+
 struct LightClustering {
-    // Size of a single tile in pixel coordinates, e.g. 16x16.
+    // Size of a single tile in pixel coordinates
     glm::ivec2 m_tileSize;
 
     // Size of the grid, e.g. number of tiles in X and Y needed to cover the whole screen.
@@ -32,7 +39,7 @@ struct LightClustering {
     std::unique_ptr<VulkanImage> m_lightGrid;
     std::unique_ptr<VulkanImageView> m_lightGridView;
 
-    void configure(Renderer* renderer, const CameraParameters& cameraParameters, uint32_t maximumLightCount);
+    void configure(Renderer* renderer, const CameraParameters& cameraParameters);
 };
 
 } // namespace crisp

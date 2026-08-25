@@ -48,6 +48,14 @@ public:
     VulkanRingBuffer* getLightIndexBuffer() const;
     const VulkanImageView& getTileGridView() const;
 
+    uint32_t getPointLightCount() const {
+        return static_cast<uint32_t>(m_pointLights.size());
+    }
+
+    const LightClustering& getLightClustering() const {
+        return m_lightClustering;
+    }
+
     EnvironmentLight* getEnvironmentLight() const {
         return m_environmentLight.get();
     }
