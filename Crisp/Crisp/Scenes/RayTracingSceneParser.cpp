@@ -1,5 +1,7 @@
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 
+#include <stdexcept>
+
 namespace crisp {
 namespace {
 constexpr int32_t kBrdfLambertian = 0;
@@ -8,6 +10,10 @@ constexpr int32_t kBrdfMirror = 2;
 constexpr int32_t kBrdfMicrofacet = 3;
 constexpr int32_t kBrdfOrenNayar = 4;
 constexpr int32_t kBrdfSmoothConductor = 5;
+constexpr int32_t kBrdfRoughConductor = 6;
+
+constexpr int32_t kMicrofacetGgx = 0;
+constexpr int32_t kMicrofacetBeckmann = 1;
 
 constexpr int32_t kLightArea = 0;
 
@@ -48,17 +54,43 @@ BrdfParameters createSmoothConductorBrdf(const std::string& iorPreset) {
     };
 }
 
+BrdfParameters createRoughConductorBrdf(const std::string& iorPreset, const int32_t microfacetType, const float alpha) {
+    const auto ior = Fresnel::getComplexIOR(iorPreset);
+    return {
+        .type = kBrdfRoughConductor,
+        .microfacetType = microfacetType,
+        .complexIorEta = {ior.eta.r, ior.eta.g, ior.eta.b},
+        .microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f),
+        .complexIorK = {ior.k.r, ior.k.g, ior.k.b},
+    };
+}
+
+int32_t parseMicrofacetType(const std::string_view type) {
+    if (type == "ggx") {
+        return kMicrofacetGgx;
+    }
+    if (type == "beckmann") {
+        return kMicrofacetBeckmann;
+    }
+    throw std::invalid_argument("Unsupported microfacet distribution: " + std::string(type));
+}
+
 BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
     const auto& type{brdf["type"]};
     if (type == "lambertian") {
         return createLambertianBrdf(parseVec3(brdf["reflectance"]));
     }
     if (type == "oren-nayar") {
-        return createOrenNayarBrdf(
-            parseVec3(brdf["reflectance"]), brdf.value("roughnessDegrees", 0.0f));
+        return createOrenNayarBrdf(parseVec3(brdf["reflectance"]), brdf.value("roughnessDegrees", 0.0f));
     }
     if (type == "smooth-conductor") {
         return createSmoothConductorBrdf(brdf.value("conductorIorPreset", std::string("Au")));
+    }
+    if (type == "rough-conductor") {
+        return createRoughConductorBrdf(
+            brdf.value("conductorIorPreset", std::string("Au")),
+            parseMicrofacetType(brdf.value("microfacetDistribution", std::string("beckmann"))),
+            brdf.value("microfacetAlpha", 0.1f));
     }
     if (type == "dielectric") {
         return createDielectricBrdf(brdf.value("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass)));
@@ -67,7 +99,10 @@ BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
         return createMirrorBrdf();
     }
     if (type == "microfacet") {
-        return createMicrofacetBrdf(parseVec3(brdf["diffuseReflectance"]), brdf.value("microfacetAlpha", 0.1f));
+        return createMicrofacetBrdf(
+            parseVec3(brdf["diffuseReflectance"]),
+            brdf.value("microfacetAlpha", 0.1f),
+            parseMicrofacetType(brdf.value("microfacetDistribution", std::string("ggx"))));
     }
     return createLambertianBrdf(glm::vec3(1.0, 1.0, 0.0));
 }
@@ -102,13 +137,14 @@ glm::mat4 parseTransform(const nlohmann::json& shape) {
 
 } // namespace
 
-BrdfParameters createMicrofacetBrdf(const glm::vec3 kd, const float alpha) {
+BrdfParameters createMicrofacetBrdf(const glm::vec3 kd, const float alpha, const int32_t microfacetType) {
     return {
         .type = kBrdfMicrofacet,
         .intIor = Fresnel::getIOR(IndexOfRefraction::Glass),
+        .microfacetType = microfacetType,
         .kd = kd,
         .ks = 1.0f - std::max(kd.x, std::max(kd.y, kd.z)),
-        .microfacetAlpha = alpha,
+        .microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f),
     };
 }
 

@@ -11,6 +11,7 @@ const int kBrdfMirror = 2;
 const int kBrdfMicrofacet = 3;
 const int kBrdfOrenNayar = 4;
 const int kBrdfSmoothConductor = 5;
+const int kBrdfRoughConductor = 6;
 
 const uint kBrdfOperationSample = 0;
 const uint kBrdfOperationEvaluate = 1;

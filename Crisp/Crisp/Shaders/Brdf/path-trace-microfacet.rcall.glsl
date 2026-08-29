@@ -16,25 +16,24 @@ void main() {
     const BrdfParameters material = scene.materials.data[brdf.materialId];
     const float ks = material.ks;
     const float alpha = material.microfacetAlpha;
+    const int microfacetType = material.microfacetType;
 
     if (brdf.operation == kBrdfOperationSample) {
-        vec2 unitSample = brdf.unitSample;
-
-        if (unitSample.x < ks) {
-            unitSample.x /= ks; // Reuse the sample here.
-            const vec3 microfacetNormal = sampleGGXNormal(unitSample, alpha);
-            brdf.wo = 2.0f * dot(microfacetNormal, brdf.wi) * microfacetNormal - brdf.wi; // Reflect.
-            brdf.lobeType = kLobeTypeGlossy;
-        } else {
-            unitSample.x = (unitSample.x - ks) / (1.0 - ks); // Reuse the sample here.
-            brdf.wo = squareToCosineHemisphere(unitSample);
-            brdf.lobeType = kLobeTypeDiffuse;
-        }
+        bool sampledSpecular;
+        brdf.wo = sampleMicrofacet(brdf.unitSample, brdf.wi, ks, microfacetType, alpha, sampledSpecular);
+        brdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
     } else {
         brdf.lobeType = kLobeTypeGlossy | kLobeTypeDiffuse;
     }
 
     brdf.f = evaluateMicrofacet(
-        material.kd, material.ks, material.extIor, material.intIor, material.microfacetAlpha, brdf.wi, brdf.wo);
-    brdf.pdf = microfacetPdf(brdf.wi, brdf.wo, material.ks, material.microfacetAlpha);
+        material.kd,
+        material.ks,
+        material.extIor,
+        material.intIor,
+        material.microfacetType,
+        material.microfacetAlpha,
+        brdf.wi,
+        brdf.wo);
+    brdf.pdf = microfacetPdf(brdf.wi, brdf.wo, material.ks, material.microfacetType, material.microfacetAlpha);
 }

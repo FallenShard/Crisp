@@ -56,7 +56,7 @@ struct SceneDescription {
 
 glm::vec3 parseVec3(const nlohmann::json& json);
 
-BrdfParameters createMicrofacetBrdf(glm::vec3 kd, float alpha);
+BrdfParameters createMicrofacetBrdf(glm::vec3 kd, float alpha, int32_t microfacetType = 0);
 
 SceneDescription parseSceneDescription(const nlohmann::json& shapeList);
 
