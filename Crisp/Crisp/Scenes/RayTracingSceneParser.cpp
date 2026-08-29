@@ -7,6 +7,7 @@ constexpr int32_t kBrdfDielectric = 1;
 constexpr int32_t kBrdfMirror = 2;
 constexpr int32_t kBrdfMicrofacet = 3;
 constexpr int32_t kBrdfOrenNayar = 4;
+constexpr int32_t kBrdfSmoothConductor = 5;
 
 constexpr int32_t kLightArea = 0;
 
@@ -38,6 +39,15 @@ BrdfParameters createOrenNayarBrdf(const glm::vec3 reflectance, const float roug
     };
 }
 
+BrdfParameters createSmoothConductorBrdf(const std::string& iorPreset) {
+    const auto ior = Fresnel::getComplexIOR(iorPreset);
+    return {
+        .type = kBrdfSmoothConductor,
+        .complexIorEta = {ior.eta.r, ior.eta.g, ior.eta.b},
+        .complexIorK = {ior.k.r, ior.k.g, ior.k.b},
+    };
+}
+
 BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
     const auto& type{brdf["type"]};
     if (type == "lambertian") {
@@ -46,6 +56,9 @@ BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
     if (type == "oren-nayar") {
         return createOrenNayarBrdf(
             parseVec3(brdf["reflectance"]), brdf.value("roughnessDegrees", 0.0f));
+    }
+    if (type == "smooth-conductor") {
+        return createSmoothConductorBrdf(brdf.value("conductorIorPreset", std::string("Au")));
     }
     if (type == "dielectric") {
         return createDielectricBrdf(brdf.value("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass)));

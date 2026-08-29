@@ -10,6 +10,11 @@
       "name": "cornell_box",
       "mitsubaScene": "mitsuba/cornell_box.xml",
       "crispScene": "VesperScenes/Nori-PA-4/cbox-mats.json"
+    },
+    {
+      "name": "smooth_conductor",
+      "mitsubaScene": "mitsuba/cbox_smooth_conductor.xml",
+      "crispScene": "tools/path_tracer_evaluation/crisp/cbox_smooth_conductor.json"
     }
   ]
 }

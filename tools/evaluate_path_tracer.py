@@ -132,9 +132,17 @@ def capture_candidate(
     force: bool,
 ) -> None:
     candidate = candidates_dir / reference.name
-    scene_file = REPO_ROOT / "Resources" / case["crispScene"]
-    if not scene_file.is_file():
-        raise SystemExit(f"[{case['name']}] Crisp scene not found: {scene_file}")
+    relative_scene_file = Path(case["crispScene"])
+    resource_scene_file = REPO_ROOT / "Resources" / relative_scene_file
+    repository_scene_file = REPO_ROOT / relative_scene_file
+    if resource_scene_file.is_file():
+        scene_argument = str(relative_scene_file)
+    elif repository_scene_file.is_file():
+        scene_argument = str(repository_scene_file.resolve())
+    else:
+        raise SystemExit(
+            f"[{case['name']}] Crisp scene not found under Resources or the repository root: {relative_scene_file}"
+        )
 
     executable = REPO_ROOT / "build" / preset / "Crisp" / "CrispMain.exe"
     if not executable.is_file():
@@ -155,7 +163,7 @@ def capture_candidate(
         "scene": "vulkan-ray-tracer",
         "logLevel": "info",
         "sceneArgs": {
-            "sceneFile": case["crispScene"],
+            "sceneFile": scene_argument,
             "samplesPerFrame": settings["samplesPerFrame"],
             "captureAfterSamples": settings["spp"],
             "captureFilename": reference.name,
