@@ -23,7 +23,7 @@ struct BrdfParameters {
     float microfacetAlpha;
 
     glm::vec3 complexIorK;
-    float pad1;
+    float roughness;
 };
 
 struct InstanceProperties {

@@ -9,6 +9,7 @@ const int kBrdfLambertian = 0;
 const int kBrdfDielectric = 1;
 const int kBrdfMirror = 2;
 const int kBrdfMicrofacet = 3;
+const int kBrdfOrenNayar = 4;
 
 const uint kBrdfOperationSample = 0;
 const uint kBrdfOperationEvaluate = 1;
@@ -89,7 +90,7 @@ struct BrdfParameters {
     float microfacetAlpha;
 
     vec3 complexIorK;
-    float pad1;
+    float roughness;
 };
 
 struct BrdfEval {

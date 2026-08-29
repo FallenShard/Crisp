@@ -6,6 +6,7 @@ constexpr int32_t kBrdfLambertian = 0;
 constexpr int32_t kBrdfDielectric = 1;
 constexpr int32_t kBrdfMirror = 2;
 constexpr int32_t kBrdfMicrofacet = 3;
+constexpr int32_t kBrdfOrenNayar = 4;
 
 constexpr int32_t kLightArea = 0;
 
@@ -29,10 +30,22 @@ BrdfParameters createMirrorBrdf() {
     };
 }
 
+BrdfParameters createOrenNayarBrdf(const glm::vec3 reflectance, const float roughnessDegrees) {
+    return {
+        .albedo = reflectance,
+        .type = kBrdfOrenNayar,
+        .roughness = glm::radians(glm::clamp(roughnessDegrees, 0.0f, 90.0f)),
+    };
+}
+
 BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
     const auto& type{brdf["type"]};
-    if (type == "lambertian" || type == "oren-nayar") {
+    if (type == "lambertian") {
         return createLambertianBrdf(parseVec3(brdf["reflectance"]));
+    }
+    if (type == "oren-nayar") {
+        return createOrenNayarBrdf(
+            parseVec3(brdf["reflectance"]), brdf.value("roughnessDegrees", 0.0f));
     }
     if (type == "dielectric") {
         return createDielectricBrdf(brdf.value("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass)));
