@@ -4,7 +4,6 @@ add_cpp_static_library(CrispScenes
 
     "AtmosphereScene.cpp"
     "AtmosphereScene.hpp"
-
 )
 target_link_libraries(CrispScenes
     PUBLIC Crisp::Scene
@@ -197,3 +196,29 @@ target_link_libraries(CrispVulkanRayTracingScene
     PUBLIC Crisp::VulkanDescriptorHeap
     PUBLIC Crisp::RayTracingPipelineBuilder
 )
+
+add_cpp_test(CrispBsdfValidationTest
+    "Test/BsdfValidationTest.cpp")
+set_target_properties(CrispBsdfValidationTest PROPERTIES CXX_SCAN_FOR_MODULES OFF)
+target_link_libraries(CrispBsdfValidationTest
+    PRIVATE Crisp::Renderer
+    PRIVATE Crisp::VulkanTestUtils)
+target_add_test_shader(CrispBsdfValidationTest "Test/Data/bsdf-validation.comp.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Common/math-constants.part.glsl" "Common/math-constants.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Common/warp.part.glsl" "Common/warp.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Brdf/lambertian.part.glsl" "Brdf/lambertian.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Brdf/oren-nayar.part.glsl" "Brdf/oren-nayar.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Brdf/microfacet.part.glsl" "Brdf/microfacet.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Brdf/dielectric.part.glsl" "Brdf/dielectric.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Brdf/fresnel.part.glsl" "Brdf/fresnel.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Brdf/smooth-conductor.part.glsl" "Brdf/smooth-conductor.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Brdf/rough-conductor.part.glsl" "Brdf/rough-conductor.part.glsl")

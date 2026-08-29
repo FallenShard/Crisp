@@ -15,6 +15,11 @@
       "name": "smooth_conductor",
       "mitsubaScene": "mitsuba/cbox_smooth_conductor.xml",
       "crispScene": "tools/path_tracer_evaluation/crisp/cbox_smooth_conductor.json"
+    },
+    {
+      "name": "rough_conductor_beckmann",
+      "mitsubaScene": "mitsuba/cbox_rough_conductor_beckmann.xml",
+      "crispScene": "tools/path_tracer_evaluation/crisp/cbox_rough_conductor_beckmann.json"
     }
   ]
 }

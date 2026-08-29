@@ -72,10 +72,12 @@ Crisp scene it mirrors:
 }
 ```
 
-`mitsubaScene` is relative to this directory, `crispScene` to `Resources/`. Any
-of `spp`, `seed`, `mitsubaVariant`, or `samplesPerFrame` can be set per case to
-override the manifest `defaults`. The candidate EXR is named after the Mitsuba
-scene's stem, which is how the comparison pairs the two images.
+`mitsubaScene` is relative to this directory. `crispScene` first resolves relative
+to `Resources/`, preserving existing asset paths, and then relative to the repository
+root so tracked evaluation fixtures can live beside their Mitsuba counterparts. Any
+of `spp`, `seed`, `mitsubaVariant`, or `samplesPerFrame` can be set per case to override
+the manifest `defaults`. The candidate EXR is named after the Mitsuba scene's stem,
+which is how the comparison pairs the two images.
 
 Adding a case means authoring a Mitsuba XML that matches the Crisp scene's
 geometry, materials, emitter, camera, and path depth. Nothing checks that
