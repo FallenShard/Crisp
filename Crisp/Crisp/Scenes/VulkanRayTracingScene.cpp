@@ -66,7 +66,7 @@ Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) 
     return createGeometry(
         renderer,
         mesh,
-        {{VertexAttribute::Position}, {VertexAttribute::Normal}},
+        {{VertexAttribute::Position}, {VertexAttribute::Normal}, {VertexAttribute::TexCoord}},
         VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 }
@@ -217,6 +217,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     m_sceneAddresses = {
         .vertices = sceneGeometry.getVertexBuffer()->getDeviceAddress(),
         .normals = sceneGeometry.getVertexBuffer(1)->getDeviceAddress(),
+        .texCoords = sceneGeometry.getVertexBuffer(2)->getDeviceAddress(),
         .triangles = sceneGeometry.getIndexBuffer()->getDeviceAddress(),
         .instances = m_instancePropsBuffer->getDeviceAddress(),
         .materials = m_brdfParamsBuffer->getDeviceAddress(),

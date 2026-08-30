@@ -36,11 +36,13 @@ void main() {
     const vec3 baryCoord = vec3(1.0 - barycentric.x - barycentric.y, barycentric.x, barycentric.y);
     const vec3 normal = interpolateNormal(hitTriangle, baryCoord);
     const vec3 position = interpolatePosition(hitTriangle, baryCoord);
+    const vec2 texCoord = interpolateTexCoord(hitTriangle, baryCoord);
 
     // Record the hit info for the calling shader.
     hitInfo.position = position;
     hitInfo.tHit = gl_HitTEXT;
     hitInfo.normal = normal;
+    hitInfo.texCoord = texCoord;
 
     // Determine sampled BRDF and the new path direction.
 
@@ -50,6 +52,7 @@ void main() {
     bsdf.wi = toLocal(-gl_WorldRayDirectionEXT, worldTransform);
     bsdf.materialId = props.materialId;
     bsdf.operation = kBrdfOperationSample;
+    bsdf.texCoord = texCoord;
 
     bsdf.unitSample = hitInfo.bsdfSample;
     bsdf.lobeSample = hitInfo.bsdfLobeSample;

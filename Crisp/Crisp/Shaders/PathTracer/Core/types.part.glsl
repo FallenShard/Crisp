@@ -48,6 +48,9 @@ struct HitInfo {
     vec2 bsdfSample;       // In, the unit-square sample the hit shader hands to the BSDF.
     float bsdfLobeSample;  // In, independent sample for selecting a BSDF lobe.
     float pad0;
+
+    vec2 texCoord; // Out.
+    vec2 pad1;
 };
 
 // This structure is used to communicate BRDF sampling across hit and callable shaders.
@@ -67,6 +70,9 @@ struct BrdfSample {
 
     vec3 wo;       // In for evaluation, out for sampling; local space.
     uint lobeType; // Out, diffuse or specular.
+
+    vec2 texCoord; // In.
+    vec2 pad1;
 };
 
 struct InstanceProperties {

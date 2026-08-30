@@ -14,12 +14,50 @@
     {
       "name": "smooth_conductor",
       "mitsubaScene": "mitsuba/cbox_smooth_conductor.xml",
-      "crispScene": "tools/path_tracer_evaluation/crisp/cbox_smooth_conductor.json"
+      "crispScene": "tools/path_tracer_evaluation/crisp/cbox_smooth_conductor.json",
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.02,
+          "relativeMeanLuminanceError": 0.005,
+          "candidateNegativeValues": 0,
+          "candidateNonFiniteValues": 0
+        },
+        "minimum": {
+          "psnrDb": 60.0
+        }
+      }
     },
     {
       "name": "rough_conductor_beckmann",
       "mitsubaScene": "mitsuba/cbox_rough_conductor_beckmann.xml",
-      "crispScene": "tools/path_tracer_evaluation/crisp/cbox_rough_conductor_beckmann.json"
+      "crispScene": "tools/path_tracer_evaluation/crisp/cbox_rough_conductor_beckmann.json",
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.015,
+          "relativeMeanLuminanceError": 0.005,
+          "candidateNegativeValues": 0,
+          "candidateNonFiniteValues": 0
+        },
+        "minimum": {
+          "psnrDb": 60.0
+        }
+      }
+    },
+    {
+      "name": "rough_dielectric",
+      "mitsubaScene": "mitsuba/cbox_rough_dielectric.xml",
+      "crispScene": "tools/path_tracer_evaluation/crisp/cbox_rough_dielectric.json",
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.03,
+          "relativeMeanLuminanceError": 0.005,
+          "candidateNegativeValues": 0,
+          "candidateNonFiniteValues": 0
+        },
+        "minimum": {
+          "psnrDb": 58.0
+        }
+      }
     },
     {
       "name": "environment_only",

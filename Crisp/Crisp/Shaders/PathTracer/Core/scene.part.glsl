@@ -9,6 +9,10 @@ layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Pat
     vec3 data[];
 };
 
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceTexCoords {
+    vec2 data[];
+};
+
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceTriangles {
     uvec3 data[];
 };
@@ -43,6 +47,7 @@ layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Env
 layout(push_constant, scalar) uniform RayTracingSceneAddresses {
     PathTraceVertices vertices;
     PathTraceNormals normals;
+    PathTraceTexCoords texCoords;
     PathTraceTriangles triangles;
     PathTraceInstances instances;
     PathTraceMaterials materials;
