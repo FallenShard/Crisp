@@ -201,6 +201,15 @@ target_link_libraries(
     PUBLIC Crisp::VulkanDevice
 )
 
+add_cpp_test(
+    CrispVulkanSamplerTest
+    "Test/VulkanSamplerTest.cpp"
+)
+target_link_libraries(
+    CrispVulkanSamplerTest
+    PRIVATE Crisp::VulkanSampler
+)
+
 add_cpp_static_library(
     CrispVulkanImageView
     "VulkanImageView.cpp"

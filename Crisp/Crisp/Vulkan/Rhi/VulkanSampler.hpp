@@ -6,15 +6,16 @@
 namespace crisp {
 inline constexpr float MaxAnisotropy = 16.0f;
 
+VkSamplerCreateInfo createLinearClampSamplerCreateInfo(
+    float anisotropy = 1.0f, float maxLod = VK_LOD_CLAMP_NONE);
+VkSamplerCreateInfo createNearestClampSamplerCreateInfo();
+VkSamplerCreateInfo createLinearRepeatSamplerCreateInfo(
+    float anisotropy = 1.0f, float maxLod = VK_LOD_CLAMP_NONE);
+VkSamplerCreateInfo createLatLongEnvironmentSamplerCreateInfo();
+
 class VulkanSampler final : public VulkanResource<VkSampler> {
 public:
-    VulkanSampler(
-        const VulkanDevice& device,
-        VkFilter minFilter,
-        VkFilter magFilter,
-        VkSamplerAddressMode addressMode,
-        float anisotropy = 1.0f,
-        float maxLod = VK_LOD_CLAMP_NONE);
+    VulkanSampler(const VulkanDevice& device, const VkSamplerCreateInfo& createInfo);
 };
 
 std::unique_ptr<VulkanSampler> createLinearClampSampler(
