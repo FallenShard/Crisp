@@ -17,11 +17,22 @@ add_cpp_static_library(CrispMath
     "Warp.cpp"
     "Warp.hpp")
 target_link_libraries(CrispMath
+    PUBLIC Crisp::Checks
     PUBLIC glm)
 
 add_cpp_test(CrispIFFTTest
     "Test/IFFTTest.cpp")
 target_link_libraries(CrispIFFTTest
+    PRIVATE Crisp::Math)
+
+add_cpp_test(CrispDistribution1DTest
+    "Test/Distribution1DTest.cpp")
+target_link_libraries(CrispDistribution1DTest
+    PRIVATE Crisp::Math)
+
+add_cpp_test(CrispDistribution2DTest
+    "Test/Distribution2DTest.cpp")
+target_link_libraries(CrispDistribution2DTest
     PRIVATE Crisp::Math)
 
 add_cpp_header_library(CrispGlmFormat
