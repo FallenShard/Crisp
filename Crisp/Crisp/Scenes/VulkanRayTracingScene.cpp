@@ -179,7 +179,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         encoder.buildAccelerationStructure(*m_topLevelAccelStructure);
     });
 
-    m_descriptorHeap = std::make_unique<VulkanDescriptorHeap>(
+    m_resourceHeap = std::make_unique<VulkanResourceHeap>(
         m_renderer->getDevice(), kHeapSlotCount, "Path Tracer Resource Descriptor Heap");
     m_pipeline = createPipeline();
 
@@ -260,9 +260,9 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
 void VulkanRayTracingScene::traceRays(const FrameContext& frameContext) {
     const auto& encoder = frameContext.commandEncoder;
-    uploadIfPending(*m_descriptorHeap, encoder, *frameContext.stagingBelt, kRayTracingResourceHeapRead);
+    uploadIfPending(*m_resourceHeap, encoder, *frameContext.stagingBelt, kRayTracingResourceHeapRead);
     encoder.bindPipeline(*m_pipeline);
-    encoder.bindDescriptorHeap(*m_descriptorHeap);
+    encoder.bindResourceHeap(*m_resourceHeap);
     encoder.pushData(structAsBytes(m_sceneAddresses));
     encoder.traceRays(m_shaderBindingTable.bindings, m_renderer->getSwapChainExtent());
 
@@ -364,7 +364,7 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
     }
 
     const VkDescriptorSetAndBindingMappingEXT bvhMapping{
-        m_descriptorHeap->makeMapping(kBvhSlot, 1, 0, VK_SPIRV_RESOURCE_TYPE_ACCELERATION_STRUCTURE_BIT_EXT)};
+        m_resourceHeap->makeMapping(kBvhSlot, 1, 0, VK_SPIRV_RESOURCE_TYPE_ACCELERATION_STRUCTURE_BIT_EXT)};
     pipelineBuilder.setDescriptorHeapMappings(0, {&bvhMapping, 1});
 
     const VkPipeline pipeline{pipelineBuilder.createDescriptorHeapHandle()};
@@ -378,11 +378,11 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
 }
 
 void VulkanRayTracingScene::updateDescriptorHeap() {
-    m_descriptorHeap->writeAccelerationStructure(kBvhSlot, *m_topLevelAccelStructure);
-    m_descriptorHeap->writeStorageImage(
+    m_resourceHeap->writeAccelerationStructure(kBvhSlot, *m_topLevelAccelStructure);
+    m_resourceHeap->writeStorageImage(
         kImageSlot, m_renderGraph->getImageView<&PathTracingPassData::image>(), VK_IMAGE_LAYOUT_GENERAL);
-    m_descriptorHeap->writeUniformBuffer(kViewSlot, *m_cameraBuffer);
-    m_descriptorHeap->writeUniformBuffer(kIntegratorSlot, *m_integratorBuffer);
+    m_resourceHeap->writeUniformBuffer(kViewSlot, *m_cameraBuffer);
+    m_resourceHeap->writeUniformBuffer(kIntegratorSlot, *m_integratorBuffer);
 }
 
 void VulkanRayTracingScene::setupInput() {

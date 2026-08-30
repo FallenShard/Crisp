@@ -207,4 +207,9 @@ inline constexpr VulkanSynchronizationStage kRayTracingResourceHeapRead = {
     .access = VK_ACCESS_2_RESOURCE_HEAP_READ_BIT_EXT,
 };
 
+inline constexpr VulkanSynchronizationStage kRayTracingSamplerHeapRead = {
+    .stage = VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR,
+    .access = VK_ACCESS_2_SAMPLER_HEAP_READ_BIT_EXT,
+};
+
 } // namespace crisp

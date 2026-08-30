@@ -180,7 +180,13 @@ private:
 };
 
 void uploadIfPending(
-    VulkanDescriptorHeap& heap,
+    VulkanResourceHeap& heap,
+    const VulkanCommandEncoder& encoder,
+    VulkanStagingBelt& stagingBelt,
+    const VulkanSynchronizationStage& consumer);
+
+void uploadIfPending(
+    VulkanSamplerHeap& heap,
     const VulkanCommandEncoder& encoder,
     VulkanStagingBelt& stagingBelt,
     const VulkanSynchronizationStage& consumer);

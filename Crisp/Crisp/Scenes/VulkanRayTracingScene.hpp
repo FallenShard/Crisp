@@ -50,7 +50,7 @@ private:
     std::filesystem::path m_screenshotFilename{"screenshot.exr"};
 
     std::unique_ptr<VulkanPipeline> m_pipeline;
-    std::unique_ptr<VulkanDescriptorHeap> m_descriptorHeap;
+    std::unique_ptr<VulkanResourceHeap> m_resourceHeap;
 
     ShaderBindingTable m_shaderBindingTable;
 

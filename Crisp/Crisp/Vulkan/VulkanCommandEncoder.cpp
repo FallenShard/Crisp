@@ -48,8 +48,12 @@ void VulkanCommandEncoder::bindDescriptorSets(
         dynamicOffsets.data());
 }
 
-void VulkanCommandEncoder::bindDescriptorHeap(const VulkanDescriptorHeap& heap) const {
-    vkCmdBindResourceHeapEXT(m_cmdBuffer, &heap.getBindInfo());
+void VulkanCommandEncoder::bindResourceHeap(const VulkanResourceHeap& heap) const {
+    vkCmdBindResourceHeapEXT(m_cmdBuffer, &heap.getHeap().getBindInfo());
+}
+
+void VulkanCommandEncoder::bindSamplerHeap(const VulkanSamplerHeap& heap) const {
+    vkCmdBindSamplerHeapEXT(m_cmdBuffer, &heap.getHeap().getBindInfo());
 }
 
 void VulkanCommandEncoder::bindVertexBuffers(

@@ -29,7 +29,8 @@ public:
         uint32_t firstSet,
         std::span<const VkDescriptorSet> sets,
         std::span<const uint32_t> dynamicOffsets = {}) const;
-    void bindDescriptorHeap(const VulkanDescriptorHeap& heap) const;
+    void bindResourceHeap(const VulkanResourceHeap& heap) const;
+    void bindSamplerHeap(const VulkanSamplerHeap& heap) const;
     void bindVertexBuffers(
         uint32_t firstBinding, std::span<const VkBuffer> buffers, std::span<const VkDeviceSize> offsets) const;
     void bindIndexBuffer(VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType) const;

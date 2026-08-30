@@ -12,32 +12,16 @@
 
 namespace crisp {
 
-// Byte stride between heap slots. Shaders addressing the heap must declare the same value as descriptor_stride
-// on every unsized array, which is what makes one slot index mean one byte offset for every descriptor type.
-// glslang requires the stride to be a power of two.
-inline constexpr VkDeviceSize kHeapSlotStride = 64;
+inline constexpr VkDeviceSize kHeapSlotStride = 64; // In bytes.
 
-// A VK_EXT_descriptor_heap resource heap addressed by slot index.
-//
-// Shaders reach it through unsized arrays (GL_EXT_descriptor_heap), so nothing here deals in sets, bindings, or
-// mappings: the array subscript in the shader is the slot written here. Slot assignment is a contract between
-// the shader and its owning scene.
-//
-// Samplers are not handled; they live in a separate heap bound by vkCmdBindSamplerHeapEXT.
 class VulkanDescriptorHeap {
 public:
-    VulkanDescriptorHeap(VulkanDevice& device, uint32_t slotCount, std::string_view debugName);
+    enum class Type : uint8_t { Resource, Sampler };
 
-    VulkanDescriptorHeap(const VulkanDescriptorHeap&) = delete;
-    VulkanDescriptorHeap& operator=(const VulkanDescriptorHeap&) = delete;
-    VulkanDescriptorHeap(VulkanDescriptorHeap&&) = delete;
-    VulkanDescriptorHeap& operator=(VulkanDescriptorHeap&&) = delete;
-    ~VulkanDescriptorHeap();
+    VulkanDescriptorHeap(VulkanDevice& device, uint32_t slotCount, Type type, std::string_view debugName);
 
-    void writeAccelerationStructure(uint32_t slot, const VulkanAccelerationStructure& accelerationStructure);
-    void writeUniformBuffer(uint32_t slot, const VulkanBuffer& buffer);
-    void writeStorageBuffer(uint32_t slot, const VulkanBuffer& buffer);
-    void writeStorageImage(uint32_t slot, const VulkanImageView& imageView, VkImageLayout layout);
+    void encodeResource(uint32_t slot, const VkResourceDescriptorInfoEXT& resource);
+    void encodeSampler(uint32_t slot, const VkSamplerCreateInfo& samplerInfo);
 
     struct PendingUpload {
         const VulkanBuffer& buffer;
@@ -49,14 +33,12 @@ public:
 
     const VkBindHeapInfoEXT& getBindInfo() const;
 
-    // Describes a slot to a pipeline as a legacy (set, binding) instead of a heap array subscript. Needed for
-    // resources that cannot be reached through an unsized array; see docs/descriptor-heap.md.
-    VkDescriptorSetAndBindingMappingEXT makeMapping(
-        uint32_t slot, uint32_t set, uint32_t binding, VkSpirvResourceTypeFlagsEXT resourceMask) const;
+    uint32_t getSlotCount() const {
+        return m_slotCount;
+    }
 
 private:
-    void writeBuffer(uint32_t slot, const VulkanBuffer& buffer, VkDescriptorType type);
-    void encode(uint32_t slot, const VkResourceDescriptorInfoEXT& resource);
+    void encode(uint32_t slot, VkDeviceSize descriptorSize, auto&& writeDescriptor);
 
     VulkanDevice* m_device;
     uint32_t m_slotCount;
@@ -66,9 +48,54 @@ private:
     std::vector<std::byte> m_scratch;
 
     VkDeviceSize m_bufferOffset{0};
-    VkDeviceSize m_reservedRangeOffset{0};
     VkBindHeapInfoEXT m_bindInfo{VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
     bool m_uploadPending{false};
+};
+
+class VulkanResourceHeap {
+public:
+    VulkanResourceHeap(VulkanDevice& device, uint32_t slotCount, std::string_view debugName);
+
+    void writeAccelerationStructure(uint32_t slot, const VulkanAccelerationStructure& accelerationStructure);
+    void writeUniformBuffer(uint32_t slot, const VulkanBuffer& buffer);
+    void writeStorageBuffer(uint32_t slot, const VulkanBuffer& buffer);
+    void writeStorageImage(uint32_t slot, const VulkanImageView& imageView, VkImageLayout layout);
+    void writeSampledImage(uint32_t slot, const VulkanImageView& imageView, VkImageLayout layout);
+
+    VkDescriptorSetAndBindingMappingEXT makeMapping(
+        uint32_t slot, uint32_t set, uint32_t binding, VkSpirvResourceTypeFlagsEXT resourceMask) const;
+
+    VulkanDescriptorHeap& getHeap() {
+        return m_heap;
+    }
+
+    const VulkanDescriptorHeap& getHeap() const {
+        return m_heap;
+    }
+
+private:
+    void writeBuffer(uint32_t slot, const VulkanBuffer& buffer, VkDescriptorType type);
+    void writeImage(uint32_t slot, const VulkanImageView& imageView, VkImageLayout layout, VkDescriptorType type);
+
+    VulkanDescriptorHeap m_heap;
+};
+
+class VulkanSamplerHeap {
+public:
+    VulkanSamplerHeap(VulkanDevice& device, uint32_t slotCount, std::string_view debugName);
+
+    void write(uint32_t slot, const VkSamplerCreateInfo& samplerInfo);
+
+    VulkanDescriptorHeap& getHeap() {
+        return m_heap;
+    }
+
+    const VulkanDescriptorHeap& getHeap() const {
+        return m_heap;
+    }
+
+private:
+    VulkanDescriptorHeap m_heap;
 };
 
 } // namespace crisp

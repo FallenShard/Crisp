@@ -209,7 +209,8 @@ ReadbackBuffer VulkanStagingBelt::downloadImage(
     return {.buffer = std::move(buffer)};
 }
 
-void uploadIfPending(
+namespace {
+void uploadHeapIfPending(
     VulkanDescriptorHeap& heap,
     const VulkanCommandEncoder& encoder,
     VulkanStagingBelt& stagingBelt,
@@ -222,6 +223,23 @@ void uploadIfPending(
     stagingBelt.uploadBuffer(encoder, upload->buffer, upload->bufferOffset, upload->bytes.data(), upload->bytes.size());
     encoder.insertBufferMemoryBarrier(
         upload->buffer.getHandle(), upload->bufferOffset, upload->bytes.size(), kTransferWrite >> consumer);
+}
+} // namespace
+
+void uploadIfPending(
+    VulkanResourceHeap& heap,
+    const VulkanCommandEncoder& encoder,
+    VulkanStagingBelt& stagingBelt,
+    const VulkanSynchronizationStage& consumer) {
+    uploadHeapIfPending(heap.getHeap(), encoder, stagingBelt, consumer);
+}
+
+void uploadIfPending(
+    VulkanSamplerHeap& heap,
+    const VulkanCommandEncoder& encoder,
+    VulkanStagingBelt& stagingBelt,
+    const VulkanSynchronizationStage& consumer) {
+    uploadHeapIfPending(heap.getHeap(), encoder, stagingBelt, consumer);
 }
 
 } // namespace crisp
