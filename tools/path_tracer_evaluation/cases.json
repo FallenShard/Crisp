@@ -77,6 +77,23 @@
       }
     },
     {
+      "name": "directional_light",
+      "mitsubaScene": "mitsuba/directional_light.xml",
+      "crispScene": "tools/path_tracer_evaluation/crisp/directional_light.json",
+      "spp": 1024,
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.00001,
+          "relativeMeanLuminanceError": 0.00001,
+          "candidateNegativeValues": 0,
+          "candidateNonFiniteValues": 0
+        },
+        "minimum": {
+          "psnrDb": 120.0
+        }
+      }
+    },
+    {
       "name": "environment_only",
       "mitsubaScene": "mitsuba/environment_only.xml",
       "crispScene": "tools/path_tracer_evaluation/crisp/environment_only.json",

@@ -412,9 +412,13 @@ void VulkanRayTracingScene::drawGui() {
 
     if (!m_sceneDesc.lights.empty()) {
         const bool isPointLight = m_sceneDesc.lights[0].type == kLightPoint;
-        const char* redLabel = isPointLight ? "Point Power R" : "Area Radiance R";
-        const char* greenLabel = isPointLight ? "Point Power G" : "Area Radiance G";
-        const char* blueLabel = isPointLight ? "Point Power B" : "Area Radiance B";
+        const bool isDirectionalLight = m_sceneDesc.lights[0].type == kLightDirectional;
+        const char* redLabel =
+            isPointLight ? "Point Power R" : (isDirectionalLight ? "Directional Irradiance R" : "Area Radiance R");
+        const char* greenLabel =
+            isPointLight ? "Point Power G" : (isDirectionalLight ? "Directional Irradiance G" : "Area Radiance G");
+        const char* blueLabel =
+            isPointLight ? "Point Power B" : (isDirectionalLight ? "Directional Irradiance B" : "Area Radiance B");
         if (ImGui::SliderFloat(redLabel, &m_sceneDesc.lights[0].emission[0], 0.0f, 50.0f)) {
             m_integratorParams.frameIdx = 0;
         }

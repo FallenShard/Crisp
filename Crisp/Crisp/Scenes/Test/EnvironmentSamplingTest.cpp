@@ -23,6 +23,7 @@ const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispEn
 const TestShaderMap kTestShaders{
     kShaderSourceDirectory / "environment-sampling.comp.glsl",
     kShaderSourceDirectory / "point-light.comp.glsl",
+    kShaderSourceDirectory / "directional-light.comp.glsl",
 };
 
 struct SamplingResult {
@@ -57,6 +58,21 @@ struct PointLightPushConstants {
 
 static_assert(sizeof(PointLightResult) == 32);
 static_assert(sizeof(PointLightPushConstants) == 48);
+
+struct DirectionalLightResult {
+    glm::vec4 directionAndDistance;
+    glm::vec4 irradianceAndPdf;
+};
+
+struct DirectionalLightPushConstants {
+    glm::vec3 direction;
+    float pad0{};
+    glm::vec3 irradiance;
+    float pad1{};
+};
+
+static_assert(sizeof(DirectionalLightResult) == 32);
+static_assert(sizeof(DirectionalLightPushConstants) == 32);
 
 std::vector<float> createTestPixels() {
     std::vector<float> pixels(kWidth * kHeight * 4, 1.0f);
@@ -153,6 +169,39 @@ std::array<PointLightResult, 2> runPointLightShader(
     return {data[0], data[1]};
 }
 
+DirectionalLightResult runDirectionalLightShader(
+    VulkanDevice& device, const DirectionalLightPushConstants& pushConstants) {
+    constexpr VkDeviceSize kResultByteSize = sizeof(DirectionalLightResult);
+    VulkanBuffer resultBuffer(
+        device,
+        kResultByteSize,
+        VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
+        BufferMemoryType::GpuOnly);
+    VulkanBuffer readbackBuffer(
+        device, kResultByteSize, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
+
+    constexpr VkExtent3D kWorkGroupSize{1, 1, 1};
+    auto pipeline =
+        createComputePipeline(device, kTestShaders.getSpirvPath("directional-light.comp.glsl"), kWorkGroupSize);
+    Material material(pipeline.get());
+    material.writeDescriptor(0, 0, resultBuffer.createDescriptorInfo());
+    device.flushDescriptorUpdates();
+
+    {
+        const ScopeCommandExecutor executor(device);
+        const auto& encoder = executor.cmdEncoder;
+        encoder.bindPipeline(*pipeline);
+        encoder.bindDescriptorSets(material.getDescriptorSetBinding());
+        encoder.setPushConstants(*pipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, pushConstants);
+        encoder.dispatchCompute({1, 1, 1});
+        encoder.insertBufferMemoryBarrier(resultBuffer.createDescriptorInfo(), kComputeStorageWrite >> kTransferRead);
+        encoder.copyBuffer(resultBuffer, readbackBuffer);
+        encoder.insertBufferMemoryBarrier(readbackBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
+    }
+
+    return *readbackBuffer.getHostVisibleData<DirectionalLightResult>();
+}
+
 TEST(EnvironmentSamplingDistributionTest, BuildsNormalizedLuminanceTimesSineDistribution) {
     const auto pixels = createTestPixels();
     const auto distribution = createEnvironmentSamplingDistribution(pixels, kWidth, kHeight);
@@ -247,6 +296,21 @@ TEST_F(EnvironmentSamplingTest, PointLightUsesPowerAndInverseSquareFalloff) {
 
     EXPECT_EQ(results[1].directionAndDistance, glm::vec4(0.0f));
     EXPECT_EQ(results[1].radianceAndPdf, glm::vec4(0.0f));
+}
+
+TEST_F(EnvironmentSamplingTest, DirectionalLightUsesConstantIrradianceAndInfiniteShadowRay) {
+    const DirectionalLightPushConstants pushConstants{
+        .direction = glm::normalize(glm::vec3(3.0f, -4.0f, -12.0f)),
+        .irradiance = {1.0f, 2.0f, 3.0f},
+    };
+    const auto result = runDirectionalLightShader(*device_, pushConstants);
+
+    EXPECT_NEAR(result.directionAndDistance.x, -pushConstants.direction.x, 1e-6f);
+    EXPECT_NEAR(result.directionAndDistance.y, -pushConstants.direction.y, 1e-6f);
+    EXPECT_NEAR(result.directionAndDistance.z, -pushConstants.direction.z, 1e-6f);
+    EXPECT_GT(result.directionAndDistance.w, 1e20f);
+    EXPECT_EQ(glm::vec3(result.irradianceAndPdf), pushConstants.irradiance);
+    EXPECT_FLOAT_EQ(result.irradianceAndPdf.w, 1.0f);
 }
 
 TEST(EnvironmentLightParserTest, ParsesEnvironmentFilenameAndScale) {

@@ -1,0 +1,32 @@
+{
+    "integrator": {"type": "mis-path-tracer"},
+    "sampler": {"type": "independent", "samplesPerPixel": 1024},
+    "camera": {
+        "type": "perspective",
+        "imageSize": [1920, 1080],
+        "fovY": 40.0,
+        "zNear": 0.1,
+        "zFar": 1000.0,
+        "position": [0.0, 0.0, 5.0],
+        "target": [0.0, 0.0, 0.0],
+        "up": [0.0, 1.0, 0.0]
+    },
+    "lights": [
+        {
+            "type": "directional",
+            "direction": [0.6, 0.0, -0.8],
+            "power": [0.0, 1.25, 0.0]
+        }
+    ],
+    "shapes": [
+        {
+            "type": "mesh",
+            "filename": "plane.obj",
+            "toWorld": [
+                {"scale": [10.0, 1.0, 10.0]},
+                {"rotation": {"axis": [1.0, 0.0, 0.0], "angleDegrees": 90.0}}
+            ],
+            "bsdf": {"type": "lambertian", "reflectance": [1.0, 1.0, 1.0]}
+        }
+    ]
+}

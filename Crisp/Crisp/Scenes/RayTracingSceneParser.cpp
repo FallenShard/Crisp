@@ -316,7 +316,32 @@ Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, 
                     scene.lights.push_back({
                         .type = kLightPoint,
                         .emission = power,
-                        .position = position,
+                        .positionOrDirection = position,
+                    });
+                    continue;
+                }
+                if (type == "directional") {
+                    if (!light.contains("direction")) {
+                        return resultError("Directional light {} requires a direction", lightIndex);
+                    }
+                    if (!light.contains("power")) {
+                        return resultError("Directional light {} requires power", lightIndex);
+                    }
+                    CRISP_TRY(auto direction, parseVec3(light["direction"]));
+                    CRISP_TRY(const auto power, parseVec3(light["power"]));
+                    const float directionLengthSquared = glm::dot(direction, direction);
+                    if (!std::isfinite(directionLengthSquared) || directionLengthSquared <= 0.0f) {
+                        return resultError(
+                            "Directional-light direction {} must have finite, non-zero length", lightIndex);
+                    }
+                    if (glm::any(glm::lessThan(power, glm::vec3(0.0f)))) {
+                        return resultError("Directional-light power {} must be non-negative", lightIndex);
+                    }
+                    direction /= std::sqrt(directionLengthSquared);
+                    scene.lights.push_back({
+                        .type = kLightDirectional,
+                        .emission = power,
+                        .positionOrDirection = direction,
                     });
                     continue;
                 }

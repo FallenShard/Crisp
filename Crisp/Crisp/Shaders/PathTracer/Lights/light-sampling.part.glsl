@@ -2,6 +2,7 @@
 #define CRISP_PATH_TRACER_LIGHT_SAMPLING_GLSL
 
 #include "environment-distribution.part.glsl"
+#include "directional-light.part.glsl"
 #include "point-light.part.glsl"
 
 vec3 evaluateEnvironment(const vec3 direction) {
@@ -113,7 +114,11 @@ vec3 sampleUniformLight(
         if (light.type == kLightPoint) {
             lightIsDelta = true;
             radiance = samplePointLight(
-                light.position, light.emission, refPoint, shadowRayDir, shadowRayLen, lightPdf);
+                light.positionOrDirection, light.emission, refPoint, shadowRayDir, shadowRayLen, lightPdf);
+        } else if (light.type == kLightDirectional) {
+            lightIsDelta = true;
+            radiance = sampleDirectionalLight(
+                light.positionOrDirection, light.emission, shadowRayDir, shadowRayLen, lightPdf);
         } else {
             radiance = sampleAreaLight(
                 rng,

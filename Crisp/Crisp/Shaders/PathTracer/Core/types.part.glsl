@@ -16,6 +16,7 @@ const int kBrdfRoughDielectric = 7;
 
 const int kLightArea = 0;
 const int kLightPoint = 1;
+const int kLightDirectional = 2;
 
 const uint kBrdfOperationSample = 0;
 const uint kBrdfOperationEvaluate = 1;
@@ -123,9 +124,9 @@ struct LightParameters {
     int meshId;
     int pad0;
     int pad1;
-    vec3 emission; // Area-light radiance or point-light power.
+    vec3 emission; // Area radiance, point power, or directional irradiance.
     float pad2;
-    vec3 position;
+    vec3 positionOrDirection;
     float pad3;
 };
 
