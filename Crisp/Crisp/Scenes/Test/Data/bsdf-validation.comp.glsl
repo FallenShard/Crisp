@@ -9,6 +9,7 @@
 #include "Brdf/fresnel.part.glsl"
 #include "Brdf/smooth-conductor.part.glsl"
 #include "Brdf/rough-conductor.part.glsl"
+#include "Brdf/rough-dielectric.part.glsl"
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
@@ -20,10 +21,12 @@ const uint kModelConductorFresnel = 4u;
 const uint kModelSmoothConductor = 5u;
 const uint kModelMicrofacetNormal = 6u;
 const uint kModelRoughConductor = 7u;
+const uint kModelRoughDielectric = 8u;
 
 const uint kOperationEvaluate = 0u;
 const uint kOperationSample = 1u;
 const uint kOperationLimit = 2u;
+const uint kOperationCriticalAngle = 3u;
 
 struct ValidationResult {
     vec4 wiAndAux;
@@ -65,6 +68,7 @@ void main() {
     const vec2 integrationSample =
         vec2(unitFloat(2u * index), (float(index) + 0.5f) / float(sampleCount));
     const vec2 bsdfSample = vec2(unitFloat(2u * index + 0x68bc21ebu), unitFloat(2u * index + 0x967a889bu));
+    const float lobeSample = unitFloat(index + 0xd1b54a35u);
     const float incidentCosines[4] = float[](1.0f, 0.8f, 0.4f, 0.1f);
     const float cosThetaI = incidentCosines[index & 3u];
     const vec3 wi = vec3(sqrt(1.0f - cosThetaI * cosThetaI), 0.0f, cosThetaI);
@@ -164,5 +168,81 @@ void main() {
         results[index].woAndPdf =
             vec4(microfacetNormal, microfacetNormalPdf(microfacetNormal, microfacetType, 0.3f));
         results[index].value.x = microfacetDistribution(microfacetNormal, microfacetType, 0.3f);
+        return;
+    }
+
+    if (model == kModelRoughDielectric) {
+        const float extIor = 1.0f;
+        const float intIor = 1.5046f;
+        vec3 dielectricWi = wi;
+
+        if (operation == kOperationEvaluate) {
+            const vec2 sphereSample = vec2(
+                unitFloat(index + 0x243f6a88u),
+                unitFloat(index + 0x85a308d3u));
+            vec3 wo = squareToUniformHemisphere(sphereSample);
+            if ((hashUint(index + 0x13198a2eu) & 1u) != 0u) {
+                wo.z = -wo.z;
+            }
+            results[index].woAndPdf = vec4(
+                wo,
+                roughDielectricPdf(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo));
+            results[index].value = vec4(
+                evaluateRoughDielectric(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo),
+                0.0f);
+            results[index].reverseValue = vec4(
+                evaluateRoughDielectric(extIor, intIor, microfacetType, 0.3f, wo, dielectricWi),
+                0.0f);
+            return;
+        }
+
+        vec2 dielectricNormalSample = bsdfSample;
+        float dielectricLobeSample = lobeSample;
+        if (operation == kOperationCriticalAngle) {
+            const float criticalSine = extIor / intIor;
+            const bool aboveCriticalAngle = (index & 1u) != 0u;
+            const float sinThetaI = criticalSine + (aboveCriticalAngle ? 1e-3f : -1e-3f);
+            dielectricWi = vec3(sinThetaI, 0.0f, -sqrt(1.0f - sinThetaI * sinThetaI));
+            dielectricNormalSample = vec2(0.0f);
+            dielectricLobeSample = 0.999999f;
+            results[index].wiAndAux.xyz = dielectricWi;
+        }
+
+        const vec3 sampledNormal = sampleMicrofacetNormal(dielectricNormalSample, microfacetType, 0.3f);
+        const float cosThetaIm = dot(dielectricWi, sampledNormal);
+        float cosThetaTm;
+        const float fresnel = fresnelDielectric(cosThetaIm, extIor, intIor, cosThetaTm);
+        results[index].wiAndAux.w = cosThetaIm * dielectricWi.z > 0.0f ? fresnel : -1.0f;
+        const vec3 reflectionWo = 2.0f * cosThetaIm * sampledNormal - dielectricWi;
+        const bool validReflection = cosThetaIm * dielectricWi.z > 0.0f && reflectionWo.z * dielectricWi.z > 0.0f;
+        const float etaIt = dielectricWi.z > 0.0f ? extIor / intIor : intIor / extIor;
+        const vec3 transmissionWo =
+            sampledNormal * (etaIt * cosThetaIm - sign(cosThetaIm) * cosThetaTm) - etaIt * dielectricWi;
+        const bool validTransmission = cosThetaIm * dielectricWi.z > 0.0f && fresnel < 1.0f &&
+            transmissionWo.z * dielectricWi.z < 0.0f;
+        const float directionalMass =
+            fresnel * float(validReflection) + (1.0f - fresnel) * float(validTransmission);
+        const bool selectedReflection = dielectricLobeSample <= fresnel;
+        results[index].reverseValue.w = selectedReflection ? directionalMass : -directionalMass;
+
+        vec3 wo;
+        vec3 sampledF;
+        float pdf;
+        sampleRoughDielectric(
+            dielectricNormalSample,
+            dielectricLobeSample,
+            extIor,
+            intIor,
+            microfacetType,
+            0.3f,
+            dielectricWi,
+            wo,
+            sampledF,
+            pdf);
+        results[index].woAndPdf = vec4(wo, pdf);
+        results[index].value = vec4(
+            evaluateRoughDielectric(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo),
+            roughDielectricPdf(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo));
+        results[index].reverseValue.xyz = sampledF;
     }
 }

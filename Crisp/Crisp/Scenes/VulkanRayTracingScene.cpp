@@ -355,6 +355,7 @@ std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
         {"Brdf/path-trace-oren-nayar.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
         {"Brdf/path-trace-smooth-conductor.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
         {"Brdf/path-trace-rough-conductor.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+        {"Brdf/path-trace-rough-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     };
     RayTracingPipelineBuilder pipelineBuilder(m_renderer->getDevice());
     for (auto&& [idx, info] : std::views::enumerate(shaderInfos)) {

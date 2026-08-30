@@ -222,3 +222,5 @@ target_add_test_file(
     CrispBsdfValidationTest "../Shaders/Brdf/smooth-conductor.part.glsl" "Brdf/smooth-conductor.part.glsl")
 target_add_test_file(
     CrispBsdfValidationTest "../Shaders/Brdf/rough-conductor.part.glsl" "Brdf/rough-conductor.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Brdf/rough-dielectric.part.glsl" "Brdf/rough-dielectric.part.glsl")

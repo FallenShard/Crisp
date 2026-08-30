@@ -52,6 +52,7 @@ void main() {
     bsdf.operation = kBrdfOperationSample;
 
     bsdf.unitSample = hitInfo.bsdfSample;
+    bsdf.lobeSample = hitInfo.bsdfLobeSample;
 
     const int brdfType = scene.materials.data[props.materialId].type;
     executeCallableEXT(brdfType, /*location(bsdf)=*/0);

@@ -5,6 +5,7 @@
 #include "../../Brdf/microfacet.part.glsl"
 #include "../../Brdf/oren-nayar.part.glsl"
 #include "../../Brdf/rough-conductor.part.glsl"
+#include "../../Brdf/rough-dielectric.part.glsl"
 
 BrdfEval evaluateLambertian(BrdfParameters material, vec3 wi, vec3 wo) {
     return BrdfEval(evaluateLambertian(material.albedo, wi, wo), lambertianPdf(wi, wo));
@@ -42,6 +43,24 @@ BrdfEval evaluateRoughConductor(BrdfParameters material, vec3 wi, vec3 wo) {
         roughConductorPdf(wi, wo, material.microfacetType, material.microfacetAlpha));
 }
 
+BrdfEval evaluateRoughDielectric(BrdfParameters material, vec3 wi, vec3 wo) {
+    return BrdfEval(
+        evaluateRoughDielectric(
+            material.extIor,
+            material.intIor,
+            material.microfacetType,
+            material.microfacetAlpha,
+            wi,
+            wo),
+        roughDielectricPdf(
+            material.extIor,
+            material.intIor,
+            material.microfacetType,
+            material.microfacetAlpha,
+            wi,
+            wo));
+}
+
 BrdfEval evaluateBrdf(BrdfParameters material, vec3 wi, vec3 wo) {
     switch (material.type) {
     case kBrdfLambertian:
@@ -52,6 +71,8 @@ BrdfEval evaluateBrdf(BrdfParameters material, vec3 wi, vec3 wo) {
         return evaluateOrenNayar(material, wi, wo);
     case kBrdfRoughConductor:
         return evaluateRoughConductor(material, wi, wo);
+    case kBrdfRoughDielectric:
+        return evaluateRoughDielectric(material, wi, wo);
     default:
         return BrdfEval(vec3(0.0f), 0.0f); // Delta materials.
     }

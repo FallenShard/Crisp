@@ -11,6 +11,7 @@ constexpr int32_t kBrdfMicrofacet = 3;
 constexpr int32_t kBrdfOrenNayar = 4;
 constexpr int32_t kBrdfSmoothConductor = 5;
 constexpr int32_t kBrdfRoughConductor = 6;
+constexpr int32_t kBrdfRoughDielectric = 7;
 
 constexpr int32_t kMicrofacetGgx = 0;
 constexpr int32_t kMicrofacetBeckmann = 1;
@@ -24,10 +25,18 @@ BrdfParameters createLambertianBrdf(glm::vec3 albedo) {
     };
 }
 
-BrdfParameters createDielectricBrdf(const float intIor) {
+void validateDielectricIors(const float intIor, const float extIor) {
+    if (intIor <= 0.0f || extIor <= 0.0f || intIor == extIor) {
+        throw std::invalid_argument("Interior and exterior IORs must be positive and differ");
+    }
+}
+
+BrdfParameters createDielectricBrdf(const float intIor, const float extIor) {
+    validateDielectricIors(intIor, extIor);
     return {
         .type = kBrdfDielectric,
         .intIor = intIor,
+        .extIor = extIor,
     };
 }
 
@@ -65,6 +74,18 @@ BrdfParameters createRoughConductorBrdf(const std::string& iorPreset, const int3
     };
 }
 
+BrdfParameters createRoughDielectricBrdf(
+    const float intIor, const float extIor, const int32_t microfacetType, const float alpha) {
+    validateDielectricIors(intIor, extIor);
+    return {
+        .type = kBrdfRoughDielectric,
+        .intIor = intIor,
+        .extIor = extIor,
+        .microfacetType = microfacetType,
+        .microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f),
+    };
+}
+
 int32_t parseMicrofacetType(const std::string_view type) {
     if (type == "ggx") {
         return kMicrofacetGgx;
@@ -92,8 +113,17 @@ BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
             parseMicrofacetType(brdf.value("microfacetDistribution", std::string("beckmann"))),
             brdf.value("microfacetAlpha", 0.1f));
     }
+    if (type == "rough-dielectric") {
+        return createRoughDielectricBrdf(
+            brdf.value("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass)),
+            brdf.value("exteriorIor", Fresnel::getIOR(IndexOfRefraction::Air)),
+            parseMicrofacetType(brdf.value("microfacetDistribution", std::string("beckmann"))),
+            brdf.value("microfacetAlpha", 0.1f));
+    }
     if (type == "dielectric") {
-        return createDielectricBrdf(brdf.value("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass)));
+        return createDielectricBrdf(
+            brdf.value("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass)),
+            brdf.value("exteriorIor", Fresnel::getIOR(IndexOfRefraction::Air)));
     }
     if (type == "mirror") {
         return createMirrorBrdf();

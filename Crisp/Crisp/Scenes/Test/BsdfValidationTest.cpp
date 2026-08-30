@@ -30,9 +30,10 @@ enum class Model : uint32_t { // NOLINT
     SmoothConductor,
     MicrofacetNormal,
     RoughConductor,
+    RoughDielectric,
 };
 
-enum class Operation : uint32_t { Evaluate, Sample, Limit }; // NOLINT
+enum class Operation : uint32_t { Evaluate, Sample, Limit, CriticalAngle }; // NOLINT
 enum class MicrofacetType : int32_t { Ggx, Beckmann };       // NOLINT
 
 struct PushConstants {
@@ -347,6 +348,180 @@ TEST_F(BsdfValidationTest, SmoothConductorSatisfiesDeltaContract) {
         EXPECT_TRUE(isFiniteAndNonNegative(glm::vec3(results[i].value)));
         for (int32_t channel = 0; channel < 3; ++channel) {
             EXPECT_NEAR(results[i].value[channel], reference[channel], 2e-5);
+        }
+    }
+}
+
+TEST_F(BsdfValidationTest, RoughDielectricIsFiniteConservativeAndEtaReciprocal) {
+    constexpr float kExtIor = 1.0f;
+    constexpr float kIntIor = 1.5046f;
+    constexpr float kEtaItSquared = (kExtIor / kIntIor) * (kExtIor / kIntIor);
+    constexpr std::array microfacetTypes{MicrofacetType::Ggx, MicrofacetType::Beckmann};
+
+    for (const MicrofacetType microfacetType : microfacetTypes) {
+        const auto results = runValidationShader(*device_, Model::RoughDielectric, Operation::Evaluate, microfacetType);
+        std::array<glm::dvec3, 4> flux{};
+        std::array<double, 4> pdfMass{};
+        std::array<size_t, 4> counts{};
+
+        for (size_t i = 0; i < results.size(); ++i) {
+            SCOPED_TRACE(static_cast<int32_t>(microfacetType));
+            SCOPED_TRACE(i);
+            const auto& result = results[i];
+            const glm::vec3 wi = result.wiAndAux;
+            const glm::vec3 wo = result.woAndPdf;
+            const glm::vec3 value = result.value;
+            const glm::vec3 reverseValue = result.reverseValue;
+            ASSERT_TRUE(isFinite(wi));
+            ASSERT_TRUE(isFinite(wo));
+            EXPECT_TRUE(isFiniteAndNonNegative(value));
+            EXPECT_TRUE(isFiniteAndNonNegative(reverseValue));
+            EXPECT_TRUE(std::isfinite(result.woAndPdf.w));
+            EXPECT_GE(result.woAndPdf.w, 0.0f);
+
+            if (glm::any(glm::greaterThan(value, glm::vec3(0.0f)))) {
+                const glm::vec3 forward = value / std::abs(wo.z);
+                const glm::vec3 reverse = reverseValue / wi.z;
+                const bool reflection = wo.z > 0.0f;
+                for (int32_t channel = 0; channel < 3; ++channel) {
+                    const float expectedForward = reflection ? reverse[channel] : reverse[channel] * kEtaItSquared;
+                    const float magnitude = std::max({1.0f, std::abs(forward[channel]), std::abs(expectedForward)});
+                    EXPECT_NEAR(forward[channel], expectedForward, 3e-6f + 4e-5f * magnitude);
+                }
+            }
+
+            const uint32_t incidentDirection = static_cast<uint32_t>(i & 3u);
+            const double fluxScale = wo.z < 0.0f ? 1.0 / kEtaItSquared : 1.0;
+            flux[incidentDirection] += glm::dvec3(value) * fluxScale;
+            pdfMass[incidentDirection] += result.woAndPdf.w;
+            ++counts[incidentDirection];
+        }
+
+        for (uint32_t incidentDirection = 0; incidentDirection < 4; ++incidentDirection) {
+            SCOPED_TRACE(incidentDirection);
+            const double integrationWeight = 4.0 * std::numbers::pi / static_cast<double>(counts[incidentDirection]);
+            const glm::dvec3 integratedFlux = flux[incidentDirection] * integrationWeight;
+            for (int32_t channel = 0; channel < 3; ++channel) {
+                EXPECT_GE(integratedFlux[channel], 0.0);
+                EXPECT_LE(integratedFlux[channel], 1.04);
+            }
+            const double integratedPdf = pdfMass[incidentDirection] * integrationWeight;
+            EXPECT_GT(integratedPdf, 0.0);
+            EXPECT_LE(integratedPdf, 1.04);
+        }
+    }
+}
+
+TEST_F(BsdfValidationTest, RoughDielectricSamplingMatchesEvaluationAndFresnelBranches) {
+    constexpr float kExtIor = 1.0f;
+    constexpr float kIntIor = 1.5046f;
+    constexpr std::array microfacetTypes{MicrofacetType::Ggx, MicrofacetType::Beckmann};
+
+    for (const MicrofacetType microfacetType : microfacetTypes) {
+        const auto results = runValidationShader(*device_, Model::RoughDielectric, Operation::Sample, microfacetType);
+        double expectedReflectionCount = 0.0;
+        double reflectionVariance = 0.0;
+        size_t observedReflectionCount = 0;
+        size_t validNormalCount = 0;
+
+        for (size_t i = 0; i < results.size(); ++i) {
+            SCOPED_TRACE(static_cast<int32_t>(microfacetType));
+            SCOPED_TRACE(i);
+            const auto& result = results[i];
+            const glm::vec3 wi = result.wiAndAux;
+            const glm::vec3 wo = result.woAndPdf;
+            const glm::vec3 evaluatedF = result.value;
+            const glm::vec3 sampledF = result.reverseValue;
+            const float fresnel = result.wiAndAux.w;
+
+            if (fresnel >= 0.0f) {
+                ++validNormalCount;
+                expectedReflectionCount += fresnel;
+                reflectionVariance += fresnel * (1.0 - fresnel);
+                observedReflectionCount += result.reverseValue.w >= 0.0f ? 1u : 0u;
+            }
+
+            EXPECT_TRUE(isFiniteAndNonNegative(evaluatedF));
+            EXPECT_TRUE(isFiniteAndNonNegative(sampledF));
+            EXPECT_TRUE(std::isfinite(result.woAndPdf.w));
+            EXPECT_TRUE(std::isfinite(result.value.w));
+            EXPECT_GE(result.woAndPdf.w, 0.0f);
+            EXPECT_GE(result.value.w, 0.0f);
+            EXPECT_NEAR(result.woAndPdf.w, result.value.w, 2e-5f);
+            for (int32_t channel = 0; channel < 3; ++channel) {
+                EXPECT_NEAR(sampledF[channel], evaluatedF[channel], 2e-5f);
+            }
+
+            if (result.woAndPdf.w == 0.0f) {
+                EXPECT_EQ(wo, glm::vec3(0.0f));
+                continue;
+            }
+
+            EXPECT_NEAR(glm::dot(wo, wo), 1.0f, 3e-5f);
+            const bool reflection = wi.z * wo.z > 0.0f;
+            EXPECT_EQ(reflection, result.reverseValue.w >= 0.0f);
+
+            if (!reflection) {
+                const glm::vec3 halfVector = glm::normalize(wi + wo * (kIntIor / kExtIor));
+                const glm::vec3 microfacetNormal = halfVector.z < 0.0f ? -halfVector : halfVector;
+                const double sinThetaI = std::sqrt(std::max(0.0, 1.0 - std::pow(glm::dot(wi, microfacetNormal), 2.0f)));
+                const double sinThetaO = std::sqrt(std::max(0.0, 1.0 - std::pow(glm::dot(wo, microfacetNormal), 2.0f)));
+                EXPECT_NEAR(kExtIor * sinThetaI, kIntIor * sinThetaO, 2e-4);
+            }
+        }
+
+        ASSERT_GT(validNormalCount, 0u);
+        const double standardDeviation = std::sqrt(reflectionVariance);
+        EXPECT_NEAR(
+            static_cast<double>(observedReflectionCount),
+            expectedReflectionCount,
+            std::max(8.0, 5.0 * standardDeviation));
+    }
+}
+
+TEST_F(BsdfValidationTest, RoughDielectricPdfIncludesItsNullEventMass) {
+    constexpr std::array microfacetTypes{MicrofacetType::Ggx, MicrofacetType::Beckmann};
+    for (const MicrofacetType microfacetType : microfacetTypes) {
+        const auto sampled = runValidationShader(*device_, Model::RoughDielectric, Operation::Sample, microfacetType);
+        std::array<double, 4> expectedDirectionalMass{};
+        std::array<size_t, 4> validSamples{};
+        std::array<size_t, 4> counts{};
+
+        for (size_t i = 0; i < sampled.size(); ++i) {
+            const uint32_t incidentDirection = static_cast<uint32_t>(i & 3u);
+            expectedDirectionalMass[incidentDirection] += std::abs(sampled[i].reverseValue.w);
+            validSamples[incidentDirection] += sampled[i].woAndPdf.w > 0.0f ? 1u : 0u;
+            ++counts[incidentDirection];
+        }
+
+        for (uint32_t incidentDirection = 0; incidentDirection < 4; ++incidentDirection) {
+            SCOPED_TRACE(static_cast<int32_t>(microfacetType));
+            SCOPED_TRACE(incidentDirection);
+            const double integratedPdf =
+                expectedDirectionalMass[incidentDirection] / static_cast<double>(counts[incidentDirection]);
+            const double observedDirectionalMass =
+                static_cast<double>(validSamples[incidentDirection]) / static_cast<double>(counts[incidentDirection]);
+            EXPECT_NEAR(integratedPdf, observedDirectionalMass, 2e-2);
+        }
+    }
+}
+
+TEST_F(BsdfValidationTest, RoughDielectricHandlesCriticalAngleAndTotalInternalReflection) {
+    const auto results =
+        runValidationShader(*device_, Model::RoughDielectric, Operation::CriticalAngle, MicrofacetType::Beckmann);
+    for (size_t i = 0; i < results.size(); ++i) {
+        SCOPED_TRACE(i);
+        const glm::vec3 wi = results[i].wiAndAux;
+        const glm::vec3 wo = results[i].woAndPdf;
+        ASSERT_LT(wi.z, 0.0f);
+        ASSERT_GT(results[i].woAndPdf.w, 0.0f);
+        EXPECT_NEAR(glm::dot(wo, wo), 1.0f, 3e-5f);
+        if ((i & 1u) == 0u) {
+            EXPECT_GT(wo.z, 0.0f) << "below the critical angle must transmit";
+        } else {
+            EXPECT_FLOAT_EQ(results[i].wiAndAux.w, 1.0f);
+            EXPECT_LT(wo.z, 0.0f) << "above the critical angle must reflect via TIR";
+            EXPECT_FLOAT_EQ(results[i].reverseValue.w, 1.0f);
         }
     }
 }

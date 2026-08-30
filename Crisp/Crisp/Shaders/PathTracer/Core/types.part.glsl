@@ -12,6 +12,7 @@ const int kBrdfMicrofacet = 3;
 const int kBrdfOrenNayar = 4;
 const int kBrdfSmoothConductor = 5;
 const int kBrdfRoughConductor = 6;
+const int kBrdfRoughDielectric = 7;
 
 const uint kBrdfOperationSample = 0;
 const uint kBrdfOperationEvaluate = 1;
@@ -22,10 +23,10 @@ const uint kBrdfOperationEvaluate = 1;
 // does. A free-running cursor would let neighbouring pixels disagree on what dimension d means.
 const uint kDimPixelFilter = 0u; // 2 dimensions.
 const uint kDimBounceBase = 2u;
-const uint kDimsPerBounce = 8u;
-const uint kDimBsdf = 0u;            // 2 dimensions, relative to the bounce base.
-const uint kDimLight = 2u;           // 5 dimensions.
-const uint kDimRussianRoulette = 7u; // 1 dimension.
+const uint kDimsPerBounce = 9u;
+const uint kDimBsdf = 0u;            // 3 dimensions, relative to the bounce base.
+const uint kDimLight = 3u;           // 5 dimensions.
+const uint kDimRussianRoulette = 8u; // 1 dimension.
 
 // This structure is used to communicate hit information across path tracing shaders.
 struct HitInfo {
@@ -44,13 +45,16 @@ struct HitInfo {
     vec3 normal;         // Out.
     uint sampleLobeType; // Out.
 
-    vec2 bsdfSample; // In, the unit-square sample the hit shader hands to the BSDF.
+    vec2 bsdfSample;       // In, the unit-square sample the hit shader hands to the BSDF.
+    float bsdfLobeSample;  // In, independent sample for selecting a BSDF lobe.
+    float pad0;
 };
 
 // This structure is used to communicate BRDF sampling across hit and callable shaders.
 struct BrdfSample {
-    vec2 unitSample; // In.
-    vec2 pad0;       // Unused.
+    vec2 unitSample; // In, samples a direction or microfacet normal.
+    float lobeSample; // In, independently selects a BSDF lobe.
+    float pad0;
 
     vec3 normal;     // In, local space.
     uint materialId; // In.

@@ -8,6 +8,7 @@ void traceRay(
     inout Sampler rng, in uint bounceDimBase, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
     setDimension(rng, bounceDimBase + kDimBsdf);
     hitInfo.bsdfSample = next2D(rng);
+    hitInfo.bsdfLobeSample = next1D(rng);
     traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, rayOrigin, tMin, rayDirection, tMax, kPayloadIndex);
 }
 
