@@ -102,11 +102,25 @@ target_link_libraries(CrispClusteredLightingScene
     PRIVATE ImGui
 )
 
+add_cpp_static_library(CrispPathTracedView
+    "PathTracedView.cpp"
+    "PathTracedView.hpp"
+)
+target_link_libraries(CrispPathTracedView
+    PUBLIC Crisp::Renderer
+    PUBLIC Crisp::Camera
+    PUBLIC Crisp::VulkanDescriptorHeap
+    PUBLIC Crisp::RayTracingPipelineBuilder
+    PRIVATE Crisp::RenderGraph
+    PRIVATE ImGui
+)
+
 add_cpp_static_library(CrispMaterialExplorerScene
     "MaterialExplorerScene.cpp"
     "MaterialExplorerScene.hpp"
 )
 target_link_libraries(CrispMaterialExplorerScene
+    PUBLIC Crisp::PathTracedView
     PUBLIC Crisp::Scene
     PUBLIC Crisp::Camera
     PUBLIC Crisp::Lights

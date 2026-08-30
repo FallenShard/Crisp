@@ -13,6 +13,7 @@
 #include <Crisp/Models/Skybox.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
+#include <Crisp/Scenes/PathTracedView.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
 
@@ -20,6 +21,8 @@ namespace crisp {
 
 class MaterialExplorerScene : public Scene {
 public:
+    enum class RenderMode { Rasterized, PathTraced };
+
     MaterialExplorerScene(Renderer* renderer, Window* window, const nlohmann::json& args);
 
     void resize(int width, int height) override;
@@ -31,6 +34,9 @@ private:
     void createRenderResources(const std::string& environmentMapName);
     void createSceneObjects(const std::filesystem::path& shaderBallPath);
     void createRayTracedShadowResources();
+    void createPathTracedView();
+    void setRenderMode(RenderMode mode);
+    void updatePresentedImage();
     RenderNode& createRenderNode(std::string_view nodeId);
     PbrMaterialHandle addPbrNode(
         std::string_view nodeId,
@@ -60,6 +66,10 @@ private:
     std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_shadowBlases;
     std::unique_ptr<VulkanAccelerationStructure> m_shadowTlas;
 
+    std::unique_ptr<PathTracedView> m_pathTracedView;
+    std::vector<PathTracedGeometry> m_pathTracedGeometry;
+    RenderMode m_renderMode{RenderMode::Rasterized};
+
     std::array<std::vector<DrawCommand>, kDefaultCascadeCount> m_shadowDrawCommands;
     std::vector<DrawCommand> m_shaderBallForwardDrawCommands;
     std::vector<DrawCommand> m_floorForwardDrawCommands;
@@ -79,6 +89,7 @@ private:
     bool m_showFloor{true};
     bool m_rayTracedShadowsSupported{false};
     bool m_useRayTracedShadows{false};
+    bool m_pathTracingSupported{false};
 };
 
 } // namespace crisp

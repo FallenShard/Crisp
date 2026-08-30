@@ -89,7 +89,10 @@ PbrImageGroup createMaterialExplorerImageGroup() {
 MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window, const nlohmann::json& args)
     : Scene(renderer, window) {
     setupInput();
-    m_rayTracedShadowsSupported = m_renderer->getDevice().getEnabledFeatures().rayQuery;
+    const auto& features = m_renderer->getDevice().getEnabledFeatures();
+    m_rayTracedShadowsSupported = features.rayQuery;
+    // The path-traced view addresses its resources through a descriptor heap, so it needs more than a BVH.
+    m_pathTracingSupported = features.rayTracing && features.descriptorHeap && features.shaderUntypedPointers;
 
     m_cameraController = std::make_unique<TargetCameraController>(*m_window);
     m_cameraController->setTarget(glm::vec3(0.0f, 1.0f, 0.0f));
@@ -132,6 +135,14 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
         executeDrawCommands(std::span<const DrawCommand>(&m_skyboxDrawCommand, 1), frameContext.commandEncoder);
     });
 
+    if (m_pathTracingSupported) {
+        addPathTracedViewPass(*m_renderGraph, [this](const FrameContext& frameContext) {
+            if (m_renderMode == RenderMode::PathTraced && m_pathTracedView) {
+                m_pathTracedView->trace(frameContext);
+            }
+        });
+    }
+
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     m_renderer->setSceneImageView(&m_renderGraph->getImageView<&ForwardLightingPassData::hdrImage>());
 
@@ -150,7 +161,12 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
         "modelPath", std::string{"glTFSamples/2.0/USDShaderBallForGltf/glTF-Binary/USDShaderBallForGltf.glb"});
     createSceneObjects(shaderBallPath);
     createRayTracedShadowResources();
+    createPathTracedView();
     rebuildDrawCommands();
+
+    if (args.value("renderMode", std::string{"rasterized"}) == "path-traced") {
+        setRenderMode(RenderMode::PathTraced);
+    }
 
     m_materialPresetNames.emplace_back(kNoMaterialPreset);
     const auto materialPresetsPath = m_renderer->getResourcesPath() / "Textures/PbrMaterials";
@@ -174,13 +190,20 @@ void MaterialExplorerScene::resize(const int width, const int height) {
     m_cameraController->onViewportResized(width, height);
     m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
-    m_renderer->setSceneImageView(&m_renderGraph->getImageView<&ForwardLightingPassData::hdrImage>());
+    if (m_pathTracedView) {
+        m_pathTracedView->updateDescriptorHeap(*m_renderGraph);
+        m_pathTracedView->resetAccumulation();
+    }
+    updatePresentedImage();
 }
 
 void MaterialExplorerScene::update(const UpdateParams& updateParams) {
     m_cameraController->update(updateParams.dt);
     const auto cameraParameters = m_cameraController->getCameraParameters();
     m_transformBuffer->update(cameraParameters.V, cameraParameters.P);
+    if (m_pathTracedView) {
+        m_pathTracedView->updateCamera(cameraParameters);
+    }
 }
 
 void MaterialExplorerScene::render(const FrameContext& frameContext) {
@@ -206,6 +229,11 @@ void MaterialExplorerScene::render(const FrameContext& frameContext) {
 
     frameContext.commandEncoder.insertBarrier(
         kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead | kFragmentRead));
+
+    if (m_renderMode == RenderMode::PathTraced && m_pathTracedView) {
+        m_pathTracedView->uploadFrameData(frameContext);
+    }
+
     m_renderGraph->execute(frameContext);
 }
 
@@ -213,6 +241,26 @@ void MaterialExplorerScene::drawGui() {
     drawCameraPivot(*m_cameraController);
 
     ImGui::Begin("Material Explorer");
+
+    if (m_pathTracingSupported) {
+        int mode = static_cast<int>(m_renderMode);
+        if (ImGui::RadioButton("Rasterized", &mode, static_cast<int>(RenderMode::Rasterized))) {
+            setRenderMode(RenderMode::Rasterized);
+        }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("Path traced", &mode, static_cast<int>(RenderMode::PathTraced))) {
+            setRenderMode(RenderMode::PathTraced);
+        }
+        if (m_renderMode == RenderMode::PathTraced) {
+            m_pathTracedView->drawGui();
+            ImGui::TextWrapped(
+                "Reference view: material factors only, no textures or normal maps, and the environment is the "
+                "only light. It will not match the rasterized view yet.");
+        }
+    } else {
+        ImGui::TextDisabled("Path tracing unavailable (needs ray tracing and descriptor heaps)");
+    }
+    ImGui::Separator();
 
     gui::drawComboBox(
         "Texture Set",
@@ -269,6 +317,9 @@ void MaterialExplorerScene::drawGui() {
 
     if (materialChanged) {
         m_pbrMaterialTable->update(m_shaderBallMaterialHandle, m_shaderBallParams);
+        if (m_pathTracedView) {
+            m_pathTracedView->resetAccumulation();
+        }
     }
     if (m_shaderBallParams.flags != previousFlags) {
         updateShaderBallShadowMaterials();
@@ -472,6 +523,45 @@ void MaterialExplorerScene::createRayTracedShadowResources() {
     });
 }
 
+void MaterialExplorerScene::createPathTracedView() {
+    if (!m_pathTracingSupported) {
+        return;
+    }
+
+    m_pathTracedView = std::make_unique<PathTracedView>(
+        *m_renderer,
+        m_pathTracedGeometry,
+        m_pbrMaterialTable->getDeviceAddress(),
+        m_lightSystem->getEnvironmentLight()->getCubeMapView());
+    m_pathTracedView->updateDescriptorHeap(*m_renderGraph);
+}
+
+void MaterialExplorerScene::setRenderMode(const RenderMode mode) {
+    if (m_renderMode == mode) {
+        return;
+    }
+
+    // Switching re-points the renderer's scene material at the other view's image, which rewrites a descriptor
+    // set that in-flight command buffers still reference. The resize path gets its idle from
+    // Renderer::recreateSwapChain; a GUI-driven switch has to ask for one. It is a click, so the stall is free.
+    m_renderer->finish();
+
+    m_renderMode = mode;
+    if (m_pathTracedView) {
+        m_pathTracedView->resetAccumulation();
+    }
+    updatePresentedImage();
+}
+
+void MaterialExplorerScene::updatePresentedImage() {
+    // Both views render into the graph; only the presented image changes. A swipe comparison replaces this with
+    // a composite pass reading both.
+    const bool pathTraced = m_renderMode == RenderMode::PathTraced && m_pathTracedView;
+    m_renderer->setSceneImageView(
+        pathTraced ? &getPathTracedViewImage(*m_renderGraph)
+                   : &m_renderGraph->getImageView<&ForwardLightingPassData::hdrImage>());
+}
+
 RenderNode& MaterialExplorerScene::createRenderNode(const std::string_view nodeId) {
     const auto transformHandle = m_transformBuffer->getNextIndex();
     return *m_renderNodes.emplace(nodeId, std::make_unique<RenderNode>(*m_transformBuffer, transformHandle)).first->second;
@@ -483,7 +573,10 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
     const PbrMaterial& material,
     const glm::mat4& modelMatrix,
     const bool castsShadow) {
-    const VkBufferUsageFlags2 accelerationStructureUsage = castsShadow && m_rayTracedShadowsSupported
+    // Every node feeds the path tracer, including ones that cast no shadow, so the usage bits cannot be gated
+    // on castsShadow the way the shadow BLAS below is.
+    const bool needsAccelerationStructure = m_rayTracedShadowsSupported || m_pathTracingSupported;
+    const VkBufferUsageFlags2 accelerationStructureUsage = needsAccelerationStructure
         ? VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
         : 0;
@@ -512,6 +605,15 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
     const auto gpuParams = createGpuPbrParams(material, m_resourceContext->imageCache);
     const auto materialHandle = m_pbrMaterialTable->add(gpuParams);
     m_pbrMaterialHandles.emplace(&node, materialHandle);
+
+    if (m_pathTracingSupported) {
+        m_pathTracedGeometry.push_back({
+            .geometry = &geometry,
+            .transform = modelMatrix,
+            .materialIndex = materialHandle.index,
+            .triangleCount = mesh.getTriangleCount(),
+        });
+    }
     const PbrDrawFlagFlags drawFlags =
         m_useRayTracedShadows ? PbrDrawFlagFlags{PbrDrawFlag::RayTracedShadows} : PbrDrawFlagFlags{};
     const auto drawParameters = m_pbrMaterialTable->createDrawParameters(materialHandle, drawFlags);
@@ -548,6 +650,10 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
     CRISP_CHECK(
         std::filesystem::is_directory(environmentMapPath), "Environment map does not exist: {}", environmentMapName);
 
+    // Rebuilding the skybox and reconfiguring the forward material rewrite descriptor sets that in-flight command
+    // buffers still reference, so this needs the same idle as a render-mode switch. Harmless during construction.
+    m_renderer->finish();
+
     m_lightSystem->setEnvironmentMap(loadImageBasedLightingData(environmentMapPath).unwrap(), environmentMapName);
     m_skybox = std::make_unique<Skybox>(
         m_renderer,
@@ -562,6 +668,9 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
 
     if (m_forwardPassMaterial) {
         configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
+    }
+    if (m_pathTracedView) {
+        m_pathTracedView->setEnvironmentMap(m_lightSystem->getEnvironmentLight()->getCubeMapView());
     }
 }
 
