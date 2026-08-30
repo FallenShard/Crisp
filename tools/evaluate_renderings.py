@@ -186,15 +186,15 @@ def compare_images(reference: np.ndarray, candidate: np.ndarray, requested_peak:
     if reference.shape != candidate.shape:
         return {"error": f"Shape mismatch: reference {reference.shape}, candidate {candidate.shape}"}
 
-    reference_non_finite = int(reference.size - np.count_nonzero(np.isfinite(reference)))
-    candidate_non_finite = int(candidate.size - np.count_nonzero(np.isfinite(candidate)))
-    diagnostics = {
-        "referenceNonFiniteValues": reference_non_finite,
-        "candidateNonFiniteValues": candidate_non_finite,
-        "candidateNegativeValues": int(np.count_nonzero(candidate < 0.0)),
-    }
-    if reference_non_finite or candidate_non_finite:
-        return {**diagnostics, "error": "Cannot calculate metrics for images containing non-finite values"}
+    invalid_reasons = []
+    if not np.all(np.isfinite(reference)):
+        invalid_reasons.append("reference contains non-finite values")
+    if not np.all(np.isfinite(candidate)):
+        invalid_reasons.append("candidate contains non-finite values")
+    if np.any(candidate < 0.0):
+        invalid_reasons.append("candidate contains negative values")
+    if invalid_reasons:
+        return {"error": "; ".join(invalid_reasons)}
 
     difference = candidate - reference
     absolute_difference = np.abs(difference)
@@ -219,7 +219,6 @@ def compare_images(reference: np.ndarray, candidate: np.ndarray, requested_peak:
         psnr_db = float(20.0 * math.log10(peak) - 10.0 * math.log10(mse))
 
     return {
-        **diagnostics,
         "meanAbsoluteError": float(np.mean(absolute_difference)),
         "medianAbsoluteError": float(absolute_error_percentiles[0]),
         "absoluteErrorP95": float(absolute_error_percentiles[1]),

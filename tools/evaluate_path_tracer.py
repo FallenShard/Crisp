@@ -199,7 +199,7 @@ def capture_candidate(
         raise SystemExit(f"[{case['name']}] Crisp exited without writing {candidate}")
 
 
-def validate_thresholds(cases: list[dict], report_path: Path) -> None:
+def validate_results(cases: list[dict], report_path: Path) -> None:
     report = json.loads(report_path.read_text(encoding="utf-8"))
     candidate_runs = report.get("candidateRuns", [])
     if len(candidate_runs) != 1:
@@ -208,10 +208,6 @@ def validate_thresholds(cases: list[dict], report_path: Path) -> None:
     image_results = candidate_runs[0].get("images", {})
     failures: list[str] = []
     for case in cases:
-        thresholds = case.get("thresholds")
-        if not thresholds:
-            continue
-
         image_name = f"{Path(case['mitsubaScene']).stem}.exr"
         metrics = image_results.get(image_name)
         if metrics is None:
@@ -221,6 +217,7 @@ def validate_thresholds(cases: list[dict], report_path: Path) -> None:
             failures.append(f"[{case['name']}] {metrics['error']}")
             continue
 
+        thresholds = case.get("thresholds", {})
         for metric, limit in thresholds.get("maximum", {}).items():
             value = metrics.get(metric)
             if value is None or value > limit:
@@ -232,7 +229,7 @@ def validate_thresholds(cases: list[dict], report_path: Path) -> None:
 
     if failures:
         raise SystemExit("Image validation failed:\n  " + "\n  ".join(failures))
-    print("All configured image thresholds passed")
+    print("All images are valid and configured thresholds passed")
 
 
 def main() -> int:
@@ -272,7 +269,7 @@ def main() -> int:
     if args.skip_flip:
         compare_command.append("--skip-flip")
     run(compare_command, "Comparing captures against references")
-    validate_thresholds(cases, json_report)
+    validate_results(cases, json_report)
 
     run(
         [

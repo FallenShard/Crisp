@@ -71,8 +71,6 @@ def metric_rows(result: dict[str, Any]) -> str:
         ("Abs. error P95", result.get("absoluteErrorP95")),
         ("Abs. error P99", result.get("absoluteErrorP99")),
         ("Luminance bias", result.get("signedRelativeMeanLuminanceError"), "%"),
-        ("Non-finite values", result.get("candidateNonFiniteValues"), "", 0),
-        ("Negative values", result.get("candidateNegativeValues"), "", 0),
     )
     rendered = []
     for row in rows:

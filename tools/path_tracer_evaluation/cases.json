@@ -18,9 +18,7 @@
       "thresholds": {
         "maximum": {
           "relativeL2": 0.02,
-          "relativeMeanLuminanceError": 0.005,
-          "candidateNegativeValues": 0,
-          "candidateNonFiniteValues": 0
+          "relativeMeanLuminanceError": 0.005
         },
         "minimum": {
           "psnrDb": 60.0
@@ -34,9 +32,7 @@
       "thresholds": {
         "maximum": {
           "relativeL2": 0.015,
-          "relativeMeanLuminanceError": 0.005,
-          "candidateNegativeValues": 0,
-          "candidateNonFiniteValues": 0
+          "relativeMeanLuminanceError": 0.005
         },
         "minimum": {
           "psnrDb": 60.0
@@ -50,9 +46,7 @@
       "thresholds": {
         "maximum": {
           "relativeL2": 0.03,
-          "relativeMeanLuminanceError": 0.005,
-          "candidateNegativeValues": 0,
-          "candidateNonFiniteValues": 0
+          "relativeMeanLuminanceError": 0.005
         },
         "minimum": {
           "psnrDb": 58.0
@@ -67,9 +61,7 @@
       "thresholds": {
         "maximum": {
           "relativeL2": 0.001,
-          "relativeMeanLuminanceError": 0.0001,
-          "candidateNegativeValues": 0,
-          "candidateNonFiniteValues": 0
+          "relativeMeanLuminanceError": 0.0001
         },
         "minimum": {
           "psnrDb": 85.0
@@ -84,9 +76,7 @@
       "thresholds": {
         "maximum": {
           "relativeL2": 0.00001,
-          "relativeMeanLuminanceError": 0.00001,
-          "candidateNegativeValues": 0,
-          "candidateNonFiniteValues": 0
+          "relativeMeanLuminanceError": 0.00001
         },
         "minimum": {
           "psnrDb": 120.0
@@ -101,9 +91,7 @@
       "thresholds": {
         "maximum": {
           "relativeL2": 0.05,
-          "relativeMeanLuminanceError": 0.003,
-          "candidateNegativeValues": 0,
-          "candidateNonFiniteValues": 0
+          "relativeMeanLuminanceError": 0.003
         },
         "minimum": {
           "psnrDb": 38.0
@@ -118,9 +106,7 @@
       "thresholds": {
         "maximum": {
           "relativeL2": 0.03,
-          "relativeMeanLuminanceError": 0.003,
-          "candidateNegativeValues": 0,
-          "candidateNonFiniteValues": 0
+          "relativeMeanLuminanceError": 0.003
         },
         "minimum": {
           "psnrDb": 58.0
@@ -135,9 +121,7 @@
       "thresholds": {
         "maximum": {
           "relativeL2": 0.01,
-          "relativeMeanLuminanceError": 0.003,
-          "candidateNegativeValues": 0,
-          "candidateNonFiniteValues": 0
+          "relativeMeanLuminanceError": 0.003
         },
         "minimum": {
           "psnrDb": 40.0
