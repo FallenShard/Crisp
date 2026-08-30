@@ -7,6 +7,7 @@
 #include "../PathTracer/Core/types.part.glsl"
 #include "../Common/math-constants.part.glsl"
 #include "../PathTracer/Core/scene.part.glsl"
+#include "../PathTracer/Textures/material-texture.part.glsl"
 #include "lambertian.part.glsl"
 #include "oren-nayar.part.glsl"
 
@@ -20,6 +21,7 @@ void main() {
     }
 
     brdf.lobeType = kLobeTypeDiffuse;
-    brdf.f = evaluateOrenNayar(material.albedo, material.roughness, brdf.wi, brdf.wo);
+    brdf.f = evaluateOrenNayar(
+        evaluateMaterialReflectance(material, brdf.texCoord), material.roughness, brdf.wi, brdf.wo);
     brdf.pdf = lambertianPdf(brdf.wi, brdf.wo);
 }

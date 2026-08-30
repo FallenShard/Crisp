@@ -114,17 +114,7 @@ PathTracedView::PathTracedView(
     m_samplerHeap = std::make_unique<VulkanSamplerHeap>(device, kSamplerHeapSlotCount, "Path-Traced View Sampler Heap");
 
     // Clamped trilinear, matching how the raster path samples the same cube map.
-    const VkSamplerCreateInfo environmentSampler{
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_LINEAR,
-        .minFilter = VK_FILTER_LINEAR,
-        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-        .maxLod = VK_LOD_CLAMP_NONE,
-    };
-    m_samplerHeap->write(kEnvironmentSamplerSlot, environmentSampler);
+    m_samplerHeap->write(kEnvironmentSamplerSlot, createLinearClampSamplerCreateInfo());
 
     m_pipeline = createPipeline();
 }

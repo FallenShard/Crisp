@@ -254,3 +254,8 @@ target_add_test_file(
     CrispEnvironmentSamplingTest
     "../Shaders/PathTracer/Lights/environment-distribution.part.glsl"
     "PathTracer/Lights/environment-distribution.part.glsl")
+
+add_cpp_test(CrispRayTracingSceneParserTest
+    "Test/RayTracingSceneParserTest.cpp")
+target_link_libraries(CrispRayTracingSceneParserTest
+    PRIVATE Crisp::VulkanRayTracingScene)

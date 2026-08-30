@@ -7,6 +7,7 @@
 #include "../PathTracer/Core/types.part.glsl"
 #include "../Common/math-constants.part.glsl"
 #include "../PathTracer/Core/scene.part.glsl"
+#include "../PathTracer/Textures/material-texture.part.glsl"
 #include "lambertian.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
@@ -17,6 +18,7 @@ void main() {
     }
 
     brdf.lobeType = kLobeTypeDiffuse;
-    brdf.f = evaluateLambertian(scene.materials.data[brdf.materialId].albedo, brdf.wi, brdf.wo);
+    const BrdfParameters material = scene.materials.data[brdf.materialId];
+    brdf.f = evaluateLambertian(evaluateMaterialReflectance(material, brdf.texCoord), brdf.wi, brdf.wo);
     brdf.pdf = lambertianPdf(brdf.wi, brdf.wo);
 }

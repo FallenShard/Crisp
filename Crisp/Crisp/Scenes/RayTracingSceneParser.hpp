@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstddef>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 #include <Crisp/Io/JsonUtils.hpp>
@@ -25,6 +27,23 @@ struct BrdfParameters {
 
     glm::vec3 complexIorK;
     float roughness;
+
+    int32_t reflectanceTexture{-1};
+    int32_t reflectanceSampler{-1};
+    int32_t pad0{};
+    int32_t pad1{};
+};
+
+static_assert(sizeof(BrdfParameters) == 96);
+static_assert(std::is_standard_layout_v<BrdfParameters>);
+static_assert(offsetof(BrdfParameters, albedo) == 0);
+static_assert(offsetof(BrdfParameters, kd) == 32);
+static_assert(offsetof(BrdfParameters, complexIorEta) == 48);
+static_assert(offsetof(BrdfParameters, complexIorK) == 64);
+static_assert(offsetof(BrdfParameters, reflectanceTexture) == 80);
+
+struct MaterialTextureDescription {
+    std::string filename;
 };
 
 struct InstanceProperties {
@@ -57,6 +76,7 @@ struct SceneDescription {
     std::vector<glm::mat4> transforms;
     std::vector<InstanceProperties> props;
     std::vector<BrdfParameters> brdfs;
+    std::vector<MaterialTextureDescription> materialTextures;
     std::vector<LightParameters> lights;
     std::optional<EnvironmentLightDescription> environment;
 };

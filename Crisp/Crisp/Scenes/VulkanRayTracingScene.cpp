@@ -17,6 +17,7 @@
 #include <Crisp/ShaderUtils/Reflection.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 namespace crisp {
 namespace {
@@ -106,10 +107,12 @@ constexpr uint32_t kImageSlot = 1;
 constexpr uint32_t kViewSlot = 2;
 constexpr uint32_t kIntegratorSlot = 3;
 constexpr uint32_t kEnvironmentMapSlot = 4;
-constexpr uint32_t kHeapSlotCount = 5;
+constexpr uint32_t kMaterialTextureFirstSlot = 5;
+constexpr uint32_t kFixedHeapSlotCount = kMaterialTextureFirstSlot;
 
 constexpr uint32_t kEnvironmentSamplerSlot = 0;
-constexpr uint32_t kSamplerHeapSlotCount = 1;
+constexpr uint32_t kMaterialSamplerSlot = 1;
+constexpr uint32_t kSamplerHeapSlotCount = 2;
 
 } // namespace
 
@@ -127,6 +130,28 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     const auto sceneFile = args.value("sceneFile", std::string{"VesperScenes/Nori-PA-4/cbox-mats.json"});
     const auto json = loadJsonFromFile(renderer->getAssetPaths().resourceDir / sceneFile).unwrap();
     m_sceneDesc = parseSceneDescription(json["shapes"], json.value("lights", nlohmann::json::array()));
+
+    m_materialImages.reserve(m_sceneDesc.materialTextures.size());
+    for (const auto& texture : m_sceneDesc.materialTextures) {
+        auto texturePath = renderer->getResourcesPath() / texture.filename;
+        if (!std::filesystem::exists(texturePath)) {
+            texturePath = renderer->getResourcesPath() / "Textures" / texture.filename;
+        }
+        const Image image =
+            texturePath.extension() == ".exr"
+                ? loadEnvironmentImage(texturePath)
+                : loadImage(texturePath, 4, FlipAxis::None).unwrap();
+        const VkFormat format =
+            image.getPixelByteSize() == 4 * sizeof(float) ? VK_FORMAT_R32G32B32A32_SFLOAT : VK_FORMAT_R8G8B8A8_SRGB;
+        m_materialImages.push_back(createVulkanImage(*renderer, image, format));
+    }
+    for (auto& material : m_sceneDesc.brdfs) {
+        if (material.reflectanceTexture < 0) {
+            continue;
+        }
+        material.reflectanceTexture += static_cast<int32_t>(kMaterialTextureFirstSlot);
+        material.reflectanceSampler = static_cast<int32_t>(kMaterialSamplerSlot);
+    }
 
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
@@ -156,7 +181,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         const Image environmentImage = loadEnvironmentImage(environmentPath);
         const auto pixelCount = static_cast<size_t>(environmentImage.getWidth()) * environmentImage.getHeight();
         const auto distribution = createEnvironmentSamplingDistribution(
-            std::span<const float>{reinterpret_cast<const float*>(environmentImage.getData()), pixelCount * 4},
+            std::span<const float>{reinterpret_cast<const float*>(environmentImage.getData()), pixelCount * 4}, // NOLINT
             environmentImage.getWidth(),
             environmentImage.getHeight());
 
@@ -241,20 +266,15 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     });
 
     m_resourceHeap = std::make_unique<VulkanResourceHeap>(
-        m_renderer->getDevice(), kHeapSlotCount, "Path Tracer Resource Descriptor Heap");
+        m_renderer->getDevice(),
+        kFixedHeapSlotCount + static_cast<uint32_t>(m_materialImages.size()),
+        "Path Tracer Resource Descriptor Heap");
     m_samplerHeap = std::make_unique<VulkanSamplerHeap>(
         m_renderer->getDevice(), kSamplerHeapSlotCount, "Path Tracer Sampler Descriptor Heap");
-    const VkSamplerCreateInfo environmentSampler{
-        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_LINEAR,
-        .minFilter = VK_FILTER_LINEAR,
-        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-        .maxLod = 0.0f,
-    };
-    m_samplerHeap->write(kEnvironmentSamplerSlot, environmentSampler);
+    m_samplerHeap->write(
+        kEnvironmentSamplerSlot,
+        createLatLongEnvironmentSamplerCreateInfo());
+    m_samplerHeap->write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo());
     m_pipeline = createPipeline();
 
     buildRenderGraph();
@@ -464,6 +484,10 @@ void VulkanRayTracingScene::updateDescriptorHeap() {
     if (m_environmentImage) {
         m_resourceHeap->writeSampledImage(
             kEnvironmentMapSlot, m_environmentImage->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+    for (uint32_t i = 0; i < m_materialImages.size(); ++i) {
+        m_resourceHeap->writeSampledImage(
+            kMaterialTextureFirstSlot + i, m_materialImages[i]->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 }
 

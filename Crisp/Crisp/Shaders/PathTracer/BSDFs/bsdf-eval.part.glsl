@@ -6,9 +6,11 @@
 #include "../../Brdf/oren-nayar.part.glsl"
 #include "../../Brdf/rough-conductor.part.glsl"
 #include "../../Brdf/rough-dielectric.part.glsl"
+#include "../Textures/material-texture.part.glsl"
 
-BrdfEval evaluateLambertian(BrdfParameters material, vec3 wi, vec3 wo) {
-    return BrdfEval(evaluateLambertian(material.albedo, wi, wo), lambertianPdf(wi, wo));
+BrdfEval evaluateLambertian(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
+    return BrdfEval(
+        evaluateLambertian(evaluateMaterialReflectance(material, texCoord), wi, wo), lambertianPdf(wi, wo));
 }
 
 BrdfEval evaluateMicrofacet(BrdfParameters material, vec3 wi, vec3 wo) {
@@ -25,9 +27,9 @@ BrdfEval evaluateMicrofacet(BrdfParameters material, vec3 wi, vec3 wo) {
         microfacetPdf(wi, wo, material.ks, material.microfacetType, material.microfacetAlpha));
 }
 
-BrdfEval evaluateOrenNayar(BrdfParameters material, vec3 wi, vec3 wo) {
+BrdfEval evaluateOrenNayar(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
     return BrdfEval(
-        evaluateOrenNayar(material.albedo, material.roughness, wi, wo),
+        evaluateOrenNayar(evaluateMaterialReflectance(material, texCoord), material.roughness, wi, wo),
         lambertianPdf(wi, wo));
 }
 
@@ -61,14 +63,14 @@ BrdfEval evaluateRoughDielectric(BrdfParameters material, vec3 wi, vec3 wo) {
             wo));
 }
 
-BrdfEval evaluateBrdf(BrdfParameters material, vec3 wi, vec3 wo) {
+BrdfEval evaluateBrdf(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
     switch (material.type) {
     case kBrdfLambertian:
-        return evaluateLambertian(material, wi, wo);
+        return evaluateLambertian(material, texCoord, wi, wo);
     case kBrdfMicrofacet:
         return evaluateMicrofacet(material, wi, wo);
     case kBrdfOrenNayar:
-        return evaluateOrenNayar(material, wi, wo);
+        return evaluateOrenNayar(material, texCoord, wi, wo);
     case kBrdfRoughConductor:
         return evaluateRoughConductor(material, wi, wo);
     case kBrdfRoughDielectric:

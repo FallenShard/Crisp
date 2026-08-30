@@ -138,6 +138,21 @@ BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
     return createLambertianBrdf(glm::vec3(1.0, 1.0, 0.0));
 }
 
+MaterialTextureDescription parseReflectanceTexture(const nlohmann::json& texture) {
+    if (!texture.is_object()) {
+        throw std::invalid_argument("reflectanceTexture must be an object");
+    }
+    const std::string type = texture.value("type", std::string{});
+    if (type != "bitmap") {
+        throw std::invalid_argument("Unsupported GPU reflectance texture type: " + type);
+    }
+    const std::string filename = texture.value("filename", std::string{});
+    if (filename.empty()) {
+        throw std::invalid_argument("Bitmap reflectanceTexture requires a filename");
+    }
+    return {.filename = filename};
+}
+
 glm::mat4 parseTransform(const nlohmann::json& shape) {
     if (shape.value("type", std::string("mesh")) == "sphere") {
         return glm::translate(parseVec3(shape["center"])) * glm::scale(glm::vec3(shape["radius"].get<float>()));
@@ -192,7 +207,15 @@ SceneDescription parseSceneDescription(const nlohmann::json& shapeList, const nl
             scene.meshFilenames.push_back(shape["filename"]);
         }
 
-        scene.brdfs.push_back(parseBrdfParameters(shape["bsdf"]));
+        auto material = parseBrdfParameters(shape["bsdf"]);
+        if (shape["bsdf"].contains("reflectanceTexture")) {
+            if (material.type != kBrdfLambertian && material.type != kBrdfOrenNayar) {
+                throw std::invalid_argument("reflectanceTexture is only supported by diffuse GPU materials");
+            }
+            material.reflectanceTexture = static_cast<int32_t>(scene.materialTextures.size());
+            scene.materialTextures.push_back(parseReflectanceTexture(shape["bsdf"]["reflectanceTexture"]));
+        }
+        scene.brdfs.push_back(material);
 
         if (shape.contains("light")) {
             const auto lightIdx = static_cast<int32_t>(scene.lights.size());

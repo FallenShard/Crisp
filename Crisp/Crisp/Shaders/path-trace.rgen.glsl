@@ -26,8 +26,6 @@ const uint kEnvironmentSamplerSlot = 0;
 // This doesn't work yet in a descriptor_heap: Nvidia driver bug.
 layout(set = 1, binding = 0) uniform accelerationStructureEXT sceneBvh;
 layout(descriptor_heap, descriptor_stride = 64, rgba32f) uniform image2D heapStorageImages[];
-layout(descriptor_heap, descriptor_stride = 64) uniform texture2D heapTexture2Ds[];
-layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 
 layout(descriptor_heap, descriptor_stride = 64) uniform View {
     ViewParameters params;
@@ -56,12 +54,13 @@ heapIntegrators[];
 
 #include "PathTracer/Core/scene.part.glsl"
 #include "PathTracer/Core/intersection.part.glsl"
+#include "PathTracer/Textures/material-texture.part.glsl"
 #include "PathTracer/BSDFs/bsdf-eval.part.glsl"
 
-BrdfEval evaluateBrdfWorldSpace(vec3 normal, vec3 wi, vec3 wo, uint materialId) {
+BrdfEval evaluateBrdfWorldSpace(vec3 normal, vec3 wi, vec3 wo, uint materialId, vec2 texCoord) {
     const mat3 coordinateFrame = createCoordinateFrame(normal);
     const mat3 worldToLocal = transpose(coordinateFrame);
-    return evaluateBrdf(scene.materials.data[materialId], worldToLocal * wi, worldToLocal * wo);
+    return evaluateBrdf(scene.materials.data[materialId], texCoord, worldToLocal * wi, worldToLocal * wo);
 }
 
 #include "PathTracer/Core/tracing.part.glsl"
@@ -95,6 +94,7 @@ vec3 computeRadianceDirectLighting(inout Sampler rng) {
     const vec3 n = hitInfo.normal;
     const vec3 wi = -rayDirection.xyz;
     const uint materialId = hitInfo.materialId;
+    const vec2 texCoord = hitInfo.texCoord;
 
     vec3 shadowRayDir;
     float shadowRayLen;
@@ -103,7 +103,7 @@ vec3 computeRadianceDirectLighting(inout Sampler rng) {
     const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-            const BrdfEval lightDirectionBrdf = evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
+            const BrdfEval lightDirectionBrdf = evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
             L += radiance * lightDirectionBrdf.f;
         }
     }
@@ -146,6 +146,7 @@ vec3 computeRadianceMis(inout Sampler rng) {
     const vec3 sampleWeight = hitInfo.sampleWeight;
     const vec3 wi = -rayDirection.xyz;
     const uint materialId = hitInfo.materialId;
+    const vec2 texCoord = hitInfo.texCoord;
     const bool deltaSample = hitInfo.sampleLobeType == kLobeTypeDelta;
 
     // BRDF sampling.
@@ -173,7 +174,8 @@ vec3 computeRadianceMis(inout Sampler rng) {
     const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-            const BrdfEval lightDirectionBrdf = evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
+            const BrdfEval lightDirectionBrdf =
+                evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
             L += radiance * lightDirectionBrdf.f * powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
         }
     }
@@ -236,6 +238,7 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
         const vec3 rayDir = hitInfo.sampleDirection;
         const vec3 wi = -rayDirection.xyz;
         const uint materialId = hitInfo.materialId;
+        const vec2 texCoord = hitInfo.texCoord;
         const bool isDelta = hitInfo.sampleLobeType == kLobeTypeDelta;
 
         // If the bounce wasn't a delta bounce (glass/mirror), do light sampling.
@@ -247,7 +250,8 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
             const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf);
             if (lightPdf > 0.0f) {
                 if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-                    const BrdfEval lightDirectionBrdf = evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId);
+                    const BrdfEval lightDirectionBrdf =
+                        evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
                     L += throughput * radiance * lightDirectionBrdf.f * powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
                 }
             }

@@ -53,6 +53,7 @@ private:
     std::unique_ptr<VulkanResourceHeap> m_resourceHeap;
     std::unique_ptr<VulkanSamplerHeap> m_samplerHeap;
     std::unique_ptr<VulkanImage> m_environmentImage;
+    std::vector<std::unique_ptr<VulkanImage>> m_materialImages;
 
     ShaderBindingTable m_shaderBindingTable;
 

@@ -7,6 +7,7 @@
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 namespace crisp {
 namespace {
@@ -98,7 +99,7 @@ std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const 
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
     const auto unitCube = createGeometry(*renderer, createCubeMesh(), vertexLayout);
     auto sampler = std::make_unique<VulkanSampler>(
-        renderer->getDevice(), VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, 16.0f, 12.0f);
+        renderer->getDevice(), createLinearRepeatSamplerCreateInfo(16.0f, 12.0f));
     auto cubeMapMaterial = std::make_unique<Material>(cubeMapPipeline.get());
     cubeMapMaterial->writeDescriptor(0, 0, equirectMap.getView().getDescriptorInfo(sampler.get()));
     renderer->getDevice().flushDescriptorUpdates();

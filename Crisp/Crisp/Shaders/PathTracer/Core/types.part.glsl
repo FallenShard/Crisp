@@ -103,6 +103,11 @@ struct BrdfParameters {
 
     vec3 complexIorK;
     float roughness;
+
+    int reflectanceTexture;
+    int reflectanceSampler;
+    int pad0;
+    int pad1;
 };
 
 struct BrdfEval {
