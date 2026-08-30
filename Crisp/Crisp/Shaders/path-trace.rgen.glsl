@@ -99,8 +99,9 @@ vec3 computeRadianceDirectLighting(inout Sampler rng) {
     vec3 shadowRayDir;
     float shadowRayLen;
     float lightPdf;
+    bool lightIsDelta;
     setDimension(rng, kDimBounceBase + kDimLight);
-    const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf);
+    const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf, lightIsDelta);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
             const BrdfEval lightDirectionBrdf = evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
@@ -170,13 +171,15 @@ vec3 computeRadianceMis(inout Sampler rng) {
     vec3 shadowRayDir;
     float shadowRayLen;
     float lightPdf;
+    bool lightIsDelta;
     setDimension(rng, kDimBounceBase + kDimLight);
-    const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf);
+    const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf, lightIsDelta);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
             const BrdfEval lightDirectionBrdf =
                 evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
-            L += radiance * lightDirectionBrdf.f * powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
+            const float misWeight = lightIsDelta ? 1.0f : powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
+            L += radiance * lightDirectionBrdf.f * misWeight;
         }
     }
 
@@ -246,13 +249,17 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
             vec3 shadowRayDir;
             float shadowRayLen;
             float lightPdf;
+            bool lightIsDelta;
             setDimension(rng, bounceDim + kDimLight);
-            const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf);
+            const vec3 radiance =
+                sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf, lightIsDelta);
             if (lightPdf > 0.0f) {
                 if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
                     const BrdfEval lightDirectionBrdf =
                         evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
-                    L += throughput * radiance * lightDirectionBrdf.f * powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
+                    const float misWeight =
+                        lightIsDelta ? 1.0f : powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
+                    L += throughput * radiance * lightDirectionBrdf.f * misWeight;
                 }
             }
         }

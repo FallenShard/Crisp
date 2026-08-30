@@ -92,5 +92,48 @@ TEST(RayTracingSceneParserTest, PropagatesNestedMaterialValidationErrors) {
     EXPECT_THAT(parseSceneDescription(invalidReflectance), HasErrorWithMessageRegex("exactly three numbers"));
 }
 
+TEST(RayTracingSceneParserTest, ParsesStandalonePointLights) {
+    const nlohmann::json lights = nlohmann::json::array({{
+        {"type", "point"},
+        {"position", {1.0f, 2.0f, 3.0f}},
+        {"power", {10.0f, 20.0f, 30.0f}},
+    }});
+
+    const auto result = parseSceneDescription(nlohmann::json::array(), lights);
+    ASSERT_TRUE(result.hasValue());
+    ASSERT_EQ(result->lights.size(), 1);
+    EXPECT_EQ(result->lights[0].type, kLightPoint);
+    EXPECT_EQ(result->lights[0].meshId, -1);
+    EXPECT_EQ(result->lights[0].position, glm::vec3(1.0f, 2.0f, 3.0f));
+    EXPECT_EQ(result->lights[0].emission, glm::vec3(10.0f, 20.0f, 30.0f));
+}
+
+TEST(RayTracingSceneParserTest, RejectsInvalidPointLights) {
+    const nlohmann::json missingPosition = nlohmann::json::array({{
+        {"type", "point"},
+        {"power", {10.0f, 20.0f, 30.0f}},
+    }});
+    EXPECT_THAT(
+        parseSceneDescription(nlohmann::json::array(), missingPosition),
+        HasErrorWithMessageRegex("requires a position"));
+
+    const nlohmann::json missingPower = nlohmann::json::array({{
+        {"type", "point"},
+        {"position", {1.0f, 2.0f, 3.0f}},
+    }});
+    EXPECT_THAT(
+        parseSceneDescription(nlohmann::json::array(), missingPower),
+        HasErrorWithMessageRegex("requires power"));
+
+    const nlohmann::json negativePower = nlohmann::json::array({{
+        {"type", "point"},
+        {"position", {1.0f, 2.0f, 3.0f}},
+        {"power", {10.0f, -1.0f, 30.0f}},
+    }});
+    EXPECT_THAT(
+        parseSceneDescription(nlohmann::json::array(), negativePower),
+        HasErrorWithMessageRegex("power .* must be non-negative"));
+}
+
 } // namespace
 } // namespace crisp

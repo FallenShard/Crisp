@@ -69,7 +69,7 @@ void main() {
     hitInfo.Le = vec3(0.0f);
     hitInfo.lightId = -1;
     if (props.lightId != -1) {
-        hitInfo.Le = evalAreaLight(position, normal, scene.lights.data[props.lightId].radiance);
+        hitInfo.Le = evalAreaLight(position, normal, scene.lights.data[props.lightId].emission);
         hitInfo.lightId = props.lightId;
     }
 }

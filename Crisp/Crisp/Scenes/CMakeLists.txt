@@ -248,12 +248,17 @@ target_link_libraries(CrispEnvironmentSamplingTest
     PRIVATE Crisp::VulkanRayTracingScene
     PRIVATE Crisp::VulkanTestUtils)
 target_add_test_shader(CrispEnvironmentSamplingTest "Test/Data/environment-sampling.comp.glsl")
+target_add_test_shader(CrispEnvironmentSamplingTest "Test/Data/point-light.comp.glsl")
 target_add_test_file(
     CrispEnvironmentSamplingTest "../Shaders/Common/math-constants.part.glsl" "Common/math-constants.part.glsl")
 target_add_test_file(
     CrispEnvironmentSamplingTest
     "../Shaders/PathTracer/Lights/environment-distribution.part.glsl"
     "PathTracer/Lights/environment-distribution.part.glsl")
+target_add_test_file(
+    CrispEnvironmentSamplingTest
+    "../Shaders/PathTracer/Lights/point-light.part.glsl"
+    "PathTracer/Lights/point-light.part.glsl")
 
 add_cpp_test(CrispRayTracingSceneParserTest
     "Test/RayTracingSceneParserTest.cpp")

@@ -17,8 +17,6 @@ constexpr int32_t kBrdfRoughDielectric = 7;
 constexpr int32_t kMicrofacetGgx = 0;
 constexpr int32_t kMicrofacetBeckmann = 1;
 
-constexpr int32_t kLightArea = 0;
-
 BrdfParameters createLambertianBrdf(glm::vec3 albedo) {
     return {
         .albedo = albedo,
@@ -268,6 +266,9 @@ Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, 
                 if (!shape["light"].is_object()) {
                     return resultError("Area light on shape {} must be an object", shapeIndex);
                 }
+                if (shape["light"].value("type", std::string{}) != "area") {
+                    return resultError("Shape {} only supports an area light", shapeIndex);
+                }
                 CRISP_TRY(const auto radiance, parseVec3(shape["light"]["radiance"]));
                 if (glm::any(glm::lessThan(radiance, glm::vec3(0.0f)))) {
                     return resultError("Area-light radiance on shape {} must be non-negative", shapeIndex);
@@ -281,7 +282,7 @@ Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, 
                 scene.lights.push_back({
                     .type = kLightArea,
                     .meshId = meshIdx,
-                    .radiance = radiance,
+                    .emission = radiance,
                 });
             } else {
                 scene.props.push_back({.materialId = static_cast<int32_t>(scene.brdfs.size() - 1), .lightId = -1});
@@ -300,6 +301,25 @@ Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, 
                     return resultError("Standalone light {} must be an object", lightIndex);
                 }
                 const std::string type = light.value("type", std::string{});
+                if (type == "point") {
+                    if (!light.contains("position")) {
+                        return resultError("Point light {} requires a position", lightIndex);
+                    }
+                    if (!light.contains("power")) {
+                        return resultError("Point light {} requires power", lightIndex);
+                    }
+                    CRISP_TRY(const auto position, parseVec3(light["position"]));
+                    CRISP_TRY(const auto power, parseVec3(light["power"]));
+                    if (glm::any(glm::lessThan(power, glm::vec3(0.0f)))) {
+                        return resultError("Point-light power {} must be non-negative", lightIndex);
+                    }
+                    scene.lights.push_back({
+                        .type = kLightPoint,
+                        .emission = power,
+                        .position = position,
+                    });
+                    continue;
+                }
                 if (type != "environment") {
                     return resultError("Unsupported standalone light type: {}", type);
                 }

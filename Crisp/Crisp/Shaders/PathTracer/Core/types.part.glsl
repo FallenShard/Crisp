@@ -14,6 +14,9 @@ const int kBrdfSmoothConductor = 5;
 const int kBrdfRoughConductor = 6;
 const int kBrdfRoughDielectric = 7;
 
+const int kLightArea = 0;
+const int kLightPoint = 1;
+
 const uint kBrdfOperationSample = 0;
 const uint kBrdfOperationEvaluate = 1;
 
@@ -120,8 +123,10 @@ struct LightParameters {
     int meshId;
     int pad0;
     int pad1;
-    vec3 radiance;
+    vec3 emission; // Area-light radiance or point-light power.
     float pad2;
+    vec3 position;
+    float pad3;
 };
 
 #endif // CRISP_PATH_TRACER_TYPES_GLSL

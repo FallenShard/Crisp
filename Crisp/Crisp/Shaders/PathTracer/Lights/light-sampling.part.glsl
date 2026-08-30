@@ -2,6 +2,7 @@
 #define CRISP_PATH_TRACER_LIGHT_SAMPLING_GLSL
 
 #include "environment-distribution.part.glsl"
+#include "point-light.part.glsl"
 
 vec3 evaluateEnvironment(const vec3 direction) {
     if (integrator.environmentEnabled == 0) {
@@ -95,21 +96,34 @@ vec3 sampleAreaLight(
 }
 
 vec3 sampleUniformLight(
-    inout Sampler rng, in vec3 refPoint, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
+    inout Sampler rng,
+    in vec3 refPoint,
+    out vec3 shadowRayDir,
+    out float shadowRayLen,
+    out float lightPdf,
+    out bool lightIsDelta) {
     const uint lightId = nextRange(rng, integrator.lightCount);
     const float uniformPdf = 1.0f / float(integrator.lightCount);
 
-    const uint areaLightCount = uint(integrator.lightCount - integrator.environmentEnabled);
+    const uint finiteLightCount = uint(integrator.lightCount - integrator.environmentEnabled);
     vec3 radiance;
-    if (lightId < areaLightCount) {
-        radiance = sampleAreaLight(
-            rng,
-            scene.lights.data[lightId].meshId,
-            scene.lights.data[lightId].radiance,
-            refPoint,
-            shadowRayDir,
-            shadowRayLen,
-            lightPdf);
+    lightIsDelta = false;
+    if (lightId < finiteLightCount) {
+        const LightParameters light = scene.lights.data[lightId];
+        if (light.type == kLightPoint) {
+            lightIsDelta = true;
+            radiance = samplePointLight(
+                light.position, light.emission, refPoint, shadowRayDir, shadowRayLen, lightPdf);
+        } else {
+            radiance = sampleAreaLight(
+                rng,
+                light.meshId,
+                light.emission,
+                refPoint,
+                shadowRayDir,
+                shadowRayLen,
+                lightPdf);
+        }
     } else {
         radiance = sampleEnvironmentLight(rng, shadowRayDir, shadowRayLen, lightPdf);
     }
@@ -118,6 +132,9 @@ vec3 sampleUniformLight(
 }
 
 float getLightPdf(in int lightId, in vec3 hitVector, in vec3 hitNormal) {
+    if (scene.lights.data[lightId].type != kLightArea) {
+        return 0.0f;
+    }
     const int meshId = scene.lights.data[lightId].meshId;
     const uint aliasTableOffset = scene.instances.data[meshId].aliasTableOffset;
     const float shapePdf = scene.aliasTable.data[aliasTableOffset].tau;

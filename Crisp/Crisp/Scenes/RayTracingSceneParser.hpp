@@ -58,14 +58,25 @@ struct InstanceProperties {
     uint32_t pad1{};
 };
 
+inline constexpr int32_t kLightArea = 0;
+inline constexpr int32_t kLightPoint = 1;
+
 struct LightParameters {
-    int32_t type;
+    int32_t type{kLightArea};
     int32_t meshId{-1};
     int32_t pad0{};
     int32_t pad1{};
-    glm::vec3 radiance;
+    glm::vec3 emission{}; // Area-light radiance or point-light power.
     float pad2{};
+    glm::vec3 position{};
+    float pad3{};
 };
+
+static_assert(sizeof(LightParameters) == 48);
+static_assert(std::is_standard_layout_v<LightParameters>);
+static_assert(offsetof(LightParameters, type) == 0);
+static_assert(offsetof(LightParameters, emission) == 16);
+static_assert(offsetof(LightParameters, position) == 32);
 
 struct EnvironmentLightDescription {
     std::optional<std::string> filename;

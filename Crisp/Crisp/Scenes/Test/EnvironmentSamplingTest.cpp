@@ -20,7 +20,10 @@ constexpr uint32_t kWidth = 8;
 constexpr uint32_t kHeight = 4;
 constexpr uint32_t kSampleCount = 1u << 16;
 const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispEnvironmentSamplingTest";
-const TestShaderMap kTestShaders{kShaderSourceDirectory / "environment-sampling.comp.glsl"};
+const TestShaderMap kTestShaders{
+    kShaderSourceDirectory / "environment-sampling.comp.glsl",
+    kShaderSourceDirectory / "point-light.comp.glsl",
+};
 
 struct SamplingResult {
     glm::vec4 directionAndPdf;
@@ -37,6 +40,23 @@ struct PushConstants {
 
 static_assert(sizeof(PushConstants) == 24);
 static_assert(sizeof(SamplingResult) == 32);
+
+struct PointLightResult {
+    glm::vec4 directionAndDistance;
+    glm::vec4 radianceAndPdf;
+};
+
+struct PointLightPushConstants {
+    glm::vec3 position;
+    float pad0{};
+    glm::vec3 power;
+    float pad1{};
+    glm::vec3 reference;
+    float pad2{};
+};
+
+static_assert(sizeof(PointLightResult) == 32);
+static_assert(sizeof(PointLightPushConstants) == 48);
 
 std::vector<float> createTestPixels() {
     std::vector<float> pixels(kWidth * kHeight * 4, 1.0f);
@@ -98,6 +118,39 @@ std::vector<SamplingResult> runSamplingShader(
 
     const auto* data = readbackBuffer.getHostVisibleData<SamplingResult>();
     return {data, data + kSampleCount}; // NOLINT
+}
+
+std::array<PointLightResult, 2> runPointLightShader(
+    VulkanDevice& device, const PointLightPushConstants& pushConstants) {
+    constexpr VkDeviceSize kResultByteSize = 2 * sizeof(PointLightResult);
+    VulkanBuffer resultBuffer(
+        device,
+        kResultByteSize,
+        VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT,
+        BufferMemoryType::GpuOnly);
+    VulkanBuffer readbackBuffer(
+        device, kResultByteSize, VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
+
+    constexpr VkExtent3D kWorkGroupSize{1, 1, 1};
+    auto pipeline = createComputePipeline(device, kTestShaders.getSpirvPath("point-light.comp.glsl"), kWorkGroupSize);
+    Material material(pipeline.get());
+    material.writeDescriptor(0, 0, resultBuffer.createDescriptorInfo());
+    device.flushDescriptorUpdates();
+
+    {
+        const ScopeCommandExecutor executor(device);
+        const auto& encoder = executor.cmdEncoder;
+        encoder.bindPipeline(*pipeline);
+        encoder.bindDescriptorSets(material.getDescriptorSetBinding());
+        encoder.setPushConstants(*pipeline->getPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, pushConstants);
+        encoder.dispatchCompute({1, 1, 1});
+        encoder.insertBufferMemoryBarrier(resultBuffer.createDescriptorInfo(), kComputeStorageWrite >> kTransferRead);
+        encoder.copyBuffer(resultBuffer, readbackBuffer);
+        encoder.insertBufferMemoryBarrier(readbackBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
+    }
+
+    const auto* data = readbackBuffer.getHostVisibleData<PointLightResult>();
+    return {data[0], data[1]};
 }
 
 TEST(EnvironmentSamplingDistributionTest, BuildsNormalizedLuminanceTimesSineDistribution) {
@@ -168,6 +221,32 @@ TEST_F(EnvironmentSamplingTest, SamplesMatchCdfAndReportSolidAnglePdf) {
     }
     // 31 degrees of freedom; this is above the 99.99th percentile while still catching systematic CDF errors.
     EXPECT_LT(chiSquared, 70.0);
+}
+
+TEST_F(EnvironmentSamplingTest, PointLightUsesPowerAndInverseSquareFalloff) {
+    const PointLightPushConstants pushConstants{
+        .position = {1.0f, 2.0f, 3.0f},
+        .power = {20.0f, 40.0f, 60.0f},
+        .reference = {-1.0f, 2.0f, -1.0f},
+    };
+    const auto results = runPointLightShader(*device_, pushConstants);
+
+    const glm::vec3 lightVector = pushConstants.position - pushConstants.reference;
+    const float squaredDistance = glm::dot(lightVector, lightVector);
+    const glm::vec3 expectedRadiance =
+        pushConstants.power / (4.0f * std::numbers::pi_v<float> * squaredDistance);
+
+    EXPECT_NEAR(results[0].directionAndDistance.x, glm::normalize(lightVector).x, 1e-6f);
+    EXPECT_NEAR(results[0].directionAndDistance.y, glm::normalize(lightVector).y, 1e-6f);
+    EXPECT_NEAR(results[0].directionAndDistance.z, glm::normalize(lightVector).z, 1e-6f);
+    EXPECT_NEAR(results[0].directionAndDistance.w, std::sqrt(squaredDistance), 1e-6f);
+    EXPECT_NEAR(results[0].radianceAndPdf.x, expectedRadiance.x, 1e-6f);
+    EXPECT_NEAR(results[0].radianceAndPdf.y, expectedRadiance.y, 1e-6f);
+    EXPECT_NEAR(results[0].radianceAndPdf.z, expectedRadiance.z, 1e-6f);
+    EXPECT_FLOAT_EQ(results[0].radianceAndPdf.w, 1.0f);
+
+    EXPECT_EQ(results[1].directionAndDistance, glm::vec4(0.0f));
+    EXPECT_EQ(results[1].radianceAndPdf, glm::vec4(0.0f));
 }
 
 TEST(EnvironmentLightParserTest, ParsesEnvironmentFilenameAndScale) {

@@ -60,6 +60,23 @@
       }
     },
     {
+      "name": "point_light",
+      "mitsubaScene": "mitsuba/point_light.xml",
+      "crispScene": "tools/path_tracer_evaluation/crisp/point_light.json",
+      "spp": 1024,
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.001,
+          "relativeMeanLuminanceError": 0.0001,
+          "candidateNegativeValues": 0,
+          "candidateNonFiniteValues": 0
+        },
+        "minimum": {
+          "psnrDb": 85.0
+        }
+      }
+    },
+    {
       "name": "environment_only",
       "mitsubaScene": "mitsuba/environment_only.xml",
       "crispScene": "tools/path_tracer_evaluation/crisp/environment_only.json",
