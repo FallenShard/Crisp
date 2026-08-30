@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -21,7 +22,7 @@ namespace crisp {
 
 class MaterialExplorerScene : public Scene {
 public:
-    enum class RenderMode { Rasterized, PathTraced };
+    enum class RenderMode : uint8_t { Rasterized, PathTraced, WhiteFurnace };
 
     MaterialExplorerScene(Renderer* renderer, Window* window, const nlohmann::json& args);
 
@@ -33,6 +34,7 @@ public:
 private:
     void createRenderResources(const std::string& environmentMapName);
     void createSceneObjects(const std::filesystem::path& shaderBallPath);
+    void createWhiteFurnaceResources();
     void createRayTracedShadowResources();
     void createPathTracedView();
     void setRenderMode(RenderMode mode);
@@ -67,6 +69,7 @@ private:
     std::unique_ptr<VulkanAccelerationStructure> m_shadowTlas;
 
     std::unique_ptr<PathTracedView> m_pathTracedView;
+    std::unique_ptr<VulkanImage> m_whiteFurnaceEnvironmentMap;
     std::vector<PathTracedGeometry> m_pathTracedGeometry;
     RenderMode m_renderMode{RenderMode::Rasterized};
 
@@ -79,6 +82,7 @@ private:
     RenderNode* m_editableMaterialNode{nullptr};
     RenderNode* m_floorNode{nullptr};
     PbrMaterialHandle m_shaderBallMaterialHandle;
+    std::optional<PbrMaterialHandle> m_whiteFurnaceMaterialHandle;
     PbrMaterialParams m_shaderBallParams;
     std::unordered_map<RenderNode*, PbrMaterialHandle> m_pbrMaterialHandles;
 

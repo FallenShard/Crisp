@@ -123,6 +123,17 @@ TEST(EnvironmentSamplingDistributionTest, BuildsNormalizedLuminanceTimesSineDist
     EXPECT_NEAR(equatorialProbability / northProbability, luminanceRatio * sineRatio, 2e-5f);
 }
 
+TEST(EnvironmentSamplingDistributionTest, SupportsSinglePixelWhiteFurnace) {
+    constexpr std::array<float, 4> kUnitRadiance{1.0f, 1.0f, 1.0f, 1.0f};
+    const auto distribution = createEnvironmentSamplingDistribution(kUnitRadiance, 1, 1);
+
+    EXPECT_EQ(distribution.getColumnCount(), 1);
+    EXPECT_EQ(distribution.getRowCount(), 1);
+    EXPECT_DOUBLE_EQ(distribution.getWeightSum(), 1.0);
+    EXPECT_FLOAT_EQ(distribution.getCellProbability(0, 0), 1.0f);
+    EXPECT_FLOAT_EQ(distribution.getPdf(glm::vec2(0.5f)), 1.0f);
+}
+
 TEST_F(EnvironmentSamplingTest, SamplesMatchCdfAndReportSolidAnglePdf) {
     const auto pixels = createTestPixels();
     const auto distribution = createEnvironmentSamplingDistribution(pixels, kWidth, kHeight);
@@ -167,8 +178,25 @@ TEST(EnvironmentLightParserTest, ParsesEnvironmentFilenameAndScale) {
     ASSERT_TRUE(result.hasValue());
     const auto& scene = *result;
     ASSERT_TRUE(scene.environment.has_value());
-    EXPECT_EQ(scene.environment->filename, "Textures/studio.hdr");
+    ASSERT_TRUE(scene.environment->filename.has_value());
+    EXPECT_EQ(*scene.environment->filename, "Textures/studio.hdr");
+    EXPECT_FALSE(scene.environment->radiance.has_value());
     EXPECT_FLOAT_EQ(scene.environment->radianceScale, 2.5f);
+}
+
+TEST(EnvironmentLightParserTest, ParsesWhiteFurnaceRadiance) {
+    const nlohmann::json lights = nlohmann::json::array({
+        {{"type", "environment"}, {"radiance", {1.0f, 1.0f, 1.0f}}},
+    });
+    const auto result = parseSceneDescription(nlohmann::json::array(), lights);
+    ASSERT_TRUE(result.hasValue());
+    const auto& scene = *result;
+
+    ASSERT_TRUE(scene.environment.has_value());
+    EXPECT_FALSE(scene.environment->filename.has_value());
+    ASSERT_TRUE(scene.environment->radiance.has_value());
+    EXPECT_EQ(*scene.environment->radiance, glm::vec3(1.0f));
+    EXPECT_FLOAT_EQ(scene.environment->radianceScale, 1.0f);
 }
 
 TEST(EnvironmentLightParserTest, RejectsInvalidOrDuplicateEnvironments) {

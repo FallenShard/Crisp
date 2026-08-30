@@ -1,6 +1,7 @@
 
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
+#include <array>
 #include <cstring>
 
 #include <Crisp/Core/Checks.hpp>
@@ -100,6 +101,13 @@ Image loadEnvironmentImage(const std::filesystem::path& path) {
     return Image(std::move(bytes), exr.width, exr.height, 4, 4 * sizeof(float));
 }
 
+Image createConstantEnvironmentImage(const glm::vec3 radiance) {
+    const std::array<float, 4> rgba{radiance.r, radiance.g, radiance.b, 1.0f};
+    std::vector<uint8_t> bytes(sizeof(rgba));
+    std::memcpy(bytes.data(), rgba.data(), sizeof(rgba));
+    return Image(std::move(bytes), 1, 1, 4, 4 * sizeof(float));
+}
+
 // Must match the heap array subscripts in Shaders/path-trace.rgen.glsl. The BVH slot is reached through a
 // (set, binding) mapping rather than a subscript, so its number is private to this file.
 constexpr uint32_t kBvhSlot = 0;
@@ -174,11 +182,16 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         m_resourceContext->createStorageBuffer("lightParams", gpuLights, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
 
     if (m_sceneDesc.environment) {
-        auto environmentPath = renderer->getResourcesPath() / m_sceneDesc.environment->filename;
-        if (!std::filesystem::exists(environmentPath)) {
-            environmentPath = renderer->getResourcesPath() / "Textures" / m_sceneDesc.environment->filename;
-        }
-        const Image environmentImage = loadEnvironmentImage(environmentPath);
+        const Image environmentImage = [&]() {
+            if (m_sceneDesc.environment->radiance) {
+                return createConstantEnvironmentImage(*m_sceneDesc.environment->radiance);
+            }
+            auto environmentPath = renderer->getResourcesPath() / *m_sceneDesc.environment->filename;
+            if (!std::filesystem::exists(environmentPath)) {
+                environmentPath = renderer->getResourcesPath() / "Textures" / *m_sceneDesc.environment->filename;
+            }
+            return loadEnvironmentImage(environmentPath);
+        }();
         const auto pixelCount = static_cast<size_t>(environmentImage.getWidth()) * environmentImage.getHeight();
         const auto distribution = createEnvironmentSamplingDistribution(
             std::span<const float>{reinterpret_cast<const float*>(environmentImage.getData()), pixelCount * 4}, // NOLINT

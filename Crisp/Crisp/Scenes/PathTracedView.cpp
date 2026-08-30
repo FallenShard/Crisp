@@ -49,8 +49,12 @@ PathTracedView::PathTracedView(
 
     std::vector<PathTracedInstance> instanceRecords;
     instanceRecords.reserve(instances.size());
-    std::vector<VulkanAccelerationStructure*> blases;
-    blases.reserve(instances.size());
+    uint32_t sceneCount = 0;
+    for (const auto& instance : instances) {
+        sceneCount = std::max(sceneCount, instance.sceneIndex + 1);
+    }
+    std::vector<std::vector<VulkanAccelerationStructure*>> sceneBlases(sceneCount);
+    std::vector<std::vector<uint32_t>> sceneInstanceIndices(sceneCount);
 
     for (auto&& [idx, instance] : std::views::enumerate(instances)) {
         const auto& geometry = *instance.geometry;
@@ -68,11 +72,20 @@ PathTracedView::PathTracedView(
                 instance.triangleCount,
                 instance.transform));
         m_bottomLevelAccelStructures.back()->setDebugName(device, fmt::format("Path-Traced View BLAS [{}]", idx));
-        blases.push_back(m_bottomLevelAccelStructures.back().get());
+        sceneBlases[instance.sceneIndex].push_back(m_bottomLevelAccelStructures.back().get());
+        sceneInstanceIndices[instance.sceneIndex].push_back(static_cast<uint32_t>(idx));
     }
 
-    m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(device, blases);
-    m_topLevelAccelStructure->setDebugName(device, "Path-Traced View TLAS");
+    m_topLevelAccelStructures.reserve(sceneCount);
+    for (uint32_t sceneIndex = 0; sceneIndex < sceneCount; ++sceneIndex) {
+        CRISP_CHECK(!sceneBlases[sceneIndex].empty(), "Path-traced scene groups must be contiguous and non-empty.");
+        auto tlas = std::make_unique<VulkanAccelerationStructure>(device, sceneBlases[sceneIndex]);
+        for (auto&& [localIndex, globalIndex] : std::views::enumerate(sceneInstanceIndices[sceneIndex])) {
+            tlas->setInstanceCustomIndex(static_cast<uint32_t>(localIndex), globalIndex);
+        }
+        tlas->setDebugName(device, fmt::format("Path-Traced View TLAS [{}]", sceneIndex));
+        m_topLevelAccelStructures.push_back(std::move(tlas));
+    }
 
     m_instanceBuffer = createStorageBuffer(
         device,
@@ -106,7 +119,9 @@ PathTracedView::PathTracedView(
             encoder.buildAccelerationStructure(*blas);
         }
         encoder.insertBarrier(kAccelerationStructureWrite >> kAccelerationStructureRead);
-        encoder.buildAccelerationStructure(*m_topLevelAccelStructure);
+        for (auto& tlas : m_topLevelAccelStructures) {
+            encoder.buildAccelerationStructure(*tlas);
+        }
     });
 
     m_resourceHeap =
@@ -170,7 +185,7 @@ const VulkanImageView& getPathTracedViewImage(const rg::RenderGraph& renderGraph
 }
 
 void PathTracedView::updateDescriptorHeap(const rg::RenderGraph& renderGraph) {
-    m_resourceHeap->writeAccelerationStructure(kBvhSlot, *m_topLevelAccelStructure);
+    m_resourceHeap->writeAccelerationStructure(kBvhSlot, *m_topLevelAccelStructures[m_sceneIndex]);
     m_resourceHeap->writeStorageImage(
         kImageSlot, renderGraph.getImageView<&PathTracedPassData::image>(), VK_IMAGE_LAYOUT_GENERAL);
     m_resourceHeap->writeUniformBuffer(kViewSlot, *m_cameraBuffer);
@@ -183,6 +198,18 @@ void PathTracedView::setEnvironmentMap(const VulkanImageView& environmentMapView
     m_environmentMapView = &environmentMapView;
     m_resourceHeap->writeSampledImage(
         kEnvironmentMapSlot, *m_environmentMapView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    resetAccumulation();
+}
+
+void PathTracedView::setSceneIndex(const uint32_t sceneIndex) {
+    CRISP_CHECK_LT(sceneIndex, m_topLevelAccelStructures.size());
+    m_sceneIndex = sceneIndex;
+    m_resourceHeap->writeAccelerationStructure(kBvhSlot, *m_topLevelAccelStructures[m_sceneIndex]);
+    resetAccumulation();
+}
+
+void PathTracedView::setEnvironmentIntensity(const float intensity) {
+    m_integratorParams.environmentIntensity = intensity;
     resetAccumulation();
 }
 
@@ -223,7 +250,7 @@ void PathTracedView::trace(const FrameContext& frameContext) {
     ++m_integratorParams.frameIdx;
 }
 
-void PathTracedView::drawGui() {
+void PathTracedView::drawGui(const bool allowEnvironmentIntensity) {
     ImGui::LabelText("Acc. Samples", "%d", getAccumulatedSampleCount()); // NOLINT
     if (ImGui::SliderInt("Max Bounces", &m_integratorParams.maxBounces, 1, 32)) {
         resetAccumulation();
@@ -231,8 +258,13 @@ void PathTracedView::drawGui() {
     if (ImGui::SliderInt("Samples per Frame", &m_integratorParams.sampleCount, 1, 16)) {
         resetAccumulation();
     }
-    if (ImGui::SliderFloat("Environment Intensity", &m_integratorParams.environmentIntensity, 0.0f, 4.0f, "%.2f")) {
-        resetAccumulation();
+    if (allowEnvironmentIntensity) {
+        if (ImGui::SliderFloat(
+                "Environment Intensity", &m_integratorParams.environmentIntensity, 0.0f, 4.0f, "%.2f")) {
+            resetAccumulation();
+        }
+    } else {
+        ImGui::LabelText("Environment Intensity", "1.00 (unit radiance)");
     }
 }
 

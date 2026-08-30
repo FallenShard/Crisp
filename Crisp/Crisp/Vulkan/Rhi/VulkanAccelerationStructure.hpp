@@ -55,6 +55,11 @@ public:
         return m_instances;
     }
 
+    // Precondition: this is a TLAS and instanceIndex is less than getInstances().size(). Call before building it.
+    void setInstanceCustomIndex(uint32_t instanceIndex, uint32_t customIndex) {
+        m_instances[instanceIndex].instanceCustomIndex = customIndex;
+    }
+
 private:
     void createAccelerationStructure(const VulkanDevice& device);
 

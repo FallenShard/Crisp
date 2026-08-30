@@ -1,6 +1,7 @@
 #include <Crisp/Scenes/MaterialExplorerScene.hpp>
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <ranges>
 #include <span>
@@ -16,12 +17,15 @@
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
+#include <Crisp/Renderer/VulkanImageUtils.hpp>
 
 namespace crisp {
 namespace {
 
 constexpr uint32_t kShadowMapSize{2048};
-constexpr uint32_t kMaterialCapacity{5};
+constexpr uint32_t kMaterialCapacity{6};
+constexpr uint32_t kMaterialExplorerSceneIndex{0};
+constexpr uint32_t kWhiteFurnaceSceneIndex{1};
 constexpr std::string_view kShaderBallNodeId{"shader-ball"};
 constexpr std::string_view kFloorNodeId{"floor"};
 constexpr std::string_view kEditableGltfMaterialName{"material_surface"};
@@ -84,6 +88,23 @@ PbrImageGroup createMaterialExplorerImageGroup() {
     return imageGroup;
 }
 
+Image createUnitRadianceImage() {
+    constexpr std::array<float, 4> kUnitRadiance{1.0f, 1.0f, 1.0f, 1.0f};
+    std::vector<uint8_t> bytes(sizeof(kUnitRadiance));
+    std::memcpy(bytes.data(), kUnitRadiance.data(), sizeof(kUnitRadiance));
+    return Image(std::move(bytes), 1, 1, 4, 4 * sizeof(float));
+}
+
+std::unique_ptr<VulkanImage> createWhiteFurnaceCubeMap(Renderer& renderer) {
+    std::vector<Image> faces;
+    faces.reserve(kCubeMapFaceCount);
+    for (uint32_t face = 0; face < kCubeMapFaceCount; ++face) {
+        faces.push_back(createUnitRadianceImage());
+    }
+    const std::array<std::vector<Image>, 1> mipLevels{std::move(faces)};
+    return createVulkanCubeMap(renderer, mipLevels, VK_FORMAT_R32G32B32A32_SFLOAT);
+}
+
 } // namespace
 
 MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window, const nlohmann::json& args)
@@ -137,7 +158,7 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
 
     if (m_pathTracingSupported) {
         addPathTracedViewPass(*m_renderGraph, [this](const FrameContext& frameContext) {
-            if (m_renderMode == RenderMode::PathTraced && m_pathTracedView) {
+            if (m_renderMode != RenderMode::Rasterized && m_pathTracedView) {
                 m_pathTracedView->trace(frameContext);
             }
         });
@@ -160,12 +181,16 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
     const std::filesystem::path shaderBallPath = args.value(
         "modelPath", std::string{"glTFSamples/2.0/USDShaderBallForGltf/glTF-Binary/USDShaderBallForGltf.glb"});
     createSceneObjects(shaderBallPath);
+    createWhiteFurnaceResources();
     createRayTracedShadowResources();
     createPathTracedView();
     rebuildDrawCommands();
 
-    if (args.value("renderMode", std::string{"rasterized"}) == "path-traced") {
+    const auto renderMode = args.value("renderMode", std::string{"rasterized"});
+    if (renderMode == "path-traced") {
         setRenderMode(RenderMode::PathTraced);
+    } else if (renderMode == "white-furnace") {
+        setRenderMode(RenderMode::WhiteFurnace);
     }
 
     m_materialPresetNames.emplace_back(kNoMaterialPreset);
@@ -230,7 +255,7 @@ void MaterialExplorerScene::render(const FrameContext& frameContext) {
     frameContext.commandEncoder.insertBarrier(
         kTransferWrite >> (kVertexUniformRead | kFragmentUniformRead | kFragmentRead));
 
-    if (m_renderMode == RenderMode::PathTraced && m_pathTracedView) {
+    if (m_renderMode != RenderMode::Rasterized && m_pathTracedView) {
         m_pathTracedView->uploadFrameData(frameContext);
     }
 
@@ -251,11 +276,21 @@ void MaterialExplorerScene::drawGui() {
         if (ImGui::RadioButton("Path traced", &mode, static_cast<int>(RenderMode::PathTraced))) {
             setRenderMode(RenderMode::PathTraced);
         }
+        ImGui::SameLine();
+        if (ImGui::RadioButton("White furnace", &mode, static_cast<int>(RenderMode::WhiteFurnace))) {
+            setRenderMode(RenderMode::WhiteFurnace);
+        }
+        if (m_renderMode != RenderMode::Rasterized) {
+            m_pathTracedView->drawGui(m_renderMode != RenderMode::WhiteFurnace);
+        }
         if (m_renderMode == RenderMode::PathTraced) {
-            m_pathTracedView->drawGui();
             ImGui::TextWrapped(
                 "Reference view: material factors only, no textures or normal maps, and the environment is the "
                 "only light. It will not match the rasterized view yet.");
+        } else if (m_renderMode == RenderMode::WhiteFurnace) {
+            ImGui::TextWrapped(
+                "White furnace: the selected material on a unit sphere under constant unit radiance. The floor, "
+                "shader-ball geometry, textures, and direct lights are excluded.");
         }
     } else {
         ImGui::TextDisabled("Path tracing unavailable (needs ray tracing and descriptor heaps)");
@@ -317,6 +352,9 @@ void MaterialExplorerScene::drawGui() {
 
     if (materialChanged) {
         m_pbrMaterialTable->update(m_shaderBallMaterialHandle, m_shaderBallParams);
+        if (m_whiteFurnaceMaterialHandle) {
+            m_pbrMaterialTable->update(*m_whiteFurnaceMaterialHandle, m_shaderBallParams);
+        }
         if (m_pathTracedView) {
             m_pathTracedView->resetAccumulation();
         }
@@ -420,7 +458,7 @@ void MaterialExplorerScene::createSceneObjects(const std::filesystem::path& shad
     const auto extension = absoluteShaderBallPath.extension().string();
     if (extension == ".gltf" || extension == ".glb") {
         auto sceneData = loadGltfAsset(absoluteShaderBallPath).unwrap();
-        CRISP_CHECK_LE(sceneData.models.size(), kMaterialCapacity - 1);
+        CRISP_CHECK_LE(sceneData.models.size(), kMaterialCapacity - 2);
         addPbrImageGroupToImageCache(sceneData.images, m_resourceContext->imageCache);
 
         glm::vec3 boundsMin{std::numeric_limits<float>::max()};
@@ -497,6 +535,29 @@ void MaterialExplorerScene::createSceneObjects(const std::filesystem::path& shad
     addPbrNode(kFloorNodeId, floorMesh, floorMaterial, glm::mat4(1.0f), false);
 }
 
+void MaterialExplorerScene::createWhiteFurnaceResources() {
+    if (!m_pathTracingSupported) {
+        return;
+    }
+
+    const auto sphereMesh = createSphereMesh();
+    constexpr VkBufferUsageFlags2 kAccelerationStructureUsage =
+        VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT |
+        VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+    auto& geometry = m_resourceContext->addGeometry(
+        "white-furnace-sphere",
+        createGeometry(*m_renderer, sphereMesh, kPbrVertexFormat, kAccelerationStructureUsage));
+    m_whiteFurnaceMaterialHandle = m_pbrMaterialTable->add(m_shaderBallParams);
+    m_pathTracedGeometry.push_back({
+        .geometry = &geometry,
+        .transform = glm::translate(glm::vec3(0.0f, 1.0f, 0.0f)),
+        .materialIndex = m_whiteFurnaceMaterialHandle->index,
+        .triangleCount = sphereMesh.getTriangleCount(),
+        .sceneIndex = kWhiteFurnaceSceneIndex,
+    });
+    m_whiteFurnaceEnvironmentMap = createWhiteFurnaceCubeMap(*m_renderer);
+}
+
 void MaterialExplorerScene::createRayTracedShadowResources() {
     if (!m_rayTracedShadowsSupported) {
         return;
@@ -548,7 +609,16 @@ void MaterialExplorerScene::setRenderMode(const RenderMode mode) {
 
     m_renderMode = mode;
     if (m_pathTracedView) {
-        m_pathTracedView->resetAccumulation();
+        if (mode == RenderMode::WhiteFurnace) {
+            m_pathTracedView->setEnvironmentMap(m_whiteFurnaceEnvironmentMap->getView());
+            m_pathTracedView->setSceneIndex(kWhiteFurnaceSceneIndex);
+            m_pathTracedView->setEnvironmentIntensity(1.0f);
+        } else if (mode == RenderMode::PathTraced) {
+            m_pathTracedView->setEnvironmentMap(m_lightSystem->getEnvironmentLight()->getCubeMapView());
+            m_pathTracedView->setSceneIndex(kMaterialExplorerSceneIndex);
+        } else {
+            m_pathTracedView->resetAccumulation();
+        }
     }
     updatePresentedImage();
 }
@@ -556,7 +626,7 @@ void MaterialExplorerScene::setRenderMode(const RenderMode mode) {
 void MaterialExplorerScene::updatePresentedImage() {
     // Both views render into the graph; only the presented image changes. A swipe comparison replaces this with
     // a composite pass reading both.
-    const bool pathTraced = m_renderMode == RenderMode::PathTraced && m_pathTracedView;
+    const bool pathTraced = m_renderMode != RenderMode::Rasterized && m_pathTracedView;
     m_renderer->setSceneImageView(
         pathTraced ? &getPathTracedViewImage(*m_renderGraph)
                    : &m_renderGraph->getImageView<&ForwardLightingPassData::hdrImage>());
@@ -612,6 +682,7 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
             .transform = modelMatrix,
             .materialIndex = materialHandle.index,
             .triangleCount = mesh.getTriangleCount(),
+            .sceneIndex = kMaterialExplorerSceneIndex,
         });
     }
     const PbrDrawFlagFlags drawFlags =
@@ -669,7 +740,7 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
     if (m_forwardPassMaterial) {
         configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
     }
-    if (m_pathTracedView) {
+    if (m_pathTracedView && m_renderMode == RenderMode::PathTraced) {
         m_pathTracedView->setEnvironmentMap(m_lightSystem->getEnvironmentLight()->getCubeMapView());
     }
 }
@@ -720,6 +791,12 @@ void MaterialExplorerScene::setMaterialPreset(const std::string& materialPresetN
     m_shaderBallParams = params;
     m_materialPresetName = materialPresetName;
     m_pbrMaterialTable->update(m_shaderBallMaterialHandle, m_shaderBallParams);
+    if (m_whiteFurnaceMaterialHandle) {
+        m_pbrMaterialTable->update(*m_whiteFurnaceMaterialHandle, m_shaderBallParams);
+    }
+    if (m_pathTracedView) {
+        m_pathTracedView->resetAccumulation();
+    }
 }
 
 void MaterialExplorerScene::resetMaterial() {
@@ -739,6 +816,9 @@ void MaterialExplorerScene::resetMaterial() {
     m_shaderBallParams.ormTex = ormTex;
     m_shaderBallParams.emissionTex = emissionTex;
     m_pbrMaterialTable->update(m_shaderBallMaterialHandle, m_shaderBallParams);
+    if (m_whiteFurnaceMaterialHandle) {
+        m_pbrMaterialTable->update(*m_whiteFurnaceMaterialHandle, m_shaderBallParams);
+    }
     updateShaderBallShadowMaterials();
     rebuildDrawCommands();
 }

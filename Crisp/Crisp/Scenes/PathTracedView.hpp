@@ -50,6 +50,7 @@ struct PathTracedGeometry {
     glm::mat4 transform{1.0f};
     uint32_t materialIndex{0};
     uint32_t triangleCount{0};
+    uint32_t sceneIndex{0};
 };
 
 // Declares the accumulation image and the trace pass. Separate from PathTracedView because a scene has to
@@ -93,7 +94,7 @@ public:
 
     void uploadFrameData(const FrameContext& frameContext);
 
-    void drawGui();
+    void drawGui(bool allowEnvironmentIntensity = true);
 
     int32_t getAccumulatedSampleCount() const;
 
@@ -103,13 +104,18 @@ public:
 
     void setEnvironmentMap(const VulkanImageView& environmentMapView);
 
+    void setSceneIndex(uint32_t sceneIndex);
+
+    void setEnvironmentIntensity(float intensity);
+
 private:
     std::unique_ptr<VulkanPipeline> createPipeline();
 
     Renderer* m_renderer;
 
     std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_bottomLevelAccelStructures;
-    std::unique_ptr<VulkanAccelerationStructure> m_topLevelAccelStructure;
+    std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_topLevelAccelStructures;
+    uint32_t m_sceneIndex{0};
 
     const VulkanImageView* m_environmentMapView{nullptr};
 

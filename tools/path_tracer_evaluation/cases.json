@@ -92,6 +92,23 @@
           "psnrDb": 58.0
         }
       }
+    },
+    {
+      "name": "white_furnace",
+      "mitsubaScene": "mitsuba/white_furnace.xml",
+      "crispScene": "tools/path_tracer_evaluation/crisp/white_furnace.json",
+      "spp": 256,
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.01,
+          "relativeMeanLuminanceError": 0.003,
+          "candidateNegativeValues": 0,
+          "candidateNonFiniteValues": 0
+        },
+        "minimum": {
+          "psnrDb": 40.0
+        }
+      }
     }
   ]
 }
