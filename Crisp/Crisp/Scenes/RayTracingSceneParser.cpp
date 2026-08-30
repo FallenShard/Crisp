@@ -1,7 +1,7 @@
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 
 #include <cmath>
-#include <stdexcept>
+#include <ranges>
 
 namespace crisp {
 namespace {
@@ -26,15 +26,16 @@ BrdfParameters createLambertianBrdf(glm::vec3 albedo) {
     };
 }
 
-void validateDielectricIors(const float intIor, const float extIor) {
-    if (intIor <= 0.0f || extIor <= 0.0f || intIor == extIor) {
-        throw std::invalid_argument("Interior and exterior IORs must be positive and differ");
+Result<> validateDielectricIors(const float intIor, const float extIor) {
+    if (!std::isfinite(intIor) || !std::isfinite(extIor) || intIor <= 0.0f || extIor <= 0.0f || intIor == extIor) {
+        return resultError("Interior and exterior IORs must be finite, positive, and different");
     }
+    return {};
 }
 
-BrdfParameters createDielectricBrdf(const float intIor, const float extIor) {
-    validateDielectricIors(intIor, extIor);
-    return {
+Result<BrdfParameters> createDielectricBrdf(const float intIor, const float extIor) {
+    CRISP_TRY(validateDielectricIors(intIor, extIor));
+    return BrdfParameters{
         .type = kBrdfDielectric,
         .intIor = intIor,
         .extIor = extIor,
@@ -42,7 +43,7 @@ BrdfParameters createDielectricBrdf(const float intIor, const float extIor) {
 }
 
 BrdfParameters createMirrorBrdf() {
-    return {
+    return BrdfParameters{
         .type = kBrdfMirror,
     };
 }
@@ -75,10 +76,10 @@ BrdfParameters createRoughConductorBrdf(const std::string& iorPreset, const int3
     };
 }
 
-BrdfParameters createRoughDielectricBrdf(
+Result<BrdfParameters> createRoughDielectricBrdf(
     const float intIor, const float extIor, const int32_t microfacetType, const float alpha) {
-    validateDielectricIors(intIor, extIor);
-    return {
+    CRISP_TRY(validateDielectricIors(intIor, extIor));
+    return BrdfParameters{
         .type = kBrdfRoughDielectric,
         .intIor = intIor,
         .extIor = extIor,
@@ -87,38 +88,49 @@ BrdfParameters createRoughDielectricBrdf(
     };
 }
 
-int32_t parseMicrofacetType(const std::string_view type) {
+Result<int32_t> parseMicrofacetType(const std::string_view type) {
     if (type == "ggx") {
         return kMicrofacetGgx;
     }
     if (type == "beckmann") {
         return kMicrofacetBeckmann;
     }
-    throw std::invalid_argument("Unsupported microfacet distribution: " + std::string(type));
+    return resultError("Unsupported microfacet distribution: {}", type);
 }
 
-BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
+Result<BrdfParameters> parseBrdfParameters(const nlohmann::json& brdf) {
+    if (!brdf.is_object() || !brdf.contains("type") || !brdf["type"].is_string()) {
+        return resultError("BSDF must be an object with a string 'type' field");
+    }
     const auto& type{brdf["type"]};
     if (type == "lambertian") {
-        return createLambertianBrdf(parseVec3(brdf["reflectance"]));
+        CRISP_TRY(const auto reflectance, parseVec3(brdf["reflectance"]));
+        return createLambertianBrdf(reflectance);
     }
     if (type == "oren-nayar") {
-        return createOrenNayarBrdf(parseVec3(brdf["reflectance"]), brdf.value("roughnessDegrees", 0.0f));
+        CRISP_TRY(const auto reflectance, parseVec3(brdf["reflectance"]));
+        return createOrenNayarBrdf(reflectance, brdf.value("roughnessDegrees", 0.0f));
     }
     if (type == "smooth-conductor") {
         return createSmoothConductorBrdf(brdf.value("conductorIorPreset", std::string("Au")));
     }
     if (type == "rough-conductor") {
+        CRISP_TRY(
+            const auto microfacetType,
+            parseMicrofacetType(brdf.value("microfacetDistribution", std::string("beckmann"))));
         return createRoughConductorBrdf(
             brdf.value("conductorIorPreset", std::string("Au")),
-            parseMicrofacetType(brdf.value("microfacetDistribution", std::string("beckmann"))),
+            microfacetType,
             brdf.value("microfacetAlpha", 0.1f));
     }
     if (type == "rough-dielectric") {
+        CRISP_TRY(
+            const auto microfacetType,
+            parseMicrofacetType(brdf.value("microfacetDistribution", std::string("beckmann"))));
         return createRoughDielectricBrdf(
             brdf.value("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass)),
             brdf.value("exteriorIor", Fresnel::getIOR(IndexOfRefraction::Air)),
-            parseMicrofacetType(brdf.value("microfacetDistribution", std::string("beckmann"))),
+            microfacetType,
             brdf.value("microfacetAlpha", 0.1f));
     }
     if (type == "dielectric") {
@@ -130,49 +142,61 @@ BrdfParameters parseBrdfParameters(const nlohmann::json& brdf) {
         return createMirrorBrdf();
     }
     if (type == "microfacet") {
-        return createMicrofacetBrdf(
-            parseVec3(brdf["diffuseReflectance"]),
-            brdf.value("microfacetAlpha", 0.1f),
+        CRISP_TRY(const auto diffuseReflectance, parseVec3(brdf["diffuseReflectance"]));
+        CRISP_TRY(
+            const auto microfacetType,
             parseMicrofacetType(brdf.value("microfacetDistribution", std::string("ggx"))));
+        return createMicrofacetBrdf(
+            diffuseReflectance, brdf.value("microfacetAlpha", 0.1f), microfacetType);
     }
-    return createLambertianBrdf(glm::vec3(1.0, 1.0, 0.0));
+    return resultError("Unsupported GPU BSDF type: {}", type.get<std::string>());
 }
 
-MaterialTextureDescription parseReflectanceTexture(const nlohmann::json& texture) {
+Result<MaterialTextureDescription> parseReflectanceTexture(const nlohmann::json& texture) {
     if (!texture.is_object()) {
-        throw std::invalid_argument("reflectanceTexture must be an object");
+        return resultError("reflectanceTexture must be an object");
     }
     const std::string type = texture.value("type", std::string{});
     if (type != "bitmap") {
-        throw std::invalid_argument("Unsupported GPU reflectance texture type: " + type);
+        return resultError("Unsupported GPU reflectance texture type: {}", type);
     }
     const std::string filename = texture.value("filename", std::string{});
     if (filename.empty()) {
-        throw std::invalid_argument("Bitmap reflectanceTexture requires a filename");
+        return resultError("Bitmap reflectanceTexture requires a filename");
     }
-    return {.filename = filename};
+    return MaterialTextureDescription{.filename = filename};
 }
 
-glm::mat4 parseTransform(const nlohmann::json& shape) {
+Result<glm::mat4> parseTransform(const nlohmann::json& shape) {
     if (shape.value("type", std::string("mesh")) == "sphere") {
-        return glm::translate(parseVec3(shape["center"])) * glm::scale(glm::vec3(shape["radius"].get<float>()));
+        CRISP_TRY(const auto center, parseVec3(shape["center"]));
+        const float radius = shape["radius"].get<float>();
+        if (!std::isfinite(radius) || radius <= 0.0f) {
+            return resultError("Sphere radius must be finite and positive");
+        }
+        return glm::translate(center) * glm::scale(glm::vec3(radius));
     }
 
     glm::mat4 transform(1.0f);
     if (shape.contains("toWorld")) {
         for (const auto& operation : shape["toWorld"]) {
             if (operation.contains("translation")) {
-                transform = glm::translate(parseVec3(operation["translation"])) * transform;
+                CRISP_TRY(const auto translation, parseVec3(operation["translation"]));
+                transform = glm::translate(translation) * transform;
             }
             if (operation.contains("scale")) {
-                transform = glm::scale(parseVec3(operation["scale"])) * transform;
+                CRISP_TRY(const auto scale, parseVec3(operation["scale"]));
+                transform = glm::scale(scale) * transform;
             }
             if (operation.contains("rotation")) {
                 const auto& rotation = operation["rotation"];
+                CRISP_TRY(const auto axis, parseVec3(rotation["axis"]));
+                if (glm::length2(axis) == 0.0f) {
+                    return resultError("Rotation axis must be non-zero");
+                }
                 transform =
                     glm::rotate(
-                        glm::radians(rotation["angleDegrees"].get<float>()),
-                        glm::normalize(parseVec3(rotation["axis"]))) *
+                        glm::radians(rotation["angleDegrees"].get<float>()), glm::normalize(axis)) *
                     transform;
             }
         }
@@ -194,69 +218,128 @@ BrdfParameters createMicrofacetBrdf(const glm::vec3 kd, const float alpha, const
     };
 }
 
-glm::vec3 parseVec3(const nlohmann::json& json) {
-    return {json[0].get<float>(), json[1].get<float>(), json[2].get<float>()};
+Result<glm::vec3> parseVec3(const nlohmann::json& json) {
+    if (!json.is_array() || json.size() != 3 || !json[0].is_number() || !json[1].is_number() ||
+        !json[2].is_number()) {
+        return resultError("Expected an array containing exactly three numbers, got {}", json.dump());
+    }
+
+    const glm::vec3 value{json[0].get<float>(), json[1].get<float>(), json[2].get<float>()};
+    if (!std::isfinite(value.x) || !std::isfinite(value.y) || !std::isfinite(value.z)) {
+        return resultError("Vector components must be finite, got {}", json.dump());
+    }
+    return value;
 }
 
-SceneDescription parseSceneDescription(const nlohmann::json& shapeList, const nlohmann::json& lightList) {
-    SceneDescription scene{};
-    for (const auto& shape : shapeList) {
-        if (shape.value("type", std::string("mesh")) == "sphere") {
-            scene.meshFilenames.emplace_back("sphere.obj");
-        } else {
-            scene.meshFilenames.push_back(shape["filename"]);
+Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, const nlohmann::json& lightList) {
+    try {
+        if (!shapeList.is_array()) {
+            return resultError("Scene shapes must be an array");
         }
 
-        auto material = parseBrdfParameters(shape["bsdf"]);
-        if (shape["bsdf"].contains("reflectanceTexture")) {
-            if (material.type != kBrdfLambertian && material.type != kBrdfOrenNayar) {
-                throw std::invalid_argument("reflectanceTexture is only supported by diffuse GPU materials");
+        SceneDescription scene{};
+        for (auto&& [shapeIndex, shape] : std::views::enumerate(shapeList)) {
+            if (!shape.is_object()) {
+                return resultError("Shape {} must be an object", shapeIndex);
             }
-            material.reflectanceTexture = static_cast<int32_t>(scene.materialTextures.size());
-            scene.materialTextures.push_back(parseReflectanceTexture(shape["bsdf"]["reflectanceTexture"]));
+
+            if (shape.value("type", std::string("mesh")) == "sphere") {
+                scene.meshFilenames.emplace_back("sphere.obj");
+            } else {
+                const std::string filename = shape.value("filename", std::string{});
+                if (filename.empty()) {
+                    return resultError("Mesh shape {} requires a filename", shapeIndex);
+                }
+                scene.meshFilenames.push_back(filename);
+            }
+
+            CRISP_TRY(auto material, parseBrdfParameters(shape["bsdf"]));
+            if (shape["bsdf"].contains("reflectanceTexture")) {
+                if (material.type != kBrdfLambertian && material.type != kBrdfOrenNayar) {
+                    return resultError("Shape {} uses reflectanceTexture on a non-diffuse GPU material", shapeIndex);
+                }
+                CRISP_TRY(auto texture, parseReflectanceTexture(shape["bsdf"]["reflectanceTexture"]));
+                material.reflectanceTexture = static_cast<int32_t>(scene.materialTextures.size());
+                scene.materialTextures.push_back(std::move(texture));
+            }
+            scene.brdfs.push_back(material);
+
+            if (shape.contains("light")) {
+                if (!shape["light"].is_object()) {
+                    return resultError("Area light on shape {} must be an object", shapeIndex);
+                }
+                CRISP_TRY(const auto radiance, parseVec3(shape["light"]["radiance"]));
+                if (glm::any(glm::lessThan(radiance, glm::vec3(0.0f)))) {
+                    return resultError("Area-light radiance on shape {} must be non-negative", shapeIndex);
+                }
+
+                const auto lightIdx = static_cast<int32_t>(scene.lights.size());
+                scene.props.push_back(
+                    {.materialId = static_cast<int32_t>(scene.brdfs.size() - 1), .lightId = lightIdx});
+
+                const auto meshIdx = static_cast<int32_t>(scene.meshFilenames.size() - 1);
+                scene.lights.push_back({
+                    .type = kLightArea,
+                    .meshId = meshIdx,
+                    .radiance = radiance,
+                });
+            } else {
+                scene.props.push_back({.materialId = static_cast<int32_t>(scene.brdfs.size() - 1), .lightId = -1});
+            }
+
+            CRISP_TRY(auto transform, parseTransform(shape));
+            scene.transforms.push_back(std::move(transform));
         }
-        scene.brdfs.push_back(material);
 
-        if (shape.contains("light")) {
-            const auto lightIdx = static_cast<int32_t>(scene.lights.size());
-            scene.props.push_back({.materialId = static_cast<int32_t>(scene.brdfs.size() - 1), .lightId = lightIdx});
+        if (!lightList.is_null()) {
+            if (!lightList.is_array()) {
+                return resultError("Scene lights must be an array");
+            }
+            for (auto&& [lightIndex, light] : std::views::enumerate(lightList)) {
+                if (!light.is_object()) {
+                    return resultError("Standalone light {} must be an object", lightIndex);
+                }
+                const std::string type = light.value("type", std::string{});
+                if (type != "environment") {
+                    return resultError("Unsupported standalone light type: {}", type);
+                }
+                if (scene.environment.has_value()) {
+                    return resultError("Only one environment light is supported");
+                }
+                const bool hasFilename = light.contains("filename");
+                const bool hasRadiance = light.contains("radiance");
+                if (hasFilename == hasRadiance) {
+                    return resultError("Environment light requires exactly one of filename or radiance");
+                }
 
-            const auto meshIdx = static_cast<int32_t>(scene.meshFilenames.size() - 1);
-            scene.lights.push_back({
-                .type = kLightArea,
-                .meshId = meshIdx,
-                .radiance = parseVec3(shape["light"]["radiance"]),
-            });
-        } else {
-            scene.props.push_back({.materialId = static_cast<int32_t>(scene.brdfs.size() - 1), .lightId = -1});
+                std::optional<std::string> filename;
+                std::optional<glm::vec3> radiance;
+                if (hasFilename) {
+                    filename = light["filename"].get<std::string>();
+                    if (filename->empty()) {
+                        return resultError("Environment light filename must not be empty");
+                    }
+                } else {
+                    CRISP_TRY(auto parsedRadiance, parseVec3(light["radiance"]));
+                    if (glm::any(glm::lessThan(parsedRadiance, glm::vec3(0.0f)))) {
+                        return resultError("Environment radiance must be non-negative");
+                    }
+                    radiance = parsedRadiance;
+                }
+                const float radianceScale = light.value("radianceScale", 1.0f);
+                if (!std::isfinite(radianceScale) || radianceScale < 0.0f) {
+                    return resultError("Environment radianceScale must be finite and non-negative");
+                }
+                scene.environment = EnvironmentLightDescription{
+                    .filename = std::move(filename),
+                    .radiance = radiance,
+                    .radianceScale = radianceScale,
+                };
+            }
         }
-
-        scene.transforms.push_back(parseTransform(shape));
+        return scene;
+    } catch (const nlohmann::json::exception& exception) {
+        return resultError("Invalid GPU path-tracing scene JSON: {}", exception.what());
     }
-
-    if (!lightList.is_null()) {
-        if (!lightList.is_array()) {
-            throw std::invalid_argument("Scene lights must be an array");
-        }
-        for (const auto& light : lightList) {
-            const std::string type = light.value("type", std::string{});
-            if (type != "environment") {
-                throw std::invalid_argument("Unsupported standalone light type: " + type);
-            }
-            if (scene.environment.has_value()) {
-                throw std::invalid_argument("Only one environment light is supported");
-            }
-            const std::string filename = light.value("filename", std::string{});
-            const float radianceScale = light.value("radianceScale", 1.0f);
-            if (filename.empty()) {
-                throw std::invalid_argument("Environment light requires a filename");
-            }
-            if (!std::isfinite(radianceScale) || radianceScale < 0.0f) {
-                throw std::invalid_argument("Environment radianceScale must be finite and non-negative");
-            }
-            scene.environment = EnvironmentLightDescription{filename, radianceScale};
-        }
-    }
-    return scene;
 }
 } // namespace crisp

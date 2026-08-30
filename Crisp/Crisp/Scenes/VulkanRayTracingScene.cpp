@@ -73,7 +73,7 @@ Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) 
 }
 
 void setCameraParameters(FreeCameraController& cameraController, const nlohmann::json& camera) {
-    cameraController.setPosition(parseVec3(camera["position"]));
+    cameraController.setPosition(parseVec3(camera["position"]).unwrap());
     cameraController.setFovY(camera["fovY"].get<float>());
 }
 
@@ -129,7 +129,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
 
     const auto sceneFile = args.value("sceneFile", std::string{"VesperScenes/Nori-PA-4/cbox-mats.json"});
     const auto json = loadJsonFromFile(renderer->getAssetPaths().resourceDir / sceneFile).unwrap();
-    m_sceneDesc = parseSceneDescription(json["shapes"], json.value("lights", nlohmann::json::array()));
+    m_sceneDesc = parseSceneDescription(json["shapes"], json.value("lights", nlohmann::json::array())).unwrap();
 
     m_materialImages.reserve(m_sceneDesc.materialTextures.size());
     for (const auto& texture : m_sceneDesc.materialTextures) {

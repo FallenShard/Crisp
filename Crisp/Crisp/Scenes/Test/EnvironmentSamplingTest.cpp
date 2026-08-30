@@ -9,6 +9,8 @@
 #include <cmath>
 #include <numbers>
 
+#include <Crisp/Core/Test/ResultTestUtils.hpp>
+
 namespace crisp {
 namespace {
 
@@ -161,7 +163,9 @@ TEST(EnvironmentLightParserTest, ParsesEnvironmentFilenameAndScale) {
     const nlohmann::json lights = nlohmann::json::array({
         {{"type", "environment"}, {"filename", "Textures/studio.hdr"}, {"radianceScale", 2.5f}},
     });
-    const auto scene = parseSceneDescription(nlohmann::json::array(), lights);
+    const auto result = parseSceneDescription(nlohmann::json::array(), lights);
+    ASSERT_TRUE(result.hasValue());
+    const auto& scene = *result;
     ASSERT_TRUE(scene.environment.has_value());
     EXPECT_EQ(scene.environment->filename, "Textures/studio.hdr");
     EXPECT_FLOAT_EQ(scene.environment->radianceScale, 2.5f);
@@ -169,18 +173,38 @@ TEST(EnvironmentLightParserTest, ParsesEnvironmentFilenameAndScale) {
 
 TEST(EnvironmentLightParserTest, RejectsInvalidOrDuplicateEnvironments) {
     const nlohmann::json missingFilename = nlohmann::json::array({{{"type", "environment"}}});
-    EXPECT_THROW(parseSceneDescription(nlohmann::json::array(), missingFilename), std::invalid_argument);
+    EXPECT_THAT(
+        parseSceneDescription(nlohmann::json::array(), missingFilename),
+        HasErrorWithMessageRegex("exactly one of filename or radiance"));
 
     const nlohmann::json negativeScale = nlohmann::json::array({
         {{"type", "environment"}, {"filename", "studio.hdr"}, {"radianceScale", -1.0f}},
     });
-    EXPECT_THROW(parseSceneDescription(nlohmann::json::array(), negativeScale), std::invalid_argument);
+    EXPECT_THAT(
+        parseSceneDescription(nlohmann::json::array(), negativeScale),
+        HasErrorWithMessageRegex("radianceScale must be finite and non-negative"));
+
+    const nlohmann::json negativeRadiance = nlohmann::json::array({
+        {{"type", "environment"}, {"radiance", {1.0f, -1.0f, 1.0f}}},
+    });
+    EXPECT_THAT(
+        parseSceneDescription(nlohmann::json::array(), negativeRadiance),
+        HasErrorWithMessageRegex("radiance must be non-negative"));
+
+    const nlohmann::json ambiguousEnvironment = nlohmann::json::array({
+        {{"type", "environment"}, {"filename", "studio.hdr"}, {"radiance", {1.0f, 1.0f, 1.0f}}},
+    });
+    EXPECT_THAT(
+        parseSceneDescription(nlohmann::json::array(), ambiguousEnvironment),
+        HasErrorWithMessageRegex("exactly one of filename or radiance"));
 
     const nlohmann::json duplicate = nlohmann::json::array({
         {{"type", "environment"}, {"filename", "studio.hdr"}},
         {{"type", "environment"}, {"filename", "studio.hdr"}},
     });
-    EXPECT_THROW(parseSceneDescription(nlohmann::json::array(), duplicate), std::invalid_argument);
+    EXPECT_THAT(
+        parseSceneDescription(nlohmann::json::array(), duplicate),
+        HasErrorWithMessageRegex("Only one environment light"));
 }
 
 } // namespace

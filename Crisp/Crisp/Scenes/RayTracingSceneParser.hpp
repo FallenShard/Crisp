@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <vector>
 
+#include <Crisp/Core/Result.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/PathTracer/Optics/Fresnel.hpp>
@@ -67,7 +68,8 @@ struct LightParameters {
 };
 
 struct EnvironmentLightDescription {
-    std::string filename;
+    std::optional<std::string> filename;
+    std::optional<glm::vec3> radiance;
     float radianceScale{1.0f};
 };
 
@@ -81,10 +83,10 @@ struct SceneDescription {
     std::optional<EnvironmentLightDescription> environment;
 };
 
-glm::vec3 parseVec3(const nlohmann::json& json);
+Result<glm::vec3> parseVec3(const nlohmann::json& json);
 
 BrdfParameters createMicrofacetBrdf(glm::vec3 kd, float alpha, int32_t microfacetType = 0);
 
-SceneDescription parseSceneDescription(const nlohmann::json& shapeList, const nlohmann::json& lightList = {});
+Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, const nlohmann::json& lightList = {});
 
 } // namespace crisp
