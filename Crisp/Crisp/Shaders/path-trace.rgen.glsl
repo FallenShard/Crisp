@@ -20,10 +20,14 @@ layout(location = kPayloadIndex) rayPayloadEXT HitInfo hitInfo;
 const uint kImageSlot = 1;
 const uint kViewSlot = 2;
 const uint kIntegratorSlot = 3;
+const uint kEnvironmentMapSlot = 4;
+const uint kEnvironmentSamplerSlot = 0;
 
 // This doesn't work yet in a descriptor_heap: Nvidia driver bug.
 layout(set = 1, binding = 0) uniform accelerationStructureEXT sceneBvh;
 layout(descriptor_heap, descriptor_stride = 64, rgba32f) uniform image2D heapStorageImages[];
+layout(descriptor_heap, descriptor_stride = 64) uniform texture2D heapTexture2Ds[];
+layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 
 layout(descriptor_heap, descriptor_stride = 64) uniform View {
     ViewParameters params;
@@ -37,12 +41,18 @@ layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
     int lightCount;
     int shapeCount;
     int samplingMode;
+    int environmentEnabled;
+    int environmentWidth;
+    int environmentHeight;
+    float environmentScale;
 }
 heapIntegrators[];
 
 #define image heapStorageImages[kImageSlot]
 #define view heapViews[kViewSlot].params
 #define integrator heapIntegrators[kIntegratorSlot]
+#define environmentMap heapTexture2Ds[kEnvironmentMapSlot]
+#define environmentSampler heapSamplers[kEnvironmentSamplerSlot]
 
 #include "PathTracer/Core/scene.part.glsl"
 #include "PathTracer/Core/intersection.part.glsl"
@@ -76,7 +86,7 @@ vec3 computeRadianceDirectLighting(inout Sampler rng) {
     traceRay(rng, kDimBounceBase, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
 
     if (hitInfo.tHit == -1.0) {
-        return L;
+        return evaluateEnvironment(rayDirection.xyz);
     }
 
     L += hitInfo.Le;
@@ -126,7 +136,7 @@ vec3 computeRadianceMis(inout Sampler rng) {
     traceRay(rng, kDimBounceBase, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
 
     if (hitInfo.tHit == -1.0) {
-        return L;
+        return evaluateEnvironment(rayDirection.xyz);
     }
 
     L += hitInfo.Le;
@@ -141,12 +151,17 @@ vec3 computeRadianceMis(inout Sampler rng) {
     // BRDF sampling.
     {
         const float samplePdf = hitInfo.samplePdf;
-        traceRay(rng, kDimBounceBase + kDimsPerBounce, p, tMin, hitInfo.sampleDirection, tMax);
+        const vec3 sampleDirection = hitInfo.sampleDirection;
+        traceRay(rng, kDimBounceBase + kDimsPerBounce, p, tMin, sampleDirection, tMax);
 
         if (hitInfo.lightId != -1) {
             const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
             const float misWeight = deltaSample ? 1.0f : powerHeuristic(samplePdf, lightPdf);
             L += sampleWeight * hitInfo.Le * misWeight;
+        } else if (hitInfo.tHit < tMin && integrator.environmentEnabled != 0) {
+            const float lightPdf = getEnvironmentLightPdf(sampleDirection);
+            const float misWeight = deltaSample ? 1.0f : powerHeuristic(samplePdf, lightPdf);
+            L += sampleWeight * evaluateEnvironment(sampleDirection) * misWeight;
         }
     }
 
@@ -191,8 +206,13 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
         const uint bounceDim = kDimBounceBase + uint(bounceCount) * kDimsPerBounce;
         traceRay(rng, bounceDim, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
         if (hitInfo.tHit < tMin) {
-            // The ray missed; evaluate environment lighting here once it is supported.
-            // L += throughput * texture(environmentMap, rayDirection);
+            if (integrator.environmentEnabled != 0) {
+                float misWeight = 1.0f;
+                if (bounceCount > 0 && !prevWasDelta) {
+                    misWeight = powerHeuristic(prevSamplePdf, getEnvironmentLightPdf(rayDirection.xyz));
+                }
+                L += throughput * evaluateEnvironment(rayDirection.xyz) * misWeight;
+            }
             break;
         }
 
@@ -231,6 +251,10 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
                     L += throughput * radiance * lightDirectionBrdf.f * powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
                 }
             }
+        }
+
+        if (dot(sampleWeight, sampleWeight) == 0.0f || dot(rayDir, rayDir) < 1e-12f) {
+            break;
         }
 
         // Adjust throughput for the hit surface.
@@ -286,6 +310,11 @@ vec3 computeRadiance(inout Sampler rng) {
             // Accumulate any emission from the hit surface (e.g. we hit a light).
             L += throughput * hitInfo.Le;
 
+            if (dot(hitInfo.sampleWeight, hitInfo.sampleWeight) == 0.0f ||
+                dot(hitInfo.sampleDirection, hitInfo.sampleDirection) < 1e-12f) {
+                break;
+            }
+
             // Adjust throughput for the hit surface.
             throughput *= hitInfo.sampleWeight; // equal to f(wi) * cos(wo) / pdf(wo).
 
@@ -293,7 +322,7 @@ vec3 computeRadiance(inout Sampler rng) {
             rayOrigin.xyz = hitInfo.position;
             rayDirection.xyz = hitInfo.sampleDirection;
         } else { // The ray missed, evaluate environment lighting and exit the loop.
-            // L += throughput * texture(environmentMap, rayDirection);
+            L += throughput * evaluateEnvironment(rayDirection.xyz);
             break;
         }
 

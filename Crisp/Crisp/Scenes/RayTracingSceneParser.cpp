@@ -1,5 +1,6 @@
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 
+#include <cmath>
 #include <stdexcept>
 
 namespace crisp {
@@ -182,7 +183,7 @@ glm::vec3 parseVec3(const nlohmann::json& json) {
     return {json[0].get<float>(), json[1].get<float>(), json[2].get<float>()};
 }
 
-SceneDescription parseSceneDescription(const nlohmann::json& shapeList) {
+SceneDescription parseSceneDescription(const nlohmann::json& shapeList, const nlohmann::json& lightList) {
     SceneDescription scene{};
     for (const auto& shape : shapeList) {
         if (shape.value("type", std::string("mesh")) == "sphere") {
@@ -208,6 +209,30 @@ SceneDescription parseSceneDescription(const nlohmann::json& shapeList) {
         }
 
         scene.transforms.push_back(parseTransform(shape));
+    }
+
+    if (!lightList.is_null()) {
+        if (!lightList.is_array()) {
+            throw std::invalid_argument("Scene lights must be an array");
+        }
+        for (const auto& light : lightList) {
+            const std::string type = light.value("type", std::string{});
+            if (type != "environment") {
+                throw std::invalid_argument("Unsupported standalone light type: " + type);
+            }
+            if (scene.environment.has_value()) {
+                throw std::invalid_argument("Only one environment light is supported");
+            }
+            const std::string filename = light.value("filename", std::string{});
+            const float radianceScale = light.value("radianceScale", 1.0f);
+            if (filename.empty()) {
+                throw std::invalid_argument("Environment light requires a filename");
+            }
+            if (!std::isfinite(radianceScale) || radianceScale < 0.0f) {
+                throw std::invalid_argument("Environment radianceScale must be finite and non-negative");
+            }
+            scene.environment = EnvironmentLightDescription{filename, radianceScale};
+        }
     }
     return scene;
 }

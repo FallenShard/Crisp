@@ -1,14 +1,19 @@
 
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
+#include <cstring>
+
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Gui/ImGuiCameraUtils.hpp>
 #include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/Image/Io/Exr.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Math/AliasTable.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
+#include <Crisp/Renderer/VulkanImageUtils.hpp>
+#include <Crisp/Scenes/EnvironmentLightSampling.hpp>
 #include <Crisp/ShaderUtils/Reflection.hpp>
 #include <Crisp/ShaderUtils/ShaderType.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
@@ -71,13 +76,40 @@ void setCameraParameters(FreeCameraController& cameraController, const nlohmann:
     cameraController.setFovY(camera["fovY"].get<float>());
 }
 
+Image loadEnvironmentImage(const std::filesystem::path& path) {
+    if (path.extension() != ".exr") {
+        return loadImage(path, 4, FlipAxis::None).unwrap();
+    }
+
+    const auto exr = loadExr(path).unwrap();
+    const size_t pixelCount = static_cast<size_t>(exr.width) * exr.height;
+    std::vector<float> rgba(pixelCount * 4, 1.0f);
+    for (size_t pixel = 0; pixel < pixelCount; ++pixel) {
+        for (uint32_t channel = 0; channel < std::min(exr.channelCount, 4u); ++channel) {
+            rgba[pixel * 4 + channel] = exr.pixelData[pixel * exr.channelCount + channel];
+        }
+        if (exr.channelCount == 1) {
+            rgba[pixel * 4 + 1] = rgba[pixel * 4];
+            rgba[pixel * 4 + 2] = rgba[pixel * 4];
+        }
+    }
+
+    std::vector<uint8_t> bytes(rgba.size() * sizeof(float));
+    std::memcpy(bytes.data(), rgba.data(), bytes.size());
+    return Image(std::move(bytes), exr.width, exr.height, 4, 4 * sizeof(float));
+}
+
 // Must match the heap array subscripts in Shaders/path-trace.rgen.glsl. The BVH slot is reached through a
 // (set, binding) mapping rather than a subscript, so its number is private to this file.
 constexpr uint32_t kBvhSlot = 0;
 constexpr uint32_t kImageSlot = 1;
 constexpr uint32_t kViewSlot = 2;
 constexpr uint32_t kIntegratorSlot = 3;
-constexpr uint32_t kHeapSlotCount = 4;
+constexpr uint32_t kEnvironmentMapSlot = 4;
+constexpr uint32_t kHeapSlotCount = 5;
+
+constexpr uint32_t kEnvironmentSamplerSlot = 0;
+constexpr uint32_t kSamplerHeapSlotCount = 1;
 
 } // namespace
 
@@ -94,7 +126,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
 
     const auto sceneFile = args.value("sceneFile", std::string{"VesperScenes/Nori-PA-4/cbox-mats.json"});
     const auto json = loadJsonFromFile(renderer->getAssetPaths().resourceDir / sceneFile).unwrap();
-    m_sceneDesc = parseSceneDescription(json["shapes"]);
+    m_sceneDesc = parseSceneDescription(json["shapes"], json.value("lights", nlohmann::json::array()));
 
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
@@ -102,15 +134,39 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     m_cameraBuffer = m_resourceContext->createUniformBuffer<CameraParameters>("camera");
 
     m_integratorParams.shapeCount = static_cast<int32_t>(m_sceneDesc.meshFilenames.size());
-    m_integratorParams.lightCount = static_cast<int32_t>(m_sceneDesc.lights.size());
+    m_integratorParams.environmentEnabled = m_sceneDesc.environment.has_value() ? 1 : 0;
+    m_integratorParams.lightCount =
+        static_cast<int32_t>(m_sceneDesc.lights.size()) + m_integratorParams.environmentEnabled;
     m_integratorBuffer = m_resourceContext->createUniformBuffer<IntegratorParameters>("integrator");
 
     m_sceneDesc.brdfs.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
 
     m_brdfParamsBuffer = m_resourceContext->createStorageBuffer(
         "brdfParams", m_sceneDesc.brdfs, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
-    m_lightParamsBuffer = m_resourceContext->createStorageBuffer(
-        "lightParams", m_sceneDesc.lights, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
+    const std::vector<LightParameters> gpuLights =
+        m_sceneDesc.lights.empty() ? std::vector{LightParameters{}} : m_sceneDesc.lights;
+    m_lightParamsBuffer =
+        m_resourceContext->createStorageBuffer("lightParams", gpuLights, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
+
+    if (m_sceneDesc.environment) {
+        auto environmentPath = renderer->getResourcesPath() / m_sceneDesc.environment->filename;
+        if (!std::filesystem::exists(environmentPath)) {
+            environmentPath = renderer->getResourcesPath() / "Textures" / m_sceneDesc.environment->filename;
+        }
+        const Image environmentImage = loadEnvironmentImage(environmentPath);
+        const auto pixelCount = static_cast<size_t>(environmentImage.getWidth()) * environmentImage.getHeight();
+        const auto distribution = createEnvironmentSamplingDistribution(
+            std::span<const float>{reinterpret_cast<const float*>(environmentImage.getData()), pixelCount * 4},
+            environmentImage.getWidth(),
+            environmentImage.getHeight());
+
+        m_integratorParams.environmentWidth = static_cast<int32_t>(environmentImage.getWidth());
+        m_integratorParams.environmentHeight = static_cast<int32_t>(environmentImage.getHeight());
+        m_integratorParams.environmentScale = m_sceneDesc.environment->radianceScale;
+        m_environmentImage = createVulkanImage(*renderer, environmentImage, VK_FORMAT_R32G32B32A32_SFLOAT);
+        m_environmentCdfBuffer = m_resourceContext->createStorageBuffer(
+            "environmentCdf", distribution.getCdf(), VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
+    }
 
     AliasTable aliasTable{};
     TriangleMesh sceneMesh{};
@@ -150,6 +206,9 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
     m_topLevelAccelStructure->setDebugName(m_renderer->getDevice(), "Path Tracer TLAS");
+    if (aliasTable.empty()) {
+        aliasTable.push_back({.tau = 0.0f, .j = 0});
+    }
     m_aliasTableBuffer = m_resourceContext->addBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
 
     m_instancePropsBuffer = m_resourceContext->createStorageBuffer(
@@ -163,6 +222,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         .materials = m_brdfParamsBuffer->getDeviceAddress(),
         .lights = m_lightParamsBuffer->getDeviceAddress(),
         .aliasTable = m_aliasTableBuffer->getDeviceAddress(),
+        .environmentCdf = m_environmentCdfBuffer ? m_environmentCdfBuffer->getDeviceAddress() : 0,
     };
     CRISP_CHECK_LE(
         sizeof(m_sceneAddresses),
@@ -181,6 +241,19 @@ VulkanRayTracingScene::VulkanRayTracingScene(
 
     m_resourceHeap = std::make_unique<VulkanResourceHeap>(
         m_renderer->getDevice(), kHeapSlotCount, "Path Tracer Resource Descriptor Heap");
+    m_samplerHeap = std::make_unique<VulkanSamplerHeap>(
+        m_renderer->getDevice(), kSamplerHeapSlotCount, "Path Tracer Sampler Descriptor Heap");
+    const VkSamplerCreateInfo environmentSampler{
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = VK_FILTER_LINEAR,
+        .minFilter = VK_FILTER_LINEAR,
+        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+        .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+        .maxLod = 0.0f,
+    };
+    m_samplerHeap->write(kEnvironmentSamplerSlot, environmentSampler);
     m_pipeline = createPipeline();
 
     buildRenderGraph();
@@ -232,7 +305,9 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_cameraBuffer, 0, cameraParams);
     frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_integratorBuffer, 0, m_integratorParams);
     frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_brdfParamsBuffer, 0, m_sceneDesc.brdfs);
-    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_lightParamsBuffer, 0, m_sceneDesc.lights);
+    if (!m_sceneDesc.lights.empty()) {
+        frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_lightParamsBuffer, 0, m_sceneDesc.lights);
+    }
 
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> kRayTracingRead);
 
@@ -261,8 +336,10 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 void VulkanRayTracingScene::traceRays(const FrameContext& frameContext) {
     const auto& encoder = frameContext.commandEncoder;
     uploadIfPending(*m_resourceHeap, encoder, *frameContext.stagingBelt, kRayTracingResourceHeapRead);
+    uploadIfPending(*m_samplerHeap, encoder, *frameContext.stagingBelt, kRayTracingSamplerHeapRead);
     encoder.bindPipeline(*m_pipeline);
     encoder.bindResourceHeap(*m_resourceHeap);
+    encoder.bindSamplerHeap(*m_samplerHeap);
     encoder.pushData(structAsBytes(m_sceneAddresses));
     encoder.traceRays(m_shaderBindingTable.bindings, m_renderer->getSwapChainExtent());
 
@@ -383,6 +460,10 @@ void VulkanRayTracingScene::updateDescriptorHeap() {
         kImageSlot, m_renderGraph->getImageView<&PathTracingPassData::image>(), VK_IMAGE_LAYOUT_GENERAL);
     m_resourceHeap->writeUniformBuffer(kViewSlot, *m_cameraBuffer);
     m_resourceHeap->writeUniformBuffer(kIntegratorSlot, *m_integratorBuffer);
+    if (m_environmentImage) {
+        m_resourceHeap->writeSampledImage(
+            kEnvironmentMapSlot, m_environmentImage->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
 }
 
 void VulkanRayTracingScene::setupInput() {

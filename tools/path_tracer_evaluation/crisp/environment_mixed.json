@@ -1,0 +1,38 @@
+{
+    "integrator": {"type": "mis-path-tracer"},
+    "sampler": {"type": "independent", "samplesPerPixel": 256},
+    "camera": {
+        "type": "perspective",
+        "imageSize": [1920, 1080],
+        "fovY": 27.7856,
+        "zNear": 0.1,
+        "zFar": 1000.0,
+        "position": [0.0, 0.919769, 5.41159],
+        "target": [0.0, 0.919769, 4.41159],
+        "up": [0.0, 1.0, 0.0]
+    },
+    "lights": [
+        {
+            "type": "environment",
+            "filename": "Textures/EnvironmentMaps/GreenwichPark/GreenwichPark.hdr",
+            "radianceScale": 0.1
+        }
+    ],
+    "shapes": [
+        {"type": "mesh", "filename": "walls.obj", "bsdf": {"type": "lambertian", "reflectance": [0.725, 0.71, 0.68]}},
+        {"type": "mesh", "filename": "rightwall.obj", "bsdf": {"type": "lambertian", "reflectance": [0.161, 0.133, 0.427]}},
+        {"type": "mesh", "filename": "leftwall.obj", "bsdf": {"type": "lambertian", "reflectance": [0.63, 0.065, 0.05]}},
+        {
+            "type": "mesh",
+            "filename": "light.obj",
+            "bsdf": {"type": "lambertian", "reflectance": [0.5, 0.5, 0.5]},
+            "light": {"type": "area", "radiance": [12.0, 12.0, 12.0]}
+        },
+        {
+            "type": "sphere",
+            "center": [0.0, 0.55, 0.0],
+            "radius": 0.55,
+            "bsdf": {"type": "lambertian", "reflectance": [0.6, 0.6, 0.6]}
+        }
+    ]
+}

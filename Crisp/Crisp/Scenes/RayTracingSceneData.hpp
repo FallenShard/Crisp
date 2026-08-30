@@ -16,9 +16,10 @@ struct RayTracingSceneAddresses {
     VkDeviceAddress materials{0};
     VkDeviceAddress lights{0};
     VkDeviceAddress aliasTable{0};
+    VkDeviceAddress environmentCdf{0};
 };
 
-static_assert(sizeof(RayTracingSceneAddresses) == 7 * sizeof(VkDeviceAddress));
+static_assert(sizeof(RayTracingSceneAddresses) == 8 * sizeof(VkDeviceAddress));
 static_assert(std::is_standard_layout_v<RayTracingSceneAddresses>);
 static_assert(offsetof(RayTracingSceneAddresses, vertices) == 0);
 static_assert(offsetof(RayTracingSceneAddresses, normals) == 8);
@@ -27,5 +28,6 @@ static_assert(offsetof(RayTracingSceneAddresses, instances) == 24);
 static_assert(offsetof(RayTracingSceneAddresses, materials) == 32);
 static_assert(offsetof(RayTracingSceneAddresses, lights) == 40);
 static_assert(offsetof(RayTracingSceneAddresses, aliasTable) == 48);
+static_assert(offsetof(RayTracingSceneAddresses, environmentCdf) == 56);
 
 } // namespace crisp

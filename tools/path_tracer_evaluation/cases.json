@@ -20,6 +20,40 @@
       "name": "rough_conductor_beckmann",
       "mitsubaScene": "mitsuba/cbox_rough_conductor_beckmann.xml",
       "crispScene": "tools/path_tracer_evaluation/crisp/cbox_rough_conductor_beckmann.json"
+    },
+    {
+      "name": "environment_only",
+      "mitsubaScene": "mitsuba/environment_only.xml",
+      "crispScene": "tools/path_tracer_evaluation/crisp/environment_only.json",
+      "spp": 256,
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.05,
+          "relativeMeanLuminanceError": 0.003,
+          "candidateNegativeValues": 0,
+          "candidateNonFiniteValues": 0
+        },
+        "minimum": {
+          "psnrDb": 38.0
+        }
+      }
+    },
+    {
+      "name": "environment_mixed",
+      "mitsubaScene": "mitsuba/environment_mixed.xml",
+      "crispScene": "tools/path_tracer_evaluation/crisp/environment_mixed.json",
+      "spp": 256,
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.03,
+          "relativeMeanLuminanceError": 0.003,
+          "candidateNegativeValues": 0,
+          "candidateNonFiniteValues": 0
+        },
+        "minimum": {
+          "psnrDb": 58.0
+        }
+      }
     }
   ]
 }

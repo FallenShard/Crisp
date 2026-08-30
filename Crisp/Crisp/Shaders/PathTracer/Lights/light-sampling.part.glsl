@@ -1,6 +1,43 @@
 #ifndef CRISP_PATH_TRACER_LIGHT_SAMPLING_GLSL
 #define CRISP_PATH_TRACER_LIGHT_SAMPLING_GLSL
 
+#include "environment-distribution.part.glsl"
+
+vec3 evaluateEnvironment(const vec3 direction) {
+    if (integrator.environmentEnabled == 0) {
+        return vec3(0.0f);
+    }
+    const vec2 uv = environmentDirectionToUv(direction);
+    return integrator.environmentScale *
+        textureLod(sampler2D(environmentMap, environmentSampler), uv, 0.0f).rgb;
+}
+
+float getEnvironmentLightPdf(const vec3 direction) {
+    if (integrator.environmentEnabled == 0 || integrator.lightCount <= 0) {
+        return 0.0f;
+    }
+    return environmentDirectionPdf(
+               scene.environmentCdf,
+               uint(integrator.environmentWidth),
+               uint(integrator.environmentHeight),
+               direction) /
+        float(integrator.lightCount);
+}
+
+vec3 sampleEnvironmentLight(
+    inout Sampler rng, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
+    vec2 uv;
+    shadowRayDir = sampleEnvironmentDirection(
+        scene.environmentCdf,
+        uint(integrator.environmentWidth),
+        uint(integrator.environmentHeight),
+        next2D(rng),
+        uv,
+        lightPdf);
+    shadowRayLen = 1e30f;
+    return lightPdf > 0.0f ? evaluateEnvironment(shadowRayDir) / lightPdf : vec3(0.0f);
+}
+
 float sampleSurfaceCoord(inout Sampler rng, in uint meshId, out vec3 position, out vec3 normal) {
     const uint aliasTableOffset = scene.instances.data[meshId].aliasTableOffset;
     const uint triCount = scene.aliasTable.data[aliasTableOffset].j;
@@ -62,14 +99,20 @@ vec3 sampleUniformLight(
     const uint lightId = nextRange(rng, integrator.lightCount);
     const float uniformPdf = 1.0f / float(integrator.lightCount);
 
-    const vec3 radiance = sampleAreaLight(
-        rng,
-        scene.lights.data[lightId].meshId,
-        scene.lights.data[lightId].radiance,
-        refPoint,
-        shadowRayDir,
-        shadowRayLen,
-        lightPdf);
+    const uint areaLightCount = uint(integrator.lightCount - integrator.environmentEnabled);
+    vec3 radiance;
+    if (lightId < areaLightCount) {
+        radiance = sampleAreaLight(
+            rng,
+            scene.lights.data[lightId].meshId,
+            scene.lights.data[lightId].radiance,
+            refPoint,
+            shadowRayDir,
+            shadowRayLen,
+            lightPdf);
+    } else {
+        radiance = sampleEnvironmentLight(rng, shadowRayDir, shadowRayLen, lightPdf);
+    }
     lightPdf *= uniformPdf;
     return radiance / uniformPdf;
 }

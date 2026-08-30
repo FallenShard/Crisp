@@ -34,6 +34,11 @@ layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Pat
     AliasTableElement data[];
 };
 
+#ifndef CRISP_PATH_TRACER_ENVIRONMENT_CDF_TYPE_GLSL
+#define CRISP_PATH_TRACER_ENVIRONMENT_CDF_TYPE_GLSL
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer EnvironmentCdf { float data[]; };
+#endif
+
 // Must match RayTracingSceneAddresses in Scenes/RayTracingSceneData.hpp.
 layout(push_constant, scalar) uniform RayTracingSceneAddresses {
     PathTraceVertices vertices;
@@ -43,6 +48,7 @@ layout(push_constant, scalar) uniform RayTracingSceneAddresses {
     PathTraceMaterials materials;
     PathTraceLights lights;
     PathTraceAliasTable aliasTable;
+    EnvironmentCdf environmentCdf;
 }
 scene;
 

@@ -22,6 +22,7 @@ target_link_libraries(CrispScenes
     PUBLIC Crisp::Models
     PUBLIC Crisp::MeshIo
     PUBLIC Crisp::MaterialUtils
+    PUBLIC Crisp::Math
     PUBLIC Crisp::JsonUtils
     PUBLIC Crisp::PathTracer
 
@@ -175,6 +176,8 @@ target_link_libraries(CrispFluidSimulationSceneTest
     PRIVATE Crisp::Application)
 
 add_cpp_static_library(CrispVulkanRayTracingScene
+    "EnvironmentLightSampling.cpp"
+    "EnvironmentLightSampling.hpp"
     "VulkanRayTracingScene.cpp"
     "VulkanRayTracingScene.hpp"
     "RayTracingSceneParser.cpp"
@@ -224,3 +227,16 @@ target_add_test_file(
     CrispBsdfValidationTest "../Shaders/Brdf/rough-conductor.part.glsl" "Brdf/rough-conductor.part.glsl")
 target_add_test_file(
     CrispBsdfValidationTest "../Shaders/Brdf/rough-dielectric.part.glsl" "Brdf/rough-dielectric.part.glsl")
+
+add_cpp_test(CrispEnvironmentSamplingTest
+    "Test/EnvironmentSamplingTest.cpp")
+target_link_libraries(CrispEnvironmentSamplingTest
+    PRIVATE Crisp::VulkanRayTracingScene
+    PRIVATE Crisp::VulkanTestUtils)
+target_add_test_shader(CrispEnvironmentSamplingTest "Test/Data/environment-sampling.comp.glsl")
+target_add_test_file(
+    CrispEnvironmentSamplingTest "../Shaders/Common/math-constants.part.glsl" "Common/math-constants.part.glsl")
+target_add_test_file(
+    CrispEnvironmentSamplingTest
+    "../Shaders/PathTracer/Lights/environment-distribution.part.glsl"
+    "PathTracer/Lights/environment-distribution.part.glsl")

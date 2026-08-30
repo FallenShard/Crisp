@@ -144,13 +144,6 @@ def capture_candidate(
             f"[{case['name']}] Crisp scene not found under Resources or the repository root: {relative_scene_file}"
         )
 
-    executable = REPO_ROOT / "build" / preset / "Crisp" / "CrispMain.exe"
-    if not executable.is_file():
-        raise SystemExit(
-            f"CrispMain not built for preset '{preset}': {executable}\n"
-            f"Build it with: cmuck build CrispMain --preset {preset}"
-        )
-
     # saveExr does not create parent directories, so the capture target must exist up front.
     candidates_dir.mkdir(parents=True, exist_ok=True)
     config = {
@@ -158,16 +151,20 @@ def capture_candidate(
         "shaderSourcesPath": str(REPO_ROOT / "Crisp" / "Crisp" / "Shaders"),
         "outputDir": str(candidates_dir),
         "imguiFontPath": str(REPO_ROOT / "Resources" / "Fonts" / "Barlow-SemiBold.ttf"),
-        "forceValidationLayers": False,
-        "enableVulkanRayTracing": True,
-        "scene": "vulkan-ray-tracer",
         "logLevel": "info",
-        "sceneArgs": {
-            "sceneFile": scene_argument,
-            "samplesPerFrame": settings["samplesPerFrame"],
-            "captureAfterSamples": settings["spp"],
-            "captureFilename": reference.name,
-            "closeAfterCapture": True,
+        "vulkan": {
+            "forceValidationLayers": False,
+            "enableRayTracing": True,
+        },
+        "activeScene": "vulkan-ray-tracer",
+        "scenes": {
+            "vulkan-ray-tracer": {
+                "sceneFile": scene_argument,
+                "samplesPerFrame": settings["samplesPerFrame"],
+                "captureAfterSamples": settings["spp"],
+                "captureFilename": reference.name,
+                "closeAfterCapture": True,
+            },
         },
     }
     config_path = candidates_dir / f"{case['name']}.config.json"
@@ -186,11 +183,56 @@ def capture_candidate(
     config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
 
     run(
-        [str(executable), "--config_path", str(config_path)],
+        [
+            "cmuck",
+            "run",
+            "CrispMain",
+            "--preset",
+            preset,
+            "--",
+            "--config_path",
+            str(config_path),
+        ],
         f"[{case['name']}] Crisp capture at {settings['spp']} spp",
     )
     if not candidate.is_file():
         raise SystemExit(f"[{case['name']}] Crisp exited without writing {candidate}")
+
+
+def validate_thresholds(cases: list[dict], report_path: Path) -> None:
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    candidate_runs = report.get("candidateRuns", [])
+    if len(candidate_runs) != 1:
+        raise SystemExit(f"Expected one candidate run in {report_path}, found {len(candidate_runs)}")
+
+    image_results = candidate_runs[0].get("images", {})
+    failures: list[str] = []
+    for case in cases:
+        thresholds = case.get("thresholds")
+        if not thresholds:
+            continue
+
+        image_name = f"{Path(case['mitsubaScene']).stem}.exr"
+        metrics = image_results.get(image_name)
+        if metrics is None:
+            failures.append(f"[{case['name']}] no metrics found for {image_name}")
+            continue
+        if "error" in metrics:
+            failures.append(f"[{case['name']}] {metrics['error']}")
+            continue
+
+        for metric, limit in thresholds.get("maximum", {}).items():
+            value = metrics.get(metric)
+            if value is None or value > limit:
+                failures.append(f"[{case['name']}] {metric}={value!r} exceeds maximum {limit}")
+        for metric, limit in thresholds.get("minimum", {}).items():
+            value = metrics.get(metric)
+            if value is None or value < limit:
+                failures.append(f"[{case['name']}] {metric}={value!r} is below minimum {limit}")
+
+    if failures:
+        raise SystemExit("Image validation failed:\n  " + "\n  ".join(failures))
+    print("All configured image thresholds passed")
 
 
 def main() -> int:
@@ -230,6 +272,7 @@ def main() -> int:
     if args.skip_flip:
         compare_command.append("--skip-flip")
     run(compare_command, "Comparing captures against references")
+    validate_thresholds(cases, json_report)
 
     run(
         [

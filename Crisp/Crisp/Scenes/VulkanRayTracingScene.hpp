@@ -51,6 +51,8 @@ private:
 
     std::unique_ptr<VulkanPipeline> m_pipeline;
     std::unique_ptr<VulkanResourceHeap> m_resourceHeap;
+    std::unique_ptr<VulkanSamplerHeap> m_samplerHeap;
+    std::unique_ptr<VulkanImage> m_environmentImage;
 
     ShaderBindingTable m_shaderBindingTable;
 
@@ -61,6 +63,10 @@ private:
         int32_t lightCount{0};
         int32_t shapeCount{0};
         int32_t samplingMode{2};
+        int32_t environmentEnabled{0};
+        int32_t environmentWidth{0};
+        int32_t environmentHeight{0};
+        float environmentScale{1.0f};
     };
 
     SceneDescription m_sceneDesc;
@@ -74,5 +80,6 @@ private:
     VulkanBuffer* m_lightParamsBuffer{};
     VulkanBuffer* m_instancePropsBuffer{};
     VulkanBuffer* m_aliasTableBuffer{};
+    VulkanBuffer* m_environmentCdfBuffer{};
 };
 } // namespace crisp

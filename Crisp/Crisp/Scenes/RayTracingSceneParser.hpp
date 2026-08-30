@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 
 #include <Crisp/Io/JsonUtils.hpp>
@@ -46,18 +47,24 @@ struct LightParameters {
     float pad2{};
 };
 
+struct EnvironmentLightDescription {
+    std::string filename;
+    float radianceScale{1.0f};
+};
+
 struct SceneDescription {
     std::vector<std::string> meshFilenames;
     std::vector<glm::mat4> transforms;
     std::vector<InstanceProperties> props;
     std::vector<BrdfParameters> brdfs;
     std::vector<LightParameters> lights;
+    std::optional<EnvironmentLightDescription> environment;
 };
 
 glm::vec3 parseVec3(const nlohmann::json& json);
 
 BrdfParameters createMicrofacetBrdf(glm::vec3 kd, float alpha, int32_t microfacetType = 0);
 
-SceneDescription parseSceneDescription(const nlohmann::json& shapeList);
+SceneDescription parseSceneDescription(const nlohmann::json& shapeList, const nlohmann::json& lightList = {});
 
 } // namespace crisp

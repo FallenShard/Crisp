@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<scene version="3.0.0">
+    <integrator type="path"><integer name="max_depth" value="32"/><integer name="rr_depth" value="5"/></integrator>
+    <sensor type="perspective">
+        <string name="fov_axis" value="y"/><float name="fov" value="27.7856"/>
+        <float name="near_clip" value="0.1"/><float name="far_clip" value="1000.0"/>
+        <transform name="to_world"><lookat origin="0, 0.919769, 5.41159" target="0, 0.919769, 4.41159" up="0, 1, 0"/></transform>
+        <sampler type="independent"><integer name="sample_count" value="256"/></sampler>
+        <film type="hdrfilm">
+            <integer name="width" value="1920"/><integer name="height" value="1080"/>
+            <string name="pixel_format" value="rgb"/><string name="component_format" value="float32"/><rfilter type="box"/>
+        </film>
+    </sensor>
+    <emitter type="envmap">
+        <string name="filename" value="../../../Resources/Textures/EnvironmentMaps/GreenwichPark/GreenwichPark.hdr"/>
+        <float name="scale" value="0.1"/>
+    </emitter>
+    <bsdf type="diffuse" id="white"><rgb name="reflectance" value="0.725, 0.71, 0.68"/></bsdf>
+    <bsdf type="diffuse" id="right-wall"><rgb name="reflectance" value="0.161, 0.133, 0.427"/></bsdf>
+    <bsdf type="diffuse" id="left-wall"><rgb name="reflectance" value="0.63, 0.065, 0.05"/></bsdf>
+    <shape type="obj"><string name="filename" value="../../../Resources/Meshes/walls.obj"/><ref id="white"/></shape>
+    <shape type="obj"><string name="filename" value="../../../Resources/Meshes/rightwall.obj"/><ref id="right-wall"/></shape>
+    <shape type="obj"><string name="filename" value="../../../Resources/Meshes/leftwall.obj"/><ref id="left-wall"/></shape>
+    <shape type="obj">
+        <string name="filename" value="../../../Resources/Meshes/light.obj"/>
+        <bsdf type="diffuse"><rgb name="reflectance" value="0.5, 0.5, 0.5"/></bsdf>
+        <emitter type="area"><rgb name="radiance" value="12, 12, 12"/></emitter>
+    </shape>
+    <shape type="obj">
+        <string name="filename" value="../../../Resources/Meshes/sphere.obj"/>
+        <transform name="to_world"><matrix value="0.55 0 0 0  0 0.55 0 0.55  0 0 0.55 0  0 0 0 1"/></transform>
+        <bsdf type="diffuse"><rgb name="reflectance" value="0.6, 0.6, 0.6"/></bsdf>
+    </shape>
+</scene>
