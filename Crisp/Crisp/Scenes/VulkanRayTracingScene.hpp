@@ -69,7 +69,7 @@ private:
         int32_t reconstructionFilter{static_cast<int32_t>(ReconstructionFilterType::Box)};
         int32_t lightCount{0};
         int32_t shapeCount{0};
-        int32_t samplingMode{2};
+        int32_t samplingMode{0};
         int32_t environmentEnabled{0};
         int32_t environmentWidth{0};
         int32_t environmentHeight{0};

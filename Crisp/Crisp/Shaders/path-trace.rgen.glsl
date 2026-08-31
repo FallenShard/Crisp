@@ -369,9 +369,13 @@ void main() {
     for (uint i = 0; i < sampleCount; ++i) {
         Sampler rng = createSampler(gl_LaunchIDEXT.xy, baseSampleIdx + i, integrator.seed);
         if (integrator.samplingMode == 0) {
-            L += computeRadianceDirectLighting(rng);
+            L += computeRadianceMisPt(rng);
         } else if (integrator.samplingMode == 1) {
             L += computeRadiance(rng);
+        } else if (integrator.samplingMode == 2) {
+            L += computeRadianceDirectLighting(rng);
+        } else if (integrator.samplingMode == 3) {
+            L += computeRadianceMis(rng);
         } else {
             L += computeRadianceMisPt(rng);
         }

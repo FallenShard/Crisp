@@ -457,16 +457,20 @@ void VulkanRayTracingScene::drawGui() {
 
     ImGui::Separator();
 
-    if (ImGui::RadioButton("Use Light Sampling", m_integratorParams.samplingMode == 0)) {
+    if (ImGui::RadioButton("MIS Path Tracing", m_integratorParams.samplingMode == 0)) {
         m_integratorParams.samplingMode = 0;
         m_integratorParams.frameIdx = 0;
     }
-    if (ImGui::RadioButton("Use BRDF Sampling", m_integratorParams.samplingMode == 1)) {
+    if (ImGui::RadioButton("Pure Path Tracing", m_integratorParams.samplingMode == 1)) {
         m_integratorParams.samplingMode = 1;
         m_integratorParams.frameIdx = 0;
     }
-    if (ImGui::RadioButton("Use MIS", m_integratorParams.samplingMode == 2)) {
+    if (ImGui::RadioButton("Light-Sampled Direct", m_integratorParams.samplingMode == 2)) {
         m_integratorParams.samplingMode = 2;
+        m_integratorParams.frameIdx = 0;
+    }
+    if (ImGui::RadioButton("Direct MIS", m_integratorParams.samplingMode == 3)) {
+        m_integratorParams.samplingMode = 3;
         m_integratorParams.frameIdx = 0;
     }
     if (ImGui::Button("Take Screenshot")) {
