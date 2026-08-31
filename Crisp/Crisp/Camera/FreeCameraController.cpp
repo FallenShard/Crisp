@@ -1,9 +1,12 @@
 #include <Crisp/Camera/FreeCameraController.hpp>
 
+#include <cmath>
+
 namespace crisp {
 FreeCameraController::FreeCameraController(Window& window)
     : m_window(&window)
     , m_camera(m_window->getSize().x, m_window->getSize().y)
+    , m_viewportSize(m_window->getSize())
     , m_speed(1.5f)
     , m_angularSpeed(glm::radians(90.0f))
     , m_yaw(0.0f)
@@ -20,6 +23,7 @@ FreeCameraController::FreeCameraController(Window& window)
 
 FreeCameraController::FreeCameraController(const int32_t viewportWidth, const int32_t viewportHeight)
     : m_camera(viewportWidth, viewportHeight)
+    , m_viewportSize(viewportWidth, viewportHeight)
     , m_speed(1.5f)
     , m_angularSpeed(glm::radians(90.0f))
     , m_yaw(0.0f)
@@ -45,6 +49,23 @@ void FreeCameraController::setPosition(const float x, const float y, const float
 
 void FreeCameraController::setPosition(const glm::vec3& position) {
     m_camera.setPosition(position);
+    m_hasUpdated = true;
+}
+
+void FreeCameraController::setLookAt(
+    const glm::vec3& position, const glm::vec3& target, const glm::vec3& up) {
+    const glm::vec3 lookDirection = glm::normalize(target - position);
+    m_camera.setPosition(position);
+    m_camera.setOrientation(
+        glm::quatLookAtRH(glm::dvec3(lookDirection), glm::dvec3(glm::normalize(up))));
+
+    m_yaw = std::atan2(-lookDirection.x, -lookDirection.z);
+    m_pitch = std::asin(glm::clamp(lookDirection.y, -1.0f, 1.0f));
+    m_hasUpdated = true;
+}
+
+void FreeCameraController::setViewDepthRange(const float zNear, const float zFar) {
+    m_camera.setViewDepthRange(zNear, zFar);
     m_hasUpdated = true;
 }
 
@@ -126,7 +147,7 @@ void FreeCameraController::onMouseMoved(const double xPos, const double yPos) {
 
     if (m_isDragging) {
         // In [-1, 1] range
-        const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_window->getSize());
+        const auto delta = (mousePos - m_prevMousePos) / glm::vec2(m_viewportSize);
         updateOrientation(-delta.x, -delta.y);
         m_hasUpdated = true;
     }
@@ -140,6 +161,7 @@ void FreeCameraController::onMouseWheelScrolled(const double offset) {
 }
 
 void FreeCameraController::onViewportResized(const int32_t width, const int32_t height) {
+    m_viewportSize = {width, height};
     m_camera.setViewportSize(width, height);
 }
 
@@ -149,7 +171,7 @@ CameraParameters FreeCameraController::getCameraParameters() const {
     params.P = m_camera.getProjectionMatrix();
     params.invV = glm::inverse(params.V);
     params.invP = glm::inverse(params.P);
-    params.screenSize = glm::vec2(m_window->getSize());
+    params.screenSize = glm::vec2(m_viewportSize);
     params.nearFar = m_camera.getViewDepthRange();
     return params;
 }

@@ -25,6 +25,7 @@ public:
 
     void setVerticalFov(float verticalFov);
     float getVerticalFov() const;
+    void setViewDepthRange(float zNear, float zFar);
     void setViewportSize(int32_t viewportWidth, int32_t viewportHeight);
     void setAspectRatio(float aspectRatio);
 

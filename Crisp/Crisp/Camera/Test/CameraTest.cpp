@@ -26,6 +26,10 @@ TEST(CameraTest, DepthRange) {
     constexpr float kZNear = 1.0f;
     constexpr float kZFar = 10000.0f;
     EXPECT_EQ(Camera(kDefaultWidth, kDefaultHeight, kZNear, kZFar).getViewDepthRange(), glm::vec2(kZNear, kZFar));
+
+    Camera camera(kDefaultWidth, kDefaultHeight);
+    camera.setViewDepthRange(kZNear, kZFar);
+    EXPECT_EQ(camera.getViewDepthRange(), glm::vec2(kZNear, kZFar));
 }
 
 } // namespace crisp

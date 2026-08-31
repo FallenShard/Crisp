@@ -20,6 +20,8 @@ public:
 
     void setPosition(float x, float y, float z);
     void setPosition(const glm::vec3& position);
+    void setLookAt(const glm::vec3& position, const glm::vec3& target, const glm::vec3& up);
+    void setViewDepthRange(float zNear, float zFar);
     void setSpeed(float speed);
     void setFovY(float fovYDegrees);
 
@@ -42,6 +44,7 @@ public:
 private:
     Window* m_window{nullptr};
     Camera m_camera;
+    glm::ivec2 m_viewportSize;
 
     float m_speed;
     float m_angularSpeed;

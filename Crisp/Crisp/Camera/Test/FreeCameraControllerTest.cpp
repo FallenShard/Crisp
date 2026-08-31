@@ -65,4 +65,18 @@ TEST(FreeCameraControllerTest, ComplexMotion) {
     const auto lookAt3 = glm::lookAt(glm::vec3(1.5, 1, 4), glm::vec3(0, 1, 4), glm::vec3(0, 1, 0));
     EXPECT_THAT(controller.getCamera().getViewMatrix(), GlmMatNearEq(lookAt3));
 }
+
+TEST(FreeCameraControllerTest, AppliesSceneCameraTransformAndViewport) {
+    FreeCameraController controller(640, 360);
+    const glm::vec3 position{1.0f, 2.0f, 3.0f};
+    const glm::vec3 target{-1.0f, 1.0f, 0.0f};
+    const glm::vec3 up{0.0f, 1.0f, 0.0f};
+
+    controller.setLookAt(position, target, up);
+    controller.setViewDepthRange(0.25f, 250.0f);
+
+    EXPECT_THAT(controller.getCamera().getViewMatrix(), GlmMatNearEq(glm::lookAt(position, target, up)));
+    EXPECT_EQ(controller.getCamera().getViewDepthRange(), glm::vec2(0.25f, 250.0f));
+    EXPECT_EQ(controller.getCameraParameters().screenSize, glm::vec2(640.0f, 360.0f));
+}
 } // namespace crisp

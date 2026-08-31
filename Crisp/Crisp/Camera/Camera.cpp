@@ -73,6 +73,12 @@ float Camera::getVerticalFov() const {
     return glm::degrees(m_verticalFov);
 }
 
+void Camera::setViewDepthRange(const float zNear, const float zFar) {
+    m_zNear = zNear;
+    m_zFar = zFar;
+    updateProjectionMatrix();
+}
+
 void Camera::setViewportSize(const int32_t viewportWidth, const int32_t viewportHeight) {
     setAspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight));
 }
