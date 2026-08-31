@@ -15,6 +15,59 @@ nlohmann::json createShape(nlohmann::json bsdf) {
     };
 }
 
+nlohmann::json createRenderSettings() {
+    return {
+        {"integrator", {{"type", "mis-path-tracer"}, {"maxDepth", 12}}},
+        {"sampler", {{"type", "independent"}, {"samplesPerPixel", 256}, {"seed", 17}}},
+        {"camera",
+         {
+             {"type", "perspective"},
+             {"imageSize", {640, 360}},
+             {"fovY", 50.0f},
+             {"zNear", 0.25f},
+             {"zFar", 250.0f},
+             {"position", {1.0f, 2.0f, 3.0f}},
+             {"target", {-1.0f, 1.0f, 0.0f}},
+             {"up", {0.0f, 1.0f, 0.0f}},
+             {"reconstructionFilter", {{"type", "box"}}},
+         }},
+    };
+}
+
+TEST(RayTracingSceneParserTest, ParsesDeterministicRenderSettings) {
+    const auto result = parseRayTracingRenderSettings(createRenderSettings());
+    ASSERT_TRUE(result.hasValue());
+    EXPECT_EQ(result->resolution, glm::ivec2(640, 360));
+    EXPECT_EQ(result->seed, 17u);
+    EXPECT_EQ(result->samplesPerPixel, 256);
+    EXPECT_EQ(result->maxDepth, 12);
+    EXPECT_EQ(result->reconstructionFilter, ReconstructionFilterType::Box);
+    EXPECT_EQ(result->cameraPosition, glm::vec3(1.0f, 2.0f, 3.0f));
+    EXPECT_EQ(result->cameraTarget, glm::vec3(-1.0f, 1.0f, 0.0f));
+    EXPECT_EQ(result->cameraUp, glm::vec3(0.0f, 1.0f, 0.0f));
+    EXPECT_FLOAT_EQ(result->verticalFov, 50.0f);
+    EXPECT_FLOAT_EQ(result->zNear, 0.25f);
+    EXPECT_FLOAT_EQ(result->zFar, 250.0f);
+}
+
+TEST(RayTracingSceneParserTest, RejectsInvalidDeterministicRenderSettings) {
+    auto scene = createRenderSettings();
+    scene["sampler"]["samplesPerPixel"] = 0;
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("samplesPerPixel"));
+
+    scene = createRenderSettings();
+    scene["sampler"]["seed"] = -1;
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("seed"));
+
+    scene = createRenderSettings();
+    scene["camera"]["target"] = scene["camera"]["position"];
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("position and target"));
+
+    scene = createRenderSettings();
+    scene["camera"]["reconstructionFilter"]["type"] = "gaussian";
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("reconstruction filter"));
+}
+
 TEST(RayTracingSceneParserTest, AssignsLogicalIndicesToBitmapReflectanceTextures) {
     const nlohmann::json shapes = nlohmann::json::array({
         createShape({

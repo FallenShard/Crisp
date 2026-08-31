@@ -25,12 +25,16 @@ struct Sampler {
     uint dimension; // Cursor into the sample vector, reset per bounce rather than free-running.
 };
 
-Sampler createSampler(uvec2 pixel, uint sampleIdx) {
+Sampler createSampler(uvec2 pixel, uint sampleIdx, uint sceneSeed) {
     Sampler s;
-    s.seed = pcg3d(uvec3(pixel, 0u)).x;
+    s.seed = pcg3d(uvec3(pixel, sceneSeed)).x;
     s.sampleIdx = sampleIdx;
     s.dimension = 0u;
     return s;
+}
+
+Sampler createSampler(uvec2 pixel, uint sampleIdx) {
+    return createSampler(pixel, sampleIdx, 0u);
 }
 
 // Paths of different lengths must not drift against each other, so callers restart the cursor at a

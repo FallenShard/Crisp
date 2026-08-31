@@ -73,9 +73,11 @@ Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) 
             VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 }
 
-void setCameraParameters(FreeCameraController& cameraController, const nlohmann::json& camera) {
-    cameraController.setPosition(parseVec3(camera["position"]).unwrap());
-    cameraController.setFovY(camera["fovY"].get<float>());
+void setCameraParameters(FreeCameraController& cameraController, const RayTracingRenderSettings& settings) {
+    cameraController.onViewportResized(settings.resolution.x, settings.resolution.y);
+    cameraController.setLookAt(settings.cameraPosition, settings.cameraTarget, settings.cameraUp);
+    cameraController.setFovY(settings.verticalFov);
+    cameraController.setViewDepthRange(settings.zNear, settings.zFar);
 }
 
 Image loadEnvironmentImage(const std::filesystem::path& path) {
@@ -130,13 +132,18 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     , m_outputDir(std::move(outputDir)) {
     setupInput();
 
-    m_integratorParams.sampleCount = std::max(1, args.value("samplesPerFrame", 1));
-    m_captureAfterSamples = std::max(0, args.value("captureAfterSamples", 0));
+    m_samplesPerFrame = std::max(1, args.value("samplesPerFrame", 1));
     m_closeAfterScreenshot = args.value("closeAfterCapture", false);
     m_screenshotFilename = args.value("captureFilename", std::string{"screenshot.exr"});
 
     const auto sceneFile = args.value("sceneFile", std::string{"VesperScenes/Nori-PA-4/cbox-mats.json"});
     const auto json = loadJsonFromFile(renderer->getAssetPaths().resourceDir / sceneFile).unwrap();
+    const auto renderSettings = parseRayTracingRenderSettings(json).unwrap();
+    m_renderResolution = renderSettings.resolution;
+    m_integratorParams.maxBounces = renderSettings.maxDepth;
+    m_integratorParams.seed = renderSettings.seed;
+    m_integratorParams.reconstructionFilter = static_cast<int32_t>(renderSettings.reconstructionFilter);
+    m_captureAfterSamples = m_closeAfterScreenshot ? renderSettings.samplesPerPixel : 0;
     m_sceneDesc = parseSceneDescription(json["shapes"], json.value("lights", nlohmann::json::array())).unwrap();
 
     m_materialImages.reserve(m_sceneDesc.materialTextures.size());
@@ -163,7 +170,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
 
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
-    setCameraParameters(*m_cameraController, json["camera"]);
+    setCameraParameters(*m_cameraController, renderSettings);
     m_cameraBuffer = m_resourceContext->createUniformBuffer<CameraParameters>("camera");
 
     m_integratorParams.shapeCount = static_cast<int32_t>(m_sceneDesc.meshFilenames.size());
@@ -298,10 +305,12 @@ void VulkanRayTracingScene::buildRenderGraph() {
     m_renderGraph->addPass(
         "path-trace",
         PassType::RayTracing,
-        [](rg::RenderGraph::Builder& builder) {
+        [this](rg::RenderGraph::Builder& builder) {
             builder.getBlackboard().insert<PathTracingPassData>().image = builder.createStorageImage(
                 {
-                    .sizePolicy = SizePolicy::SwapChainRelative,
+                    .sizePolicy = SizePolicy::Absolute,
+                    .width = static_cast<uint32_t>(m_renderResolution.x),
+                    .height = static_cast<uint32_t>(m_renderResolution.y),
                     .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                     // Screenshots copy straight out of the accumulation image.
                     .imageUsageFlags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
@@ -316,7 +325,8 @@ void VulkanRayTracingScene::buildRenderGraph() {
 }
 
 void VulkanRayTracingScene::resize(int width, int height) {
-    m_cameraController->onViewportResized(width, height);
+    static_cast<void>(width);
+    static_cast<void>(height);
 
     m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     updateDescriptorHeap();
@@ -333,6 +343,19 @@ void VulkanRayTracingScene::update(const UpdateParams& updateParams) {
 void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     CRISP_TRACE_VK_SCOPE("VulkanRayTracingScene::render", frameContext.commandEncoder);
 
+    if (m_integratorParams.frameIdx == 0) {
+        m_accumulatedSamples = 0;
+    }
+    m_integratorParams.sampleOffset = m_accumulatedSamples;
+    m_integratorParams.sampleCount = m_samplesPerFrame;
+    if (m_captureAfterSamples > 0) {
+        m_integratorParams.sampleCount = std::min(m_samplesPerFrame, m_captureAfterSamples - m_accumulatedSamples);
+        if (m_accumulatedSamples + m_integratorParams.sampleCount >= m_captureAfterSamples) {
+            // traceRays records the readback after this dispatch, so arm it before executing the pass.
+            m_screenshotRequested = true;
+        }
+    }
+
     frameContext.commandEncoder.insertBarrier(kRayTracingRead >> kTransferWrite);
 
     const auto& cameraParams = m_cameraController->getCameraParameters();
@@ -347,12 +370,10 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
     m_renderGraph->execute(frameContext);
 
+    m_accumulatedSamples += m_integratorParams.sampleCount;
     m_integratorParams.frameIdx++;
 
-    const int64_t accumulatedSamples =
-        static_cast<int64_t>(m_integratorParams.frameIdx) * m_integratorParams.sampleCount;
-    if (m_captureAfterSamples > 0 && accumulatedSamples >= m_captureAfterSamples) {
-        m_screenshotRequested = true;
+    if (m_captureAfterSamples > 0 && m_accumulatedSamples >= m_captureAfterSamples) {
         m_captureAfterSamples = 0;
     }
 
@@ -375,7 +396,8 @@ void VulkanRayTracingScene::traceRays(const FrameContext& frameContext) {
     encoder.bindResourceHeap(*m_resourceHeap);
     encoder.bindSamplerHeap(*m_samplerHeap);
     encoder.pushData(structAsBytes(m_sceneAddresses));
-    encoder.traceRays(m_shaderBindingTable.bindings, m_renderer->getSwapChainExtent());
+    const auto extent = m_renderGraph->getImageExtent(m_renderGraph->getBlackboard().get<PathTracingPassData>().image);
+    encoder.traceRays(m_shaderBindingTable.bindings, {extent.width, extent.height});
 
     if (!m_screenshotRequested || m_screenshot.isPending()) {
         return;
@@ -399,12 +421,12 @@ void VulkanRayTracingScene::traceRays(const FrameContext& frameContext) {
 
 void VulkanRayTracingScene::drawGui() {
     ImGui::Begin("Integrator");
-    ImGui::LabelText("Acc. Samples", "%d", m_integratorParams.frameIdx * m_integratorParams.sampleCount); // NOLINT
+    ImGui::LabelText("Acc. Samples", "%d", m_accumulatedSamples); // NOLINT
     if (ImGui::InputInt("Max Bounces", &m_integratorParams.maxBounces)) {
         m_integratorParams.frameIdx = 0;
     }
-    if (ImGui::InputInt("Samples per Frame", &m_integratorParams.sampleCount)) {
-        m_integratorParams.sampleCount = std::max(1, m_integratorParams.sampleCount);
+    if (ImGui::InputInt("Samples per Frame", &m_samplesPerFrame)) {
+        m_samplesPerFrame = std::max(1, m_samplesPerFrame);
         m_integratorParams.frameIdx = 0;
     }
 

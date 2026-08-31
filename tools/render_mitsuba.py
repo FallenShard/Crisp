@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -89,6 +90,7 @@ def main() -> int:
                 "mitsubaVersion": getattr(mi, "__version__", "unknown"),
                 "variant": args.variant,
                 "sourceScene": str(scene_path),
+                "sourceSha256": hashlib.sha256(scene_path.read_bytes()).hexdigest(),
                 "samplesPerPixel": args.spp,
                 "seed": args.seed,
                 "previewExposure": None if args.no_preview else args.preview_exposure,

@@ -9,6 +9,7 @@ Output/PathTracerEvaluation.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -77,7 +78,11 @@ def run(command: list[str], description: str) -> None:
         raise SystemExit(f"{description} failed with exit code {completed.returncode}")
 
 
-def reference_is_current(reference: Path, spp: int, seed: int, variant: str) -> bool:
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def reference_is_current(reference: Path, source: Path, spp: int, seed: int, variant: str) -> bool:
     """render_mitsuba.py leaves a sidecar recording the settings the EXR was made with."""
     metadata_path = reference.with_suffix(".json")
     if not reference.is_file() or not metadata_path.is_file():
@@ -86,7 +91,12 @@ def reference_is_current(reference: Path, spp: int, seed: int, variant: str) -> 
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return False
-    return (metadata.get("samplesPerPixel"), metadata.get("seed"), metadata.get("variant")) == (spp, seed, variant)
+    return (
+        metadata.get("samplesPerPixel"),
+        metadata.get("seed"),
+        metadata.get("variant"),
+        metadata.get("sourceSha256"),
+    ) == (spp, seed, variant, file_sha256(source))
 
 
 def render_reference(case: dict, settings: dict, references_dir: Path, force: bool) -> Path:
@@ -95,7 +105,9 @@ def render_reference(case: dict, settings: dict, references_dir: Path, force: bo
         raise SystemExit(f"[{case['name']}] Mitsuba scene not found: {scene_path}")
     reference = references_dir / f"{scene_path.stem}.exr"
 
-    if not force and reference_is_current(reference, settings["spp"], settings["seed"], settings["mitsubaVariant"]):
+    if not force and reference_is_current(
+        reference, scene_path, settings["spp"], settings["seed"], settings["mitsubaVariant"]
+    ):
         print(f"[{case['name']}] Reference is current: {reference}")
         return reference
 
@@ -127,23 +139,13 @@ def capture_candidate(
     case: dict,
     settings: dict,
     reference: Path,
+    scene_path: Path,
+    scene_fingerprint: str,
     candidates_dir: Path,
     preset: str,
     force: bool,
 ) -> None:
     candidate = candidates_dir / reference.name
-    relative_scene_file = Path(case["crispScene"])
-    resource_scene_file = REPO_ROOT / "Resources" / relative_scene_file
-    repository_scene_file = REPO_ROOT / relative_scene_file
-    if resource_scene_file.is_file():
-        scene_argument = str(relative_scene_file)
-    elif repository_scene_file.is_file():
-        scene_argument = str(repository_scene_file.resolve())
-    else:
-        raise SystemExit(
-            f"[{case['name']}] Crisp scene not found under Resources or the repository root: {relative_scene_file}"
-        )
-
     # saveExr does not create parent directories, so the capture target must exist up front.
     candidates_dir.mkdir(parents=True, exist_ok=True)
     config = {
@@ -159,9 +161,9 @@ def capture_candidate(
         "activeScene": "vulkan-ray-tracer",
         "scenes": {
             "vulkan-ray-tracer": {
-                "sceneFile": scene_argument,
+                "sceneFile": str(scene_path),
+                "sceneFingerprint": scene_fingerprint,
                 "samplesPerFrame": settings["samplesPerFrame"],
-                "captureAfterSamples": settings["spp"],
                 "captureFilename": reference.name,
                 "closeAfterCapture": True,
             },
@@ -197,6 +199,61 @@ def capture_candidate(
     )
     if not candidate.is_file():
         raise SystemExit(f"[{case['name']}] Crisp exited without writing {candidate}")
+
+
+def resolve_crisp_scene(case: dict) -> Path:
+    relative_scene_file = Path(case["crispScene"])
+    resource_scene_file = REPO_ROOT / "Resources" / relative_scene_file
+    repository_scene_file = REPO_ROOT / relative_scene_file
+    if resource_scene_file.is_file():
+        return resource_scene_file.resolve()
+    if repository_scene_file.is_file():
+        return repository_scene_file.resolve()
+    raise SystemExit(
+        f"[{case['name']}] Crisp scene not found under Resources or the repository root: {relative_scene_file}"
+    )
+
+
+def prepare_crisp_scene(case: dict, candidates_dir: Path, spp_override: int | None) -> tuple[Path, str, dict]:
+    source_path = resolve_crisp_scene(case)
+    try:
+        scene = json.loads(source_path.read_text(encoding="utf-8"))
+        if spp_override is not None:
+            scene["sampler"]["samplesPerPixel"] = spp_override
+
+        sampler = scene["sampler"]
+        integrator = scene["integrator"]
+        camera = scene["camera"]
+        spp = sampler["samplesPerPixel"]
+        seed = sampler.get("seed", 0)
+        resolution = camera["imageSize"]
+        filter_type = camera.get("reconstructionFilter", {"type": "box"})["type"]
+        max_depth = integrator.get("maxDepth", 32)
+    except (json.JSONDecodeError, KeyError, TypeError) as error:
+        raise SystemExit(f"[{case['name']}] invalid Crisp reference settings in {source_path}: {error}") from error
+
+    if not isinstance(spp, int) or isinstance(spp, bool) or spp <= 0:
+        raise SystemExit(f"[{case['name']}] samplesPerPixel must be a positive integer")
+    if not isinstance(seed, int) or isinstance(seed, bool) or not 0 <= seed <= 0xFFFFFFFF:
+        raise SystemExit(f"[{case['name']}] seed must be a uint32 integer")
+    if (
+        not isinstance(resolution, list)
+        or len(resolution) != 2
+        or any(not isinstance(value, int) or isinstance(value, bool) or value <= 0 for value in resolution)
+    ):
+        raise SystemExit(f"[{case['name']}] imageSize must contain two positive integers")
+    if not isinstance(max_depth, int) or isinstance(max_depth, bool) or max_depth <= 0:
+        raise SystemExit(f"[{case['name']}] maxDepth must be a positive integer")
+    if filter_type != "box":
+        raise SystemExit(f"[{case['name']}] unsupported reference reconstruction filter: {filter_type}")
+
+    serialized = json.dumps(scene, indent=2) + "\n"
+    fingerprint = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+    scene_dir = candidates_dir / "scenes"
+    scene_dir.mkdir(parents=True, exist_ok=True)
+    capture_scene_path = scene_dir / f"{case['name']}.json"
+    capture_scene_path.write_text(serialized, encoding="utf-8")
+    return capture_scene_path.resolve(), fingerprint, {"spp": spp, "seed": seed}
 
 
 def validate_results(cases: list[dict], report_path: Path) -> None:
@@ -247,14 +304,23 @@ def main() -> int:
 
     print(f"Evaluating {len(cases)} case(s) into {output_dir}")
     for case in cases:
+        scene_path, scene_fingerprint, scene_settings = prepare_crisp_scene(case, candidates_dir, args.spp)
         settings = {
-            "spp": args.spp if args.spp is not None else case.get("spp", defaults.get("spp", 1024)),
-            "seed": case.get("seed", defaults.get("seed", 0)),
+            **scene_settings,
             "mitsubaVariant": case.get("mitsubaVariant", defaults.get("mitsubaVariant", "cuda_ad_rgb")),
             "samplesPerFrame": case.get("samplesPerFrame", defaults.get("samplesPerFrame", 16)),
         }
         reference = render_reference(case, settings, references_dir, args.force_references)
-        capture_candidate(case, settings, reference, candidates_dir, args.preset, args.force_captures)
+        capture_candidate(
+            case,
+            settings,
+            reference,
+            scene_path,
+            scene_fingerprint,
+            candidates_dir,
+            args.preset,
+            args.force_captures,
+        )
 
     compare_command = [
         sys.executable,

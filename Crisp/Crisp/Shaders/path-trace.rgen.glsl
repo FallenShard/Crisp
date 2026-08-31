@@ -36,6 +36,9 @@ layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
     int maxBounces;
     int sampleCount;
     int frameIdx;
+    int sampleOffset;
+    uint seed;
+    int reconstructionFilter;
     int lightCount;
     int shapeCount;
     int samplingMode;
@@ -67,11 +70,17 @@ BrdfEval evaluateBrdfWorldSpace(vec3 normal, vec3 wi, vec3 wo, uint materialId, 
 #include "PathTracer/Cameras/perspective.part.glsl"
 #include "PathTracer/Lights/light-sampling.part.glsl"
 
+vec2 samplePixelPosition(inout Sampler rng) {
+    setDimension(rng, kDimPixelFilter);
+    if (integrator.reconstructionFilter == 0) {
+        return vec2(gl_LaunchIDEXT.xy) + next2D(rng);
+    }
+    return vec2(gl_LaunchIDEXT.xy) + vec2(0.5f);
+}
+
 vec3 computeRadianceDirectLighting(inout Sampler rng) {
     // Sample a point on the screen and transform it into a ray.
-    setDimension(rng, kDimPixelFilter);
-    const vec2 subpixelSample = next2D(rng);
-    const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
+    const vec2 pixelSample = samplePixelPosition(rng);
 
     vec4 rayOrigin;
     vec4 rayDirection;
@@ -121,9 +130,7 @@ float powerHeuristic(const float fPdf, const float gPdf) {
 
 vec3 computeRadianceMis(inout Sampler rng) {
     // Sample a point on the screen and transform it into a ray.
-    setDimension(rng, kDimPixelFilter);
-    const vec2 subpixelSample = next2D(rng);
-    const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
+    const vec2 pixelSample = samplePixelPosition(rng);
 
     vec4 rayOrigin;
     vec4 rayDirection;
@@ -188,9 +195,7 @@ vec3 computeRadianceMis(inout Sampler rng) {
 
 vec3 computeRadianceMisPt(inout Sampler rng) {
     // Sample a point on the screen and transform it into a ray.
-    setDimension(rng, kDimPixelFilter);
-    const vec2 subpixelSample = next2D(rng);
-    const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
+    const vec2 pixelSample = samplePixelPosition(rng);
 
     vec4 rayOrigin;
     vec4 rayDirection;
@@ -296,9 +301,7 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
 
 vec3 computeRadiance(inout Sampler rng) {
     // Sample a point on the screen and transform it into a ray.
-    setDimension(rng, kDimPixelFilter);
-    const vec2 subpixelSample = next2D(rng);
-    const vec2 pixelSample = vec2(gl_LaunchIDEXT.xy) + subpixelSample;
+    const vec2 pixelSample = samplePixelPosition(rng);
 
     vec4 rayOrigin;
     vec4 rayDirection;
@@ -362,9 +365,9 @@ void main() {
     // The sample index has to count accumulated samples, not frames, or every sample within a frame
     // would reuse the same point of the sequence.
     const uint sampleCount = uint(integrator.sampleCount);
-    const uint baseSampleIdx = uint(integrator.frameIdx) * sampleCount;
+    const uint baseSampleIdx = uint(integrator.sampleOffset);
     for (uint i = 0; i < sampleCount; ++i) {
-        Sampler rng = createSampler(gl_LaunchIDEXT.xy, baseSampleIdx + i);
+        Sampler rng = createSampler(gl_LaunchIDEXT.xy, baseSampleIdx + i, integrator.seed);
         if (integrator.samplingMode == 0) {
             L += computeRadianceDirectLighting(rng);
         } else if (integrator.samplingMode == 1) {
@@ -375,8 +378,8 @@ void main() {
     }
     L /= sampleCount;
 
-    if (integrator.frameIdx > 0) {
-        const float t = 1.0f / (integrator.frameIdx + 1);
+    if (integrator.sampleOffset > 0) {
+        const float t = float(integrator.sampleCount) / float(integrator.sampleOffset + integrator.sampleCount);
         const vec3 prevVal = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
         L = mix(prevVal, L, t);
     }

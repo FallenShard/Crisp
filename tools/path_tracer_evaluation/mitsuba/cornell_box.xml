@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Mitsuba reference for VulkanRayTracingScene's hard-coded cbox-mats scene.
+    Mitsuba reference for VulkanRayTracingScene's scene-controlled cbox-mats baseline.
 
     Keep this file aligned with:
-      Resources/VesperScenes/Nori-PA-4/cbox-mats.json
-      Crisp/Crisp/Scenes/VulkanRayTracingScene.cpp
-
-    VulkanRayTracingScene currently applies only the camera position and vertical
-    FOV from the JSON file. FreeCameraController starts pointed along -Z, so the
-    JSON target is intentionally not used here.
+      tools/path_tracer_evaluation/crisp/cornell_box.json
+      tools/path_tracer_evaluation/cases.json
 -->
 <scene version="3.0.0">
     <integrator type="path">

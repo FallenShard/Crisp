@@ -1,6 +1,7 @@
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 
 #include <cmath>
+#include <limits>
 #include <ranges>
 
 namespace crisp {
@@ -227,6 +228,107 @@ Result<glm::vec3> parseVec3(const nlohmann::json& json) {
         return resultError("Vector components must be finite, got {}", json.dump());
     }
     return value;
+}
+
+Result<RayTracingRenderSettings> parseRayTracingRenderSettings(const nlohmann::json& json) {
+    try {
+        if (!json.is_object()) {
+            return resultError("GPU path-tracing scene must be an object");
+        }
+        if (!json.contains("integrator") || !json["integrator"].is_object()) {
+            return resultError("GPU path-tracing scene requires an integrator object");
+        }
+        if (!json.contains("sampler") || !json["sampler"].is_object()) {
+            return resultError("GPU path-tracing scene requires a sampler object");
+        }
+        if (!json.contains("camera") || !json["camera"].is_object()) {
+            return resultError("GPU path-tracing scene requires a camera object");
+        }
+
+        RayTracingRenderSettings settings{};
+        const auto& integrator = json["integrator"];
+        const auto& sampler = json["sampler"];
+        const auto& camera = json["camera"];
+
+        if (integrator.contains("maxDepth") && !integrator["maxDepth"].is_number_integer()) {
+            return resultError("Integrator maxDepth must be an integer");
+        }
+        settings.maxDepth = integrator.value("maxDepth", settings.maxDepth);
+        if (settings.maxDepth <= 0) {
+            return resultError("Integrator maxDepth must be greater than zero");
+        }
+
+        if (!sampler.contains("samplesPerPixel") || !sampler["samplesPerPixel"].is_number_integer()) {
+            return resultError("Sampler samplesPerPixel must be an integer");
+        }
+        settings.samplesPerPixel = sampler["samplesPerPixel"].get<int32_t>();
+        if (settings.samplesPerPixel <= 0) {
+            return resultError("Sampler samplesPerPixel must be greater than zero");
+        }
+        if (sampler.contains("seed")) {
+            const auto& seed = sampler["seed"];
+            if ((!seed.is_number_integer() && !seed.is_number_unsigned()) || seed.get<int64_t>() < 0 ||
+                seed.get<uint64_t>() > std::numeric_limits<uint32_t>::max()) {
+                return resultError("Sampler seed must be an integer in the uint32 range");
+            }
+            settings.seed = seed.get<uint32_t>();
+        }
+
+        if (!camera.contains("imageSize") || !camera["imageSize"].is_array() || camera["imageSize"].size() != 2 ||
+            !camera["imageSize"][0].is_number_integer() || !camera["imageSize"][1].is_number_integer()) {
+            return resultError("Camera imageSize must contain exactly two integers");
+        }
+        settings.resolution = {camera["imageSize"][0].get<int32_t>(), camera["imageSize"][1].get<int32_t>()};
+        if (settings.resolution.x <= 0 || settings.resolution.y <= 0) {
+            return resultError("Camera imageSize components must be greater than zero");
+        }
+
+        if (!camera.contains("position") || !camera.contains("target") || !camera.contains("up")) {
+            return resultError("Camera requires position, target, and up vectors");
+        }
+        CRISP_TRY(settings.cameraPosition, parseVec3(camera["position"]));
+        CRISP_TRY(settings.cameraTarget, parseVec3(camera["target"]));
+        CRISP_TRY(settings.cameraUp, parseVec3(camera["up"]));
+        const glm::vec3 viewDirection = settings.cameraTarget - settings.cameraPosition;
+        if (glm::length2(viewDirection) <= 1e-12f) {
+            return resultError("Camera position and target must be different");
+        }
+        if (glm::length2(settings.cameraUp) <= 1e-12f ||
+            glm::length2(glm::cross(viewDirection, settings.cameraUp)) <= 1e-12f) {
+            return resultError("Camera up must be non-zero and not parallel to the view direction");
+        }
+
+        if (!camera.contains("fovY") || !camera["fovY"].is_number()) {
+            return resultError("Camera fovY must be numeric");
+        }
+        settings.verticalFov = camera["fovY"].get<float>();
+        if (!std::isfinite(settings.verticalFov) || settings.verticalFov <= 0.0f || settings.verticalFov >= 180.0f) {
+            return resultError("Camera fovY must be finite and between zero and 180 degrees");
+        }
+
+        settings.zNear = camera.value("zNear", settings.zNear);
+        settings.zFar = camera.value("zFar", settings.zFar);
+        if (!std::isfinite(settings.zNear) || !std::isfinite(settings.zFar) || settings.zNear <= 0.0f ||
+            settings.zFar <= settings.zNear) {
+            return resultError("Camera depth range must be finite and satisfy 0 < zNear < zFar");
+        }
+
+        if (camera.contains("reconstructionFilter")) {
+            const auto& filter = camera["reconstructionFilter"];
+            if (!filter.is_object() || !filter.contains("type") || !filter["type"].is_string()) {
+                return resultError("Camera reconstructionFilter must be an object with a string type");
+            }
+            const std::string type = filter["type"].get<std::string>();
+            if (type != "box") {
+                return resultError("Unsupported GPU reconstruction filter: {}", type);
+            }
+            settings.reconstructionFilter = ReconstructionFilterType::Box;
+        }
+
+        return settings;
+    } catch (const nlohmann::json::exception& exception) {
+        return resultError("Invalid GPU path-tracing render settings: {}", exception.what());
+    }
 }
 
 Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, const nlohmann::json& lightList) {

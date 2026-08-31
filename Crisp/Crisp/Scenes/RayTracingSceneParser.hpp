@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <type_traits>
 #include <vector>
@@ -11,6 +12,25 @@
 #include <Crisp/PathTracer/Optics/Fresnel.hpp>
 
 namespace crisp {
+enum class ReconstructionFilterType : int32_t { // NOLINT
+    Box = 0,
+};
+
+struct RayTracingRenderSettings {
+    glm::ivec2 resolution{1920, 1080};
+    uint32_t seed{0};
+    int32_t samplesPerPixel{64};
+    int32_t maxDepth{32};
+    ReconstructionFilterType reconstructionFilter{ReconstructionFilterType::Box};
+
+    glm::vec3 cameraPosition{0.0f, 1.0f, 10.0f};
+    glm::vec3 cameraTarget{0.0f, 1.0f, 9.0f};
+    glm::vec3 cameraUp{0.0f, 1.0f, 0.0f};
+    float verticalFov{45.0f};
+    float zNear{0.1f};
+    float zFar{1000.0f};
+};
+
 struct BrdfParameters {
     glm::vec3 albedo{1.0f, 1.0f, 1.0f};
     int32_t type;
@@ -96,6 +116,7 @@ struct SceneDescription {
 };
 
 Result<glm::vec3> parseVec3(const nlohmann::json& json);
+Result<RayTracingRenderSettings> parseRayTracingRenderSettings(const nlohmann::json& json);
 
 BrdfParameters createMicrofacetBrdf(glm::vec3 kd, float alpha, int32_t microfacetType = 0);
 

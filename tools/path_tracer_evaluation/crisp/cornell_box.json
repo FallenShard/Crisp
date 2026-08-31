@@ -61,8 +61,7 @@
             "center": [-0.4214, 0.3321, -0.28],
             "radius": 0.3263,
             "bsdf": {
-                "type": "smooth-conductor",
-                "conductorIorPreset": "Au"
+                "type": "mirror"
             }
         },
         {
@@ -70,8 +69,7 @@
             "center": [0.4458, 0.3321, 0.3767],
             "radius": 0.3263,
             "bsdf": {
-                "type": "smooth-conductor",
-                "conductorIorPreset": "Cu"
+                "type": "dielectric"
             }
         }
     ]

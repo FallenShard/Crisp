@@ -1,7 +1,5 @@
 {
   "defaults": {
-    "spp": 1024,
-    "seed": 0,
     "mitsubaVariant": "cuda_ad_rgb",
     "samplesPerFrame": 16
   },
@@ -9,7 +7,16 @@
     {
       "name": "cornell_box",
       "mitsubaScene": "mitsuba/cornell_box.xml",
-      "crispScene": "VesperScenes/Nori-PA-4/cbox-mats.json"
+      "crispScene": "tools/path_tracer_evaluation/crisp/cornell_box.json",
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.03,
+          "relativeMeanLuminanceError": 0.005
+        },
+        "minimum": {
+          "psnrDb": 58.0
+        }
+      }
     },
     {
       "name": "smooth_conductor",
@@ -57,7 +64,6 @@
       "name": "point_light",
       "mitsubaScene": "mitsuba/point_light.xml",
       "crispScene": "tools/path_tracer_evaluation/crisp/point_light.json",
-      "spp": 1024,
       "thresholds": {
         "maximum": {
           "relativeL2": 0.001,
@@ -72,7 +78,6 @@
       "name": "directional_light",
       "mitsubaScene": "mitsuba/directional_light.xml",
       "crispScene": "tools/path_tracer_evaluation/crisp/directional_light.json",
-      "spp": 1024,
       "thresholds": {
         "maximum": {
           "relativeL2": 0.00001,
@@ -87,7 +92,6 @@
       "name": "environment_only",
       "mitsubaScene": "mitsuba/environment_only.xml",
       "crispScene": "tools/path_tracer_evaluation/crisp/environment_only.json",
-      "spp": 256,
       "thresholds": {
         "maximum": {
           "relativeL2": 0.05,
@@ -102,7 +106,6 @@
       "name": "environment_mixed",
       "mitsubaScene": "mitsuba/environment_mixed.xml",
       "crispScene": "tools/path_tracer_evaluation/crisp/environment_mixed.json",
-      "spp": 256,
       "thresholds": {
         "maximum": {
           "relativeL2": 0.03,
@@ -117,7 +120,6 @@
       "name": "white_furnace",
       "mitsubaScene": "mitsuba/white_furnace.xml",
       "crispScene": "tools/path_tracer_evaluation/crisp/white_furnace.json",
-      "spp": 256,
       "thresholds": {
         "maximum": {
           "relativeL2": 0.01,

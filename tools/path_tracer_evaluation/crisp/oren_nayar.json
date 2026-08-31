@@ -1,10 +1,12 @@
 {
     "integrator": {
-        "type": "mis-path-tracer"
+        "type": "mis-path-tracer",
+        "maxDepth": 32
     },
     "sampler": {
         "type": "independent",
-        "samplesPerPixel": 1024
+        "samplesPerPixel": 1024,
+        "seed": 0
     },
     "camera": {
         "type": "perspective",
@@ -14,7 +16,8 @@
         "zFar": 1000.0,
         "position": [0.0, 0.919769, 5.41159],
         "target": [0.0, 0.919769, 4.41159],
-        "up": [0.0, 1.0, 0.0]
+        "up": [0.0, 1.0, 0.0],
+        "reconstructionFilter": {"type": "box"}
     },
     "shapes": [
         {

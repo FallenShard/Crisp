@@ -47,7 +47,10 @@ private:
     bool m_screenshotRequested{false};
     bool m_closeAfterScreenshot{false};
     int32_t m_captureAfterSamples{0};
+    int32_t m_samplesPerFrame{1};
+    int32_t m_accumulatedSamples{0};
     std::filesystem::path m_screenshotFilename{"screenshot.exr"};
+    glm::ivec2 m_renderResolution{1920, 1080};
 
     std::unique_ptr<VulkanPipeline> m_pipeline;
     std::unique_ptr<VulkanResourceHeap> m_resourceHeap;
@@ -61,6 +64,9 @@ private:
         int32_t maxBounces{32};
         int32_t sampleCount{1};
         int32_t frameIdx{0};
+        int32_t sampleOffset{0};
+        uint32_t seed{0};
+        int32_t reconstructionFilter{static_cast<int32_t>(ReconstructionFilterType::Box)};
         int32_t lightCount{0};
         int32_t shapeCount{0};
         int32_t samplingMode{2};
@@ -69,6 +75,8 @@ private:
         int32_t environmentHeight{0};
         float environmentScale{1.0f};
     };
+
+    static_assert(sizeof(IntegratorParameters) == 52);
 
     SceneDescription m_sceneDesc;
     RayTracingSceneAddresses m_sceneAddresses;
