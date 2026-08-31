@@ -109,6 +109,7 @@ add_cpp_static_library(CrispPathTracedView
 target_link_libraries(CrispPathTracedView
     PUBLIC Crisp::Renderer
     PUBLIC Crisp::Camera
+    PUBLIC Crisp::Material
     PUBLIC Crisp::VulkanDescriptorHeap
     PUBLIC Crisp::RayTracingPipelineBuilder
     PRIVATE Crisp::RenderGraph

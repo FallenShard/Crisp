@@ -25,10 +25,11 @@ constexpr uint32_t kImageSlot = 1;
 constexpr uint32_t kViewSlot = 2;
 constexpr uint32_t kIntegratorSlot = 3;
 constexpr uint32_t kEnvironmentMapSlot = 4;
-constexpr uint32_t kHeapSlotCount = 5;
+constexpr uint32_t kMaterialTextureFirstSlot = 5;
 
 constexpr uint32_t kEnvironmentSamplerSlot = 0;
-constexpr uint32_t kSamplerHeapSlotCount = 1;
+constexpr uint32_t kMaterialSamplerSlot = 1;
+constexpr uint32_t kSamplerHeapSlotCount = 2;
 
 } // namespace
 
@@ -46,6 +47,14 @@ PathTracedView::PathTracedView(
     CRISP_CHECK(!instances.empty(), "A path-traced view needs at least one instance.");
 
     auto& device = m_renderer->getDevice();
+    const auto materialTextureSlotCount = static_cast<uint32_t>(instances.size()) * kPbrMapTypeCount;
+    m_resourceHeap = std::make_unique<VulkanResourceHeap>(
+        device, kMaterialTextureFirstSlot + materialTextureSlotCount, "Path-Traced View Resource Heap");
+    m_samplerHeap = std::make_unique<VulkanSamplerHeap>(device, kSamplerHeapSlotCount, "Path-Traced View Sampler Heap");
+
+    // The environment clamps at cube edges; PBR material textures repeat just like the raster path.
+    m_samplerHeap->write(kEnvironmentSamplerSlot, createLinearClampSamplerCreateInfo());
+    m_samplerHeap->write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo(MaxAnisotropy));
 
     std::vector<PathTracedInstance> instanceRecords;
     instanceRecords.reserve(instances.size());
@@ -58,11 +67,27 @@ PathTracedView::PathTracedView(
 
     for (auto&& [idx, instance] : std::views::enumerate(instances)) {
         const auto& geometry = *instance.geometry;
+        uint32_t materialTextureOffset = std::numeric_limits<uint32_t>::max();
+        if (std::ranges::all_of(instance.materialTextures, [](const VulkanImageView* view) { return view != nullptr; })) {
+            materialTextureOffset =
+                kMaterialTextureFirstSlot + static_cast<uint32_t>(idx) * kPbrMapTypeCount;
+            for (uint32_t textureIndex = 0; textureIndex < kPbrMapTypeCount; ++textureIndex) {
+                m_resourceHeap->writeSampledImage(
+                    materialTextureOffset + textureIndex,
+                    *instance.materialTextures[textureIndex],
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            }
+            m_materialTextureBindings.push_back({
+                .materialIndex = instance.materialIndex,
+                .heapOffset = materialTextureOffset,
+            });
+        }
         instanceRecords.push_back({
             .positions = geometry.getVertexBuffer(0)->getDeviceAddress(),
             .attributes = geometry.getVertexBuffer(1)->getDeviceAddress(),
             .triangles = geometry.getIndexBuffer()->getDeviceAddress(),
             .materialIndex = instance.materialIndex,
+            .materialTextureOffset = materialTextureOffset,
         });
 
         m_bottomLevelAccelStructures.push_back(
@@ -123,13 +148,6 @@ PathTracedView::PathTracedView(
             encoder.buildAccelerationStructure(*tlas);
         }
     });
-
-    m_resourceHeap =
-        std::make_unique<VulkanResourceHeap>(device, kHeapSlotCount, "Path-Traced View Resource Heap");
-    m_samplerHeap = std::make_unique<VulkanSamplerHeap>(device, kSamplerHeapSlotCount, "Path-Traced View Sampler Heap");
-
-    // Clamped trilinear, matching how the raster path samples the same cube map.
-    m_samplerHeap->write(kEnvironmentSamplerSlot, createLinearClampSamplerCreateInfo());
 
     m_pipeline = createPipeline();
 }
@@ -210,6 +228,29 @@ void PathTracedView::setSceneIndex(const uint32_t sceneIndex) {
 
 void PathTracedView::setEnvironmentIntensity(const float intensity) {
     m_integratorParams.environmentIntensity = intensity;
+    resetAccumulation();
+}
+
+void PathTracedView::setMaterialTextures(
+    const uint32_t materialIndex, const std::array<const VulkanImageView*, kPbrMapTypeCount>& textures) {
+    CRISP_CHECK(
+        std::ranges::all_of(textures, [](const VulkanImageView* view) { return view != nullptr; }),
+        "Path-traced material textures must all resolve, including fallbacks.");
+
+    bool updated = false;
+    for (const auto& binding : m_materialTextureBindings) {
+        if (binding.materialIndex != materialIndex) {
+            continue;
+        }
+        for (uint32_t textureIndex = 0; textureIndex < kPbrMapTypeCount; ++textureIndex) {
+            m_resourceHeap->writeSampledImage(
+                binding.heapOffset + textureIndex,
+                *textures[textureIndex],
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        }
+        updated = true;
+    }
+    CRISP_CHECK(updated, "Path-traced material index {} has no texture binding.", materialIndex);
     resetAccumulation();
 }
 

@@ -81,6 +81,16 @@ void executeDrawCommands(const std::span<const DrawCommand> commands, const Vulk
     }
 }
 
+std::array<const VulkanImageView*, kPbrMapTypeCount> resolvePbrTextureViews(
+    const PbrMaterial& material, const ImageCache& imageCache) {
+    std::array<const VulkanImageView*, kPbrMapTypeCount> views{};
+    for (uint32_t textureIndex = 0; textureIndex < kPbrMapTypeCount; ++textureIndex) {
+        views[textureIndex] = &imageCache.getImageView(
+            material.textureKeys[textureIndex], fmt::format("default-{}-0", kPbrMapNames[textureIndex]));
+    }
+    return views;
+}
+
 PbrImageGroup createMaterialExplorerImageGroup() {
     auto imageGroup = createDefaultPbrImageGroup();
     imageGroup.name = "material-explorer";
@@ -285,8 +295,8 @@ void MaterialExplorerScene::drawGui() {
         }
         if (m_renderMode == RenderMode::PathTraced) {
             ImGui::TextWrapped(
-                "Reference view: material factors only, no textures or normal maps, and the environment is the "
-                "only light. It will not match the rasterized view yet.");
+                "Reference view: material textures and normal maps are enabled; the environment remains the only "
+                "light, so it will not match the rasterized view exactly.");
         } else if (m_renderMode == RenderMode::WhiteFurnace) {
             ImGui::TextWrapped(
                 "White furnace: the selected material on a unit sphere under constant unit radiance. The floor, "
@@ -683,6 +693,7 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
             .materialIndex = materialHandle.index,
             .triangleCount = mesh.getTriangleCount(),
             .sceneIndex = kMaterialExplorerSceneIndex,
+            .materialTextures = resolvePbrTextureViews(material, m_resourceContext->imageCache),
         });
     }
     const PbrDrawFlagFlags drawFlags =
@@ -795,7 +806,8 @@ void MaterialExplorerScene::setMaterialPreset(const std::string& materialPresetN
         m_pbrMaterialTable->update(*m_whiteFurnaceMaterialHandle, m_shaderBallParams);
     }
     if (m_pathTracedView) {
-        m_pathTracedView->resetAccumulation();
+        m_pathTracedView->setMaterialTextures(
+            m_shaderBallMaterialHandle.index, resolvePbrTextureViews(*preset, m_resourceContext->imageCache));
     }
 }
 

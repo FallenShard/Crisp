@@ -63,7 +63,7 @@ struct PathTracedInstance {
     PbrVertexAttributeBuffer attributes;
     PbrTriangles triangles;
     uint materialIndex;
-    uint pad0;
+    uint materialTextureOffset;
 };
 
 layout(buffer_reference, scalar, buffer_reference_align = 8) readonly buffer PathTracedInstances {

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <span>
 #include <type_traits>
@@ -9,6 +10,7 @@
 
 #include <Crisp/Camera/Camera.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
+#include <Crisp/Materials/PbrMaterial.hpp>
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
@@ -25,7 +27,7 @@ struct PathTracedInstance {
     VkDeviceAddress attributes{0};
     VkDeviceAddress triangles{0};
     uint32_t materialIndex{0};
-    uint32_t pad0{0};
+    uint32_t materialTextureOffset{std::numeric_limits<uint32_t>::max()};
 };
 
 static_assert(sizeof(PathTracedInstance) == 32);
@@ -34,6 +36,7 @@ static_assert(offsetof(PathTracedInstance, positions) == 0);
 static_assert(offsetof(PathTracedInstance, attributes) == 8);
 static_assert(offsetof(PathTracedInstance, triangles) == 16);
 static_assert(offsetof(PathTracedInstance, materialIndex) == 24);
+static_assert(offsetof(PathTracedInstance, materialTextureOffset) == 28);
 
 // Mirrors PathTracedViewAddresses in Shaders/PathTracer/Core/pbr-scene.part.glsl.
 struct PathTracedViewAddresses {
@@ -51,6 +54,7 @@ struct PathTracedGeometry {
     uint32_t materialIndex{0};
     uint32_t triangleCount{0};
     uint32_t sceneIndex{0};
+    std::array<const VulkanImageView*, kPbrMapTypeCount> materialTextures{};
 };
 
 // Declares the accumulation image and the trace pass. Separate from PathTracedView because a scene has to
@@ -108,6 +112,9 @@ public:
 
     void setEnvironmentIntensity(float intensity);
 
+    void setMaterialTextures(
+        uint32_t materialIndex, const std::array<const VulkanImageView*, kPbrMapTypeCount>& textures);
+
 private:
     std::unique_ptr<VulkanPipeline> createPipeline();
 
@@ -129,6 +136,12 @@ private:
     std::unique_ptr<VulkanBuffer> m_integratorBuffer;
 
     PathTracedViewAddresses m_sceneAddresses;
+
+    struct MaterialTextureBinding {
+        uint32_t materialIndex;
+        uint32_t heapOffset;
+    };
+    std::vector<MaterialTextureBinding> m_materialTextureBindings;
 
     struct IntegratorParameters {
         int32_t maxBounces{8};

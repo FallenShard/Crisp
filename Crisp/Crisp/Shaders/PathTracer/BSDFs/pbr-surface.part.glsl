@@ -8,7 +8,7 @@
 // Stand-in evaluator for the raster path's metalness-roughness material, so the path-traced view has something
 // to shade with before the OpenPBR lobes land. It deliberately mirrors what Shaders/pbr.frag.glsl computes --
 // Schlick Fresnel over a mix of dielectric F0 and base colour, Lambertian diffuse -- rather than being correct
-// on its own terms. Texture lookups are absent: only the material factors are read.
+// on its own terms. The closest-hit shader resolves textures before constructing this surface.
 // Replaced wholesale by Brdf/OpenPbr; see docs/openpbr-path-tracer.md.
 
 float dielectricF0(const float ior, const float weight) {
