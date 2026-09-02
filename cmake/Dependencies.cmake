@@ -139,27 +139,6 @@ set(TBB_DISABLE_HWLOC_AUTOMATIC_SEARCH ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(onetbb)
 endblock()
 
-FetchContent_Declare(embree
-    GIT_REPOSITORY "https://github.com/embree/embree.git"
-    GIT_TAG "v4.4.1"
-    GIT_SHALLOW TRUE
-)
-block()
-
-# Embree uses the parent project's generic BUILD_TESTING option. Keep Crisp's
-# CTest support enabled without registering Embree's test suite.
-set(BUILD_TESTING OFF)
-set(EMBREE_ISPC_SUPPORT OFF CACHE BOOL "" FORCE)
-set(EMBREE_TUTORIALS OFF CACHE BOOL "" FORCE)
-set(EMBREE_MAX_ISA "NONE" CACHE STRING "" FORCE)
-set(EMBREE_ISA_SSE2 OFF CACHE BOOL "" FORCE)
-set(EMBREE_ISA_SSE42 OFF CACHE BOOL "" FORCE)
-set(EMBREE_ISA_AVX OFF CACHE BOOL "" FORCE)
-set(EMBREE_ISA_AVX2 ON CACHE BOOL "" FORCE)
-set(EMBREE_ISA_AVX512 OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(embree)
-endblock()
-
 FetchContent_Declare(vulkan
     GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-Headers.git"
     GIT_TAG "v1.4.357"

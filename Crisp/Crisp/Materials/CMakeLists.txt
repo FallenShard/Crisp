@@ -1,5 +1,6 @@
 add_cpp_static_library(
     CrispMaterial
+    "Ior.hpp"
     "PbrMaterial.hpp"
     "PbrMaterial.cpp"
 )

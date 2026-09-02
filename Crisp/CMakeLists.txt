@@ -13,7 +13,6 @@ add_subdirectory(Crisp/Materials)
 add_subdirectory(Crisp/Math)
 add_subdirectory(Crisp/Mesh)
 add_subdirectory(Crisp/Models)
-add_subdirectory(Crisp/PathTracer)
 add_subdirectory(Crisp/Renderer)
 add_subdirectory(Crisp/Scenes)
 add_subdirectory(Crisp/ShaderUtils)
@@ -44,7 +43,7 @@ target_link_libraries(
 )
 copy_shared_libs(
     CrispMain
-    embree TBB::tbb
+    TBB::tbb
 )
 target_sources(
     CrispMain

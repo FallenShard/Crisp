@@ -100,14 +100,14 @@ Image loadEnvironmentImage(const std::filesystem::path& path) {
 
     std::vector<uint8_t> bytes(rgba.size() * sizeof(float));
     std::memcpy(bytes.data(), rgba.data(), bytes.size());
-    return Image(std::move(bytes), exr.width, exr.height, 4, 4 * sizeof(float));
+    return {std::move(bytes), exr.width, exr.height, 4, 4 * sizeof(float)};
 }
 
 Image createConstantEnvironmentImage(const glm::vec3 radiance) {
     const std::array<float, 4> rgba{radiance.r, radiance.g, radiance.b, 1.0f};
     std::vector<uint8_t> bytes(sizeof(rgba));
     std::memcpy(bytes.data(), rgba.data(), sizeof(rgba));
-    return Image(std::move(bytes), 1, 1, 4, 4 * sizeof(float));
+    return {std::move(bytes), 1, 1, 4, 4 * sizeof(float)};
 }
 
 // Must match the heap array subscripts in Shaders/path-trace.rgen.glsl. The BVH slot is reached through a
@@ -142,6 +142,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     m_renderResolution = renderSettings.resolution;
     m_integratorParams.maxBounces = renderSettings.maxDepth;
     m_integratorParams.seed = renderSettings.seed;
+    m_integratorParams.samplingMode = renderSettings.samplingMode;
     m_integratorParams.reconstructionFilter = static_cast<int32_t>(renderSettings.reconstructionFilter);
     m_captureAfterSamples = m_closeAfterScreenshot ? renderSettings.samplesPerPixel : 0;
     m_sceneDesc = parseSceneDescription(json["shapes"], json.value("lights", nlohmann::json::array())).unwrap();
@@ -291,9 +292,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         "Path Tracer Resource Descriptor Heap");
     m_samplerHeap = std::make_unique<VulkanSamplerHeap>(
         m_renderer->getDevice(), kSamplerHeapSlotCount, "Path Tracer Sampler Descriptor Heap");
-    m_samplerHeap->write(
-        kEnvironmentSamplerSlot,
-        createLatLongEnvironmentSamplerCreateInfo());
+    m_samplerHeap->write(kEnvironmentSamplerSlot, createLatLongEnvironmentSamplerCreateInfo());
     m_samplerHeap->write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo());
     m_pipeline = createPipeline();
 

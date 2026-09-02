@@ -8,8 +8,8 @@
 
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
+#include <Crisp/Materials/Ior.hpp>
 #include <Crisp/Math/Headers.hpp>
-#include <Crisp/PathTracer/Optics/Fresnel.hpp>
 
 namespace crisp {
 enum class ReconstructionFilterType : int32_t { // NOLINT
@@ -21,6 +21,7 @@ struct RayTracingRenderSettings {
     uint32_t seed{0};
     int32_t samplesPerPixel{64};
     int32_t maxDepth{32};
+    int32_t samplingMode{0};
     ReconstructionFilterType reconstructionFilter{ReconstructionFilterType::Box};
 
     glm::vec3 cameraPosition{0.0f, 1.0f, 10.0f};
@@ -35,8 +36,8 @@ struct BrdfParameters {
     glm::vec3 albedo{1.0f, 1.0f, 1.0f};
     int32_t type;
 
-    float intIor{Fresnel::getIOR(IndexOfRefraction::Glass)};
-    float extIor{Fresnel::getIOR(IndexOfRefraction::Vacuum)};
+    float intIor{getIor(IorMaterial::Glass)};
+    float extIor{getIor(IorMaterial::Vacuum)};
     int32_t lobe;
     int32_t microfacetType;
 

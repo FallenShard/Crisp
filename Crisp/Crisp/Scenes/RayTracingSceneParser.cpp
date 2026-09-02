@@ -56,22 +56,24 @@ BrdfParameters createOrenNayarBrdf(const glm::vec3 reflectance, const float roug
 }
 
 BrdfParameters createSmoothConductorBrdf(const std::string& iorPreset) {
-    const auto ior = Fresnel::getComplexIOR(iorPreset);
+    const auto* ior = findComplexIor(iorPreset);
+    ior = ior != nullptr ? ior : findComplexIor("Au");
     return {
         .type = kBrdfSmoothConductor,
-        .complexIorEta = {ior.eta.r, ior.eta.g, ior.eta.b},
-        .complexIorK = {ior.k.r, ior.k.g, ior.k.b},
+        .complexIorEta = ior->eta,
+        .complexIorK = ior->k,
     };
 }
 
 BrdfParameters createRoughConductorBrdf(const std::string& iorPreset, const int32_t microfacetType, const float alpha) {
-    const auto ior = Fresnel::getComplexIOR(iorPreset);
+    const auto* ior = findComplexIor(iorPreset);
+    ior = ior != nullptr ? ior : findComplexIor("Au");
     return {
         .type = kBrdfRoughConductor,
         .microfacetType = microfacetType,
-        .complexIorEta = {ior.eta.r, ior.eta.g, ior.eta.b},
+        .complexIorEta = ior->eta,
         .microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f),
-        .complexIorK = {ior.k.r, ior.k.g, ior.k.b},
+        .complexIorK = ior->k,
     };
 }
 
@@ -118,24 +120,21 @@ Result<BrdfParameters> parseBrdfParameters(const nlohmann::json& brdf) {
             const auto microfacetType,
             parseMicrofacetType(brdf.value("microfacetDistribution", std::string("beckmann"))));
         return createRoughConductorBrdf(
-            brdf.value("conductorIorPreset", std::string("Au")),
-            microfacetType,
-            brdf.value("microfacetAlpha", 0.1f));
+            brdf.value("conductorIorPreset", std::string("Au")), microfacetType, brdf.value("microfacetAlpha", 0.1f));
     }
     if (type == "rough-dielectric") {
         CRISP_TRY(
             const auto microfacetType,
             parseMicrofacetType(brdf.value("microfacetDistribution", std::string("beckmann"))));
         return createRoughDielectricBrdf(
-            brdf.value("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass)),
-            brdf.value("exteriorIor", Fresnel::getIOR(IndexOfRefraction::Air)),
+            brdf.value("interiorIor", getIor(IorMaterial::Glass)),
+            brdf.value("exteriorIor", getIor(IorMaterial::Air)),
             microfacetType,
             brdf.value("microfacetAlpha", 0.1f));
     }
     if (type == "dielectric") {
         return createDielectricBrdf(
-            brdf.value("interiorIor", Fresnel::getIOR(IndexOfRefraction::Glass)),
-            brdf.value("exteriorIor", Fresnel::getIOR(IndexOfRefraction::Air)));
+            brdf.value("interiorIor", getIor(IorMaterial::Glass)), brdf.value("exteriorIor", getIor(IorMaterial::Air)));
     }
     if (type == "mirror") {
         return createMirrorBrdf();
@@ -143,10 +142,8 @@ Result<BrdfParameters> parseBrdfParameters(const nlohmann::json& brdf) {
     if (type == "microfacet") {
         CRISP_TRY(const auto diffuseReflectance, parseVec3(brdf["diffuseReflectance"]));
         CRISP_TRY(
-            const auto microfacetType,
-            parseMicrofacetType(brdf.value("microfacetDistribution", std::string("ggx"))));
-        return createMicrofacetBrdf(
-            diffuseReflectance, brdf.value("microfacetAlpha", 0.1f), microfacetType);
+            const auto microfacetType, parseMicrofacetType(brdf.value("microfacetDistribution", std::string("ggx"))));
+        return createMicrofacetBrdf(diffuseReflectance, brdf.value("microfacetAlpha", 0.1f), microfacetType);
     }
     return resultError("Unsupported GPU BSDF type: {}", type.get<std::string>());
 }
@@ -194,9 +191,7 @@ Result<glm::mat4> parseTransform(const nlohmann::json& shape) {
                     return resultError("Rotation axis must be non-zero");
                 }
                 transform =
-                    glm::rotate(
-                        glm::radians(rotation["angleDegrees"].get<float>()), glm::normalize(axis)) *
-                    transform;
+                    glm::rotate(glm::radians(rotation["angleDegrees"].get<float>()), glm::normalize(axis)) * transform;
             }
         }
         return transform;
@@ -209,7 +204,7 @@ Result<glm::mat4> parseTransform(const nlohmann::json& shape) {
 BrdfParameters createMicrofacetBrdf(const glm::vec3 kd, const float alpha, const int32_t microfacetType) {
     return {
         .type = kBrdfMicrofacet,
-        .intIor = Fresnel::getIOR(IndexOfRefraction::Glass),
+        .intIor = getIor(IorMaterial::Glass),
         .microfacetType = microfacetType,
         .kd = kd,
         .ks = 1.0f - std::max(kd.x, std::max(kd.y, kd.z)),
@@ -218,8 +213,7 @@ BrdfParameters createMicrofacetBrdf(const glm::vec3 kd, const float alpha, const
 }
 
 Result<glm::vec3> parseVec3(const nlohmann::json& json) {
-    if (!json.is_array() || json.size() != 3 || !json[0].is_number() || !json[1].is_number() ||
-        !json[2].is_number()) {
+    if (!json.is_array() || json.size() != 3 || !json[0].is_number() || !json[1].is_number() || !json[2].is_number()) {
         return resultError("Expected an array containing exactly three numbers, got {}", json.dump());
     }
 
@@ -249,6 +243,30 @@ Result<RayTracingRenderSettings> parseRayTracingRenderSettings(const nlohmann::j
         const auto& integrator = json["integrator"];
         const auto& sampler = json["sampler"];
         const auto& camera = json["camera"];
+
+        if (!integrator.contains("type") || !integrator["type"].is_string()) {
+            return resultError("Integrator requires a string type");
+        }
+        const std::string integratorType = integrator["type"].get<std::string>();
+        if (integratorType == "mis-path-tracer") {
+            settings.samplingMode = 0;
+        } else if (integratorType == "path-tracer") {
+            settings.samplingMode = 1;
+        } else if (integratorType == "ems-direct-lighting") {
+            settings.samplingMode = 2;
+        } else if (integratorType == "mis-direct-lighting") {
+            settings.samplingMode = 3;
+        } else {
+            return resultError("Unsupported GPU integrator type: {}", integratorType);
+        }
+
+        if (!sampler.contains("type") || !sampler["type"].is_string()) {
+            return resultError("Sampler requires a string type");
+        }
+        const std::string samplerType = sampler["type"].get<std::string>();
+        if (samplerType != "independent") {
+            return resultError("Unsupported GPU sampler type: {}", samplerType);
+        }
 
         if (integrator.contains("maxDepth") && !integrator["maxDepth"].is_number_integer()) {
             return resultError("Integrator maxDepth must be an integer");
@@ -377,8 +395,7 @@ Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, 
                 }
 
                 const auto lightIdx = static_cast<int32_t>(scene.lights.size());
-                scene.props.push_back(
-                    {.materialId = static_cast<int32_t>(scene.brdfs.size() - 1), .lightId = lightIdx});
+                scene.props.push_back({.materialId = static_cast<int32_t>(scene.brdfs.size() - 1), .lightId = lightIdx});
 
                 const auto meshIdx = static_cast<int32_t>(scene.meshFilenames.size() - 1);
                 scene.lights.push_back({
@@ -391,7 +408,7 @@ Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, 
             }
 
             CRISP_TRY(auto transform, parseTransform(shape));
-            scene.transforms.push_back(std::move(transform));
+            scene.transforms.push_back(transform);
         }
 
         if (!lightList.is_null()) {

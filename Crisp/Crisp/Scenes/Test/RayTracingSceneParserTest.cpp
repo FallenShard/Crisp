@@ -41,6 +41,7 @@ TEST(RayTracingSceneParserTest, ParsesDeterministicRenderSettings) {
     EXPECT_EQ(result->seed, 17u);
     EXPECT_EQ(result->samplesPerPixel, 256);
     EXPECT_EQ(result->maxDepth, 12);
+    EXPECT_EQ(result->samplingMode, 0);
     EXPECT_EQ(result->reconstructionFilter, ReconstructionFilterType::Box);
     EXPECT_EQ(result->cameraPosition, glm::vec3(1.0f, 2.0f, 3.0f));
     EXPECT_EQ(result->cameraTarget, glm::vec3(-1.0f, 1.0f, 0.0f));
@@ -52,6 +53,14 @@ TEST(RayTracingSceneParserTest, ParsesDeterministicRenderSettings) {
 
 TEST(RayTracingSceneParserTest, RejectsInvalidDeterministicRenderSettings) {
     auto scene = createRenderSettings();
+    scene["integrator"]["type"] = "normals";
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("integrator type"));
+
+    scene = createRenderSettings();
+    scene["sampler"]["type"] = "fixed";
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("sampler type"));
+
+    scene = createRenderSettings();
     scene["sampler"]["samplesPerPixel"] = 0;
     EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("samplesPerPixel"));
 
@@ -128,8 +137,7 @@ TEST(RayTracingSceneParserTest, PropagatesNestedMaterialValidationErrors) {
         {"microfacetDistribution", "phong"},
     })});
     EXPECT_THAT(
-        parseSceneDescription(invalidDistribution),
-        HasErrorWithMessageRegex("Unsupported microfacet distribution"));
+        parseSceneDescription(invalidDistribution), HasErrorWithMessageRegex("Unsupported microfacet distribution"));
 
     const auto invalidIors = nlohmann::json::array({createShape({
         {"type", "dielectric"},
@@ -175,8 +183,7 @@ TEST(RayTracingSceneParserTest, RejectsInvalidPointLights) {
         {"position", {1.0f, 2.0f, 3.0f}},
     }});
     EXPECT_THAT(
-        parseSceneDescription(nlohmann::json::array(), missingPower),
-        HasErrorWithMessageRegex("requires power"));
+        parseSceneDescription(nlohmann::json::array(), missingPower), HasErrorWithMessageRegex("requires power"));
 
     const nlohmann::json negativePower = nlohmann::json::array({{
         {"type", "point"},
@@ -218,8 +225,7 @@ TEST(RayTracingSceneParserTest, RejectsInvalidDirectionalLights) {
         {"direction", {0.0f, 0.0f, -1.0f}},
     }});
     EXPECT_THAT(
-        parseSceneDescription(nlohmann::json::array(), missingPower),
-        HasErrorWithMessageRegex("requires power"));
+        parseSceneDescription(nlohmann::json::array(), missingPower), HasErrorWithMessageRegex("requires power"));
 
     const nlohmann::json zeroDirection = nlohmann::json::array({{
         {"type", "directional"},

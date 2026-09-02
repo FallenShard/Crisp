@@ -92,7 +92,7 @@ struct Harness {
         renderGraph->compile(renderer->getDevice(), renderer->getSwapChainExtent());
     }
 
-    void step(const uint32_t frameIdx) {
+    void step(const uint32_t /*frameIdx*/) const {
         Window::pollEvents();
         fluid->update(kFixedDeltaTime);
 

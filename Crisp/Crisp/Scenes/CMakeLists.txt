@@ -24,8 +24,6 @@ target_link_libraries(CrispScenes
     PUBLIC Crisp::MaterialUtils
     PUBLIC Crisp::Math
     PUBLIC Crisp::JsonUtils
-    PUBLIC Crisp::PathTracer
-
     PRIVATE Crisp::Application
 
     PRIVATE Crisp::RenderGraphGui
