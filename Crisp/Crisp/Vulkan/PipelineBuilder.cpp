@@ -294,12 +294,36 @@ PipelineBuilder& PipelineBuilder::addDynamicState(VkDynamicState dynamicState) {
     return *this;
 }
 
+PipelineBuilder& PipelineBuilder::setDescriptorHeapMappings(
+    const uint32_t shaderStageIdx, const std::span<const VkDescriptorSetAndBindingMappingEXT> mappings) {
+    auto stage = std::make_unique<StageMappings>();
+    stage->mappings.assign(mappings.begin(), mappings.end());
+    stage->info.mappingCount = static_cast<uint32_t>(stage->mappings.size());
+    stage->info.pMappings = stage->mappings.data();
+    m_shaderStages.at(shaderStageIdx).pNext = &stage->info;
+    m_stageMappings.push_back(std::move(stage));
+    return *this;
+}
+
 std::unique_ptr<VulkanPipeline> PipelineBuilder::create(
     const VulkanDevice& device,
     std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
     const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
+    return createImpl(device, std::move(pipelineLayout), rasterizationPassDescriptor, false);
+}
+
+std::unique_ptr<VulkanPipeline> PipelineBuilder::createDescriptorHeap(
+    const VulkanDevice& device, const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
+    return createImpl(device, nullptr, rasterizationPassDescriptor, true);
+}
+
+std::unique_ptr<VulkanPipeline> PipelineBuilder::createImpl(
+    const VulkanDevice& device,
+    std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
+    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
+    const bool descriptorHeap) {
     VkGraphicsPipelineCreateInfo pipelineInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-    populatePipelineCreateInfo(pipelineInfo, *pipelineLayout);
+    populatePipelineCreateInfo(pipelineInfo, pipelineLayout ? pipelineLayout->getHandle() : VK_NULL_HANDLE);
 
     const auto& colorFormats = rasterizationPassDescriptor.colorAttachmentFormats;
     const VkPipelineRenderingCreateInfo renderingInfo{
@@ -310,7 +334,12 @@ std::unique_ptr<VulkanPipeline> PipelineBuilder::create(
         .depthAttachmentFormat = rasterizationPassDescriptor.depthAttachmentFormat,
         .stencilAttachmentFormat = rasterizationPassDescriptor.stencilAttachmentFormat,
     };
-    pipelineInfo.pNext = &renderingInfo;
+    const VkPipelineCreateFlags2CreateInfo flagsInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO,
+        .pNext = &renderingInfo,
+        .flags = VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT,
+    };
+    pipelineInfo.pNext = descriptorHeap ? static_cast<const void*>(&flagsInfo) : &renderingInfo;
 
     auto multisampleState = m_multisampleState;
     multisampleState.rasterizationSamples = rasterizationPassDescriptor.sampleCount;
@@ -345,7 +374,7 @@ PipelineDynamicStateFlags PipelineBuilder::createDynamicStateFlags() const {
 }
 
 void PipelineBuilder::populatePipelineCreateInfo(
-    VkGraphicsPipelineCreateInfo& pipelineInfo, const VulkanPipelineLayout& pipelineLayout) const {
+    VkGraphicsPipelineCreateInfo& pipelineInfo, const VkPipelineLayout pipelineLayout) const {
     pipelineInfo.stageCount = static_cast<uint32_t>(m_shaderStages.size());
     pipelineInfo.pStages = m_shaderStages.data();
     pipelineInfo.pVertexInputState = &m_vertexInputState;
@@ -357,7 +386,7 @@ void PipelineBuilder::populatePipelineCreateInfo(
     pipelineInfo.pColorBlendState = &m_colorBlendState;
     pipelineInfo.pDepthStencilState = &m_depthStencilState;
     pipelineInfo.pDynamicState = &m_dynamicState;
-    pipelineInfo.layout = pipelineLayout.getHandle();
+    pipelineInfo.layout = pipelineLayout;
     pipelineInfo.renderPass = VK_NULL_HANDLE;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;

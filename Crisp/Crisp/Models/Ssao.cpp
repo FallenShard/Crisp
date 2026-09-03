@@ -112,7 +112,7 @@ void addSsaoPass(
                     kSsaoMaterialId,
                     "Ssao.json",
                     renderer.getDevice(),
-                    renderGraph.getRasterizationPassDescriptor(kSsaoPass));
+                    {renderGraph.getRasterizationPassDescriptor(kSsaoPass)});
                 material = resourceContext.createMaterial(kSsaoMaterialId, pipeline);
                 material->writeDescriptor(0, 1, *resourceContext.getRingBuffer(viewBufferId));
                 material->writeDescriptor(0, 2, *resourceContext.getRingBuffer(kSsaoSampleBufferId));

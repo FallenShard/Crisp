@@ -106,7 +106,7 @@ Renderer::Renderer(
 
     m_fullScreenGeometry = createFullScreenGeometry(*this);
     m_linearClampSampler = createLinearClampSampler(*m_device);
-    m_scenePipeline = createPipeline("GammaCorrect.json", getDefaultRasterizationPassDescriptor());
+    m_scenePipeline = createPipeline("GammaCorrect.json", {getDefaultRasterizationPassDescriptor()});
     m_sceneMaterial = std::make_unique<Material>(m_scenePipeline.get());
 
     m_gpuTracingContexts.resize(kRendererVirtualFrameCount);
@@ -400,15 +400,11 @@ Geometry* Renderer::getFullScreenGeometry() const {
 }
 
 std::unique_ptr<VulkanPipeline> Renderer::createPipeline(
-    const std::string_view pipelineName, const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor) {
+    const std::string_view pipelineName, const VulkanPipelineParams& params) {
     const std::filesystem::path absolutePipelinePath{getResourcesPath() / "Pipelines" / pipelineName};
     CRISP_CHECK(exists(absolutePipelinePath), "Path {} doesn't exist!", absolutePipelinePath.string());
     return createPipelineFromFile(
-               absolutePipelinePath,
-               m_assetPaths.spvShaderDir,
-               *m_device,
-               rasterizationPassDescriptor,
-               m_bindlessImageRegistry->getSetLayout())
+               absolutePipelinePath, m_assetPaths.spvShaderDir, *m_device, m_bindlessImageRegistry->getSetLayout(), params)
         .unwrap();
 }
 

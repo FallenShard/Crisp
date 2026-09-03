@@ -27,7 +27,7 @@ Skybox::Skybox(
     m_cubeMapView = createView(
         renderer->getDevice(), *m_cubeMap, VK_IMAGE_VIEW_TYPE_CUBE, 0, static_cast<uint32_t>(cubeMapImages.size()));
     m_sampler = createLinearClampSampler(renderer->getDevice());
-    m_pipeline = renderer->createPipeline("Skybox.json", rasterizationPassDescriptor);
+    m_pipeline = renderer->createPipeline("Skybox.json", {rasterizationPassDescriptor});
     updateRenderNode(*m_sampler, *m_cubeMapView);
 
     // renderer->getDevice().setObjectName(m_cubeMapView->getHandle(), "Cube Map View");
@@ -45,7 +45,7 @@ Skybox::Skybox(
     , m_transformPack{} {
     m_transformBuffer = createUniformRingBuffer(&renderer->getDevice(), sizeof(TransformPack));
 
-    m_pipeline = renderer->createPipeline("Skybox.json", rasterizationPassDescriptor);
+    m_pipeline = renderer->createPipeline("Skybox.json", {rasterizationPassDescriptor});
     updateRenderNode(sampler, cubeMapView);
 
     renderer->getDevice().flushDescriptorUpdates();

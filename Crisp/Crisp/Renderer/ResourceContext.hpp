@@ -87,10 +87,7 @@ public:
     }
 
     VulkanPipeline* createPipeline(
-        const std::string& id,
-        std::string_view filename,
-        const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
-        const SpecializationConstantMap& specializationConstants = {});
+        const std::string& id, std::string_view filename, const VulkanPipelineParams& params);
     Material* createMaterial(std::string materialId, const std::string& pipelineId);
     Material* createMaterial(
         std::string materialId, const std::string& pipelineId, uint32_t firstSet, uint32_t setCount);

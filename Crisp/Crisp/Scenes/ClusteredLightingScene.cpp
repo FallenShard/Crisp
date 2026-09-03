@@ -261,12 +261,12 @@ void ClusteredLightingScene::createCommonTextures() {
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
 
     auto* depthPipeline = m_resourceContext->createPipeline(
-        kDepthMaterialId, "ClusteredDepthPrepass.json", m_renderGraph->getRasterizationPassDescriptor(kDepthPrepass));
+        kDepthMaterialId, "ClusteredDepthPrepass.json", {m_renderGraph->getRasterizationPassDescriptor(kDepthPrepass)});
     m_depthMaterial = m_resourceContext->createMaterial(kDepthMaterialId, depthPipeline);
     m_depthMaterial->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());
 
     auto* pipeline = m_resourceContext->createPipeline(
-        kMaterialId, "ClusteredLighting.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+        kMaterialId, "ClusteredLighting.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
     m_material = m_resourceContext->createMaterial(kMaterialId, pipeline);
 
     m_material->writeDescriptor(0, 0, m_transformBuffer->getDescriptorInfo());

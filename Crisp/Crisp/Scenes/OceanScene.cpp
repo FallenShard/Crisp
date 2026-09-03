@@ -856,25 +856,27 @@ void OceanScene::buildRenderGraph() {
     createFftDispatches<1>(*m_passResources, *m_renderer);
 
     m_oceanPipeline = m_resourceContext->createPipeline(
-        "ocean", "Ocean.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+        "ocean", "Ocean.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
     m_oceanMaterial = m_resourceContext->createMaterial("ocean", m_oceanPipeline);
 
     if (m_renderer->getDevice().getEnabledFeatures().meshShading) {
-        const SpecializationConstantMap oceanMeshConstants{
-            {kTilesPerTaskGroupConstantId, kOceanTilesPerTaskGroup},
-            {kTaskGroupsPerBlockConstantId, kOceanTaskGroupsPerBlock},
-            {kTileHeightSigmasConstantId, kOceanTileHeightSigmas},
-        };
         m_oceanMeshPipeline = m_resourceContext->createPipeline(
             "oceanMesh",
             "OceanMesh.json",
-            m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass),
-            oceanMeshConstants);
+            {
+                .rasterizationPassDescriptor = m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass),
+                .specializationConstants =
+                    {
+                        {kTilesPerTaskGroupConstantId, kOceanTilesPerTaskGroup},
+                        {kTaskGroupsPerBlockConstantId, kOceanTaskGroupsPerBlock},
+                        {kTileHeightSigmasConstantId, kOceanTileHeightSigmas},
+                    },
+            });
         m_oceanMeshMaterial = m_resourceContext->createMaterial("oceanMesh", m_oceanMeshPipeline);
     }
 
     m_skyPipeline = m_resourceContext->createPipeline(
-        "oceanSky", "OceanSky.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+        "oceanSky", "OceanSky.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
     m_skyMaterial = m_resourceContext->createMaterial("oceanSky", m_skyPipeline);
 
     for (Material* material : {m_oceanMaterial, m_oceanMeshMaterial}) {

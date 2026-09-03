@@ -1,6 +1,7 @@
 #include <Crisp/Vulkan/VulkanPipelineIo.hpp>
 
 #include <bit>
+#include <ranges>
 #include <span>
 #include <string_view>
 
@@ -384,9 +385,8 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     const nlohmann::json& pipelineJson,
     const std::filesystem::path& spvShaderDir,
     const VulkanDevice& device,
-    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
     const VkDescriptorSetLayout bindlessDescriptorSetLayout,
-    const SpecializationConstantMap& specializationConstants) {
+    const VulkanPipelineParams& params) {
     CRISP_CHECK(pipelineJson.is_object());
 
     CRISP_CHECK(hasField<JsonType::Object>(pipelineJson, "shaders"));
@@ -401,9 +401,9 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     // whose constant_id a stage does not declare is ignored, which is what lets one map serve all stages.
     std::vector<VkSpecializationMapEntry> specEntries;
     std::vector<uint32_t> specData;
-    specEntries.reserve(specializationConstants.size());
-    specData.reserve(specializationConstants.size());
-    for (const auto& [constantId, value] : specializationConstants) {
+    specEntries.reserve(params.specializationConstants.size());
+    specData.reserve(params.specializationConstants.size());
+    for (const auto& [constantId, value] : params.specializationConstants) {
         specEntries.push_back({
             .constantID = constantId,
             .offset = static_cast<uint32_t>(specData.size() * sizeof(uint32_t)),
@@ -425,7 +425,17 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
         auto stageInfo = createShaderStageInfo(stageFlag, shaderModules.create(spvFile, fileStem));
         stageInfo.pSpecializationInfo = pSpecInfo;
         builder.addShaderStage(stageInfo);
-        shaderMetadata.merge(reflectPipelineLayoutFromSpirv(spvFile).unwrap());
+        if (params.descriptorHeapParams) {
+            const auto mappings = std::ranges::find_if(
+                params.descriptorHeapParams->stageMappings,
+                [stageFlag](const DescriptorHeapStageMappings& value) { return value.stage == stageFlag; });
+            if (mappings != params.descriptorHeapParams->stageMappings.end()) {
+                builder.setDescriptorHeapMappings(
+                    static_cast<uint32_t>(builder.getShaderStageCount() - 1), mappings->mappings);
+            }
+        } else {
+            shaderMetadata.merge(reflectPipelineLayoutFromSpirv(spvFile).unwrap());
+        }
         if (stageFlag == VK_SHADER_STAGE_VERTEX_BIT) {
             vertexInputMetadata = reflectVertexMetadataFromSpirvShader(spvFile).unwrap();
         }
@@ -489,6 +499,10 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
         readDepthStencilState(pipelineJson["depthStencil"], builder).unwrap();
     }
 
+    if (params.descriptorHeapParams) {
+        return builder.createDescriptorHeap(device, params.rasterizationPassDescriptor);
+    }
+
     PipelineLayoutBuilder layoutBuilder(std::move(shaderMetadata));
     if (pipelineJson.contains("descriptorSets")) {
         if (!pipelineJson["descriptorSets"].is_array()) {
@@ -499,21 +513,19 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
             "Invalid descriptor set metadata");
     }
 
-    return builder.create(device, layoutBuilder.create(device), rasterizationPassDescriptor);
+    return builder.create(device, layoutBuilder.create(device), params.rasterizationPassDescriptor);
 }
 
 Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFileImpl(
     const std::filesystem::path& path,
     const std::filesystem::path& spvShaderDir,
     const VulkanDevice& device,
-    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
     const VkDescriptorSetLayout bindlessDescriptorSetLayout,
-    const SpecializationConstantMap& specializationConstants) {
+    const VulkanPipelineParams& params) {
     CRISP_TRY(const auto& json, loadJsonFromFile(path), "Failed to open json config at {}", path.generic_string());
     CRISP_TRY(
         auto pipeline,
-        createPipelineFromJson(
-            json, spvShaderDir, device, rasterizationPassDescriptor, bindlessDescriptorSetLayout, specializationConstants),
+        createPipelineFromJson(json, spvShaderDir, device, bindlessDescriptorSetLayout, params),
         "Failed to create pipeline from json");
     device.setObjectName(*pipeline, fmt::format("{} Pipeline", path.stem().string()));
     return pipeline;
@@ -525,11 +537,9 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     const std::filesystem::path& path,
     const std::filesystem::path& spvShaderDir,
     const VulkanDevice& device,
-    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
     const VkDescriptorSetLayout bindlessDescriptorSetLayout,
-    const SpecializationConstantMap& specializationConstants) {
-    return createPipelineFromFileImpl(
-        path, spvShaderDir, device, rasterizationPassDescriptor, bindlessDescriptorSetLayout, specializationConstants);
+    const VulkanPipelineParams& params) {
+    return createPipelineFromFileImpl(path, spvShaderDir, device, bindlessDescriptorSetLayout, params);
 }
 
 } // namespace crisp

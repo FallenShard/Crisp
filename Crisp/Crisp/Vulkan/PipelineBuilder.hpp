@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -9,6 +10,21 @@
 #include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
 
 namespace crisp {
+
+struct DescriptorHeapStageMappings {
+    VkShaderStageFlagBits stage;
+    std::vector<VkDescriptorSetAndBindingMappingEXT> mappings;
+};
+
+struct DescriptorHeapPipelineParams {
+    std::vector<DescriptorHeapStageMappings> stageMappings;
+};
+
+struct VulkanPipelineParams {
+    VulkanRasterizationPassDescriptor rasterizationPassDescriptor;
+    SpecializationConstantMap specializationConstants;
+    std::optional<DescriptorHeapPipelineParams> descriptorHeapParams;
+};
 
 class PipelineBuilder {
 public:
@@ -49,18 +65,38 @@ public:
     PipelineBuilder& setDepthWrite(VkBool32 enabled);
 
     PipelineBuilder& addDynamicState(VkDynamicState dynamicState);
+    PipelineBuilder& setDescriptorHeapMappings(
+        uint32_t shaderStageIdx, std::span<const VkDescriptorSetAndBindingMappingEXT> mappings);
+
+    size_t getShaderStageCount() const {
+        return m_shaderStages.size();
+    }
 
     std::unique_ptr<VulkanPipeline> create(
         const VulkanDevice& device,
         std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
         const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
+    std::unique_ptr<VulkanPipeline> createDescriptorHeap(
+        const VulkanDevice& device, const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
     PipelineDynamicStateFlags createDynamicStateFlags() const;
 
 private:
-    void populatePipelineCreateInfo(
-        VkGraphicsPipelineCreateInfo& pipelineInfo, const VulkanPipelineLayout& pipelineLayout) const;
+    std::unique_ptr<VulkanPipeline> createImpl(
+        const VulkanDevice& device,
+        std::unique_ptr<VulkanPipelineLayout> pipelineLayout,
+        const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
+        bool descriptorHeap);
+    void populatePipelineCreateInfo(VkGraphicsPipelineCreateInfo& pipelineInfo, VkPipelineLayout pipelineLayout) const;
 
     std::vector<VkPipelineShaderStageCreateInfo> m_shaderStages;
+
+    struct StageMappings {
+        std::vector<VkDescriptorSetAndBindingMappingEXT> mappings;
+        VkShaderDescriptorSetAndBindingMappingInfoEXT info{
+            VK_STRUCTURE_TYPE_SHADER_DESCRIPTOR_SET_AND_BINDING_MAPPING_INFO_EXT};
+    };
+
+    std::vector<std::unique_ptr<StageMappings>> m_stageMappings;
 
     VulkanVertexLayout m_vertexLayout;
     VkPipelineVertexInputStateCreateInfo m_vertexInputState;

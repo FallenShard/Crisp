@@ -43,7 +43,7 @@ std::unique_ptr<Material> createAtmosphereMaterial(
     const std::string& passName,
     const std::vector<RenderGraphResourceHandle>& sampledLuts) {
     VulkanPipeline* pipeline = resourceContext.pipelineCache.loadPipeline(
-        id, pipelineFilename, renderer.getDevice(), renderGraph.getRasterizationPassDescriptor(passName));
+        id, pipelineFilename, renderer.getDevice(), {renderGraph.getRasterizationPassDescriptor(passName)});
 
     // Cached pipelines take their allocator from the cache; only hand-built layouts own one.
     auto material =

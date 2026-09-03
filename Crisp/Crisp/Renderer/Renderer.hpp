@@ -14,6 +14,7 @@
 #include <Crisp/Renderer/RendererConfig.hpp>
 #include <Crisp/Renderer/RendererFrame.hpp>
 #include <Crisp/Renderer/VulkanWorker.hpp>
+#include <Crisp/Vulkan/PipelineBuilder.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanBuffer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanImageView.hpp>
@@ -98,8 +99,7 @@ public:
 
     Geometry* getFullScreenGeometry() const;
 
-    std::unique_ptr<VulkanPipeline> createPipeline(
-        std::string_view pipelineName, const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
+    std::unique_ptr<VulkanPipeline> createPipeline(std::string_view pipelineName, const VulkanPipelineParams& params);
 
     void schedule(std::function<void()>&& task) {
         m_threadPool.schedule(std::move(task));

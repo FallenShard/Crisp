@@ -90,7 +90,7 @@ std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const 
     const VulkanRasterizationPassDescriptor rasterizationPassDescriptor{
         .colorAttachmentFormats = {cubeMap->getFormat()},
     };
-    auto cubeMapPipeline = renderer->createPipeline("EquirectToCube.json", rasterizationPassDescriptor);
+    auto cubeMapPipeline = renderer->createPipeline("EquirectToCube.json", {rasterizationPassDescriptor});
     std::vector<std::unique_ptr<VulkanImageView>> cubeMapImageViews(kCubeMapFaceCount);
     for (uint32_t i = 0; i < kCubeMapFaceCount; ++i) {
         cubeMapImageViews[i] = createView(device, *cubeMap, VK_IMAGE_VIEW_TYPE_2D, i, 1, 0, 1);
@@ -98,8 +98,7 @@ std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const 
 
     const VertexLayoutDescription vertexLayout = {{VertexAttribute::Position}};
     const auto unitCube = createGeometry(*renderer, createCubeMesh(), vertexLayout);
-    auto sampler = std::make_unique<VulkanSampler>(
-        renderer->getDevice(), createLinearRepeatSamplerCreateInfo(16.0f, 12.0f));
+    auto sampler = std::make_unique<VulkanSampler>(renderer->getDevice(), createLinearRepeatSamplerCreateInfo(16.0f));
     auto cubeMapMaterial = std::make_unique<Material>(cubeMapPipeline.get());
     cubeMapMaterial->writeDescriptor(0, 0, equirectMap.getView().getDescriptorInfo(sampler.get()));
     renderer->getDevice().flushDescriptorUpdates();
@@ -165,7 +164,7 @@ std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer) {
     const VulkanRasterizationPassDescriptor rasterizationPassDescriptor{
         .colorAttachmentFormats = {brdfLut->getFormat()},
     };
-    auto pipeline = renderer->createPipeline("BrdfLut.json", rasterizationPassDescriptor);
+    auto pipeline = renderer->createPipeline("BrdfLut.json", {rasterizationPassDescriptor});
 
     renderer->getDevice().getGeneralQueue().submitAndWait(
         [renderer, &pipeline, &view, &brdfLut](VkCommandBuffer cmdBuffer) {

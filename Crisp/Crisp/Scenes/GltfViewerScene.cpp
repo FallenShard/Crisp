@@ -163,7 +163,7 @@ GltfViewerScene::GltfViewerScene(Renderer* renderer, Window* window, const nlohm
         for (const auto& variant : kShadowMaterialVariants) {
             const std::string key = createShadowMaterialKey(i, variant.suffix);
             auto* csmPipeline = m_resourceContext->createPipeline(
-                key, variant.pipelineConfig, m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[i]));
+                key, variant.pipelineConfig, {m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[i])});
             auto* csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
             csmMaterial->writeDescriptor(1, 0, m_transformBuffer->getDescriptorInfo());
             csmMaterial->writeDescriptor(1, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(i));
@@ -302,7 +302,7 @@ void GltfViewerScene::createCommonTextures() {
     addPbrImageGroupToImageCache(createDefaultPbrImageGroup(), imageCache);
 
     auto pipeline = m_resourceContext->createPipeline(
-        "pbr", "PbrTex.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+        "pbr", "PbrTex.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
 
     setEnvironmentMap("GreenwichPark");
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));

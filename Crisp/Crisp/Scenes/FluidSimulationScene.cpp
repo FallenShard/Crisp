@@ -80,7 +80,7 @@ void FluidSimulationScene::buildRenderGraph() {
     m_renderGraph->compile(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
 
     m_pointSpritePipeline = m_resourceContext->createPipeline(
-        "pointSprite", "PointSprite.json", m_renderGraph->getRasterizationPassDescriptor(kParticlePass));
+        "pointSprite", "PointSprite.json", {m_renderGraph->getRasterizationPassDescriptor(kParticlePass)});
     m_pointSpriteMaterial = m_resourceContext->createMaterial("pointSprite", m_pointSpritePipeline);
     m_pointSpriteMaterial->writeDescriptor(0, 0, *m_resourceContext->getRingBuffer(kTransformBufferId));
     m_pointSpriteMaterial->writeDescriptor(1, 0, *m_resourceContext->getRingBuffer(kParticleBufferId));

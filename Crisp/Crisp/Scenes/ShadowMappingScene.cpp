@@ -249,7 +249,7 @@ void ShadowMappingScene::createRenderResources(const std::string& environmentMap
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
 
     auto* pipeline = m_resourceContext->createPipeline(
-        "shadowMappingPbr", "PbrTex.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+        "shadowMappingPbr", "PbrTex.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
     m_forwardPassMaterial =
         std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 1, 1);
     configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
@@ -262,7 +262,7 @@ void ShadowMappingScene::createRenderResources(const std::string& environmentMap
     for (uint32_t cascadeIndex = 0; cascadeIndex < kDefaultCascadeCount; ++cascadeIndex) {
         const auto key = createShadowMaterialKey(cascadeIndex);
         auto* shadowPipeline = m_resourceContext->createPipeline(
-            key, "PbrShadowMap.json", m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[cascadeIndex]));
+            key, "PbrShadowMap.json", {m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[cascadeIndex])});
         auto* shadowMaterial = m_resourceContext->createMaterial(key, shadowPipeline);
         shadowMaterial->writeDescriptor(1, 0, m_transformBuffer->getDescriptorInfo());
         shadowMaterial->writeDescriptor(1, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(cascadeIndex));

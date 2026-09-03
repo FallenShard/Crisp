@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -17,11 +18,7 @@ public:
     PipelineCache(AssetPaths assetPaths, VkDescriptorSetLayout bindlessDescriptorSetLayout);
 
     VulkanPipeline* loadPipeline(
-        const std::string& id,
-        std::string_view filename,
-        VulkanDevice& device,
-        const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
-        const SpecializationConstantMap& specializationConstants = {});
+        const std::string& id, std::string_view filename, VulkanDevice& device, const VulkanPipelineParams& params);
 
     VulkanPipeline* getPipeline(const std::string& key) const;
 
@@ -37,8 +34,7 @@ private:
 
     struct PipelineInfo {
         std::string filename;
-        VulkanRasterizationPassDescriptor rasterizationPassDescriptor;
-        SpecializationConstantMap specializationConstants;
+        VulkanPipelineParams params;
     };
 
     FlatHashMap<std::string, PipelineInfo> m_pipelineInfos;

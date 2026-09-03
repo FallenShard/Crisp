@@ -215,7 +215,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         for (const auto& variant : kShadowMaterialVariants) {
             const std::string key = createShadowMaterialKey(i, variant.suffix);
             auto* csmPipeline = m_resourceContext->createPipeline(
-                key, variant.pipelineConfig, m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[i]));
+                key, variant.pipelineConfig, {m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[i])});
             auto* csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
             csmMaterial->writeDescriptor(1, 0, m_transformBuffer->getDescriptorInfo());
             csmMaterial->writeDescriptor(1, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(i));
@@ -393,7 +393,7 @@ void PbrScene::createCommonTextures() {
     addPbrImageGroupToImageCache(createDefaultPbrImageGroup(), imageCache);
 
     auto pipeline = m_resourceContext->createPipeline(
-        "pbr", "PbrTex.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+        "pbr", "PbrTex.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
 
     setEnvironmentMap("GreenwichPark");
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
@@ -528,7 +528,7 @@ void PbrScene::createMeshletTestNode() {
     auto* meshletTriangles = m_resourceContext->createStorageBuffer("meshletTriangles", m_meshletData.meshletTriangles);
 
     auto* meshPipeline = m_resourceContext->createPipeline(
-        "mesh", "MeshShading.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+        "mesh", "MeshShading.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
     auto* meshMaterial = m_resourceContext->createMaterial("mesh", meshPipeline);
     meshMaterial->writeDescriptor(0, 0, meshletBuffer->createDescriptorInfo());
     meshMaterial->writeDescriptor(0, 1, meshletTriangles->createDescriptorInfo());

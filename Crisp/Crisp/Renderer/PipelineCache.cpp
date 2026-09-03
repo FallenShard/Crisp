@@ -11,15 +11,8 @@ PipelineCache::PipelineCache(AssetPaths assetPaths, const VkDescriptorSetLayout 
     , m_bindlessDescriptorSetLayout(bindlessDescriptorSetLayout) {}
 
 VulkanPipeline* PipelineCache::loadPipeline(
-    const std::string& id,
-    const std::string_view filename,
-    VulkanDevice& device,
-    const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
-    const SpecializationConstantMap& specializationConstants) {
-    PipelineInfo pipelineInfo{
-        .filename = std::string(filename),
-        .rasterizationPassDescriptor = rasterizationPassDescriptor,
-        .specializationConstants = specializationConstants};
+    const std::string& id, const std::string_view filename, VulkanDevice& device, const VulkanPipelineParams& params) {
+    PipelineInfo pipelineInfo{.filename = std::string(filename), .params = params};
 
     auto& storedPipelineInfo = m_pipelineInfos[id];
     storedPipelineInfo = std::move(pipelineInfo);
@@ -31,14 +24,15 @@ VulkanPipeline* PipelineCache::loadPipeline(
         pipelineAbsolutePath,
         m_assetPaths.spvShaderDir,
         device,
-        storedPipelineInfo.rasterizationPassDescriptor,
         m_bindlessDescriptorSetLayout,
-        storedPipelineInfo.specializationConstants);
+        storedPipelineInfo.params);
 
     auto& pipeline = m_pipelines.emplace(id, pipelineResult.unwrap()).first->second;
 
     auto layout = pipeline->getPipelineLayout();
-    m_descriptorAllocators[layout] = layout->createVulkanDescriptorSetAllocator(device);
+    if (layout) {
+        m_descriptorAllocators[layout] = layout->createVulkanDescriptorSetAllocator(device);
+    }
 
     return pipeline.get();
 }
@@ -55,12 +49,7 @@ void PipelineCache::recreatePipelines(const VulkanDevice& device) {
         CRISP_CHECK(exists(pipelineAbsolutePath), "Path {} doesn't exist!", pipelineAbsolutePath.string());
 
         auto pipelineResult = createPipelineFromFile(
-            pipelineAbsolutePath,
-            m_assetPaths.spvShaderDir,
-            device,
-            info.rasterizationPassDescriptor,
-            m_bindlessDescriptorSetLayout,
-            info.specializationConstants);
+            pipelineAbsolutePath, m_assetPaths.spvShaderDir, device, m_bindlessDescriptorSetLayout, info.params);
 
         auto pipeline = pipelineResult.unwrap();
         m_pipelines[id]->swapAll(*pipeline);

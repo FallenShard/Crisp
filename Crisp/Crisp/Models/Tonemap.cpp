@@ -53,7 +53,7 @@ void addTonemapPass(
                     kTonemapMaterialId,
                     "Tonemap.json",
                     renderer.getDevice(),
-                    renderGraph.getRasterizationPassDescriptor(kTonemapPass));
+                    {renderGraph.getRasterizationPassDescriptor(kTonemapPass)});
                 material = resourceContext.createMaterial(kTonemapMaterialId, pipeline);
                 material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kTonemapBufferId));
             }

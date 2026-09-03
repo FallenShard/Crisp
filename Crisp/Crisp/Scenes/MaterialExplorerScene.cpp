@@ -429,11 +429,11 @@ void MaterialExplorerScene::createRenderResources(const std::string& environment
     addPbrImageGroupToImageCache(createMaterialExplorerImageGroup(), imageCache);
 
     auto* pbrPipeline = m_resourceContext->createPipeline(
-        "materialExplorerPbr", "PbrTex.json", m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+        "materialExplorerPbr", "PbrTex.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
     auto* pbrDoubleSidedPipeline = m_resourceContext->createPipeline(
         "materialExplorerPbrDoubleSided",
         "PbrTexDoubleSided.json",
-        m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass));
+        {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
 
     setEnvironmentMap(environmentMapName);
     imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
@@ -454,7 +454,7 @@ void MaterialExplorerScene::createRenderResources(const std::string& environment
         for (const auto& variant : kShadowMaterialVariants) {
             const auto key = createShadowMaterialKey(cascadeIndex, variant.suffix);
             auto* pipeline = m_resourceContext->createPipeline(
-                key, variant.pipelineConfig, m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[cascadeIndex]));
+                key, variant.pipelineConfig, {m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[cascadeIndex])});
             auto* material = m_resourceContext->createMaterial(key, pipeline);
             material->writeDescriptor(1, 0, m_transformBuffer->getDescriptorInfo());
             material->writeDescriptor(1, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(cascadeIndex));
