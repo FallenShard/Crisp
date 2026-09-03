@@ -161,7 +161,7 @@ def capture_candidate(
         "activeScene": "vulkan-ray-tracer",
         "scenes": {
             "vulkan-ray-tracer": {
-                "sceneFile": str(scene_path),
+                "scenePath": str(scene_path),
                 "sceneFingerprint": scene_fingerprint,
                 "samplesPerFrame": settings["samplesPerFrame"],
                 "captureFilename": reference.name,

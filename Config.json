@@ -1,36 +1,23 @@
 {
-  "resourcesPath": "D:/Projects/Crisp/Resources",
+  "resourcesPath"    : "D:/Projects/Crisp/Resources",
   "shaderSourcesPath": "D:/Projects/Crisp/Crisp/Crisp/Shaders",
-  "outputDir": "D:/Projects/Crisp/Output",
-  "imguiFontPath": "D:/Projects/Crisp/Resources/Fonts/Barlow-SemiBold.ttf",
-  "logLevel": "info",
-  "vulkan": {
-    "forceValidationLayers": true,
-    "enableRayTracing": true
-  },
-
-  "activeScene": "pbr",
-  "scenes": {
-    "material-explorer": {
-      "modelPath": "Meshes/ShaderBall_FWVN_PosX.obj",
+  "outputDir"        : "D:/Projects/Crisp/Output",
+  "imguiFontPath"    : "D:/Projects/Crisp/Resources/Fonts/Barlow-SemiBold.ttf",
+  "logLevel"         : "info",
+  "vulkan"           : { "forceValidationLayers": true, "enableRayTracing": true },
+  "activeScene"      : "material-explorer",
+  "scenes"           : {
+    "material-explorer" : {
+      "modelPath"     : "glTFSamples/2.0/USDShaderBallForGltf/glTF-Binary/USDShaderBallForGltf.glb",
       "environmentMap": "NewportLoft"
     },
-    "gltf-viewer": {},
-    "pbr": {
-      "modelPath"  : "D:/Downloads/3D Models/bistro/bistro.gltf",
-      "meshletTest": false
-    },
-
-    "vulkan-ray-tracer": {},
-    "ray-tracer": {},
-
-    "atmosphere": {},
-    "ocean": {},
-    "fluid-simulation": {},
-
-    "normal-mapping": {},
-    "shadow-mapping": {},
-    "ambient-occlusion": {},
+    "gltf-viewer"       : {},
+    "pbr"               : { "modelPath": "models/bistro/bistro.gltf", "meshletTest": false },
+    "vulkan-ray-tracer" : { "scenePath": "../tools/path_tracer_evaluation/crisp/cornell_box.json" },
+    "atmosphere"        : {},
+    "ocean"             : {},
+    "fluid-simulation"  : {},
+    "shadow-mapping"    : {},
     "clustered-lighting": {}
   }
 }

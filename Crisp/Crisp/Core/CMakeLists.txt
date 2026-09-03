@@ -184,7 +184,7 @@ target_link_libraries(
     PUBLIC Crisp::ApplicationEnvironment
     PUBLIC Crisp::Event
     PUBLIC Crisp::Renderer
-    PUBLIC Crisp::Scenes
+    PUBLIC Crisp::SceneContainer
     PUBLIC Crisp::AssetPaths
     PUBLIC Crisp::ImGui
     PRIVATE Crisp::Timer

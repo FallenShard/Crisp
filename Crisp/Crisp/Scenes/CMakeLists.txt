@@ -1,15 +1,12 @@
-add_cpp_static_library(CrispScenes
+add_cpp_static_library(CrispSceneContainer
     "SceneContainer.cpp"
     "SceneContainer.hpp"
-
-    "AtmosphereScene.cpp"
-    "AtmosphereScene.hpp"
 )
-target_link_libraries(CrispScenes
+target_link_libraries(CrispSceneContainer
     PUBLIC Crisp::Scene
-    PUBLIC Crisp::Camera
-    PUBLIC Crisp::Lights
+    PUBLIC Crisp::JsonUtils
 
+    PRIVATE Crisp::AtmosphereScene
     PRIVATE Crisp::PbrScene
     PRIVATE Crisp::ShadowMappingScene
     PRIVATE Crisp::MaterialExplorerScene
@@ -18,17 +15,20 @@ target_link_libraries(CrispScenes
     PRIVATE Crisp::OceanScene
     PRIVATE Crisp::FluidSimulationScene
     PRIVATE Crisp::VulkanRayTracingScene
+)
 
+add_cpp_static_library(CrispAtmosphereScene
+    "AtmosphereScene.cpp"
+    "AtmosphereScene.hpp"
+)
+target_link_libraries(CrispAtmosphereScene
+    PUBLIC Crisp::Scene
+    PUBLIC Crisp::Camera
     PUBLIC Crisp::Models
-    PUBLIC Crisp::MeshIo
-    PUBLIC Crisp::MaterialUtils
-    PUBLIC Crisp::Math
-    PUBLIC Crisp::JsonUtils
-    PRIVATE Crisp::Application
-
+    PRIVATE Crisp::RenderGraph
     PRIVATE Crisp::RenderGraphGui
-    PRIVATE Crisp::ImGuiCameraUtils
     PRIVATE Crisp::AtmosphereGui
+    PRIVATE ImGui
 )
 
 add_cpp_static_library(CrispScene

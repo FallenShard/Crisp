@@ -136,8 +136,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     m_closeAfterScreenshot = args.value("closeAfterCapture", false);
     m_screenshotFilename = args.value("captureFilename", std::string{"screenshot.exr"});
 
-    const auto sceneFile = args.value("sceneFile", std::string{"VesperScenes/Nori-PA-4/cbox-mats.json"});
-    const auto json = loadJsonFromFile(renderer->getAssetPaths().resourceDir / sceneFile).unwrap();
+    const auto scenePath = args.value("scenePath", std::string{"VesperScenes/Nori-PA-4/cbox-mats.json"});
+    const auto json = loadJsonFromFile(renderer->getAssetPaths().resourceDir / scenePath).unwrap();
     const auto renderSettings = parseRayTracingRenderSettings(json).unwrap();
     m_renderResolution = renderSettings.resolution;
     m_integratorParams.maxBounces = renderSettings.maxDepth;
