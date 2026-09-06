@@ -1,0 +1,45 @@
+{
+    "integrator": { "type": "mis-path-tracer" },
+    "sampler"   : { "type": "independent", "samplesPerPixel": 128 },
+    "camera"    : {
+        "type"     : "perspective",
+        "imageSize": [ 800, 600 ],
+        "fovY"     : 27.7856,
+        "zNear"    : 0.1,
+        "zFar"     : 100.0,
+        "position" : [ 0.0, 0.919769, 5.41159 ],
+        "target"   : [ 0.0, 0.893051, 4.41198 ],
+        "up"       : [ 0.0, 1.0, 0.0 ]
+    },
+    "shapes"    : [
+        {
+            "type"    : "mesh",
+            "bsdf"    : { "type": "lambertian", "reflectance": [ 0.725, 0.71, 0.68 ] },
+            "filename": "walls.obj"
+        },
+        {
+            "type"    : "mesh",
+            "bsdf"    : { "type": "lambertian", "reflectance": [ 0.161, 0.133, 0.427 ] },
+            "filename": "rightwall.obj"
+        },
+        {
+            "type"    : "mesh",
+            "bsdf"    : { "type": "lambertian", "reflectance": [ 0.63, 0.065, 0.05 ] },
+            "filename": "leftwall.obj"
+        },
+        {
+            "type"    : "mesh",
+            "bsdf"    : { "type": "lambertian", "reflectance": [ 1.0, 1.0, 1.0 ] },
+            "light"   : { "type": "area", "radiance": [ 15.0, 15.0, 15.0 ] },
+            "filename": "light.obj"
+        },
+        {
+            "type"    : "mesh",
+            "toWorld" : [
+                { "scale": [ 0.1, 0.1, 0.1 ] }
+            ],
+            "bsdf"    : { "type": "rough-conductor", "conductorIorPreset": "Ag" },
+            "filename": "dragon.obj"
+        }
+    ]
+}
