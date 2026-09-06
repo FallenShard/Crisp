@@ -10,17 +10,33 @@
 #include "Common/warp.part.glsl"
 #include "PathTracer/Core/pbr-hit.part.glsl"
 #include "PathTracer/Core/pbr-scene.part.glsl"
-#include "PathTracer/BSDFs/pbr-surface.part.glsl"
 
 layout(location = 0) rayPayloadInEXT PbrHitInfo hitInfo;
 
 hitAttributeEXT vec2 barycentric;
 
+const uint kIntegratorSlot = 3u;
+const uint kGgxAlbedoLutSlot = 5u;
+
+const uint kMaterialSamplerSlot = 1u;
+const uint kGgxAlbedoLutSamplerSlot = 2u;
+
+const uint kInvalidMaterialTextureOffset = 0xFFFFFFFFu;
+
 layout(descriptor_heap, descriptor_stride = 64) uniform texture2D heapTexture2Ds[];
 layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 
-const uint kMaterialSamplerSlot = 1u;
-const uint kInvalidMaterialTextureOffset = 0xFFFFFFFFu;
+layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
+    int maxBounces;
+    int sampleCount;
+    int frameIdx;
+    float environmentIntensity;
+    uint energyCompensation;
+} heapIntegrators[];
+
+#define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
+
+#include "PathTracer/BSDFs/pbr-surface.part.glsl"
 
 vec4 sampleMaterialTexture(const uint textureOffset, const uint textureIndex, const vec2 texCoord) {
     const uint heapIndex = nonuniformEXT(textureOffset + textureIndex);
@@ -94,7 +110,7 @@ void main() {
     const mat3 frame = createCoordinateFrame(shadingNormal);
     const vec3 wi = transpose(frame) * wiWorld;
 
-    const PbrSurface surface = createPbrSurface(material);
+    const PbrSurface surface = createPbrSurface(material, heapIntegrators[kIntegratorSlot].energyCompensation);
 
     vec3 wo;
     float pdf;

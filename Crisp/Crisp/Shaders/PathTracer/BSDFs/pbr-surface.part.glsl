@@ -3,12 +3,10 @@
 
 #include "../../Brdf/lambertian.part.glsl"
 #include "../../Brdf/microfacet.part.glsl"
+#include "../../Brdf/OpenPbr/energy-compensation.part.glsl"
 #include "../../Common/math-constants.part.glsl"
 
-// Stand-in evaluator for the raster path's metalness-roughness material, so the path-traced view has something
-// to shade with before the OpenPBR lobes land. It deliberately mirrors what Shaders/pbr.frag.glsl computes --
-// Schlick Fresnel over a mix of dielectric F0 and base colour, Lambertian diffuse -- rather than being correct
-// on its own terms. The closest-hit shader resolves textures before constructing this surface.
+// Stand-in that deliberately mirrors Shaders/pbr.frag.glsl rather than being correct on its own terms.
 // Replaced wholesale by Brdf/OpenPbr; see docs/openpbr-path-tracer.md.
 
 float dielectricF0(const float ior, const float weight) {
@@ -22,13 +20,14 @@ struct PbrSurface {
     vec3 f0;
     float alpha;
     float specularProbability;
+    uint energyCompensation;
 };
 
 float luminance(const vec3 value) {
     return dot(value, vec3(0.2126f, 0.7152f, 0.0722f));
 }
 
-PbrSurface createPbrSurface(const PbrMaterialParameters material) {
+PbrSurface createPbrSurface(const PbrMaterialParameters material, const uint energyCompensation) {
     const float metalness = clamp(material.baseMetalness, 0.0f, 1.0f);
     const vec3 baseColor = max(material.baseColor, vec3(0.0f)) * max(material.baseWeight, 0.0f);
     const vec3 dielectric =
@@ -39,6 +38,7 @@ PbrSurface createPbrSurface(const PbrMaterialParameters material) {
     surface.f0 = mix(dielectric, baseColor, metalness);
     const float roughness = clamp(material.specularRoughness, 1e-3f, 1.0f);
     surface.alpha = roughness * roughness;
+    surface.energyCompensation = energyCompensation;
 
     // Selecting the lobe by its approximate share of the reflected energy keeps a black dielectric from
     // spending every sample on a diffuse lobe that returns nothing.
@@ -60,7 +60,13 @@ vec3 evaluatePbrSurface(const PbrSurface surface, const vec3 wi, const vec3 wo) 
     const vec3 diffuse = (1.0f - fresnel) * surface.diffuseAlbedo / PI;
     const float distribution = ggxDistribution(halfVector, surface.alpha);
     const float geometry = ggxGeometry(wi, wo, halfVector, surface.alpha);
-    const vec3 specular = fresnel * distribution * geometry / (4.0f * wi.z * wo.z);
+    vec3 specular = fresnel * distribution * geometry / (4.0f * wi.z * wo.z);
+
+    if (surface.energyCompensation == kEnergyCompensationTurquin) {
+        specular *= turquinScale(wi.z, surface.alpha, schlickFresnelAverage(surface.f0));
+    } else if (surface.energyCompensation == kEnergyCompensationKullaConty) {
+        specular += kullaContyLobe(wi.z, wo.z, surface.alpha, schlickFresnelAverage(surface.f0));
+    }
 
     return (diffuse + specular) * wo.z;
 }

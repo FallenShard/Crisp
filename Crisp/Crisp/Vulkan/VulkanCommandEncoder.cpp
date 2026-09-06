@@ -309,6 +309,26 @@ void VulkanCommandEncoder::copyBufferToImage(
         &region);
 }
 
+void VulkanCommandEncoder::copyBufferToImage(const VulkanBuffer& src, VulkanImage& dst) const {
+    const VkBufferImageCopy region{
+        .imageSubresource =
+            {
+                .aspectMask = dst.getAspectMask(),
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = dst.getLayerCount(),
+            },
+        .imageExtent = dst.getExtent(),
+    };
+    vkCmdCopyBufferToImage(
+        m_cmdBuffer,
+        src.getHandle(),
+        dst.getHandle(),
+        dst.getLayout(region.imageSubresource.baseArrayLayer, region.imageSubresource.mipLevel),
+        1,
+        &region);
+}
+
 void VulkanCommandEncoder::copyImageToBuffer(
     const VulkanImage& src, const VkBuffer dst, const std::span<const VkBufferImageCopy> regions) const {
     CRISP_CHECK(!regions.empty());

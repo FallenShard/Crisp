@@ -46,8 +46,6 @@ struct PathTracedViewAddresses {
 
 static_assert(sizeof(PathTracedViewAddresses) == 2 * sizeof(VkDeviceAddress));
 
-// What a scene hands over for one path-traced instance. The geometry must have been created with the shader
-// device-address and acceleration-structure-input usage bits.
 struct PathTracedGeometry {
     const Geometry* geometry{nullptr};
     glm::mat4 transform{1.0f};
@@ -57,19 +55,16 @@ struct PathTracedGeometry {
     std::array<const VulkanImageView*, kPbrMapTypeCount> materialTextures{};
 };
 
-// Declares the accumulation image and the trace pass. Separate from PathTracedView because a scene has to
-// compile its graph before it owns the geometry the view is built from, so the pass is registered first and the
-// view is attached to it afterwards.
+enum class EnergyCompensation : uint32_t { // NOLINT
+    None = 0,
+    KullaConty = 1,
+    Turquin = 2,
+};
+
 void addPathTracedViewPass(rg::RenderGraph& renderGraph, std::function<void(const FrameContext&)> execute);
 
 const VulkanImageView& getPathTracedViewImage(const rg::RenderGraph& renderGraph);
 
-// A path-traced view of a scene that is otherwise rasterized: same geometry, same PbrMaterialTable, same
-// environment map. It owns its acceleration structures, its accumulation image, and the ray-tracing pipeline,
-// and renders into a render-graph pass the owning scene composites.
-//
-// The evaluator is a deliberate stand-in for the raster material -- no textures, no direct lights, environment
-// lighting by BSDF sampling only. See docs/openpbr-path-tracer.md for what replaces it.
 class PathTracedView {
 public:
     PathTracedView(
@@ -84,16 +79,11 @@ public:
     PathTracedView(PathTracedView&&) = delete;
     PathTracedView& operator=(PathTracedView&&) = delete;
 
-    // Runs one accumulation step. Call from the pass registered by addPathTracedViewPass.
     void trace(const FrameContext& frameContext);
-
-    // Re-points the heap at the graph's images. Call after every compile and resize.
     void updateDescriptorHeap(const rg::RenderGraph& renderGraph);
 
     void updateCamera(const CameraParameters& cameraParams);
 
-    // Discards the accumulated estimate. Any change to the camera, the materials or the environment must call
-    // this, or the new image is averaged into the old one.
     void resetAccumulation();
 
     void uploadFrameData(const FrameContext& frameContext);
@@ -111,6 +101,12 @@ public:
     void setSceneIndex(uint32_t sceneIndex);
 
     void setEnvironmentIntensity(float intensity);
+
+    void setEnergyCompensation(EnergyCompensation mode);
+
+    EnergyCompensation getEnergyCompensation() const {
+        return static_cast<EnergyCompensation>(m_integratorParams.energyCompensation);
+    }
 
     void setMaterialTextures(
         uint32_t materialIndex, const std::array<const VulkanImageView*, kPbrMapTypeCount>& textures);
@@ -135,20 +131,28 @@ private:
     std::unique_ptr<VulkanBuffer> m_cameraBuffer;
     std::unique_ptr<VulkanBuffer> m_integratorBuffer;
 
+    std::unique_ptr<VulkanImage> m_ggxAlbedoLut;
+
     PathTracedViewAddresses m_sceneAddresses;
 
     struct MaterialTextureBinding {
         uint32_t materialIndex;
         uint32_t heapOffset;
     };
+
     std::vector<MaterialTextureBinding> m_materialTextureBindings;
 
+    // Must match the IntegratorParams block in Shaders/pbr-path-trace.rgen.glsl and .rchit.glsl.
     struct IntegratorParameters {
         int32_t maxBounces{8};
         int32_t sampleCount{1};
         int32_t frameIdx{0};
         float environmentIntensity{1.0f};
+        uint32_t energyCompensation{static_cast<uint32_t>(EnergyCompensation::None)};
     };
+
+    static_assert(sizeof(IntegratorParameters) == 20);
+    static_assert(offsetof(IntegratorParameters, energyCompensation) == 16);
 
     IntegratorParameters m_integratorParams;
     CameraParameters m_cameraParams{};

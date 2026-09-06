@@ -7,6 +7,7 @@
 #include <imgui.h>
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Renderer/GgxAlbedoLut.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
@@ -18,24 +19,28 @@ std::span<const std::byte> structAsBytes(const T& value) {
     return std::span<const std::byte>{reinterpret_cast<const std::byte*>(&value), sizeof(value)}; // NOLINT
 }
 
-// Must match the heap array subscripts in Shaders/pbr-path-trace.rgen.glsl and .rmiss.glsl. The BVH slot is
-// reached through a (set, binding) mapping rather than a subscript, so its number is private to this file.
+// Must match the heap subscripts in Shaders/pbr-path-trace.rgen.glsl, .rmiss.glsl and .rchit.glsl. The BVH slot
+// is reached through a (set, binding) mapping instead, so its number is private here.
 constexpr uint32_t kBvhSlot = 0;
 constexpr uint32_t kImageSlot = 1;
 constexpr uint32_t kViewSlot = 2;
 constexpr uint32_t kIntegratorSlot = 3;
 constexpr uint32_t kEnvironmentMapSlot = 4;
-constexpr uint32_t kMaterialTextureFirstSlot = 5;
+constexpr uint32_t kGgxAlbedoLutSlot = 5;
+constexpr uint32_t kMaterialTextureFirstSlot = 6;
 
 constexpr uint32_t kEnvironmentSamplerSlot = 0;
 constexpr uint32_t kMaterialSamplerSlot = 1;
-constexpr uint32_t kSamplerHeapSlotCount = 2;
+constexpr uint32_t kGgxAlbedoLutSamplerSlot = 2;
+constexpr uint32_t kSamplerHeapSlotCount = 3;
 
-} // namespace
+constexpr std::array<const char*, 3> kEnergyCompensationNames{"None", "Kulla-Conty", "Turquin"};
 
 struct PathTracedPassData {
     RenderGraphResourceHandle image;
 };
+
+} // namespace
 
 PathTracedView::PathTracedView(
     Renderer& renderer,
@@ -56,6 +61,13 @@ PathTracedView::PathTracedView(
     m_samplerHeap->write(kEnvironmentSamplerSlot, createLinearClampSamplerCreateInfo());
     m_samplerHeap->write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo(MaxAnisotropy));
 
+    // The table is endpoint-mapped, so repeating would wrap the grazing corner onto the normal-incidence one.
+    m_samplerHeap->write(kGgxAlbedoLutSamplerSlot, createLinearClampSamplerCreateInfo());
+
+    m_ggxAlbedoLut = loadGgxAlbedoLut(device, m_renderer->getResourcesPath() / "Textures/GgxAlbedoLut.exr");
+    m_resourceHeap->writeSampledImage(
+        kGgxAlbedoLutSlot, m_ggxAlbedoLut->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
     std::vector<PathTracedInstance> instanceRecords;
     instanceRecords.reserve(instances.size());
     uint32_t sceneCount = 0;
@@ -69,8 +81,7 @@ PathTracedView::PathTracedView(
         const auto& geometry = *instance.geometry;
         uint32_t materialTextureOffset = std::numeric_limits<uint32_t>::max();
         if (std::ranges::all_of(instance.materialTextures, [](const VulkanImageView* view) { return view != nullptr; })) {
-            materialTextureOffset =
-                kMaterialTextureFirstSlot + static_cast<uint32_t>(idx) * kPbrMapTypeCount;
+            materialTextureOffset = kMaterialTextureFirstSlot + static_cast<uint32_t>(idx) * kPbrMapTypeCount;
             for (uint32_t textureIndex = 0; textureIndex < kPbrMapTypeCount; ++textureIndex) {
                 m_resourceHeap->writeSampledImage(
                     materialTextureOffset + textureIndex,
@@ -92,10 +103,7 @@ PathTracedView::PathTracedView(
 
         m_bottomLevelAccelStructures.push_back(
             std::make_unique<VulkanAccelerationStructure>(
-                device,
-                createAccelerationStructureGeometry(geometry, 0),
-                instance.triangleCount,
-                instance.transform));
+                device, createAccelerationStructureGeometry(geometry, 0), instance.triangleCount, instance.transform));
         m_bottomLevelAccelStructures.back()->setDebugName(device, fmt::format("Path-Traced View BLAS [{}]", idx));
         sceneBlases[instance.sceneIndex].push_back(m_bottomLevelAccelStructures.back().get());
         sceneInstanceIndices[instance.sceneIndex].push_back(static_cast<uint32_t>(idx));
@@ -113,9 +121,7 @@ PathTracedView::PathTracedView(
     }
 
     m_instanceBuffer = createStorageBuffer(
-        device,
-        instanceRecords.size() * sizeof(PathTracedInstance),
-        VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
+        device, instanceRecords.size() * sizeof(PathTracedInstance), VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
     device.setObjectName(*m_instanceBuffer, "Path-Traced View Instances");
     fillDeviceBuffer(*m_renderer, m_instanceBuffer.get(), instanceRecords);
 
@@ -231,6 +237,11 @@ void PathTracedView::setEnvironmentIntensity(const float intensity) {
     resetAccumulation();
 }
 
+void PathTracedView::setEnergyCompensation(const EnergyCompensation mode) {
+    m_integratorParams.energyCompensation = static_cast<uint32_t>(mode);
+    resetAccumulation();
+}
+
 void PathTracedView::setMaterialTextures(
     const uint32_t materialIndex, const std::array<const VulkanImageView*, kPbrMapTypeCount>& textures) {
     CRISP_CHECK(
@@ -244,9 +255,7 @@ void PathTracedView::setMaterialTextures(
         }
         for (uint32_t textureIndex = 0; textureIndex < kPbrMapTypeCount; ++textureIndex) {
             m_resourceHeap->writeSampledImage(
-                binding.heapOffset + textureIndex,
-                *textures[textureIndex],
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+                binding.heapOffset + textureIndex, *textures[textureIndex], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
         updated = true;
     }
@@ -300,12 +309,25 @@ void PathTracedView::drawGui(const bool allowEnvironmentIntensity) {
         resetAccumulation();
     }
     if (allowEnvironmentIntensity) {
-        if (ImGui::SliderFloat(
-                "Environment Intensity", &m_integratorParams.environmentIntensity, 0.0f, 4.0f, "%.2f")) {
+        if (ImGui::SliderFloat("Environment Intensity", &m_integratorParams.environmentIntensity, 0.0f, 4.0f, "%.2f")) {
             resetAccumulation();
         }
     } else {
         ImGui::LabelText("Environment Intensity", "1.00 (unit radiance)");
+    }
+
+    int compensation = static_cast<int>(m_integratorParams.energyCompensation);
+    if (ImGui::Combo(
+            "Multiscatter Compensation",
+            &compensation,
+            kEnergyCompensationNames.data(),
+            static_cast<int>(kEnergyCompensationNames.size()))) {
+        setEnergyCompensation(static_cast<EnergyCompensation>(compensation));
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+        ImGui::SetTooltip(
+            "Energy the single-scattering GGX lobe drops between microfacets. Compare under the white furnace: "
+            "uncompensated rough metal darkens, and Turquin gains its brightness at the cost of reciprocity.");
     }
 }
 

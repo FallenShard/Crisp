@@ -80,6 +80,7 @@ public:
 
     void copyBufferToImage(VkBuffer src, VulkanImage& dst, std::span<const VkBufferImageCopy> regions) const;
     void copyBufferToImage(const VulkanBuffer& src, VulkanImage& dst, const VkBufferImageCopy& region) const;
+    void copyBufferToImage(const VulkanBuffer& src, VulkanImage& dst) const;
     void copyImageToBuffer(const VulkanImage& src, VkBuffer dst, std::span<const VkBufferImageCopy> regions) const;
     void copyImageToBuffer(const VulkanImage& src, const VulkanBuffer& dst, const VkBufferImageCopy& region) const;
     void blitImage(

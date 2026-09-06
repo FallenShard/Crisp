@@ -26,24 +26,6 @@ target_link_libraries(
     PRIVATE Crisp::VulkanTestUtils
 )
 
-# add_cpp_static_library(
-# CrispRenderPasses
-# "RenderPasses/BlurPass.hpp"
-# "RenderPasses/CubeMapRenderPass.cpp"
-# "RenderPasses/CubeMapRenderPass.hpp"
-# "RenderPasses/DepthPass.cpp"
-# "RenderPasses/DepthPass.hpp"
-# "RenderPasses/ForwardLightingPass.cpp"
-# "RenderPasses/ForwardLightingPass.hpp"
-# "RenderPasses/LightShaftPass.cpp"
-# "RenderPasses/LightShaftPass.hpp"
-# "RenderPasses/LiquidRenderPass.cpp"
-# "RenderPasses/LiquidRenderPass.hpp"
-# "RenderPasses/ShadowPass.cpp"
-# "RenderPasses/ShadowPass.hpp"
-# "RenderPasses/TexturePass.cpp"
-# "RenderPasses/TexturePass.hpp"
-# )
 add_cpp_static_library(
     CrispPassProfiler
     "PassProfiler.cpp"
@@ -61,6 +43,8 @@ add_cpp_static_library(
     "ComputePipeline.cpp"
     "ComputePipeline.hpp"
     "DrawCommand.hpp"
+    "GgxAlbedoLut.cpp"
+    "GgxAlbedoLut.hpp"
     "Material.cpp"
     "Material.hpp"
     "Renderer.cpp"

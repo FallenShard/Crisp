@@ -282,6 +282,12 @@ Resources/glTFSamples/2.0/*
 !Resources/glTFSamples/2.0/USDShaderBallForGltf/**
 *.exr
 
+# The GGX albedo table is renderer source: 16 KB, and the path-traced view fails to load without it. Must stay
+# after the *.exr line above -- the last matching pattern decides.
+!Resources/Textures/
+Resources/Textures/*
+!Resources/Textures/GgxAlbedoLut.exr
+
 # Ignore binary and intermediate folders
 Binaries/
 TestBinaries/

@@ -23,16 +23,15 @@ layout(descriptor_heap, descriptor_stride = 64, rgba32f) uniform image2D heapSto
 
 layout(descriptor_heap, descriptor_stride = 64) uniform View {
     ViewParameters params;
-}
-heapViews[];
+} heapViews[];
 
 layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
     int maxBounces;
     int sampleCount;
     int frameIdx;
     float environmentIntensity;
-}
-heapIntegrators[];
+    uint energyCompensation;
+} heapIntegrators[];
 
 #define image heapStorageImages[kImageSlot]
 #define view heapViews[kViewSlot].params
