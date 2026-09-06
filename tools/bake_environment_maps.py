@@ -117,6 +117,26 @@ def run(command: list[str]) -> None:
     subprocess.run(command, check=True)
 
 
+def prepare_cmgen_source(magick: Path, source: Path, destination: Path) -> None:
+    """Rewrite an equirect into cmgen's azimuth convention.
+
+    Crisp samples an equirect as u = atan2(x, -z) / 2pi + 0.5; cmgen uses u = atan2(x, z) / 2pi + 0.5,
+    a reflection about z = 0. Feeding cmgen I'(u) = I(0.5 - u) makes its lookup reproduce Crisp's, so
+    the baked IBL lines up with the runtime skybox. The cube-face basis cancels out of that identity,
+    which is why only the source image needs touching. See docs/environment-maps.md.
+
+    A flop plus a half-width roll is exact: both are integer pixel moves, so no resampling occurs.
+    """
+    width = subprocess.run(
+        [str(magick), "identify", "-format", "%w", str(source)],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    half_width = int(width) // 2
+    run([str(magick), str(source), "-flop", "-roll", f"+{half_width}+0", str(destination)])
+
+
 def resize_face(magick: Path, source: Path, destination: Path, size: int) -> None:
     run([str(magick), str(source), "-filter", "Lanczos", "-resize", f"{size}x{size}!", str(destination)])
 
@@ -189,6 +209,8 @@ def bake_environment(
         # writes into the user's system temporary directory.
         cmgen_root = staging_dir / "cmgen-output"
         cmgen_root.mkdir()
+        cmgen_source = staging_dir / f"{source.stem}-cmgen-input{source.suffix}"
+        prepare_cmgen_source(magick, source, cmgen_source)
         command = [
             str(cmgen),
             "--quiet",
@@ -199,11 +221,13 @@ def bake_environment(
             "--format=hdr",
             f"--ibl-ld={cmgen_root}",
             f"--ibl-irradiance={cmgen_root}",
-            str(source),
+            str(cmgen_source),
         ]
         run(command)
+        # The staging directory becomes the output directory, so the rewritten input must not survive.
+        cmgen_source.unlink()
 
-        face_dir = cmgen_root / source.stem
+        face_dir = cmgen_root / cmgen_source.stem
         for mip in range(MIP_COUNT):
             face_size = CUBE_SIZE >> mip
             faces = {face: face_dir / f"m{mip}_{face}.hdr" for face in FACE_NAMES}
@@ -236,9 +260,23 @@ def bake_environment(
             face_dir.replace(staging_dir / "cmgen-faces")
         shutil.rmtree(cmgen_root)
 
+        # Retire the old directory by renaming rather than deleting it, and only discard it once the new
+        # one is in place. An environment's source image lives inside its own output directory, so a
+        # delete-then-rename loses it outright if the rename fails -- which it does on Windows whenever
+        # anything still holds a handle on the directory being replaced.
+        retired_dir = output_dir.with_name(f"{output_dir.name}.retired-{uuid.uuid4().hex}")
+        renamed = False
         if output_dir.exists():
-            shutil.rmtree(output_dir)
-        staging_dir.replace(output_dir)
+            output_dir.replace(retired_dir)
+            renamed = True
+        try:
+            staging_dir.replace(output_dir)
+        except Exception:
+            if renamed:
+                retired_dir.replace(output_dir)
+            raise
+        if renamed:
+            shutil.rmtree(retired_dir, ignore_errors=True)
     except Exception:
         shutil.rmtree(staging_dir, ignore_errors=True)
         raise

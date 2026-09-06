@@ -12,6 +12,9 @@
         </film>
     </sensor>
     <emitter type="envmap">
+        <!-- Crisp puts u = 0.5 at -Z; Mitsuba's default envmap puts it at +Z.
+             See docs/environment-maps.md. -->
+        <transform name="to_world"><rotate y="1" angle="180"/></transform>
         <string name="filename" value="../../../Resources/Textures/EnvironmentMaps/GreenwichPark/GreenwichPark.hdr"/>
         <float name="scale" value="0.25"/>
     </emitter>

@@ -122,7 +122,7 @@ vec3 estimateEnvironmentDirect(const vec3 wiWorld, const vec2 lightSample) {
 
     float lightPdf;
     const vec3 direction =
-        sampleEnvironmentWorldDirection(scene.environmentCdf, width, height, lightSample, lightPdf);
+        sampleEnvironmentLightDirection(scene.environmentCdf, width, height, lightSample, lightPdf);
     if (lightPdf <= 0.0f) {
         return vec3(0.0f);
     }
@@ -185,7 +185,7 @@ vec3 computeRadiance(inout Sampler rng) {
                 const uint height = uint(integrator.environmentHeight);
                 const float lightPdf = width == 0u || height == 0u
                     ? 0.0f
-                    : environmentWorldDirectionPdf(scene.environmentCdf, width, height, rayDirection.xyz);
+                    : environmentDirectionPdf(scene.environmentCdf, width, height, rayDirection.xyz);
                 weight = environmentMisWeight(previousBsdfPdf, lightPdf);
             }
             L += throughput * radiance * weight;

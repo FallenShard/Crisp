@@ -32,16 +32,19 @@ uint sampleEnvironmentCdf1D(
     return index;
 }
 
+// Crisp's equirect convention: u = 0.5 looks down -Z, u increases turning right, v = 0 is the zenith, and the
+// image is loaded unflipped because v is Vulkan-native. Must stay the inverse of environmentUvToDirection, and
+// must match sampleSphericalMap in equirect-to-cube.frag.glsl. See docs/environment-maps.md.
 vec2 environmentDirectionToUv(const vec3 direction) {
     const vec3 unitDirection = normalize(direction);
     return vec2(
-        fract(atan(unitDirection.x, -unitDirection.z) * InvTwoPI + 1.0f),
+        fract(atan(unitDirection.x, -unitDirection.z) * InvTwoPI + 0.5f),
         acos(clamp(unitDirection.y, -1.0f, 1.0f)) * InvPI);
 }
 
 vec3 environmentUvToDirection(const vec2 uv) {
     const float theta = PI * uv.y;
-    const float phi = 2.0f * PI * uv.x;
+    const float phi = 2.0f * PI * (uv.x - 0.5f);
     const float sinTheta = sin(theta);
     return vec3(sinTheta * sin(phi), cos(theta), -sinTheta * cos(phi));
 }
