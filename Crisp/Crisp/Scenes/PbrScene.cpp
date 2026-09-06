@@ -516,7 +516,7 @@ void PbrScene::createMeshletTestNode() {
     constexpr std::string_view kNodeName{"meshletTest"};
 
     auto [mesh, materials, meshletData] =
-        loadTriangleMeshlets(m_renderer->getResourcesPath() / "Meshes/bunny.obj").unwrap();
+        loadTriangleMeshlets(m_renderer->getResourcesPath() / "Models/bunny.obj").unwrap();
     m_meshletData = std::move(meshletData);
 
     // The mesh shader reads positions and attributes straight out of the vertex buffers, so they need storage usage.

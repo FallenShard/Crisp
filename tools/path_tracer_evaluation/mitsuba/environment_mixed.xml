@@ -18,16 +18,16 @@
     <bsdf type="diffuse" id="white"><rgb name="reflectance" value="0.725, 0.71, 0.68"/></bsdf>
     <bsdf type="diffuse" id="right-wall"><rgb name="reflectance" value="0.161, 0.133, 0.427"/></bsdf>
     <bsdf type="diffuse" id="left-wall"><rgb name="reflectance" value="0.63, 0.065, 0.05"/></bsdf>
-    <shape type="obj"><string name="filename" value="../../../Resources/Meshes/walls.obj"/><ref id="white"/></shape>
-    <shape type="obj"><string name="filename" value="../../../Resources/Meshes/rightwall.obj"/><ref id="right-wall"/></shape>
-    <shape type="obj"><string name="filename" value="../../../Resources/Meshes/leftwall.obj"/><ref id="left-wall"/></shape>
+    <shape type="obj"><string name="filename" value="../../../Resources/Models/walls.obj"/><ref id="white"/></shape>
+    <shape type="obj"><string name="filename" value="../../../Resources/Models/rightwall.obj"/><ref id="right-wall"/></shape>
+    <shape type="obj"><string name="filename" value="../../../Resources/Models/leftwall.obj"/><ref id="left-wall"/></shape>
     <shape type="obj">
-        <string name="filename" value="../../../Resources/Meshes/light.obj"/>
+        <string name="filename" value="../../../Resources/Models/light.obj"/>
         <bsdf type="diffuse"><rgb name="reflectance" value="0.5, 0.5, 0.5"/></bsdf>
         <emitter type="area"><rgb name="radiance" value="12, 12, 12"/></emitter>
     </shape>
     <shape type="obj">
-        <string name="filename" value="../../../Resources/Meshes/sphere.obj"/>
+        <string name="filename" value="../../../Resources/Models/sphere.obj"/>
         <transform name="to_world"><matrix value="0.55 0 0 0  0 0.55 0 0.55  0 0 0.55 0  0 0 0 1"/></transform>
         <bsdf type="diffuse"><rgb name="reflectance" value="0.6, 0.6, 0.6"/></bsdf>
     </shape>

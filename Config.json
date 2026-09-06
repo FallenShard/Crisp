@@ -12,7 +12,7 @@
       "environmentMap": "NewportLoft"
     },
     "gltf-viewer"       : {},
-    "pbr"               : { "modelPath": "models/bistro/bistro.gltf", "meshletTest": false },
+    "pbr"               : { "modelPath": "Models/bistro/bistro.gltf", "meshletTest": false },
     "vulkan-ray-tracer" : { "scenePath": "../tools/path_tracer_evaluation/crisp/cornell_box.json" },
     "atmosphere"        : {},
     "ocean"             : {},

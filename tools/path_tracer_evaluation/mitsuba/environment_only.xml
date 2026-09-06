@@ -16,7 +16,7 @@
         <float name="scale" value="0.25"/>
     </emitter>
     <shape type="obj">
-        <string name="filename" value="../../../Resources/Meshes/sphere.obj"/>
+        <string name="filename" value="../../../Resources/Models/sphere.obj"/>
         <bsdf type="diffuse"><rgb name="reflectance" value="0.6, 0.6, 0.6"/></bsdf>
     </shape>
 </scene>

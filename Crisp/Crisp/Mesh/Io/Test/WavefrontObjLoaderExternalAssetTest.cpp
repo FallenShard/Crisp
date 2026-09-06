@@ -24,7 +24,7 @@ TEST_P(WavefrontObjExternalAssetTest, LoadsLargeRegressionMesh) {
     }
 
     const auto expectation = GetParam();
-    const auto mesh = loadWavefrontObj(test::kExternalAssetDir / "Meshes" / expectation.filename);
+    const auto mesh = loadWavefrontObj(test::kExternalAssetDir / "Models" / expectation.filename);
     EXPECT_EQ(mesh.positions.size(), expectation.positions);
     EXPECT_EQ(mesh.triangles.size(), expectation.triangles);
 }

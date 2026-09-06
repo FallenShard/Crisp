@@ -217,7 +217,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     AliasTable aliasTable{};
     TriangleMesh sceneMesh{};
     for (auto&& [idx, meshName] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
-        const std::filesystem::path relativePath = std::filesystem::path("Meshes") / meshName;
+        const std::filesystem::path relativePath = std::filesystem::path("Models") / meshName;
         auto mesh{loadTriangleMesh(renderer->getResourcesPath() / relativePath).unwrap()};
         mesh.transform(m_sceneDesc.transforms[idx]);
 

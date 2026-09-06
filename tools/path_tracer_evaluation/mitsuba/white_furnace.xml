@@ -13,7 +13,7 @@
     </sensor>
     <emitter type="constant"><rgb name="radiance" value="1, 1, 1"/></emitter>
     <shape type="obj">
-        <string name="filename" value="../../../Resources/Meshes/sphere.obj"/>
+        <string name="filename" value="../../../Resources/Models/sphere.obj"/>
         <bsdf type="diffuse"><rgb name="reflectance" value="1, 1, 1"/></bsdf>
     </shape>
 </scene>

@@ -41,23 +41,23 @@
         <rgb name="k" value="3.9129485033, 2.4528477015, 2.1421879552"/>
     </bsdf>
 
-    <shape type="obj"><string name="filename" value="../../../Resources/Meshes/walls.obj"/><ref id="white"/></shape>
-    <shape type="obj"><string name="filename" value="../../../Resources/Meshes/rightwall.obj"/><ref id="right-wall"/></shape>
-    <shape type="obj"><string name="filename" value="../../../Resources/Meshes/leftwall.obj"/><ref id="left-wall"/></shape>
+    <shape type="obj"><string name="filename" value="../../../Resources/Models/walls.obj"/><ref id="white"/></shape>
+    <shape type="obj"><string name="filename" value="../../../Resources/Models/rightwall.obj"/><ref id="right-wall"/></shape>
+    <shape type="obj"><string name="filename" value="../../../Resources/Models/leftwall.obj"/><ref id="left-wall"/></shape>
     <shape type="obj">
-        <string name="filename" value="../../../Resources/Meshes/light.obj"/>
+        <string name="filename" value="../../../Resources/Models/light.obj"/>
         <ref id="light-surface"/>
         <emitter type="area"><rgb name="radiance" value="15, 15, 15"/></emitter>
     </shape>
     <shape type="obj">
-        <string name="filename" value="../../../Resources/Meshes/sphere.obj"/>
+        <string name="filename" value="../../../Resources/Models/sphere.obj"/>
         <transform name="to_world">
             <matrix value="0.3263 0 0 -0.4214  0 0.3263 0 0.3321  0 0 0.3263 -0.28  0 0 0 1"/>
         </transform>
         <ref id="rough-gold"/>
     </shape>
     <shape type="obj">
-        <string name="filename" value="../../../Resources/Meshes/sphere.obj"/>
+        <string name="filename" value="../../../Resources/Models/sphere.obj"/>
         <transform name="to_world">
             <matrix value="0.3263 0 0 0.4458  0 0.3263 0 0.3321  0 0 0.3263 0.3767  0 0 0 1"/>
         </transform>

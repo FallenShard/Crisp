@@ -17,7 +17,7 @@
         <rgb name="intensity" value="0, 12.5663705811412, 0"/>
     </emitter>
     <shape type="obj">
-        <string name="filename" value="../../../Resources/Meshes/plane.obj"/>
+        <string name="filename" value="../../../Resources/Models/plane.obj"/>
         <transform name="to_world"><matrix value="10 0 0 0  0 0 -10 0  0 1 0 0  0 0 0 1"/></transform>
         <bsdf type="diffuse"><rgb name="reflectance" value="1, 1, 1"/></bsdf>
     </shape>

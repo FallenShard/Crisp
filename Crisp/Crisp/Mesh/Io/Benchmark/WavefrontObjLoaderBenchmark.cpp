@@ -12,7 +12,7 @@ void BM_LoadAjax(benchmark::State& state) {
     }
 
     for (auto _ : state) {
-        auto mesh = loadWavefrontObj(test::kExternalAssetDir / "Meshes" / "ajax.obj");
+        auto mesh = loadWavefrontObj(test::kExternalAssetDir / "Models" / "ajax.obj");
         benchmark::DoNotOptimize(mesh.positions.data());
         benchmark::ClobberMemory();
     }

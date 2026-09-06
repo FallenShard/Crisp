@@ -13,7 +13,7 @@ Skybox::Skybox(
     const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor,
     const std::string& cubeMapFolder)
     : m_cubeGeometry(createGeometry(
-          *renderer, loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj").unwrap(), kPosVertexFormat))
+          *renderer, loadTriangleMesh(renderer->getResourcesPath() / "Models/cube.obj").unwrap(), kPosVertexFormat))
     , m_transformPack{} {
     m_transformBuffer = createUniformRingBuffer(&renderer->getDevice(), sizeof(TransformPack));
 
@@ -41,7 +41,7 @@ Skybox::Skybox(
     const VulkanImageView& cubeMapView,
     const VulkanSampler& sampler)
     : m_cubeGeometry(createGeometry(
-          *renderer, loadTriangleMesh(renderer->getResourcesPath() / "Meshes/cube.obj").unwrap(), kPosVertexFormat))
+          *renderer, loadTriangleMesh(renderer->getResourcesPath() / "Models/cube.obj").unwrap(), kPosVertexFormat))
     , m_transformPack{} {
     m_transformBuffer = createUniformRingBuffer(&renderer->getDevice(), sizeof(TransformPack));
 
