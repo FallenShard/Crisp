@@ -1,7 +1,0 @@
-{
-    "shaders": { "vert": "fullscreen-quad.vert", "frag": "brdf-lut.frag" },
-    "vertexInputBindings": [
-        { "locations": [ 0 ], "inputRate": "vertex" }
-    ],
-    "viewport": { "viewports": [ "pass" ], "scissors": [ "pass" ] }
-}

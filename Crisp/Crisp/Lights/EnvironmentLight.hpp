@@ -52,6 +52,10 @@ private:
 };
 
 std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const VulkanImage& equirectMap);
-std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer);
+// Must match LUT_SIZE in tools/bake_brdf_lut.py.
+inline constexpr uint32_t kBrdfLutExtent = 512;
+
+// Baked offline by tools/bake_brdf_lut.py.
+std::unique_ptr<VulkanImage> loadBrdfLut(Renderer* renderer);
 
 } // namespace crisp

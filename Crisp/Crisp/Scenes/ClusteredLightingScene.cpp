@@ -258,7 +258,7 @@ void ClusteredLightingScene::createCommonTextures() {
     auto& imageCache = m_resourceContext->imageCache;
     imageCache.addSampler("linearClamp", createLinearClampSampler(m_renderer->getDevice(), kAnisotropy));
     imageCache.addSampler("linearMipmap", createLinearClampSampler(m_renderer->getDevice(), kAnisotropy, kMaxLod));
-    imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
+    imageCache.addImage("brdfLut", loadBrdfLut(m_renderer));
 
     auto* depthPipeline = m_resourceContext->createPipeline(
         kDepthMaterialId, "ClusteredDepthPrepass.json", {m_renderGraph->getRasterizationPassDescriptor(kDepthPrepass)});

@@ -2,12 +2,16 @@
 
 #include <span>
 
+#include <Crisp/Core/Checks.hpp>
 #include <Crisp/Geometry/Geometry.hpp>
+#include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/Material.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanRasterizationPassDescriptor.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
+#include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
+#include <Crisp/Vulkan/VulkanStagingBuffer.hpp>
 
 namespace crisp {
 namespace {
@@ -149,37 +153,32 @@ std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const 
     return cubeMap;
 }
 
-std::unique_ptr<VulkanImage> integrateBrdfLut(Renderer* renderer) {
+std::unique_ptr<VulkanImage> loadBrdfLut(Renderer* renderer) {
     auto& device = renderer->getDevice();
-    constexpr VkExtent2D kBrdfLutExtent{512, 512};
+    const auto exr = loadExr(renderer->getResourcesPath() / "Textures/BrdfLut.exr").unwrap();
+
+    CRISP_CHECK_EQ(exr.width, kBrdfLutExtent);
+    CRISP_CHECK_EQ(exr.height, kBrdfLutExtent);
+    CRISP_CHECK_EQ(exr.channelCount, 2, "BrdfLut.exr must hold exactly the R and G channels.");
 
     auto brdfLut = std::make_unique<VulkanImage>(
         device,
         VulkanImageDescription{
-            .format = VK_FORMAT_R16G16_SFLOAT,
-            .extent = {kBrdfLutExtent.width, kBrdfLutExtent.height, 1},
-            .usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .extent = {kBrdfLutExtent, kBrdfLutExtent, 1},
+            .mipLevelCount = 1,
+            .layerCount = 1,
+            .usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
         });
-    auto view = createView(device, *brdfLut, VK_IMAGE_VIEW_TYPE_2D);
-    const VulkanRasterizationPassDescriptor rasterizationPassDescriptor{
-        .colorAttachmentFormats = {brdfLut->getFormat()},
-    };
-    auto pipeline = renderer->createPipeline("BrdfLut.json", {rasterizationPassDescriptor});
+    device.setObjectName(*brdfLut, "BRDF LUT");
 
-    renderer->getDevice().getGeneralQueue().submitAndWait(
-        [renderer, &pipeline, &view, &brdfLut](VkCommandBuffer cmdBuffer) {
-            VulkanCommandEncoder commandEncoder(cmdBuffer);
-            commandEncoder.transitionLayout(
-                *brdfLut, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, kNullStage >> kColorWrite);
-            beginColorRendering(commandEncoder, view->getHandle(), brdfLut->getExtent2D());
+    const auto staging = createStagingBuffer(device, exr.pixelData.data(), exr.pixelData.size() * sizeof(float));
 
-            commandEncoder.bindPipeline(*pipeline);
-            renderer->drawFullScreenQuad(commandEncoder);
-
-            commandEncoder.endRendering();
-            commandEncoder.transitionLayout(
-                *brdfLut, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kColorWrite >> kFragmentSampledRead);
-        });
+    submitAndWait(device.getGeneralQueue(), [&staging, &brdfLut](const VulkanCommandEncoder& encoder) {
+        encoder.transitionLayout(*brdfLut, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, kNullStage >> kTransferWrite);
+        encoder.copyBufferToImage(*staging, *brdfLut);
+        encoder.transitionLayout(*brdfLut, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, kTransferWrite >> kAllShaderRead);
+    });
 
     return brdfLut;
 }

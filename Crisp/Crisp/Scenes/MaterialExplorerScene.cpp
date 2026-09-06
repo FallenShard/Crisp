@@ -455,7 +455,7 @@ void MaterialExplorerScene::createRenderResources(const std::string& environment
         {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
 
     setEnvironmentMap(environmentMapName);
-    imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
+    imageCache.addImage("brdfLut", loadBrdfLut(m_renderer));
 
     m_forwardPassMaterial = std::make_unique<Material>(
         pbrPipeline, pbrPipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 1, 1);

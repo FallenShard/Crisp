@@ -246,7 +246,7 @@ void ShadowMappingScene::createRenderResources(const std::string& environmentMap
         loadImageBasedLightingData(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / environmentMapName)
             .unwrap(),
         environmentMapName);
-    imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
+    imageCache.addImage("brdfLut", loadBrdfLut(m_renderer));
 
     auto* pipeline = m_resourceContext->createPipeline(
         "shadowMappingPbr", "PbrTex.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});

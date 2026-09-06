@@ -287,6 +287,7 @@ Resources/glTFSamples/2.0/*
 !Resources/Textures/
 Resources/Textures/*
 !Resources/Textures/GgxAlbedoLut.exr
+!Resources/Textures/BrdfLut.exr
 
 # Ignore binary and intermediate folders
 Binaries/

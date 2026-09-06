@@ -2,7 +2,7 @@
 #include <Crisp/Scenes/OceanScene.hpp>
 
 #include <Crisp/Gui/ImGuiUtils.hpp>
-#include <Crisp/Lights/EnvironmentLight.hpp> // integrateBrdfLut; the cubemaps themselves are gone.
+#include <Crisp/Lights/EnvironmentLight.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Models/Atmosphere.hpp>
 #include <Crisp/Models/AtmosphereGui.hpp>
@@ -269,7 +269,7 @@ void OceanScene::setupResources() {
     // entry and destroys the old sampler, which the bindless registry is still pointing at, so this
     // one needs a key of its own.
     imageCache.addSampler("oceanLinearClamp", createLinearClampSampler(m_renderer->getDevice(), 16.0f));
-    imageCache.addImage("brdfLut", integrateBrdfLut(m_renderer));
+    imageCache.addImage("brdfLut", loadBrdfLut(m_renderer));
 
     m_transformBuffer = std::make_unique<TransformBuffer>(m_renderer, 1);
     m_transformHandle = m_transformBuffer->getNextIndex();
