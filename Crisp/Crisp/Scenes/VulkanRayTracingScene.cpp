@@ -104,19 +104,28 @@ Image createConstantEnvironmentImage(const glm::vec3 radiance) {
     return {std::move(bytes), 1, 1, 4, 4 * sizeof(float)};
 }
 
-// Must match the heap array subscripts in Shaders/path-trace.rgen.glsl. The BVH slot is reached through a
-// (set, binding) mapping rather than a subscript, so its number is private to this file.
-constexpr uint32_t kBvhSlot = 0;
-constexpr uint32_t kImageSlot = 1;
-constexpr uint32_t kViewSlot = 2;
-constexpr uint32_t kIntegratorSlot = 3;
-constexpr uint32_t kEnvironmentMapSlot = 4;
-constexpr uint32_t kMaterialTextureFirstSlot = 5;
-constexpr uint32_t kFixedHeapSlotCount = kMaterialTextureFirstSlot;
+// Must match the heap array subscripts in Shaders/path-trace.rgen.glsl. Slots 0-3 are the shared ones
+// PathTracer owns.
+constexpr uint32_t kEnvironmentMapSlot = kPathTracerFirstFreeSlot;
+constexpr uint32_t kMaterialTextureFirstSlot = kPathTracerFirstFreeSlot + 1;
 
 constexpr uint32_t kEnvironmentSamplerSlot = 0;
 constexpr uint32_t kMaterialSamplerSlot = 1;
 constexpr uint32_t kSamplerHeapSlotCount = 2;
+
+constexpr std::array<PathTracerShaderStage, 11> kShaderStages{{
+    {"path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"path-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"path-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
+    {"Brdf/path-trace-lambertian.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"Brdf/path-trace-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"Brdf/path-trace-mirror.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"Brdf/path-trace-microfacet.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"Brdf/path-trace-oren-nayar.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"Brdf/path-trace-smooth-conductor.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"Brdf/path-trace-rough-conductor.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"Brdf/path-trace-rough-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+}};
 
 } // namespace
 
@@ -167,13 +176,11 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     setCameraParameters(*m_cameraController, renderSettings);
-    m_cameraBuffer = m_resourceContext->createUniformBuffer<CameraParameters>("camera");
 
     m_integratorParams.shapeCount = static_cast<int32_t>(m_sceneDesc.meshFilenames.size());
     m_integratorParams.environmentEnabled = m_sceneDesc.environment.has_value() ? 1 : 0;
     m_integratorParams.lightCount =
         static_cast<int32_t>(m_sceneDesc.lights.size()) + m_integratorParams.environmentEnabled;
-    m_integratorBuffer = m_resourceContext->createUniformBuffer<IntegratorParameters>("integrator");
 
     m_sceneDesc.brdfs.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
 
@@ -209,8 +216,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(
             "environmentCdf", distribution.getCdf(), VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
     }
 
-    std::vector<VulkanAccelerationStructure*> blases;
-    blases.reserve(m_sceneDesc.meshFilenames.size());
+    std::vector<PathTracerInstance> instances;
+    instances.reserve(m_sceneDesc.meshFilenames.size());
     for (auto&& [idx, meshName] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
         const std::filesystem::path relativePath = std::filesystem::path("Models") / meshName;
         auto mesh{loadTriangleMesh(renderer->getResourcesPath() / relativePath).unwrap()};
@@ -233,18 +240,12 @@ VulkanRayTracingScene::VulkanRayTracingScene(
                     ->getDeviceAddress();
         }
 
-        m_bottomLevelAccelStructures.push_back(
-            std::make_unique<VulkanAccelerationStructure>(
-                m_renderer->getDevice(),
-                createAccelerationStructureGeometry(geometry, 0),
-                mesh.getTriangleCount(),
-                glm::mat4(1.0f)));
-        m_bottomLevelAccelStructures.back()->setDebugName(
-            m_renderer->getDevice(), fmt::format("Path Tracer BLAS [{}]", meshName));
-        blases.push_back(m_bottomLevelAccelStructures.back().get());
+        instances.push_back({
+            .geometry = &geometry,
+            .triangleCount = mesh.getTriangleCount(),
+            .customIndex = static_cast<uint32_t>(idx),
+        });
     }
-    m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
-    m_topLevelAccelStructure->setDebugName(m_renderer->getDevice(), "Path Tracer TLAS");
 
     m_instancePropsBuffer = m_resourceContext->createStorageBuffer(
         "instanceProps", m_sceneDesc.props, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
@@ -255,28 +256,21 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         .lights = m_lightParamsBuffer->getDeviceAddress(),
         .environmentCdf = m_environmentCdfBuffer ? m_environmentCdfBuffer->getDeviceAddress() : 0,
     };
-    CRISP_CHECK_LE(
-        sizeof(m_sceneAddresses),
-        m_renderer->getPhysicalDevice().getDescriptorHeapProperties().maxPushDataSize,
-        "Ray-tracing scene addresses exceed the descriptor-heap push-data limit.");
 
-    m_renderer->enqueueResourceUpdate([this](const VulkanCommandEncoder& encoder) {
-        for (auto& blas : m_bottomLevelAccelStructures) {
-            encoder.buildAccelerationStructure(*blas);
-        }
-        encoder.insertBarrier(kAccelerationStructureWrite >> kAccelerationStructureRead);
-        encoder.buildAccelerationStructure(*m_topLevelAccelStructure);
-    });
+    m_pathTracer = std::make_unique<PathTracer>(
+        *m_renderer,
+        PathTracerCreateInfo{
+            .debugName = "Path Tracer",
+            .shaderStages = kShaderStages,
+            .resourceHeapSlotCount = kMaterialTextureFirstSlot + static_cast<uint32_t>(m_materialImages.size()),
+            .samplerHeapSlotCount = kSamplerHeapSlotCount,
+            .integratorParamsSize = sizeof(IntegratorParameters),
+        },
+        instances);
 
-    m_resourceHeap = std::make_unique<VulkanResourceHeap>(
-        m_renderer->getDevice(),
-        kFixedHeapSlotCount + static_cast<uint32_t>(m_materialImages.size()),
-        "Path Tracer Resource Descriptor Heap");
-    m_samplerHeap = std::make_unique<VulkanSamplerHeap>(
-        m_renderer->getDevice(), kSamplerHeapSlotCount, "Path Tracer Sampler Descriptor Heap");
-    m_samplerHeap->write(kEnvironmentSamplerSlot, createLatLongEnvironmentSamplerCreateInfo());
-    m_samplerHeap->write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo());
-    m_pipeline = createPipeline();
+    auto& samplerHeap = m_pathTracer->getSamplerHeap();
+    samplerHeap.write(kEnvironmentSamplerSlot, createLatLongEnvironmentSamplerCreateInfo());
+    samplerHeap.write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo());
 
     buildRenderGraph();
 }
@@ -312,49 +306,43 @@ void VulkanRayTracingScene::resize(int width, int height) {
     m_renderGraph->resize(m_renderer->getDevice(), m_renderer->getSwapChainExtent());
     updateDescriptorHeap();
     m_renderer->setSceneImageView(&m_renderGraph->getImageView<&PathTracingPassData::image>());
-    m_integratorParams.frameIdx = 0;
+    m_pathTracer->resetAccumulation();
 }
 
 void VulkanRayTracingScene::update(const UpdateParams& updateParams) {
-    if (m_cameraController->update(updateParams.dt)) {
-        m_integratorParams.frameIdx = 0;
-    }
+    m_cameraController->update(updateParams.dt);
+    m_pathTracer->updateCamera(m_cameraController->getCameraParameters());
 }
 
 void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     CRISP_TRACE_VK_SCOPE("VulkanRayTracingScene::render", frameContext.commandEncoder);
 
-    if (m_integratorParams.frameIdx == 0) {
-        m_accumulatedSamples = 0;
-    }
-    m_integratorParams.sampleOffset = m_accumulatedSamples;
+    const int32_t accumulatedSamples = m_pathTracer->getAccumulatedSampleCount();
+    m_integratorParams.frameIdx = m_pathTracer->getFrameIndex();
+    m_integratorParams.sampleOffset = accumulatedSamples;
     m_integratorParams.sampleCount = m_samplesPerFrame;
     if (m_captureAfterSamples > 0) {
-        m_integratorParams.sampleCount = std::min(m_samplesPerFrame, m_captureAfterSamples - m_accumulatedSamples);
-        if (m_accumulatedSamples + m_integratorParams.sampleCount >= m_captureAfterSamples) {
+        m_integratorParams.sampleCount = std::min(m_samplesPerFrame, m_captureAfterSamples - accumulatedSamples);
+        if (accumulatedSamples + m_integratorParams.sampleCount >= m_captureAfterSamples) {
             // traceRays records the readback after this dispatch, so arm it before executing the pass.
             m_screenshotRequested = true;
         }
     }
 
-    frameContext.commandEncoder.insertBarrier(kRayTracingRead >> kTransferWrite);
+    m_pathTracer->uploadFrameData(frameContext, structAsBytes(m_integratorParams));
 
-    const auto& cameraParams = m_cameraController->getCameraParameters();
-    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_cameraBuffer, 0, cameraParams);
-    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_integratorBuffer, 0, m_integratorParams);
+    frameContext.commandEncoder.insertBarrier(kRayTracingRead >> kTransferWrite);
     frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_brdfParamsBuffer, 0, m_sceneDesc.brdfs);
     if (!m_sceneDesc.lights.empty()) {
         frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_lightParamsBuffer, 0, m_sceneDesc.lights);
     }
-
     frameContext.commandEncoder.insertBarrier(kTransferWrite >> kRayTracingRead);
 
     m_renderGraph->execute(frameContext);
 
-    m_accumulatedSamples += m_integratorParams.sampleCount;
-    m_integratorParams.frameIdx++;
+    m_pathTracer->advance(m_integratorParams.sampleCount);
 
-    if (m_captureAfterSamples > 0 && m_accumulatedSamples >= m_captureAfterSamples) {
+    if (m_captureAfterSamples > 0 && m_pathTracer->getAccumulatedSampleCount() >= m_captureAfterSamples) {
         m_captureAfterSamples = 0;
     }
 
@@ -371,14 +359,8 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
 
 void VulkanRayTracingScene::traceRays(const FrameContext& frameContext) {
     const auto& encoder = frameContext.commandEncoder;
-    uploadIfPending(*m_resourceHeap, encoder, *frameContext.stagingBelt, kRayTracingResourceHeapRead);
-    uploadIfPending(*m_samplerHeap, encoder, *frameContext.stagingBelt, kRayTracingSamplerHeapRead);
-    encoder.bindPipeline(*m_pipeline);
-    encoder.bindResourceHeap(*m_resourceHeap);
-    encoder.bindSamplerHeap(*m_samplerHeap);
-    encoder.pushData(structAsBytes(m_sceneAddresses));
     const auto extent = m_renderGraph->getImageExtent(m_renderGraph->getBlackboard().get<PathTracingPassData>().image);
-    encoder.traceRays(m_shaderBindingTable.bindings, {extent.width, extent.height});
+    m_pathTracer->trace(frameContext, {extent.width, extent.height}, structAsBytes(m_sceneAddresses));
 
     if (!m_screenshotRequested || m_screenshot.isPending()) {
         return;
@@ -402,13 +384,13 @@ void VulkanRayTracingScene::traceRays(const FrameContext& frameContext) {
 
 void VulkanRayTracingScene::drawGui() {
     ImGui::Begin("Integrator");
-    ImGui::LabelText("Acc. Samples", "%d", m_accumulatedSamples); // NOLINT
+    ImGui::LabelText("Acc. Samples", "%d", m_pathTracer->getAccumulatedSampleCount()); // NOLINT
     if (ImGui::InputInt("Max Bounces", &m_integratorParams.maxBounces)) {
-        m_integratorParams.frameIdx = 0;
+        m_pathTracer->resetAccumulation();
     }
     if (ImGui::InputInt("Samples per Frame", &m_samplesPerFrame)) {
         m_samplesPerFrame = std::max(1, m_samplesPerFrame);
-        m_integratorParams.frameIdx = 0;
+        m_pathTracer->resetAccumulation();
     }
 
     ImGui::Separator();
@@ -423,36 +405,36 @@ void VulkanRayTracingScene::drawGui() {
         const char* blueLabel =
             isPointLight ? "Point Power B" : (isDirectionalLight ? "Directional Irradiance B" : "Area Radiance B");
         if (ImGui::SliderFloat(redLabel, &m_sceneDesc.lights[0].emission[0], 0.0f, 50.0f)) {
-            m_integratorParams.frameIdx = 0;
+            m_pathTracer->resetAccumulation();
         }
         if (ImGui::SliderFloat(greenLabel, &m_sceneDesc.lights[0].emission[1], 0.0f, 50.0f)) {
-            m_integratorParams.frameIdx = 0;
+            m_pathTracer->resetAccumulation();
         }
         if (ImGui::SliderFloat(blueLabel, &m_sceneDesc.lights[0].emission[2], 0.0f, 50.0f)) {
-            m_integratorParams.frameIdx = 0;
+            m_pathTracer->resetAccumulation();
         }
     }
     if (m_sceneDesc.brdfs.size() > 5 && ImGui::SliderFloat("Int IOR", &m_sceneDesc.brdfs[5].intIor, 1.0f, 10.0f)) {
-        m_integratorParams.frameIdx = 0;
+        m_pathTracer->resetAccumulation();
     }
 
     ImGui::Separator();
 
     if (ImGui::RadioButton("MIS Path Tracing", m_integratorParams.samplingMode == 0)) {
         m_integratorParams.samplingMode = 0;
-        m_integratorParams.frameIdx = 0;
+        m_pathTracer->resetAccumulation();
     }
     if (ImGui::RadioButton("Pure Path Tracing", m_integratorParams.samplingMode == 1)) {
         m_integratorParams.samplingMode = 1;
-        m_integratorParams.frameIdx = 0;
+        m_pathTracer->resetAccumulation();
     }
     if (ImGui::RadioButton("Light-Sampled Direct", m_integratorParams.samplingMode == 2)) {
         m_integratorParams.samplingMode = 2;
-        m_integratorParams.frameIdx = 0;
+        m_pathTracer->resetAccumulation();
     }
     if (ImGui::RadioButton("Direct MIS", m_integratorParams.samplingMode == 3)) {
         m_integratorParams.samplingMode = 3;
-        m_integratorParams.frameIdx = 0;
+        m_pathTracer->resetAccumulation();
     }
     if (ImGui::Button("Take Screenshot")) {
         m_screenshotRequested = true;
@@ -469,52 +451,16 @@ void VulkanRayTracingScene::drawGui() {
     ImGui::End();
 }
 
-std::unique_ptr<VulkanPipeline> VulkanRayTracingScene::createPipeline() {
-    std::vector<std::pair<std::string, VkRayTracingShaderGroupTypeKHR>> shaderInfos{
-        {"path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"path-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"path-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
-        {"Brdf/path-trace-lambertian.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"Brdf/path-trace-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"Brdf/path-trace-mirror.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"Brdf/path-trace-microfacet.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"Brdf/path-trace-oren-nayar.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"Brdf/path-trace-smooth-conductor.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"Brdf/path-trace-rough-conductor.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"Brdf/path-trace-rough-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    };
-    RayTracingPipelineBuilder pipelineBuilder(m_renderer->getDevice());
-    for (auto&& [idx, info] : std::views::enumerate(shaderInfos)) {
-        pipelineBuilder.addShaderStage(m_renderer->getAssetPaths().getShaderSpvPath(info.first));
-        pipelineBuilder.addShaderGroup(static_cast<uint32_t>(idx), info.second);
-    }
-
-    const VkDescriptorSetAndBindingMappingEXT bvhMapping{
-        m_resourceHeap->makeMapping(kBvhSlot, 1, 0, VK_SPIRV_RESOURCE_TYPE_ACCELERATION_STRUCTURE_BIT_EXT)};
-    pipelineBuilder.setDescriptorHeapMappings(0, {&bvhMapping, 1});
-
-    const VkPipeline pipeline{pipelineBuilder.createDescriptorHeapHandle()};
-    m_shaderBindingTable = pipelineBuilder.createShaderBindingTable(pipeline);
-    m_renderer->getDevice().setObjectName(*m_shaderBindingTable.buffer, "Path Tracer Shader Binding Table");
-
-    auto result = std::make_unique<VulkanPipeline>(
-        m_renderer->getDevice(), pipeline, nullptr, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
-    result->setDebugName(m_renderer->getDevice(), "Path Tracer");
-    return result;
-}
-
 void VulkanRayTracingScene::updateDescriptorHeap() {
-    m_resourceHeap->writeAccelerationStructure(kBvhSlot, *m_topLevelAccelStructure);
-    m_resourceHeap->writeStorageImage(
-        kImageSlot, m_renderGraph->getImageView<&PathTracingPassData::image>(), VK_IMAGE_LAYOUT_GENERAL);
-    m_resourceHeap->writeUniformBuffer(kViewSlot, *m_cameraBuffer);
-    m_resourceHeap->writeUniformBuffer(kIntegratorSlot, *m_integratorBuffer);
+    m_pathTracer->setStorageImage(m_renderGraph->getImageView<&PathTracingPassData::image>());
+
+    auto& resourceHeap = m_pathTracer->getResourceHeap();
     if (m_environmentImage) {
-        m_resourceHeap->writeSampledImage(
+        resourceHeap.writeSampledImage(
             kEnvironmentMapSlot, m_environmentImage->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
     for (uint32_t i = 0; i < m_materialImages.size(); ++i) {
-        m_resourceHeap->writeSampledImage(
+        resourceHeap.writeSampledImage(
             kMaterialTextureFirstSlot + i, m_materialImages[i]->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 }
@@ -524,7 +470,7 @@ void VulkanRayTracingScene::setupInput() {
         switch (key) {
         case Key::F5:
             m_resourceContext->recreatePipelines();
-            m_integratorParams.frameIdx = 0;
+            m_pathTracer->resetAccumulation();
             break;
         default: {
         }

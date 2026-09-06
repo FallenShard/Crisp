@@ -14,9 +14,7 @@
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
-#include <Crisp/Vulkan/RayTracingPipelineBuilder.hpp>
-#include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
-#include <Crisp/Vulkan/VulkanDescriptorHeap.hpp>
+#include <Crisp/Scenes/PathTracer.hpp>
 
 namespace crisp {
 
@@ -121,24 +119,12 @@ public:
         uint32_t materialIndex, const std::array<const VulkanImageView*, kPbrMapTypeCount>& textures);
 
 private:
-    std::unique_ptr<VulkanPipeline> createPipeline();
-
     Renderer* m_renderer;
-
-    std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_bottomLevelAccelStructures;
-    std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_topLevelAccelStructures;
-    uint32_t m_sceneIndex{0};
+    std::unique_ptr<PathTracer> m_pathTracer;
 
     const VulkanImageView* m_environmentMapView{nullptr};
 
-    std::unique_ptr<VulkanResourceHeap> m_resourceHeap;
-    std::unique_ptr<VulkanSamplerHeap> m_samplerHeap;
-    std::unique_ptr<VulkanPipeline> m_pipeline;
-    ShaderBindingTable m_shaderBindingTable;
-
     std::unique_ptr<VulkanBuffer> m_instanceBuffer;
-    std::unique_ptr<VulkanBuffer> m_cameraBuffer;
-    std::unique_ptr<VulkanBuffer> m_integratorBuffer;
 
     std::unique_ptr<VulkanBuffer> m_environmentCdfBuffer;
     const VulkanImageView* m_environmentEquirectView{nullptr};
@@ -173,7 +159,6 @@ private:
     static_assert(offsetof(IntegratorParameters, environmentHeight) == 28);
 
     IntegratorParameters m_integratorParams;
-    CameraParameters m_cameraParams{};
 };
 
 } // namespace crisp

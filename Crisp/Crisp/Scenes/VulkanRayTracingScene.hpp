@@ -8,6 +8,7 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Scenes/PathTracer.hpp>
 #include <Crisp/Scenes/RayTracingSceneData.hpp>
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 #include <Crisp/Scenes/Scene.hpp>
@@ -28,7 +29,6 @@ public:
     void drawGui() override;
 
 private:
-    std::unique_ptr<VulkanPipeline> createPipeline();
     void buildRenderGraph();
     void updateDescriptorHeap();
     void traceRays(const FrameContext& frameContext);
@@ -39,8 +39,7 @@ private:
 
     std::unique_ptr<FreeCameraController> m_cameraController;
 
-    std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_bottomLevelAccelStructures;
-    std::unique_ptr<VulkanAccelerationStructure> m_topLevelAccelStructure;
+    std::unique_ptr<PathTracer> m_pathTracer;
 
     std::unique_ptr<rg::RenderGraph> m_renderGraph;
     AsyncReadback m_screenshot;
@@ -48,17 +47,11 @@ private:
     bool m_closeAfterScreenshot{false};
     int32_t m_captureAfterSamples{0};
     int32_t m_samplesPerFrame{1};
-    int32_t m_accumulatedSamples{0};
     std::filesystem::path m_screenshotFilename{"screenshot.exr"};
     glm::ivec2 m_renderResolution{1920, 1080};
 
-    std::unique_ptr<VulkanPipeline> m_pipeline;
-    std::unique_ptr<VulkanResourceHeap> m_resourceHeap;
-    std::unique_ptr<VulkanSamplerHeap> m_samplerHeap;
     std::unique_ptr<VulkanImage> m_environmentImage;
     std::vector<std::unique_ptr<VulkanImage>> m_materialImages;
-
-    ShaderBindingTable m_shaderBindingTable;
 
     struct IntegratorParameters {
         int32_t maxBounces{32};
@@ -83,8 +76,6 @@ private:
 
     IntegratorParameters m_integratorParams;
 
-    VulkanBuffer* m_cameraBuffer{};
-    VulkanBuffer* m_integratorBuffer{};
     VulkanBuffer* m_brdfParamsBuffer{};
     VulkanBuffer* m_lightParamsBuffer{};
     VulkanBuffer* m_instancePropsBuffer{};

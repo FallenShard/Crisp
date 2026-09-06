@@ -1,0 +1,120 @@
+#pragma once
+
+#include <cstddef>
+#include <memory>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include <Crisp/Camera/Camera.hpp>
+#include <Crisp/Geometry/Geometry.hpp>
+#include <Crisp/Math/Headers.hpp>
+#include <Crisp/Renderer/Renderer.hpp>
+#include <Crisp/Vulkan/RayTracingPipelineBuilder.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanAccelerationStructure.hpp>
+#include <Crisp/Vulkan/VulkanDescriptorHeap.hpp>
+
+namespace crisp {
+
+// Resource heap slots every path tracer shares. Must match the subscripts in Shaders/path-trace.rgen.glsl and
+// Shaders/pbr-path-trace.rgen.glsl.
+inline constexpr uint32_t kPathTracerBvhSlot = 0;
+inline constexpr uint32_t kPathTracerImageSlot = 1;
+inline constexpr uint32_t kPathTracerViewSlot = 2;
+inline constexpr uint32_t kPathTracerIntegratorSlot = 3;
+inline constexpr uint32_t kPathTracerFirstFreeSlot = 4;
+
+struct PathTracerInstance {
+    const Geometry* geometry{nullptr};
+    glm::mat4 transform{1.0f};
+    uint32_t triangleCount{0};
+    uint32_t customIndex{0};
+    uint32_t sceneIndex{0};
+    uint8_t visibilityMask{0xFF};
+};
+
+struct PathTracerShaderStage {
+    std::string_view name;
+    VkRayTracingShaderGroupTypeKHR groupType{VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR};
+};
+
+struct PathTracerCreateInfo {
+    std::string debugName;
+    std::span<const PathTracerShaderStage> shaderStages;
+    uint32_t resourceHeapSlotCount{kPathTracerFirstFreeSlot};
+    uint32_t samplerHeapSlotCount{1};
+    uint32_t integratorParamsSize{0};
+};
+
+class PathTracer {
+public:
+    PathTracer(
+        Renderer& renderer, const PathTracerCreateInfo& createInfo, std::span<const PathTracerInstance> instances);
+    ~PathTracer();
+
+    PathTracer(const PathTracer&) = delete;
+    PathTracer& operator=(const PathTracer&) = delete;
+    PathTracer(PathTracer&&) = delete;
+    PathTracer& operator=(PathTracer&&) = delete;
+
+    VulkanResourceHeap& getResourceHeap() {
+        return *m_resourceHeap;
+    }
+
+    VulkanSamplerHeap& getSamplerHeap() {
+        return *m_samplerHeap;
+    }
+
+    void setStorageImage(const VulkanImageView& imageView);
+
+    void setSceneIndex(uint32_t sceneIndex);
+
+    uint32_t getSceneCount() const {
+        return static_cast<uint32_t>(m_topLevelAccelStructures.size());
+    }
+
+    void updateCamera(const CameraParameters& cameraParams);
+
+    void resetAccumulation();
+
+    int32_t getFrameIndex() const {
+        return m_frameIndex;
+    }
+
+    int32_t getAccumulatedSampleCount() const {
+        return m_accumulatedSampleCount;
+    }
+
+    void uploadFrameData(const FrameContext& frameContext, std::span<const std::byte> integratorParams);
+
+    void trace(const FrameContext& frameContext, VkExtent2D extent, std::span<const std::byte> pushData);
+
+    // Call once per dispatch, after trace, with the number of samples that dispatch drew per pixel.
+    void advance(int32_t sampleCount);
+
+private:
+    void createAccelerationStructures(std::span<const PathTracerInstance> instances, const std::string& debugName);
+    void createPipeline(const PathTracerCreateInfo& createInfo);
+
+    Renderer* m_renderer;
+
+    std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_bottomLevelAccelStructures;
+    std::vector<std::unique_ptr<VulkanAccelerationStructure>> m_topLevelAccelStructures;
+    uint32_t m_sceneIndex{0};
+
+    std::unique_ptr<VulkanResourceHeap> m_resourceHeap;
+    std::unique_ptr<VulkanSamplerHeap> m_samplerHeap;
+    std::unique_ptr<VulkanPipeline> m_pipeline;
+    ShaderBindingTable m_shaderBindingTable;
+
+    std::unique_ptr<VulkanBuffer> m_cameraBuffer;
+    std::unique_ptr<VulkanBuffer> m_integratorBuffer;
+    uint32_t m_integratorParamsSize{0};
+
+    CameraParameters m_cameraParams{};
+    int32_t m_frameIndex{0};
+    int32_t m_accumulatedSampleCount{0};
+};
+
+} // namespace crisp

@@ -1,7 +1,6 @@
 #include <Crisp/Scenes/PathTracedView.hpp>
 
 #include <algorithm>
-#include <cstring>
 #include <ranges>
 
 #include <imgui.h>
@@ -19,16 +18,12 @@ std::span<const std::byte> structAsBytes(const T& value) {
     return std::span<const std::byte>{reinterpret_cast<const std::byte*>(&value), sizeof(value)}; // NOLINT
 }
 
-// Must match the heap subscripts in Shaders/pbr-path-trace.rgen.glsl, .rmiss.glsl and .rchit.glsl. The BVH slot
-// is reached through a (set, binding) mapping instead, so its number is private here.
-constexpr uint32_t kBvhSlot = 0;
-constexpr uint32_t kImageSlot = 1;
-constexpr uint32_t kViewSlot = 2;
-constexpr uint32_t kIntegratorSlot = 3;
-constexpr uint32_t kEnvironmentMapSlot = 4;
-constexpr uint32_t kGgxAlbedoLutSlot = 5;
-constexpr uint32_t kEnvironmentEquirectSlot = 6;
-constexpr uint32_t kMaterialTextureFirstSlot = 7;
+// Must match the heap subscripts in Shaders/pbr-path-trace.rgen.glsl, .rmiss.glsl and .rchit.glsl. Slots 0-3
+// are the shared ones PathTracer owns.
+constexpr uint32_t kEnvironmentMapSlot = kPathTracerFirstFreeSlot;
+constexpr uint32_t kGgxAlbedoLutSlot = kPathTracerFirstFreeSlot + 1;
+constexpr uint32_t kEnvironmentEquirectSlot = kPathTracerFirstFreeSlot + 2;
+constexpr uint32_t kMaterialTextureFirstSlot = kPathTracerFirstFreeSlot + 3;
 
 constexpr uint32_t kEnvironmentSamplerSlot = 0;
 constexpr uint32_t kMaterialSamplerSlot = 1;
@@ -36,6 +31,12 @@ constexpr uint32_t kGgxAlbedoLutSamplerSlot = 2;
 constexpr uint32_t kSamplerHeapSlotCount = 3;
 
 constexpr std::array<const char*, 3> kEnergyCompensationNames{"None", "Kulla-Conty", "Turquin"};
+
+constexpr std::array<PathTracerShaderStage, 3> kShaderStages{{
+    {"pbr-path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"pbr-path-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"pbr-path-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
+}};
 
 struct PathTracedPassData {
     RenderGraphResourceHandle image;
@@ -53,38 +54,55 @@ PathTracedView::PathTracedView(
     CRISP_CHECK(!instances.empty(), "A path-traced view needs at least one instance.");
 
     auto& device = m_renderer->getDevice();
+
+    std::vector<PathTracerInstance> tracerInstances;
+    tracerInstances.reserve(instances.size());
+    for (auto&& [idx, instance] : std::views::enumerate(instances)) {
+        tracerInstances.push_back({
+            .geometry = instance.geometry,
+            .transform = instance.transform,
+            .triangleCount = instance.triangleCount,
+            .customIndex = static_cast<uint32_t>(idx),
+            .sceneIndex = instance.sceneIndex,
+            .visibilityMask = instance.visibilityMask,
+        });
+    }
+
     const auto materialTextureSlotCount = static_cast<uint32_t>(instances.size()) * kPbrMapTypeCount;
-    m_resourceHeap = std::make_unique<VulkanResourceHeap>(
-        device, kMaterialTextureFirstSlot + materialTextureSlotCount, "Path-Traced View Resource Heap");
-    m_samplerHeap = std::make_unique<VulkanSamplerHeap>(device, kSamplerHeapSlotCount, "Path-Traced View Sampler Heap");
+    m_pathTracer = std::make_unique<PathTracer>(
+        renderer,
+        PathTracerCreateInfo{
+            .debugName = "Path-Traced View",
+            .shaderStages = kShaderStages,
+            .resourceHeapSlotCount = kMaterialTextureFirstSlot + materialTextureSlotCount,
+            .samplerHeapSlotCount = kSamplerHeapSlotCount,
+            .integratorParamsSize = sizeof(IntegratorParameters),
+        },
+        tracerInstances);
+
+    auto& resourceHeap = m_pathTracer->getResourceHeap();
+    auto& samplerHeap = m_pathTracer->getSamplerHeap();
 
     // The environment clamps at cube edges; PBR material textures repeat just like the raster path.
-    m_samplerHeap->write(kEnvironmentSamplerSlot, createLinearClampSamplerCreateInfo());
-    m_samplerHeap->write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo(MaxAnisotropy));
+    samplerHeap.write(kEnvironmentSamplerSlot, createLinearClampSamplerCreateInfo());
+    samplerHeap.write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo(MaxAnisotropy));
 
     // The table is endpoint-mapped, so repeating would wrap the grazing corner onto the normal-incidence one.
-    m_samplerHeap->write(kGgxAlbedoLutSamplerSlot, createLinearClampSamplerCreateInfo());
+    samplerHeap.write(kGgxAlbedoLutSamplerSlot, createLinearClampSamplerCreateInfo());
 
     m_ggxAlbedoLut = loadGgxAlbedoLut(device, m_renderer->getResourcesPath() / "Textures/GgxAlbedoLut.exr");
-    m_resourceHeap->writeSampledImage(
+    resourceHeap.writeSampledImage(
         kGgxAlbedoLutSlot, m_ggxAlbedoLut->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     std::vector<PathTracedInstance> instanceRecords;
     instanceRecords.reserve(instances.size());
-    uint32_t sceneCount = 0;
-    for (const auto& instance : instances) {
-        sceneCount = std::max(sceneCount, instance.sceneIndex + 1);
-    }
-    std::vector<std::vector<VulkanAccelerationStructure*>> sceneBlases(sceneCount);
-    std::vector<std::vector<uint32_t>> sceneInstanceIndices(sceneCount);
-
     for (auto&& [idx, instance] : std::views::enumerate(instances)) {
         const auto& geometry = *instance.geometry;
         uint32_t materialTextureOffset = std::numeric_limits<uint32_t>::max();
         if (std::ranges::all_of(instance.materialTextures, [](const VulkanImageView* view) { return view != nullptr; })) {
             materialTextureOffset = kMaterialTextureFirstSlot + static_cast<uint32_t>(idx) * kPbrMapTypeCount;
             for (uint32_t textureIndex = 0; textureIndex < kPbrMapTypeCount; ++textureIndex) {
-                m_resourceHeap->writeSampledImage(
+                resourceHeap.writeSampledImage(
                     materialTextureOffset + textureIndex,
                     *instance.materialTextures[textureIndex],
                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -101,25 +119,6 @@ PathTracedView::PathTracedView(
             .materialIndex = instance.materialIndex,
             .materialTextureOffset = materialTextureOffset,
         });
-
-        m_bottomLevelAccelStructures.push_back(
-            std::make_unique<VulkanAccelerationStructure>(
-                device, createAccelerationStructureGeometry(geometry, 0), instance.triangleCount, instance.transform));
-        m_bottomLevelAccelStructures.back()->setDebugName(device, fmt::format("Path-Traced View BLAS [{}]", idx));
-        sceneBlases[instance.sceneIndex].push_back(m_bottomLevelAccelStructures.back().get());
-        sceneInstanceIndices[instance.sceneIndex].push_back(static_cast<uint32_t>(idx));
-    }
-
-    m_topLevelAccelStructures.reserve(sceneCount);
-    for (uint32_t sceneIndex = 0; sceneIndex < sceneCount; ++sceneIndex) {
-        CRISP_CHECK(!sceneBlases[sceneIndex].empty(), "Path-traced scene groups must be contiguous and non-empty.");
-        auto tlas = std::make_unique<VulkanAccelerationStructure>(device, sceneBlases[sceneIndex]);
-        for (auto&& [localIndex, globalIndex] : std::views::enumerate(sceneInstanceIndices[sceneIndex])) {
-            tlas->setInstanceCustomIndex(static_cast<uint32_t>(localIndex), globalIndex);
-            tlas->setInstanceMask(static_cast<uint32_t>(localIndex), instances[globalIndex].visibilityMask);
-        }
-        tlas->setDebugName(device, fmt::format("Path-Traced View TLAS [{}]", sceneIndex));
-        m_topLevelAccelStructures.push_back(std::move(tlas));
     }
 
     m_instanceBuffer = createStorageBuffer(
@@ -127,67 +126,13 @@ PathTracedView::PathTracedView(
     device.setObjectName(*m_instanceBuffer, "Path-Traced View Instances");
     fillDeviceBuffer(*m_renderer, m_instanceBuffer.get(), instanceRecords);
 
-    m_cameraBuffer = std::make_unique<VulkanBuffer>(
-        device,
-        sizeof(CameraParameters),
-        VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-        BufferMemoryType::GpuOnly);
-    m_integratorBuffer = std::make_unique<VulkanBuffer>(
-        device,
-        sizeof(IntegratorParameters),
-        VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_2_TRANSFER_DST_BIT,
-        BufferMemoryType::GpuOnly);
-
     m_sceneAddresses = {
         .instances = m_instanceBuffer->getDeviceAddress(),
         .materials = materialTableAddress,
     };
-    CRISP_CHECK_LE(
-        sizeof(m_sceneAddresses),
-        m_renderer->getPhysicalDevice().getDescriptorHeapProperties().maxPushDataSize,
-        "Path-traced view scene addresses exceed the descriptor-heap push-data limit.");
-
-    m_renderer->enqueueResourceUpdate([this](const VulkanCommandEncoder& encoder) {
-        for (auto& blas : m_bottomLevelAccelStructures) {
-            encoder.buildAccelerationStructure(*blas);
-        }
-        encoder.insertBarrier(kAccelerationStructureWrite >> kAccelerationStructureRead);
-        for (auto& tlas : m_topLevelAccelStructures) {
-            encoder.buildAccelerationStructure(*tlas);
-        }
-    });
-
-    m_pipeline = createPipeline();
 }
 
 PathTracedView::~PathTracedView() = default;
-
-std::unique_ptr<VulkanPipeline> PathTracedView::createPipeline() {
-    const std::array<std::pair<std::string, VkRayTracingShaderGroupTypeKHR>, 3> shaderInfos{{
-        {"pbr-path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"pbr-path-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-        {"pbr-path-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
-    }};
-
-    RayTracingPipelineBuilder pipelineBuilder(m_renderer->getDevice());
-    for (auto&& [idx, info] : std::views::enumerate(shaderInfos)) {
-        pipelineBuilder.addShaderStage(m_renderer->getAssetPaths().getShaderSpvPath(info.first));
-        pipelineBuilder.addShaderGroup(static_cast<uint32_t>(idx), info.second);
-    }
-
-    const VkDescriptorSetAndBindingMappingEXT bvhMapping{
-        m_resourceHeap->makeMapping(kBvhSlot, 1, 0, VK_SPIRV_RESOURCE_TYPE_ACCELERATION_STRUCTURE_BIT_EXT)};
-    pipelineBuilder.setDescriptorHeapMappings(0, {&bvhMapping, 1});
-
-    const VkPipeline pipeline{pipelineBuilder.createDescriptorHeapHandle()};
-    m_shaderBindingTable = pipelineBuilder.createShaderBindingTable(pipeline);
-    m_renderer->getDevice().setObjectName(*m_shaderBindingTable.buffer, "Path-Traced View Shader Binding Table");
-
-    auto result = std::make_unique<VulkanPipeline>(
-        m_renderer->getDevice(), pipeline, nullptr, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
-    result->setDebugName(m_renderer->getDevice(), "Path-Traced View");
-    return result;
-}
 
 void addPathTracedViewPass(rg::RenderGraph& renderGraph, std::function<void(const FrameContext&)> execute) {
     renderGraph.addPass(
@@ -211,22 +156,19 @@ const VulkanImageView& getPathTracedViewImage(const rg::RenderGraph& renderGraph
 }
 
 void PathTracedView::updateDescriptorHeap(const rg::RenderGraph& renderGraph) {
-    m_resourceHeap->writeAccelerationStructure(kBvhSlot, *m_topLevelAccelStructures[m_sceneIndex]);
-    m_resourceHeap->writeStorageImage(
-        kImageSlot, renderGraph.getImageView<&PathTracedPassData::image>(), VK_IMAGE_LAYOUT_GENERAL);
-    m_resourceHeap->writeUniformBuffer(kViewSlot, *m_cameraBuffer);
-    m_resourceHeap->writeUniformBuffer(kIntegratorSlot, *m_integratorBuffer);
-    m_resourceHeap->writeSampledImage(
+    auto& resourceHeap = m_pathTracer->getResourceHeap();
+    m_pathTracer->setStorageImage(renderGraph.getImageView<&PathTracedPassData::image>());
+    resourceHeap.writeSampledImage(
         kEnvironmentMapSlot, *m_environmentMapView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     if (m_environmentEquirectView != nullptr) {
-        m_resourceHeap->writeSampledImage(
+        resourceHeap.writeSampledImage(
             kEnvironmentEquirectSlot, *m_environmentEquirectView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 }
 
 void PathTracedView::setEnvironmentMap(const VulkanImageView& environmentMapView) {
     m_environmentMapView = &environmentMapView;
-    m_resourceHeap->writeSampledImage(
+    m_pathTracer->getResourceHeap().writeSampledImage(
         kEnvironmentMapSlot, *m_environmentMapView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     resetAccumulation();
 }
@@ -238,7 +180,7 @@ void PathTracedView::setEnvironmentDistribution(
 
     auto& device = m_renderer->getDevice();
     m_environmentEquirectView = &equirectView;
-    m_resourceHeap->writeSampledImage(
+    m_pathTracer->getResourceHeap().writeSampledImage(
         kEnvironmentEquirectSlot, equirectView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     m_environmentCdfBuffer = createStorageBuffer(
@@ -253,10 +195,7 @@ void PathTracedView::setEnvironmentDistribution(
 }
 
 void PathTracedView::setSceneIndex(const uint32_t sceneIndex) {
-    CRISP_CHECK_LT(sceneIndex, m_topLevelAccelStructures.size());
-    m_sceneIndex = sceneIndex;
-    m_resourceHeap->writeAccelerationStructure(kBvhSlot, *m_topLevelAccelStructures[m_sceneIndex]);
-    resetAccumulation();
+    m_pathTracer->setSceneIndex(sceneIndex);
 }
 
 void PathTracedView::setEnvironmentIntensity(const float intensity) {
@@ -282,13 +221,14 @@ void PathTracedView::setMaterialTextures(
         std::ranges::all_of(textures, [](const VulkanImageView* view) { return view != nullptr; }),
         "Path-traced material textures must all resolve, including fallbacks.");
 
+    auto& resourceHeap = m_pathTracer->getResourceHeap();
     bool updated = false;
     for (const auto& binding : m_materialTextureBindings) {
         if (binding.materialIndex != materialIndex) {
             continue;
         }
         for (uint32_t textureIndex = 0; textureIndex < kPbrMapTypeCount; ++textureIndex) {
-            m_resourceHeap->writeSampledImage(
+            resourceHeap.writeSampledImage(
                 binding.heapOffset + textureIndex, *textures[textureIndex], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
         updated = true;
@@ -298,40 +238,25 @@ void PathTracedView::setMaterialTextures(
 }
 
 void PathTracedView::updateCamera(const CameraParameters& cameraParams) {
-    // Only an actual change may reset accumulation; comparing the parameters keeps a still camera converging.
-    if (std::memcmp(&cameraParams, &m_cameraParams, sizeof(CameraParameters)) != 0) {
-        m_cameraParams = cameraParams;
-        resetAccumulation();
-    }
+    m_pathTracer->updateCamera(cameraParams);
 }
 
 void PathTracedView::resetAccumulation() {
-    m_integratorParams.frameIdx = 0;
+    m_pathTracer->resetAccumulation();
 }
 
 int32_t PathTracedView::getAccumulatedSampleCount() const {
-    return m_integratorParams.frameIdx * m_integratorParams.sampleCount;
+    return m_pathTracer->getAccumulatedSampleCount();
 }
 
 void PathTracedView::uploadFrameData(const FrameContext& frameContext) {
-    frameContext.commandEncoder.insertBarrier(kRayTracingRead >> kTransferWrite);
-    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_cameraBuffer, 0, m_cameraParams);
-    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_integratorBuffer, 0, m_integratorParams);
-    frameContext.commandEncoder.insertBarrier(kTransferWrite >> kRayTracingRead);
+    m_integratorParams.frameIdx = m_pathTracer->getFrameIndex();
+    m_pathTracer->uploadFrameData(frameContext, structAsBytes(m_integratorParams));
 }
 
 void PathTracedView::trace(const FrameContext& frameContext) {
-    const auto& encoder = frameContext.commandEncoder;
-    uploadIfPending(*m_resourceHeap, encoder, *frameContext.stagingBelt, kRayTracingResourceHeapRead);
-    uploadIfPending(*m_samplerHeap, encoder, *frameContext.stagingBelt, kRayTracingSamplerHeapRead);
-
-    encoder.bindPipeline(*m_pipeline);
-    encoder.bindResourceHeap(*m_resourceHeap);
-    encoder.bindSamplerHeap(*m_samplerHeap);
-    encoder.pushData(structAsBytes(m_sceneAddresses));
-    encoder.traceRays(m_shaderBindingTable.bindings, m_renderer->getSwapChainExtent());
-
-    ++m_integratorParams.frameIdx;
+    m_pathTracer->trace(frameContext, m_renderer->getSwapChainExtent(), structAsBytes(m_sceneAddresses));
+    m_pathTracer->advance(m_integratorParams.sampleCount);
 }
 
 void PathTracedView::drawGui(const bool allowEnvironmentIntensity) {
