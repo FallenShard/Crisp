@@ -27,7 +27,8 @@ constexpr uint32_t kViewSlot = 2;
 constexpr uint32_t kIntegratorSlot = 3;
 constexpr uint32_t kEnvironmentMapSlot = 4;
 constexpr uint32_t kGgxAlbedoLutSlot = 5;
-constexpr uint32_t kMaterialTextureFirstSlot = 6;
+constexpr uint32_t kEnvironmentEquirectSlot = 6;
+constexpr uint32_t kMaterialTextureFirstSlot = 7;
 
 constexpr uint32_t kEnvironmentSamplerSlot = 0;
 constexpr uint32_t kMaterialSamplerSlot = 1;
@@ -217,12 +218,37 @@ void PathTracedView::updateDescriptorHeap(const rg::RenderGraph& renderGraph) {
     m_resourceHeap->writeUniformBuffer(kIntegratorSlot, *m_integratorBuffer);
     m_resourceHeap->writeSampledImage(
         kEnvironmentMapSlot, *m_environmentMapView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    if (m_environmentEquirectView != nullptr) {
+        m_resourceHeap->writeSampledImage(
+            kEnvironmentEquirectSlot, *m_environmentEquirectView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
 }
 
 void PathTracedView::setEnvironmentMap(const VulkanImageView& environmentMapView) {
     m_environmentMapView = &environmentMapView;
     m_resourceHeap->writeSampledImage(
         kEnvironmentMapSlot, *m_environmentMapView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    resetAccumulation();
+}
+
+void PathTracedView::setEnvironmentDistribution(
+    const VulkanImageView& equirectView, const std::span<const float> cdf, const uint32_t width, const uint32_t height) {
+    CRISP_CHECK(width > 0 && height > 0);
+    CRISP_CHECK_EQ(cdf.size(), static_cast<size_t>(height) + 1 + static_cast<size_t>(height) * (width + 1));
+
+    auto& device = m_renderer->getDevice();
+    m_environmentEquirectView = &equirectView;
+    m_resourceHeap->writeSampledImage(
+        kEnvironmentEquirectSlot, equirectView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    m_environmentCdfBuffer = createStorageBuffer(
+        device, cdf.size() * sizeof(float), VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
+    device.setObjectName(*m_environmentCdfBuffer, "Path-Traced View Environment CDF");
+    fillDeviceBuffer(*m_renderer, m_environmentCdfBuffer.get(), cdf.data(), cdf.size() * sizeof(float));
+
+    m_sceneAddresses.environmentCdf = m_environmentCdfBuffer->getDeviceAddress();
+    m_integratorParams.environmentWidth = static_cast<int32_t>(width);
+    m_integratorParams.environmentHeight = static_cast<int32_t>(height);
     resetAccumulation();
 }
 

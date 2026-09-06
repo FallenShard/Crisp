@@ -9,6 +9,7 @@
 #include <Crisp/Camera/TargetCameraController.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Lights/LightSystem.hpp>
+#include <Crisp/Math/Distribution2D.hpp>
 #include <Crisp/Materials/PbrMaterialUtils.hpp>
 #include <Crisp/Mesh/TriangleMesh.hpp>
 #include <Crisp/Models/Skybox.hpp>
@@ -69,6 +70,10 @@ private:
     std::unique_ptr<VulkanAccelerationStructure> m_shadowTlas;
 
     std::unique_ptr<PathTracedView> m_pathTracedView;
+    Distribution2D m_environmentDistribution;
+    std::unique_ptr<VulkanImage> m_environmentEquirect;
+    std::unique_ptr<VulkanImageView> m_environmentEquirectView;
+    glm::uvec2 m_environmentExtent{0, 0};
     std::unique_ptr<VulkanImage> m_whiteFurnaceEnvironmentMap;
     std::vector<PathTracedGeometry> m_pathTracedGeometry;
     RenderMode m_renderMode{RenderMode::Rasterized};

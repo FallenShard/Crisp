@@ -71,9 +71,15 @@ layout(buffer_reference, scalar, buffer_reference_align = 8) readonly buffer Pat
 };
 
 // Must match PathTracedViewAddresses in Scenes/PathTracedView.hpp.
+#ifndef CRISP_PATH_TRACER_ENVIRONMENT_CDF_TYPE_GLSL
+#define CRISP_PATH_TRACER_ENVIRONMENT_CDF_TYPE_GLSL
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer EnvironmentCdf { float data[]; };
+#endif
+
 layout(push_constant, scalar) uniform PathTracedViewAddresses {
     PathTracedInstances instances;
     PbrMaterials materials;
+    EnvironmentCdf environmentCdf;
 }
 scene;
 

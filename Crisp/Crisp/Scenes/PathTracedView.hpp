@@ -42,9 +42,10 @@ static_assert(offsetof(PathTracedInstance, materialTextureOffset) == 28);
 struct PathTracedViewAddresses {
     VkDeviceAddress instances{0};
     VkDeviceAddress materials{0};
+    VkDeviceAddress environmentCdf{0};
 };
 
-static_assert(sizeof(PathTracedViewAddresses) == 2 * sizeof(VkDeviceAddress));
+static_assert(sizeof(PathTracedViewAddresses) == 3 * sizeof(VkDeviceAddress));
 
 struct PathTracedGeometry {
     const Geometry* geometry{nullptr};
@@ -99,6 +100,11 @@ public:
 
     void setEnvironmentMap(const VulkanImageView& environmentMapView);
 
+    // Next-event estimation samples the equirectangular map through its own CDF, so the miss shader has to read
+    // the same image: MIS weights are only valid when both strategies see one environment function.
+    void setEnvironmentDistribution(
+        const VulkanImageView& equirectView, std::span<const float> cdf, uint32_t width, uint32_t height);
+
     void setSceneIndex(uint32_t sceneIndex);
 
     void setVisibilityMask(uint8_t mask);
@@ -134,6 +140,9 @@ private:
     std::unique_ptr<VulkanBuffer> m_cameraBuffer;
     std::unique_ptr<VulkanBuffer> m_integratorBuffer;
 
+    std::unique_ptr<VulkanBuffer> m_environmentCdfBuffer;
+    const VulkanImageView* m_environmentEquirectView{nullptr};
+
     std::unique_ptr<VulkanImage> m_ggxAlbedoLut;
 
     PathTracedViewAddresses m_sceneAddresses;
@@ -153,11 +162,15 @@ private:
         float environmentIntensity{1.0f};
         uint32_t energyCompensation{static_cast<uint32_t>(EnergyCompensation::None)};
         uint32_t visibilityMask{0xFF};
+        int32_t environmentWidth{0};
+        int32_t environmentHeight{0};
     };
 
-    static_assert(sizeof(IntegratorParameters) == 24);
+    static_assert(sizeof(IntegratorParameters) == 32);
     static_assert(offsetof(IntegratorParameters, energyCompensation) == 16);
     static_assert(offsetof(IntegratorParameters, visibilityMask) == 20);
+    static_assert(offsetof(IntegratorParameters, environmentWidth) == 24);
+    static_assert(offsetof(IntegratorParameters, environmentHeight) == 28);
 
     IntegratorParameters m_integratorParams;
     CameraParameters m_cameraParams{};

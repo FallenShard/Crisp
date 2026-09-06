@@ -146,6 +146,15 @@ target_link_libraries(CrispOceanScene
     PRIVATE Crisp::MaterialUtils
     PRIVATE Crisp::ImGuiCameraUtils
 )
+add_cpp_test(CrispMaterialExplorerSceneTest
+    "Test/MaterialExplorerSceneRenderTest.cpp")
+target_link_libraries(CrispMaterialExplorerSceneTest
+    PRIVATE Crisp::MaterialExplorerScene
+    PRIVATE Crisp::Renderer
+    PRIVATE Crisp::Application
+    PRIVATE Crisp::ImageIo)
+target_add_test_file(CrispMaterialExplorerSceneTest "Test/Data/material-explorer-path-traced.exr")
+
 add_cpp_test(CrispOceanSceneTest
     "Test/OceanSceneRenderTest.cpp")
 target_link_libraries(CrispOceanSceneTest

@@ -21,8 +21,6 @@ const uint kGgxAlbedoLutSlot = 5u;
 const uint kMaterialSamplerSlot = 1u;
 const uint kGgxAlbedoLutSamplerSlot = 2u;
 
-const uint kInvalidMaterialTextureOffset = 0xFFFFFFFFu;
-
 layout(descriptor_heap, descriptor_stride = 64) uniform texture2D heapTexture2Ds[];
 layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 
@@ -33,17 +31,15 @@ layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
     float environmentIntensity;
     uint energyCompensation;
     uint visibilityMask;
+    int environmentWidth;
+    int environmentHeight;
 } heapIntegrators[];
 
 #define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
+#define CRISP_MATERIAL_TEXTURE(heapIndex) sampler2D(heapTexture2Ds[heapIndex], heapSamplers[kMaterialSamplerSlot])
 
 #include "PathTracer/BSDFs/pbr-surface.part.glsl"
-
-vec4 sampleMaterialTexture(const uint textureOffset, const uint textureIndex, const vec2 texCoord) {
-    const uint heapIndex = nonuniformEXT(textureOffset + textureIndex);
-    // Ray tracing stages have no implicit screen-space derivatives; use the base mip until ray differentials land.
-    return textureLod(sampler2D(heapTexture2Ds[heapIndex], heapSamplers[kMaterialSamplerSlot]), texCoord, 0.0f);
-}
+#include "PathTracer/Textures/pbr-material-texture.part.glsl"
 
 void main() {
     // Not const: the record holds buffer references, which GLSL forbids qualifying.
@@ -70,6 +66,9 @@ void main() {
 
     hitInfo.position = gl_WorldRayOriginEXT + gl_HitTEXT * gl_WorldRayDirectionEXT;
     hitInfo.tHit = gl_HitTEXT;
+    hitInfo.materialIndex = instance.materialIndex;
+    hitInfo.materialTextureOffset = instance.materialTextureOffset;
+    hitInfo.texCoord = texCoord;
 
     PbrMaterialParameters material = scene.materials.data[instance.materialIndex];
 
@@ -77,18 +76,9 @@ void main() {
     const vec3 wiWorld = -gl_WorldRayDirectionEXT;
     vec3 shadingNormal = dot(worldNormal, wiWorld) < 0.0f ? -worldNormal : worldNormal;
 
+    hitInfo.emission = applyMaterialTextures(material, instance.materialTextureOffset, texCoord);
+
     if (instance.materialTextureOffset != kInvalidMaterialTextureOffset) {
-        const vec2 scaledTexCoord = texCoord * material.uvScale;
-        const vec4 baseColorSample = sampleMaterialTexture(instance.materialTextureOffset, 0u, scaledTexCoord);
-        const vec3 ormSample = sampleMaterialTexture(instance.materialTextureOffset, 2u, scaledTexCoord).rgb;
-        const vec3 emissionSample = sampleMaterialTexture(instance.materialTextureOffset, 3u, scaledTexCoord).rgb;
-
-        material.baseColor *= baseColorSample.rgb;
-        material.baseMetalness *= ormSample.b;
-        material.specularRoughness *= ormSample.g;
-        hitInfo.emission = emissionSample * max(material.emissionColor, vec3(0.0f)) *
-            max(material.emissionLuminance, 0.0f);
-
         // Match the raster path's tangent-space normal decoding. Geometry without valid UV tangents keeps its
         // interpolated normal rather than allowing NaNs into the path throughput.
         if (!any(isnan(objectTangent.xyz))) {
@@ -99,14 +89,18 @@ void main() {
                 tangent *= inversesqrt(tangentLengthSquared);
                 const vec3 bitangent = objectTangent.w * cross(shadingNormal, tangent);
                 vec3 mappedNormal =
-                    sampleMaterialTexture(instance.materialTextureOffset, 1u, scaledTexCoord).xyz * 2.0f - 1.0f;
+                    sampleMaterialTexture(
+                        instance.materialTextureOffset, kMaterialNormalTexture, texCoord * material.uvScale)
+                        .xyz *
+                        2.0f -
+                    1.0f;
                 mappedNormal.xy *= material.normalScale;
                 shadingNormal = normalize(mat3(tangent, bitangent, shadingNormal) * normalize(mappedNormal));
             }
         }
-    } else {
-        hitInfo.emission = max(material.emissionColor, vec3(0.0f)) * max(material.emissionLuminance, 0.0f);
     }
+
+    hitInfo.normal = shadingNormal;
 
     const mat3 frame = createCoordinateFrame(shadingNormal);
     const vec3 wi = transpose(frame) * wiWorld;

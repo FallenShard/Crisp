@@ -1,5 +1,8 @@
 #include <Crisp/Scenes/MaterialExplorerScene.hpp>
 
+#include <cmath>
+#include <numbers>
+
 #include <algorithm>
 #include <cstring>
 #include <limits>
@@ -16,6 +19,8 @@
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
+#include <Crisp/Math/Distribution2D.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
@@ -623,6 +628,8 @@ void MaterialExplorerScene::createPathTracedView() {
         m_pathTracedGeometry,
         m_pbrMaterialTable->getDeviceAddress(),
         m_lightSystem->getEnvironmentLight()->getCubeMapView());
+    m_pathTracedView->setEnvironmentDistribution(
+        *m_environmentEquirectView, m_environmentDistribution.getCdf(), m_environmentExtent.x, m_environmentExtent.y);
     m_pathTracedView->updateDescriptorHeap(*m_renderGraph);
 }
 
@@ -756,7 +763,37 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
     // buffers still reference, so this needs the same idle as a render-mode switch. Harmless during construction.
     m_renderer->finish();
 
-    m_lightSystem->setEnvironmentMap(loadImageBasedLightingData(environmentMapPath).unwrap(), environmentMapName);
+    auto iblData = loadImageBasedLightingData(environmentMapPath).unwrap();
+
+    // Next-event estimation needs the equirectangular map and a CDF over it. Weight each texel by luminance and
+    // sin(theta): without the sine the poles, which an equirect massively oversamples, would dominate the
+    // distribution and starve the horizon.
+    {
+        // loadImageBasedLightingData flips Y for the cube-map conversion, but environmentDirectionToUv maps
+        // +Y to v = 0. Reusing that copy puts the sky underfoot, so load the source in its own orientation.
+        const auto equirect =
+            loadImage(environmentMapPath / fmt::format("{}.hdr", environmentMapName), 4, FlipAxis::None).unwrap();
+        const uint32_t width = equirect.getWidth();
+        const uint32_t height = equirect.getHeight();
+        const uint32_t channels = equirect.getChannelCount();
+        const auto* pixels = reinterpret_cast<const float*>(equirect.getData()); // NOLINT
+
+        std::vector<float> weights(static_cast<size_t>(width) * height);
+        for (uint32_t y = 0; y < height; ++y) {
+            const float sinTheta = std::sin(std::numbers::pi_v<float> * (static_cast<float>(y) + 0.5f) / static_cast<float>(height));
+            for (uint32_t x = 0; x < width; ++x) {
+                const auto* texel = pixels + (static_cast<size_t>(y) * width + x) * channels;
+                const float luminance = 0.2126f * texel[0] + 0.7152f * texel[1] + 0.0722f * texel[2];
+                weights[static_cast<size_t>(y) * width + x] = std::max(luminance, 0.0f) * sinTheta;
+            }
+        }
+        m_environmentDistribution = Distribution2D(weights, width, height);
+        m_environmentEquirect = createVulkanImage(*m_renderer, equirect, VK_FORMAT_R32G32B32A32_SFLOAT);
+        m_environmentEquirectView = createView(m_renderer->getDevice(), *m_environmentEquirect, VK_IMAGE_VIEW_TYPE_2D);
+        m_environmentExtent = {width, height};
+    }
+
+    m_lightSystem->setEnvironmentMap(std::move(iblData), environmentMapName);
     m_skybox = std::make_unique<Skybox>(
         m_renderer,
         m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass),
@@ -773,6 +810,11 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
     }
     if (m_pathTracedView && m_renderMode == RenderMode::PathTraced) {
         m_pathTracedView->setEnvironmentMap(m_lightSystem->getEnvironmentLight()->getCubeMapView());
+        m_pathTracedView->setEnvironmentDistribution(
+            *m_environmentEquirectView,
+            m_environmentDistribution.getCdf(),
+            m_environmentExtent.x,
+            m_environmentExtent.y);
     }
 }
 
