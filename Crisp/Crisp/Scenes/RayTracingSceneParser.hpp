@@ -10,6 +10,7 @@
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Materials/Ior.hpp>
 #include <Crisp/Math/Headers.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 namespace crisp {
 enum class ReconstructionFilterType : int32_t { // NOLINT
@@ -68,16 +69,25 @@ struct MaterialTextureDescription {
     std::string filename;
 };
 
+// Mirrors InstanceProperties in Shaders/PathTracer/Core/scene.part.glsl.
 struct InstanceProperties {
     int32_t materialId{-1};
     int32_t lightId{-1};
-    uint32_t vertexOffset{0};
-    uint32_t triangleOffset{0};
-    uint32_t aliasTableOffset{0};
-    uint32_t aliasTableCount{0};
-    uint32_t triangleCount{0};
-    uint32_t pad1{};
+    VkDeviceAddress positions{0};
+    VkDeviceAddress normals{0};
+    VkDeviceAddress texCoords{0};
+    VkDeviceAddress triangles{0};
+    VkDeviceAddress aliasTable{0}; // Null unless the shape is an area light.
 };
+
+static_assert(sizeof(InstanceProperties) == 48);
+static_assert(std::is_standard_layout_v<InstanceProperties>);
+static_assert(offsetof(InstanceProperties, lightId) == 4);
+static_assert(offsetof(InstanceProperties, positions) == 8);
+static_assert(offsetof(InstanceProperties, normals) == 16);
+static_assert(offsetof(InstanceProperties, texCoords) == 24);
+static_assert(offsetof(InstanceProperties, triangles) == 32);
+static_assert(offsetof(InstanceProperties, aliasTable) == 40);
 
 inline constexpr int32_t kLightArea = 0;
 inline constexpr int32_t kLightPoint = 1;

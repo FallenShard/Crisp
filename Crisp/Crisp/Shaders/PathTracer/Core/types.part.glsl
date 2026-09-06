@@ -79,17 +79,6 @@ struct BrdfSample {
     vec2 pad1;
 };
 
-struct InstanceProperties {
-    int materialId;
-    int lightId;
-    uint vertexOffset;
-    uint indexOffset;
-    uint aliasTableOffset;
-    uint aliasTableCount;
-    uint pad0;
-    uint pad1;
-};
-
 struct BrdfParameters {
     vec3 albedo;
     int type;

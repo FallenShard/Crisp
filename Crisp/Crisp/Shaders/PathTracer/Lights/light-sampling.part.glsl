@@ -41,26 +41,25 @@ vec3 sampleEnvironmentLight(
 }
 
 float sampleSurfaceCoord(inout Sampler rng, in uint meshId, out vec3 position, out vec3 normal) {
-    const uint aliasTableOffset = scene.instances.data[meshId].aliasTableOffset;
-    const uint triCount = scene.aliasTable.data[aliasTableOffset].j;
+    InstanceProperties instance = scene.instances.data[meshId];
+    const uint triCount = instance.aliasTable.data[0].j; // Header entry, written by createAliasTable.
 
     const uint elemIdx = 1 + nextRange(rng, triCount); // Add 1 to skip the header entry.
     const float rndVal = next1D(rng);
 
     uint sampledTriIdx = elemIdx - 1;
-    if (rndVal > scene.aliasTable.data[aliasTableOffset + elemIdx].tau) {
-        sampledTriIdx = scene.aliasTable.data[aliasTableOffset + elemIdx].j;
+    if (rndVal > instance.aliasTable.data[elemIdx].tau) {
+        sampledTriIdx = instance.aliasTable.data[elemIdx].j;
     }
 
     const vec3 bary = squareToUniformTriangle(next2D(rng));
 
-    const uint triangleOffset = scene.instances.data[meshId].indexOffset;
-    const uvec3 sampledTriangle = scene.triangles.data[triangleOffset + sampledTriIdx];
+    const uvec3 sampledTriangle = instance.triangles.data[sampledTriIdx];
 
-    position = interpolatePosition(sampledTriangle, bary);
-    normal = interpolateNormal(sampledTriangle, bary);
+    position = interpolatePosition(instance.positions, sampledTriangle, bary);
+    normal = interpolateNormal(instance.normals, sampledTriangle, bary);
 
-    return scene.aliasTable.data[aliasTableOffset].tau;
+    return instance.aliasTable.data[0].tau;
 }
 
 vec3 sampleAreaLight(
@@ -141,8 +140,7 @@ float getLightPdf(in int lightId, in vec3 hitVector, in vec3 hitNormal) {
         return 0.0f;
     }
     const int meshId = scene.lights.data[lightId].meshId;
-    const uint aliasTableOffset = scene.instances.data[meshId].aliasTableOffset;
-    const float shapePdf = scene.aliasTable.data[aliasTableOffset].tau;
+    const float shapePdf = scene.instances.data[meshId].aliasTable.data[0].tau;
 
     const float squaredDist = dot(hitVector, hitVector);
     const float cosTheta = dot(hitNormal, -normalize(hitVector));

@@ -32,7 +32,9 @@ struct PathTracingPassData {
     RenderGraphResourceHandle image;
 };
 
-AliasTable createAliasTable(const TriangleMesh& mesh, bool addHeaderEntry = true) {
+// The header entry at index 0 carries the inverse total area and the triangle count, so the sampler needs
+// nothing but the table's own address.
+AliasTable createAliasTable(const TriangleMesh& mesh) {
     std::vector<float> weights;
     weights.reserve(mesh.getTriangleCount());
 
@@ -43,16 +45,8 @@ AliasTable createAliasTable(const TriangleMesh& mesh, bool addHeaderEntry = true
     }
 
     auto table = ::crisp::createAliasTable(weights);
-    if (addHeaderEntry) {
-        table.insert(table.begin(), {.tau = 1.0f / totalArea, .j = mesh.getTriangleCount()});
-    }
-
+    table.insert(table.begin(), {.tau = 1.0f / totalArea, .j = mesh.getTriangleCount()});
     return table;
-}
-
-void append(AliasTable& globalAliasTable, const TriangleMesh& mesh) {
-    const auto aliasTable = createAliasTable(mesh);
-    globalAliasTable.insert(globalAliasTable.end(), aliasTable.begin(), aliasTable.end());
 }
 
 std::unique_ptr<VulkanBuffer> createAliasTableBuffer(Renderer& renderer, const AliasTable& aliasTable) {
@@ -136,7 +130,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     m_closeAfterScreenshot = args.value("closeAfterCapture", false);
     m_screenshotFilename = args.value("captureFilename", std::string{"screenshot.exr"});
 
-    const auto scenePath = args.value("scenePath", std::string{"../tools/path_tracer_evaluation/crisp/cornell_box.json"});
+    const auto scenePath =
+        args.value("scenePath", std::string{"../tools/path_tracer_evaluation/crisp/cornell_box.json"});
     const auto json = loadJsonFromFile(renderer->getAssetPaths().resourceDir / scenePath).unwrap();
     const auto renderSettings = parseRayTracingRenderSettings(json).unwrap();
     m_renderResolution = renderSettings.resolution;
@@ -214,61 +209,50 @@ VulkanRayTracingScene::VulkanRayTracingScene(
             "environmentCdf", distribution.getCdf(), VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
     }
 
-    AliasTable aliasTable{};
-    TriangleMesh sceneMesh{};
+    std::vector<VulkanAccelerationStructure*> blases;
+    blases.reserve(m_sceneDesc.meshFilenames.size());
     for (auto&& [idx, meshName] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
         const std::filesystem::path relativePath = std::filesystem::path("Models") / meshName;
         auto mesh{loadTriangleMesh(renderer->getResourcesPath() / relativePath).unwrap()};
         mesh.transform(m_sceneDesc.transforms[idx]);
 
-        m_sceneDesc.props[idx].triangleOffset = sceneMesh.getTriangleCount();
-        m_sceneDesc.props[idx].vertexOffset = sceneMesh.getVertexCount();
-        m_sceneDesc.props[idx].triangleCount = mesh.getTriangleCount();
+        auto& geometry =
+            m_resourceContext->addGeometry(fmt::format("shape-{}", idx), createRayTracingGeometry(*m_renderer, mesh));
 
-        if (m_sceneDesc.props[idx].lightId != -1) {
-            m_sceneDesc.props[idx].aliasTableOffset = static_cast<uint32_t>(aliasTable.size());
-            m_sceneDesc.props[idx].aliasTableCount = mesh.getTriangleCount();
-            append(aliasTable, mesh);
+        auto& props = m_sceneDesc.props[idx];
+        props.positions = geometry.getVertexBuffer(0)->getDeviceAddress();
+        props.normals = geometry.getVertexBuffer(1)->getDeviceAddress();
+        props.texCoords = geometry.getVertexBuffer(2)->getDeviceAddress();
+        props.triangles = geometry.getIndexBuffer()->getDeviceAddress();
+
+        if (props.lightId != -1) {
+            props.aliasTable =
+                m_resourceContext
+                    ->addBuffer(
+                        fmt::format("aliasTable-{}", idx), createAliasTableBuffer(*m_renderer, createAliasTable(mesh)))
+                    ->getDeviceAddress();
         }
 
-        sceneMesh.append(std::move(mesh));
-    }
-
-    auto& sceneGeometry =
-        m_resourceContext->addGeometry("scene-geometry", createRayTracingGeometry(*m_renderer, sceneMesh));
-
-    std::vector<VulkanAccelerationStructure*> blases;
-    for (auto&& [idx, _] : std::views::enumerate(m_sceneDesc.meshFilenames)) {
         m_bottomLevelAccelStructures.push_back(
             std::make_unique<VulkanAccelerationStructure>(
                 m_renderer->getDevice(),
-                createAccelerationStructureGeometry(
-                    sceneGeometry, m_sceneDesc.props[idx].triangleOffset * sizeof(glm::uvec3)),
-                m_sceneDesc.props[idx].triangleCount,
+                createAccelerationStructureGeometry(geometry, 0),
+                mesh.getTriangleCount(),
                 glm::mat4(1.0f)));
         m_bottomLevelAccelStructures.back()->setDebugName(
-            m_renderer->getDevice(), fmt::format("Path Tracer BLAS [{}]", m_sceneDesc.meshFilenames[idx]));
+            m_renderer->getDevice(), fmt::format("Path Tracer BLAS [{}]", meshName));
         blases.push_back(m_bottomLevelAccelStructures.back().get());
     }
     m_topLevelAccelStructure = std::make_unique<VulkanAccelerationStructure>(m_renderer->getDevice(), blases);
     m_topLevelAccelStructure->setDebugName(m_renderer->getDevice(), "Path Tracer TLAS");
-    if (aliasTable.empty()) {
-        aliasTable.push_back({.tau = 0.0f, .j = 0});
-    }
-    m_aliasTableBuffer = m_resourceContext->addBuffer("aliasTable", createAliasTableBuffer(*m_renderer, aliasTable));
 
     m_instancePropsBuffer = m_resourceContext->createStorageBuffer(
         "instanceProps", m_sceneDesc.props, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
 
     m_sceneAddresses = {
-        .vertices = sceneGeometry.getVertexBuffer()->getDeviceAddress(),
-        .normals = sceneGeometry.getVertexBuffer(1)->getDeviceAddress(),
-        .texCoords = sceneGeometry.getVertexBuffer(2)->getDeviceAddress(),
-        .triangles = sceneGeometry.getIndexBuffer()->getDeviceAddress(),
         .instances = m_instancePropsBuffer->getDeviceAddress(),
         .materials = m_brdfParamsBuffer->getDeviceAddress(),
         .lights = m_lightParamsBuffer->getDeviceAddress(),
-        .aliasTable = m_aliasTableBuffer->getDeviceAddress(),
         .environmentCdf = m_environmentCdfBuffer ? m_environmentCdfBuffer->getDeviceAddress() : 0,
     };
     CRISP_CHECK_LE(
@@ -277,12 +261,10 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         "Ray-tracing scene addresses exceed the descriptor-heap push-data limit.");
 
     m_renderer->enqueueResourceUpdate([this](const VulkanCommandEncoder& encoder) {
-        std::vector<VulkanAccelerationStructure*> blases;
         for (auto& blas : m_bottomLevelAccelStructures) {
             encoder.buildAccelerationStructure(*blas);
-            blases.push_back(blas.get());
         }
-
+        encoder.insertBarrier(kAccelerationStructureWrite >> kAccelerationStructureRead);
         encoder.buildAccelerationStructure(*m_topLevelAccelStructure);
     });
 

@@ -88,7 +88,6 @@ private:
     VulkanBuffer* m_brdfParamsBuffer{};
     VulkanBuffer* m_lightParamsBuffer{};
     VulkanBuffer* m_instancePropsBuffer{};
-    VulkanBuffer* m_aliasTableBuffer{};
     VulkanBuffer* m_environmentCdfBuffer{};
 };
 } // namespace crisp
