@@ -17,8 +17,8 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
 }
 
 float distributionGGX(float NdotH, float alpha) {
-    const float a2 = alpha * alpha;
-    const float denom = NdotH * NdotH * (a2 - 1.0f) + 1.0f;
+    const float a2 = max(alpha * alpha, 1e-12f);
+    const float denom = a2 * NdotH * NdotH + (1.0f - NdotH) * (1.0f + NdotH);
     return a2 / (PI * denom * denom);
 }
 
