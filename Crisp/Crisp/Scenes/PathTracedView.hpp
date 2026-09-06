@@ -52,6 +52,7 @@ struct PathTracedGeometry {
     uint32_t materialIndex{0};
     uint32_t triangleCount{0};
     uint32_t sceneIndex{0};
+    uint8_t visibilityMask{0xFF};
     std::array<const VulkanImageView*, kPbrMapTypeCount> materialTextures{};
 };
 
@@ -99,6 +100,8 @@ public:
     void setEnvironmentMap(const VulkanImageView& environmentMapView);
 
     void setSceneIndex(uint32_t sceneIndex);
+
+    void setVisibilityMask(uint8_t mask);
 
     void setEnvironmentIntensity(float intensity);
 
@@ -149,10 +152,12 @@ private:
         int32_t frameIdx{0};
         float environmentIntensity{1.0f};
         uint32_t energyCompensation{static_cast<uint32_t>(EnergyCompensation::None)};
+        uint32_t visibilityMask{0xFF};
     };
 
-    static_assert(sizeof(IntegratorParameters) == 20);
+    static_assert(sizeof(IntegratorParameters) == 24);
     static_assert(offsetof(IntegratorParameters, energyCompensation) == 16);
+    static_assert(offsetof(IntegratorParameters, visibilityMask) == 20);
 
     IntegratorParameters m_integratorParams;
     CameraParameters m_cameraParams{};

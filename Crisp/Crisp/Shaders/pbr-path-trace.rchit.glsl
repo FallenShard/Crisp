@@ -32,6 +32,7 @@ layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
     int frameIdx;
     float environmentIntensity;
     uint energyCompensation;
+    uint visibilityMask;
 } heapIntegrators[];
 
 #define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])

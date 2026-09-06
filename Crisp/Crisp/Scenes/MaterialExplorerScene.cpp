@@ -26,6 +26,8 @@ constexpr uint32_t kShadowMapSize{2048};
 constexpr uint32_t kMaterialCapacity{6};
 constexpr uint32_t kMaterialExplorerSceneIndex{0};
 constexpr uint32_t kWhiteFurnaceSceneIndex{1};
+constexpr uint8_t kModelVisibilityMask{1u << 0};
+constexpr uint8_t kFloorVisibilityMask{1u << 1};
 constexpr std::string_view kShaderBallNodeId{"shader-ball"};
 constexpr std::string_view kFloorNodeId{"floor"};
 constexpr std::string_view kEditableGltfMaterialName{"material_surface"};
@@ -179,7 +181,7 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
 
     m_lightSystem = std::make_unique<LightSystem>(
         m_renderer,
-        DirectionalLight(-glm::normalize(glm::vec3(1.0f, 1.5f, 0.75f)), glm::vec3(3.0f), glm::vec3(-8), glm::vec3(8)),
+        DirectionalLight(-glm::normalize(glm::vec3(1.0f, 1.5f, 0.75f)), glm::vec3(0.0f), glm::vec3(-8), glm::vec3(8)),
         kShadowMapSize,
         kDefaultCascadeCount);
     m_lightSystem->setVisualizeCascades(false);
@@ -379,6 +381,19 @@ void MaterialExplorerScene::drawGui() {
     }
 
     ImGui::Separator();
+    auto directionalLight = m_lightSystem->getDirectionalLight();
+    glm::vec3 directionalRadiance = directionalLight.getRadiance();
+    bool directionalLightChanged = ImGui::ColorEdit3(
+        "Directional Radiance", &directionalRadiance.x, ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+    if (ImGui::Button("Disable Directional Light")) {
+        directionalRadiance = glm::vec3(0.0f);
+        directionalLightChanged = true;
+    }
+    if (directionalLightChanged) {
+        directionalLight.setRadiance(glm::max(directionalRadiance, glm::vec3(0.0f)));
+        m_lightSystem->setDirectionalLight(directionalLight);
+    }
+
     if (m_rayTracedShadowsSupported) {
         if (ImGui::Checkbox("Ray-traced shadows", &m_useRayTracedShadows)) {
             updateForwardDrawParameters();
@@ -392,6 +407,10 @@ void MaterialExplorerScene::drawGui() {
     }
     if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
         m_floorNode->isVisible = m_showFloor;
+        if (m_pathTracedView) {
+            m_pathTracedView->setVisibilityMask(
+                m_showFloor ? kModelVisibilityMask | kFloorVisibilityMask : kModelVisibilityMask);
+        }
     }
     gui::drawComboBox(
         "Environment",
@@ -693,6 +712,7 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
             .materialIndex = materialHandle.index,
             .triangleCount = mesh.getTriangleCount(),
             .sceneIndex = kMaterialExplorerSceneIndex,
+            .visibilityMask = nodeId == kFloorNodeId ? kFloorVisibilityMask : kModelVisibilityMask,
             .materialTextures = resolvePbrTextureViews(material, m_resourceContext->imageCache),
         });
     }

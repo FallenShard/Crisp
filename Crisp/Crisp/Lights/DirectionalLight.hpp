@@ -12,12 +12,14 @@ public:
         const glm::vec3& direction, const glm::vec3& radiance, const glm::vec3& extentMin, const glm::vec3& extentMax);
 
     void setDirection(glm::vec3 direction);
+    void setRadiance(const glm::vec3& radiance);
     void fitProjectionToBoundingSphere(
         const glm::vec3& center, float radius, uint32_t shadowMapSize, float casterDepthExtrusion = 0.0f);
 
     LightDescriptor createDescriptor() const;
 
     const glm::vec3& getDirection() const;
+    const glm::vec3& getRadiance() const;
     const glm::mat4& getViewMatrix() const;
     const glm::mat4& getProjectionMatrix() const;
     float getWorldUnitsPerTexel() const;

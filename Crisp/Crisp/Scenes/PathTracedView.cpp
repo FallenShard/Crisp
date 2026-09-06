@@ -115,6 +115,7 @@ PathTracedView::PathTracedView(
         auto tlas = std::make_unique<VulkanAccelerationStructure>(device, sceneBlases[sceneIndex]);
         for (auto&& [localIndex, globalIndex] : std::views::enumerate(sceneInstanceIndices[sceneIndex])) {
             tlas->setInstanceCustomIndex(static_cast<uint32_t>(localIndex), globalIndex);
+            tlas->setInstanceMask(static_cast<uint32_t>(localIndex), instances[globalIndex].visibilityMask);
         }
         tlas->setDebugName(device, fmt::format("Path-Traced View TLAS [{}]", sceneIndex));
         m_topLevelAccelStructures.push_back(std::move(tlas));
@@ -235,6 +236,13 @@ void PathTracedView::setSceneIndex(const uint32_t sceneIndex) {
 void PathTracedView::setEnvironmentIntensity(const float intensity) {
     m_integratorParams.environmentIntensity = intensity;
     resetAccumulation();
+}
+
+void PathTracedView::setVisibilityMask(const uint8_t mask) {
+    if (m_integratorParams.visibilityMask != mask) {
+        m_integratorParams.visibilityMask = mask;
+        resetAccumulation();
+    }
 }
 
 void PathTracedView::setEnergyCompensation(const EnergyCompensation mode) {

@@ -75,6 +75,14 @@ const glm::vec3& DirectionalLight::getDirection() const {
     return m_direction;
 }
 
+void DirectionalLight::setRadiance(const glm::vec3& radiance) {
+    m_radiance = radiance;
+}
+
+const glm::vec3& DirectionalLight::getRadiance() const {
+    return m_radiance;
+}
+
 const glm::mat4& DirectionalLight::getViewMatrix() const {
     return m_view;
 }

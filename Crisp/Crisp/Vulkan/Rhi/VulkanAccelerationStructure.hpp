@@ -60,6 +60,11 @@ public:
         m_instances[instanceIndex].instanceCustomIndex = customIndex;
     }
 
+    // Same preconditions as setInstanceCustomIndex; the mask is consumed when building the TLAS.
+    void setInstanceMask(uint32_t instanceIndex, uint8_t mask) {
+        m_instances[instanceIndex].mask = mask;
+    }
+
 private:
     void createAccelerationStructure(const VulkanDevice& device);
 

@@ -136,7 +136,12 @@ def create_horizontal_cross(magick: Path, faces: dict[str, Path], size: int, des
     )
     # HDR faces are linear RGB. ImageMagick's default canvas is tagged sRGB,
     # which would otherwise apply an unwanted transfer function on composite.
-    command = [str(magick), "-size", f"{4 * size}x{3 * size}", "xc:black", "-colorspace", "RGB"]
+    # Even an HDRI build clamps composite results to [0, 1] by default. Preserve
+    # the radiance above 1 from cmgen, particularly in the smooth specular mips.
+    command = [
+        str(magick), "-size", f"{4 * size}x{3 * size}", "xc:black", "-colorspace", "RGB",
+        "-define", "compose:clamp=false",
+    ]
     for face, x, y in placements:
         command.extend([str(faces[face]), "-geometry", f"+{x}+{y}", "-composite"])
     command.append(str(destination))

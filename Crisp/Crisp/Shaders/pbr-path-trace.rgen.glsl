@@ -31,6 +31,7 @@ layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
     int frameIdx;
     float environmentIntensity;
     uint energyCompensation;
+    uint visibilityMask;
 } heapIntegrators[];
 
 #define image heapStorageImages[kImageSlot]
@@ -55,7 +56,7 @@ void traceBounce(inout Sampler rng, const uint bounceDim, const vec3 origin, con
     traceRayEXT(
         sceneBvh,
         gl_RayFlagsOpaqueEXT,
-        0xFF,
+        integrator.visibilityMask,
         0,
         0,
         0,
