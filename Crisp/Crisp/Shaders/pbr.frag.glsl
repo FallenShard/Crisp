@@ -6,7 +6,7 @@
 #extension GL_EXT_ray_query : require
 
 #include "Common/math-constants.part.glsl"
-#include "BSDFs/microfacet.part.glsl"
+#include "BSDFs/Microfacet/ggx.part.glsl"
 #include "Common/bindless.part.glsl"
 #include "Common/view.part.glsl"
 

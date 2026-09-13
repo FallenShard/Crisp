@@ -3,8 +3,9 @@
 
 #include "../../Common/math-constants.part.glsl"
 #include "../../Common/openpbr-surface.part.glsl"
+#include "../../Common/warp.part.glsl"
 #include "../lambertian.part.glsl"
-#include "../microfacet.part.glsl"
+#include "../Microfacet/ggx.part.glsl"
 #include "energy-compensation.part.glsl"
 
 // The OpenPBR opaque surface, evaluated and sampled from one place. Both entry points into it -- the
@@ -63,7 +64,7 @@ vec3 evaluateOpenPbrSurface(const OpenPbrSurface surface, const vec3 wi, const v
         return vec3(0.0f);
     }
 
-    const vec3 halfVector = normalize(wi + wo);
+    const vec3 halfVector = microfacetReflectionHalfVector(wi, wo);
     const vec3 fresnel = fresnelSchlick(max(dot(wi, halfVector), 0.0f), surface.f0);
 
     const vec3 diffuse = (1.0f - fresnel) * surface.diffuseAlbedo / PI;
@@ -87,9 +88,9 @@ float computeOpenPbrSurfacePdf(const OpenPbrSurface surface, const vec3 wi, cons
         return 0.0f;
     }
 
-    const vec3 halfVector = normalize(wi + wo);
+    const vec3 halfVector = microfacetReflectionHalfVector(wi, wo);
     const float specularPdf =
-        computeMicrofacetNormalPdf(halfVector, kMicrofacetGgx, surface.alpha) /
+        computeGgxNormalPdf(halfVector, surface.alpha) /
         (4.0f * max(dot(halfVector, wo), 1e-6f));
     const float diffusePdf = wo.z / PI;
     return mix(diffusePdf, specularPdf, surface.specularProbability);

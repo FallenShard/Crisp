@@ -5,7 +5,7 @@ R = A and G = B, so a shader reconstructs the specular term as prefilter * (F0 *
 N.V and the second is perceptual roughness, both texel-centred: texel i covers parameter (i + 0.5) / N.
 
 This is the only definition of the table; loadBrdfLut() in Crisp/Lights/EnvironmentLight.cpp just uploads what
-it writes. Sampling is GGX with alpha = roughness^2, matching sampleGGXNormal in BSDFs/microfacet.part.glsl.
+it writes. Sampling is GGX with alpha = roughness^2, matching sampleGgxNormal in BSDFs/Microfacet/ggx.part.glsl.
 
 Masking is the exact Smith G1 that ggxSmithG1 evaluates, which is what the path tracer integrates -- not the
 Schlick-GGX k = roughness^2 / 2 the retired brdf-lut.frag.glsl used. That approximation cost up to 0.23 of
@@ -75,7 +75,7 @@ def geometry_schlick_ibl(n_dot_v: float, n_dot_l: np.ndarray, roughness: float) 
 
 
 def smith_g1(cos_theta: np.ndarray, alpha: float) -> np.ndarray:
-    """Exact Smith G1 for GGX, matching ggxSmithG1 in BSDFs/microfacet.part.glsl."""
+    """Exact Smith G1 for GGX, matching ggxSmithG1 in BSDFs/Microfacet/ggx.part.glsl."""
     cos_theta = np.asarray(cos_theta, dtype=np.float64)
     sin_theta = np.sqrt(np.maximum(0.0, 1.0 - cos_theta * cos_theta))
     with np.errstate(divide="ignore", invalid="ignore"):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bake Resources/Textures/GgxAlbedoLut.exr: R = E(mu, alpha), G = E_avg(alpha), second axis sqrt(alpha).
 
-The lobe MUST stay a transcription of Crisp/Crisp/Shaders/BSDFs/microfacet.part.glsl -- sampleGGXNormal and the
+The lobe MUST stay a transcription of Crisp/Crisp/Shaders/BSDFs/Microfacet/ggx.part.glsl -- sampleGgxNormal and the
 separable ggxSmithG1 product. See docs/openpbr-path-tracer.md.
 
     python tools/bake_ggx_albedo_lut.py            # bake, validate, write
@@ -46,7 +46,7 @@ def hammersley(sample_count: int) -> np.ndarray:
 
 
 def sample_ggx_normal(unit_samples: np.ndarray, alpha: float) -> np.ndarray:
-    """Mirrors sampleGGXNormal: samples the full NDF, so the estimator below cancels D against the pdf."""
+    """Mirrors sampleGgxNormal: samples the full NDF, so the estimator below cancels D against the pdf."""
     tan_theta_squared = alpha * alpha * unit_samples[:, 1] / (1.0 - unit_samples[:, 1])
     cos_theta = 1.0 / np.sqrt(1.0 + tan_theta_squared)
     phi = 2.0 * np.pi * unit_samples[:, 0]

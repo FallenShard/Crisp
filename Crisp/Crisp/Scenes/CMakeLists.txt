@@ -254,6 +254,12 @@ target_add_test_file(
 target_add_test_file(
     CrispBsdfValidationTest "../Shaders/BSDFs/microfacet.part.glsl" "BSDFs/microfacet.part.glsl")
 target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/BSDFs/Microfacet/common.part.glsl" "BSDFs/Microfacet/common.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/BSDFs/Microfacet/ggx.part.glsl" "BSDFs/Microfacet/ggx.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/BSDFs/Microfacet/beckmann.part.glsl" "BSDFs/Microfacet/beckmann.part.glsl")
+target_add_test_file(
     CrispBsdfValidationTest "../Shaders/BSDFs/fresnel.part.glsl" "BSDFs/fresnel.part.glsl")
 target_add_test_file(
     CrispBsdfValidationTest "../Shaders/BSDFs/smooth-conductor.part.glsl" "BSDFs/smooth-conductor.part.glsl")

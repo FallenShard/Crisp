@@ -12,7 +12,7 @@ vec3 evaluateRoughConductor(
         return vec3(0.0f);
     }
 
-    const vec3 microfacetNormal = normalize(wi + wo);
+    const vec3 microfacetNormal = microfacetReflectionHalfVector(wi, wo);
     const vec3 fresnel = fresnelConductor(dot(wi, microfacetNormal), eta, k);
     const float distribution = microfacetDistribution(microfacetNormal, microfacetType, alpha);
     const float geometry = microfacetGeometry(wi, wo, microfacetNormal, microfacetType, alpha);
@@ -24,9 +24,9 @@ float computeRoughConductorPdf(vec3 wi, vec3 wo, int microfacetType, float alpha
         return 0.0f;
     }
 
-    const vec3 microfacetNormal = normalize(wi + wo);
-    return computeMicrofacetNormalPdf(microfacetNormal, microfacetType, alpha) /
-        (4.0f * dot(microfacetNormal, wo));
+    const vec3 microfacetNormal = microfacetReflectionHalfVector(wi, wo);
+    return computeMicrofacetNormalPdf(microfacetNormal, microfacetType, alpha) *
+        microfacetReflectionJacobian(microfacetNormal, wo);
 }
 
 vec3 sampleRoughConductor(vec2 unitSample, vec3 wi, int microfacetType, float alpha) {

@@ -8,7 +8,7 @@ layout(location = 0) in vec3 eyePosition;
 layout(location = 1) in vec2 oceanWorldXZ;
 layout(location = 2) in float vertexSpacing;
 
-#include "BSDFs/microfacet.part.glsl"
+#include "BSDFs/Microfacet/ggx.part.glsl"
 #include "Common/ocean-atmosphere.part.glsl"
 #include "Common/ocean-draw.part.glsl"
 #include "Common/view.part.glsl"
