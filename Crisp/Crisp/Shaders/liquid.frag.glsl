@@ -2,6 +2,7 @@
 
 #extension GL_GOOGLE_include_directive : require
 
+#include "BSDFs/fresnel.part.glsl"
 #include "Common/view.part.glsl"
 
 layout(location = 0) in vec2 fsTexCoord;
@@ -39,37 +40,6 @@ vec4 projectToScreen(vec3 eyePos) {
 float distanceSquared(vec2 a, vec2 b) {
     a -= b;
     return dot(a, a);
-}
-
-float fresnelDielectric(float cosThetaI, float extIOR, float intIOR) {
-    float etaI = extIOR, etaT = intIOR;
-
-    // If indices of refraction are the same, no fresnel effects
-    if (extIOR == intIOR) {
-        return 0.0f;
-    }
-
-    // if cosThetaI is < 0, it means the ray is coming from inside the object
-    if (cosThetaI < 0.0f) {
-        float t = etaI;
-        etaI = etaT;
-        etaT = t;
-        cosThetaI = -cosThetaI;
-    }
-
-    float eta = etaI / etaT;
-    float sinThetaTSqr = eta * eta * (1.0f - cosThetaI * cosThetaI);
-
-    // Total internal reflection
-    if (sinThetaTSqr > 1.0f) {
-        return 1.0f;
-    }
-
-    float cosThetaT = sqrt(1.0f - sinThetaTSqr);
-
-    float Rs = (etaI * cosThetaI - etaT * cosThetaT) / (etaI * cosThetaI + etaT * cosThetaT);
-    float Rp = (etaT * cosThetaI - etaI * cosThetaT) / (etaT * cosThetaI + etaI * cosThetaT);
-    return (Rs * Rs + Rp * Rp) / 2.0f;
 }
 
 const float ssStride = 1.0f;
@@ -261,37 +231,6 @@ void main() {
 //		return false;
 //	else
 //		return true;
-//}
-
-// float fresnelDielectric(float cosThetaI, float extIOR, float intIOR)
-//{
-//	float etaI = extIOR, etaT = intIOR;
-
-//	// If indices of refraction are the same, no fresnel effects
-//	if (extIOR == intIOR)
-//		return 0.0f;
-
-//	// if cosThetaI is < 0, it means the ray is coming from inside the object
-//	if (cosThetaI < 0.0f)
-//	{
-//		float t = etaI;
-//		etaI = etaT;
-//		etaT = t;
-//		cosThetaI = -cosThetaI;
-//	}
-
-//	float eta = etaI / etaT;
-//	float sinThetaTSqr = eta * eta * (1.0f - cosThetaI * cosThetaI);
-
-//	// Total internal reflection
-//	if (sinThetaTSqr > 1.0f)
-//		return 1.0f;
-
-//	float cosThetaT = sqrt(1.0f - sinThetaTSqr);
-
-//	float Rs = (etaI * cosThetaI - etaT * cosThetaT) / (etaI * cosThetaI + etaT * cosThetaT);
-//	float Rp = (etaT * cosThetaI - etaI * cosThetaT) / (etaT * cosThetaI + etaI * cosThetaT);
-//	return (Rs * Rs + Rp * Rp) / 2.0f;
 //}
 
 // vec3 getReflectedColor(in vec3 viewDir, in vec3 viewNormal)

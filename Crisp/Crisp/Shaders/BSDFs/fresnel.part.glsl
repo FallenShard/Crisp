@@ -31,6 +31,11 @@ float fresnelDielectric(float cosThetaI, float extIor, float intIor, out float c
     return (rs * rs + rp * rp) * 0.5f;
 }
 
+float fresnelDielectric(float cosThetaI, float extIor, float intIor) {
+    float cosThetaT;
+    return fresnelDielectric(cosThetaI, extIor, intIor, cosThetaT);
+}
+
 vec3 fresnelConductor(const float cosThetaI, const vec3 eta, const vec3 k) {
     const float cosThetaSquared = cosThetaI * cosThetaI;
     const float sinThetaSquared = 1.0f - cosThetaSquared;

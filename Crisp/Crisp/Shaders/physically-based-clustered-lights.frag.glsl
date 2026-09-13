@@ -3,6 +3,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "Common/math-constants.part.glsl"
+#include "BSDFs/Microfacet/ggx.part.glsl"
 #include "Common/view.part.glsl"
 
 const int kClusterTileSize = 64;
@@ -67,31 +68,6 @@ layout(set = 3, binding = 0) readonly buffer LightGrid {
     uvec2 lightGrid[];
 };
 
-float distributionGgx(const float NdotH, const float roughness) {
-    const float a = roughness * roughness;
-    const float a2 = a * a;
-    const float denom = NdotH * NdotH * (a2 - 1.0f) + 1.0f;
-    return a2 / (PI * denom * denom);
-}
-
-float geometrySchlickGgx(const float NdotV, const float roughness) {
-    const float r = roughness + 1.0f;
-    const float k = r * r / 8.0f;
-    return NdotV / (NdotV * (1.0f - k) + k);
-}
-
-float geometrySmith(const float NdotV, const float NdotL, const float roughness) {
-    return geometrySchlickGgx(NdotV, roughness) * geometrySchlickGgx(NdotL, roughness);
-}
-
-vec3 fresnelSchlick(const float cosTheta, const vec3 F0) {
-    return F0 + (1.0f - F0) * pow(1.0f - cosTheta, 5.0f);
-}
-
-vec3 fresnelSchlickRoughness(const float cosTheta, const vec3 F0, const float roughness) {
-    return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);
-}
-
 vec3 computeEnvRadiance(
     const vec3 eyeN, const vec3 eyeV, const vec3 kD, const vec3 albedo, const vec3 F, const float roughness) {
     const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).xyz;
@@ -137,6 +113,7 @@ void main() {
 
     const vec3 albedo = mat.albedo.rgb;
     const float roughness = clamp(mat.roughness, 0.02f, 1.0f);
+    const float alpha = roughness * roughness;
     const float metallic = mat.metallic;
 
     const vec3 F0 = mix(vec3(0.04f), albedo, metallic);
@@ -161,7 +138,7 @@ void main() {
         }
 
         const vec3 eyeH = normalize(eyeL + eyeV);
-        const float D = distributionGgx(max(dot(eyeN, eyeH), 0.0f), roughness);
+        const float D = distributionGgx(max(dot(eyeN, eyeH), 0.0f), alpha);
         const float G = geometrySmith(NdotV, NdotL, roughness);
         const vec3 F = fresnelSchlick(max(dot(eyeH, eyeV), 0.0f), F0);
 
