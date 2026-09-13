@@ -1,7 +1,7 @@
 #ifndef CRISP_MICROFACET_GLSL
 #define CRISP_MICROFACET_GLSL
 
-#include "dielectric.part.glsl"
+#include "fresnel.part.glsl"
 #include "../Common/math-constants.part.glsl"
 #include "../Common/warp.part.glsl"
 

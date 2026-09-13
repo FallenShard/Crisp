@@ -4,12 +4,12 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "../PathTracer/Core/types.part.glsl"
-#include "../Common/math-constants.part.glsl"
-#include "../PathTracer/Core/scene.part.glsl"
-#include "../PathTracer/Textures/material-texture.part.glsl"
-#include "lambertian.part.glsl"
-#include "oren-nayar.part.glsl"
+#include "../Core/types.part.glsl"
+#include "../../Common/math-constants.part.glsl"
+#include "../Core/scene.part.glsl"
+#include "../Textures/material-texture.part.glsl"
+#include "../../BSDFs/lambertian.part.glsl"
+#include "../../BSDFs/oren-nayar.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 
@@ -22,6 +22,6 @@ void main() {
 
     brdf.lobeType = kLobeTypeDiffuse;
     brdf.f = evaluateOrenNayar(
-        evaluateMaterialReflectance(material, brdf.texCoord), material.roughness, brdf.wi, brdf.wo);
+        evaluateMaterialReflectance(material, brdf.texCoord), material.orenNayarRoughness, brdf.wi, brdf.wo);
     brdf.pdf = lambertianPdf(brdf.wi, brdf.wo);
 }

@@ -1,12 +1,12 @@
 #ifndef CRISP_BRDF_EVAL_GLSL
 #define CRISP_BRDF_EVAL_GLSL
 
-#include "../../Brdf/lambertian.part.glsl"
-#include "../../Brdf/microfacet.part.glsl"
-#include "../../Brdf/oren-nayar.part.glsl"
-#include "../../Brdf/rough-conductor.part.glsl"
-#include "../../Brdf/rough-dielectric.part.glsl"
-#include "../../Brdf/OpenPbr/surface.part.glsl"
+#include "../../BSDFs/lambertian.part.glsl"
+#include "../../BSDFs/microfacet.part.glsl"
+#include "../../BSDFs/oren-nayar.part.glsl"
+#include "../../BSDFs/rough-conductor.part.glsl"
+#include "../../BSDFs/rough-dielectric.part.glsl"
+#include "../../BSDFs/OpenPbr/surface.part.glsl"
 #include "../Textures/material-texture.part.glsl"
 
 BrdfEval evaluateLambertian(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
@@ -19,7 +19,7 @@ BrdfEval evaluateMicrofacet(BrdfParameters material, vec3 wi, vec3 wo) {
         evaluateMicrofacet(
             material.surface.baseColor,
             material.surface.specularWeight,
-            material.extIor,
+            material.exteriorIor,
             material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,
@@ -30,7 +30,8 @@ BrdfEval evaluateMicrofacet(BrdfParameters material, vec3 wi, vec3 wo) {
 
 BrdfEval evaluateOrenNayar(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
     return BrdfEval(
-        evaluateOrenNayar(evaluateMaterialReflectance(material, texCoord), material.roughness, wi, wo),
+        evaluateOrenNayar(
+            evaluateMaterialReflectance(material, texCoord), material.orenNayarRoughness, wi, wo),
         lambertianPdf(wi, wo));
 }
 
@@ -49,14 +50,14 @@ BrdfEval evaluateRoughConductor(BrdfParameters material, vec3 wi, vec3 wo) {
 BrdfEval evaluateRoughDielectric(BrdfParameters material, vec3 wi, vec3 wo) {
     return BrdfEval(
         evaluateRoughDielectric(
-            material.extIor,
+            material.exteriorIor,
             material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,
             wi,
             wo),
         roughDielectricPdf(
-            material.extIor,
+            material.exteriorIor,
             material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,

@@ -248,21 +248,19 @@ target_add_test_file(
 target_add_test_file(
     CrispBsdfValidationTest "../Shaders/Common/warp.part.glsl" "Common/warp.part.glsl")
 target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Brdf/lambertian.part.glsl" "Brdf/lambertian.part.glsl")
+    CrispBsdfValidationTest "../Shaders/BSDFs/lambertian.part.glsl" "BSDFs/lambertian.part.glsl")
 target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Brdf/oren-nayar.part.glsl" "Brdf/oren-nayar.part.glsl")
+    CrispBsdfValidationTest "../Shaders/BSDFs/oren-nayar.part.glsl" "BSDFs/oren-nayar.part.glsl")
 target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Brdf/microfacet.part.glsl" "Brdf/microfacet.part.glsl")
+    CrispBsdfValidationTest "../Shaders/BSDFs/microfacet.part.glsl" "BSDFs/microfacet.part.glsl")
 target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Brdf/dielectric.part.glsl" "Brdf/dielectric.part.glsl")
+    CrispBsdfValidationTest "../Shaders/BSDFs/fresnel.part.glsl" "BSDFs/fresnel.part.glsl")
 target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Brdf/fresnel.part.glsl" "Brdf/fresnel.part.glsl")
+    CrispBsdfValidationTest "../Shaders/BSDFs/smooth-conductor.part.glsl" "BSDFs/smooth-conductor.part.glsl")
 target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Brdf/smooth-conductor.part.glsl" "Brdf/smooth-conductor.part.glsl")
+    CrispBsdfValidationTest "../Shaders/BSDFs/rough-conductor.part.glsl" "BSDFs/rough-conductor.part.glsl")
 target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Brdf/rough-conductor.part.glsl" "Brdf/rough-conductor.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Brdf/rough-dielectric.part.glsl" "Brdf/rough-dielectric.part.glsl")
+    CrispBsdfValidationTest "../Shaders/BSDFs/rough-dielectric.part.glsl" "BSDFs/rough-dielectric.part.glsl")
 
 add_cpp_test(CrispEnvironmentSamplingTest
     "Test/EnvironmentSamplingTest.cpp")

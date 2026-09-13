@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bake Resources/Textures/GgxAlbedoLut.exr: R = E(mu, alpha), G = E_avg(alpha), second axis sqrt(alpha).
 
-The lobe MUST stay a transcription of Crisp/Crisp/Shaders/Brdf/microfacet.part.glsl -- sampleGGXNormal and the
+The lobe MUST stay a transcription of Crisp/Crisp/Shaders/BSDFs/microfacet.part.glsl -- sampleGGXNormal and the
 separable ggxSmithG1 product. See docs/openpbr-path-tracer.md.
 
     python tools/bake_ggx_albedo_lut.py            # bake, validate, write

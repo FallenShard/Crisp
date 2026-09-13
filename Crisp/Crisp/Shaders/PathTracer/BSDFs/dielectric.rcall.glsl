@@ -4,10 +4,10 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "../PathTracer/Core/types.part.glsl"
-#include "../Common/math-constants.part.glsl"
-#include "../PathTracer/Core/scene.part.glsl"
-#include "dielectric.part.glsl"
+#include "../Core/types.part.glsl"
+#include "../../Common/math-constants.part.glsl"
+#include "../Core/scene.part.glsl"
+#include "../../BSDFs/fresnel.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 
@@ -21,7 +21,7 @@ void main() {
     }
 
     const float intIOR = scene.materials.data[brdf.materialId].surface.specularIor;
-    const float extIOR = scene.materials.data[brdf.materialId].extIor;
+    const float extIOR = scene.materials.data[brdf.materialId].exteriorIor;
     const float etaRatio = intIOR / extIOR;
     const float cosThetaI = dot(brdf.normal, brdf.wi);
     const vec3 localNormal = cosThetaI < 0.0f ? -brdf.normal : brdf.normal;

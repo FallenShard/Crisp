@@ -26,15 +26,15 @@ inline constexpr size_t kBrdfTypeCount = 9;
 
 // Indexed by the type tag above; the path tracer appends these to its core stages in this order.
 inline constexpr std::array<std::string_view, kBrdfTypeCount> kBrdfCallableShaders{
-    "Brdf/path-trace-lambertian.rcall",
-    "Brdf/path-trace-dielectric.rcall",
-    "Brdf/path-trace-mirror.rcall",
-    "Brdf/path-trace-microfacet.rcall",
-    "Brdf/path-trace-oren-nayar.rcall",
-    "Brdf/path-trace-smooth-conductor.rcall",
-    "Brdf/path-trace-rough-conductor.rcall",
-    "Brdf/path-trace-rough-dielectric.rcall",
-    "Brdf/path-trace-openpbr.rcall",
+    "PathTracer/BSDFs/lambertian.rcall",
+    "PathTracer/BSDFs/dielectric.rcall",
+    "PathTracer/BSDFs/mirror.rcall",
+    "PathTracer/BSDFs/microfacet.rcall",
+    "PathTracer/BSDFs/oren-nayar.rcall",
+    "PathTracer/BSDFs/smooth-conductor.rcall",
+    "PathTracer/BSDFs/rough-conductor.rcall",
+    "PathTracer/BSDFs/rough-dielectric.rcall",
+    "PathTracer/BSDFs/openpbr.rcall",
 };
 
 // Mirrors RayTracingSceneAddresses in Shaders/PathTracer/Core/scene.part.glsl.

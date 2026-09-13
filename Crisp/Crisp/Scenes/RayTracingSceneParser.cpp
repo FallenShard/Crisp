@@ -31,7 +31,7 @@ Result<BrdfParameters> createDielectricBrdf(const float intIor, const float extI
     CRISP_TRY(validateDielectricIors(intIor, extIor));
     BrdfParameters material{};
     material.surface.specularIor = intIor;
-    material.extIor = extIor;
+    material.exteriorIor = extIor;
     material.type = kBrdfDielectric;
     return material;
 }
@@ -45,7 +45,7 @@ BrdfParameters createMirrorBrdf() {
 BrdfParameters createOrenNayarBrdf(const glm::vec3 reflectance, const float roughnessDegrees) {
     BrdfParameters material{};
     material.surface.baseColor = reflectance;
-    material.roughness = glm::radians(glm::clamp(roughnessDegrees, 0.0f, 90.0f));
+    material.orenNayarRoughness = glm::radians(glm::clamp(roughnessDegrees, 0.0f, 90.0f));
     material.type = kBrdfOrenNayar;
     return material;
 }
@@ -78,7 +78,7 @@ Result<BrdfParameters> createRoughDielectricBrdf(
     BrdfParameters material{};
     material.surface.specularIor = intIor;
     material.microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f);
-    material.extIor = extIor;
+    material.exteriorIor = extIor;
     material.type = kBrdfRoughDielectric;
     material.microfacetType = microfacetType;
     return material;

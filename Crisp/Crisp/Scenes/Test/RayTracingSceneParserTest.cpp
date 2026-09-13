@@ -131,6 +131,27 @@ TEST(RayTracingSceneParserTest, RejectsUnsupportedBsdfInsteadOfUsingFallbackMate
     EXPECT_THAT(parseSceneDescription(shapes), HasErrorWithMessageRegex("Unsupported GPU BSDF type"));
 }
 
+TEST(RayTracingSceneParserTest, ReusesCanonicalSurfaceStorageForLegacyParameters) {
+    const nlohmann::json shapes = nlohmann::json::array({
+        createShape({{"type", "lambertian"}, {"reflectance", {0.2f, 0.3f, 0.4f}}}),
+        createShape({{"type", "dielectric"}, {"interiorIor", 1.7f}, {"exteriorIor", 1.1f}}),
+        createShape({
+            {"type", "microfacet"},
+            {"diffuseReflectance", {0.1f, 0.25f, 0.5f}},
+            {"microfacetAlpha", 0.2f},
+        }),
+    });
+
+    const auto result = parseSceneDescription(shapes);
+    ASSERT_TRUE(result.hasValue());
+    ASSERT_EQ(result->brdfs.size(), 3);
+    EXPECT_EQ(result->brdfs[0].surface.baseColor, glm::vec3(0.2f, 0.3f, 0.4f));
+    EXPECT_FLOAT_EQ(result->brdfs[1].surface.specularIor, 1.7f);
+    EXPECT_FLOAT_EQ(result->brdfs[1].exteriorIor, 1.1f);
+    EXPECT_EQ(result->brdfs[2].surface.baseColor, glm::vec3(0.1f, 0.25f, 0.5f));
+    EXPECT_FLOAT_EQ(result->brdfs[2].surface.specularWeight, 0.5f);
+}
+
 TEST(RayTracingSceneParserTest, PropagatesNestedMaterialValidationErrors) {
     const auto invalidDistribution = nlohmann::json::array({createShape({
         {"type", "rough-conductor"},

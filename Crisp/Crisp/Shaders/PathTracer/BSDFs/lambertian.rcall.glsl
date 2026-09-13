@@ -4,11 +4,11 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "../PathTracer/Core/types.part.glsl"
-#include "../Common/math-constants.part.glsl"
-#include "../PathTracer/Core/scene.part.glsl"
-#include "../PathTracer/Textures/material-texture.part.glsl"
-#include "lambertian.part.glsl"
+#include "../Core/types.part.glsl"
+#include "../../Common/math-constants.part.glsl"
+#include "../Core/scene.part.glsl"
+#include "../Textures/material-texture.part.glsl"
+#include "../../BSDFs/lambertian.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 

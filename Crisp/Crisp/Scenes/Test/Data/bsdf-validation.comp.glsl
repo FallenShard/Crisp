@@ -3,13 +3,13 @@
 
 #include "Common/math-constants.part.glsl"
 #include "Common/warp.part.glsl"
-#include "Brdf/lambertian.part.glsl"
-#include "Brdf/oren-nayar.part.glsl"
-#include "Brdf/microfacet.part.glsl"
-#include "Brdf/fresnel.part.glsl"
-#include "Brdf/smooth-conductor.part.glsl"
-#include "Brdf/rough-conductor.part.glsl"
-#include "Brdf/rough-dielectric.part.glsl"
+#include "BSDFs/lambertian.part.glsl"
+#include "BSDFs/oren-nayar.part.glsl"
+#include "BSDFs/microfacet.part.glsl"
+#include "BSDFs/fresnel.part.glsl"
+#include "BSDFs/smooth-conductor.part.glsl"
+#include "BSDFs/rough-conductor.part.glsl"
+#include "BSDFs/rough-dielectric.part.glsl"
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 

@@ -5,9 +5,9 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "../PathTracer/Core/types.part.glsl"
-#include "../Common/math-constants.part.glsl"
-#include "../PathTracer/Core/scene.part.glsl"
+#include "../Core/types.part.glsl"
+#include "../../Common/math-constants.part.glsl"
+#include "../Core/scene.part.glsl"
 
 // Must match the heap slots in Scenes/VulkanRayTracingScene.cpp.
 const uint kGgxAlbedoLutSlot = 5u;
@@ -18,7 +18,7 @@ layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 
 #define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
 
-#include "OpenPbr/surface.part.glsl"
+#include "../../BSDFs/OpenPbr/surface.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 

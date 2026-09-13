@@ -4,9 +4,9 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "../PathTracer/Core/types.part.glsl"
-#include "../PathTracer/Core/scene.part.glsl"
-#include "rough-dielectric.part.glsl"
+#include "../Core/types.part.glsl"
+#include "../Core/scene.part.glsl"
+#include "../../BSDFs/rough-dielectric.part.glsl"
 
 layout(location = 0) callableDataInEXT BrdfSample brdf;
 
@@ -17,7 +17,7 @@ void main() {
         sampleRoughDielectric(
             brdf.unitSample,
             brdf.lobeSample,
-            material.extIor,
+            material.exteriorIor,
             material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,
@@ -29,14 +29,14 @@ void main() {
     }
 
     brdf.f = evaluateRoughDielectric(
-        material.extIor,
+        material.exteriorIor,
         material.surface.specularIor,
         material.microfacetType,
         material.microfacetAlpha,
         brdf.wi,
         brdf.wo);
     brdf.pdf = roughDielectricPdf(
-        material.extIor,
+        material.exteriorIor,
         material.surface.specularIor,
         material.microfacetType,
         material.microfacetAlpha,

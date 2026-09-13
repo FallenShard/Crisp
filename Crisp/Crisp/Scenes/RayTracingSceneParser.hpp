@@ -41,9 +41,9 @@ struct BrdfParameters {
     float microfacetAlpha;
 
     glm::vec3 complexIorK;
-    float roughness;
+    float orenNayarRoughness;
 
-    float extIor{getIor(IorMaterial::Vacuum)};
+    float exteriorIor{getIor(IorMaterial::Vacuum)};
     int32_t type;
     int32_t microfacetType;
     int32_t reflectanceTexture{-1};
@@ -55,7 +55,7 @@ static_assert(std::is_standard_layout_v<BrdfParameters>);
 static_assert(offsetof(BrdfParameters, surface) == 0);
 static_assert(offsetof(BrdfParameters, complexIorEta) == 64);
 static_assert(offsetof(BrdfParameters, complexIorK) == 80);
-static_assert(offsetof(BrdfParameters, extIor) == 96);
+static_assert(offsetof(BrdfParameters, exteriorIor) == 96);
 static_assert(offsetof(BrdfParameters, reflectanceTexture) == 108);
 
 struct MaterialTextureDescription {

@@ -62,10 +62,10 @@ struct HitInfo {
     vec2 pad1;
 };
 
-// This structure is used to communicate BRDF sampling across hit and callable shaders.
+// Callable payload shared by the closest-hit shader and every BRDF callable.
 struct BrdfSample {
     vec2 unitSample; // In, samples a direction or microfacet normal.
-    float lobeSample; // In, independently selects a BSDF lobe.
+    float lobeSample; // In, independently selects a BRDF lobe.
     float pad0;
 
     vec3 normal;     // In, local space.
@@ -78,12 +78,15 @@ struct BrdfSample {
     float pdf; // Out.
 
     vec3 wo;       // In for evaluation, out for sampling; local space.
-    uint lobeType; // Out, diffuse or specular.
+    uint lobeType; // Out, diffuse, glossy, or delta.
 
     vec2 texCoord; // In.
     vec2 pad1;
 };
 
+// Must match BrdfParameters in Scenes/RayTracingSceneParser.hpp. Parameters with an exact OpenPBR equivalent
+// use the canonical surface block even for legacy BRDF types; the trailing fields are legacy-only values and
+// texture metadata.
 struct BrdfParameters {
     OpenPbrSurfaceParams surface;
 
@@ -91,9 +94,9 @@ struct BrdfParameters {
     float microfacetAlpha;
 
     vec3 complexIorK;
-    float roughness;
+    float orenNayarRoughness;
 
-    float extIor;
+    float exteriorIor;
     int type;
     int microfacetType;
     int reflectanceTexture;

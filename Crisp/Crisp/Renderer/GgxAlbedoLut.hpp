@@ -6,7 +6,7 @@
 
 namespace crisp {
 
-// Must match kGgxAlbedoLutSize in Shaders/Brdf/OpenPbr/directional-albedo.part.glsl.
+// Must match kGgxAlbedoLutSize in Shaders/BSDFs/OpenPbr/directional-albedo.part.glsl.
 inline constexpr uint32_t kGgxAlbedoLutExtent = 64;
 
 // Baked offline by tools/bake_ggx_albedo_lut.py.

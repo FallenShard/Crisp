@@ -1,9 +1,9 @@
 #ifndef CRISP_PBR_SURFACE_GLSL
 #define CRISP_PBR_SURFACE_GLSL
 
-#include "../../Brdf/OpenPbr/surface.part.glsl"
+#include "../../BSDFs/OpenPbr/surface.part.glsl"
 
-// PathTracedView's view onto the shared OpenPBR surface. The maths lives in Brdf/OpenPbr/surface.part.glsl so
+// PathTracedView's view onto the shared OpenPBR surface. The maths lives in BSDFs/OpenPbr/surface.part.glsl so
 // that this tracer, the kBrdfOpenPbr callable and the analytic tracer's next-event-estimation switch cannot
 // drift apart; these are adapters from the raster material record, nothing more.
 //
