@@ -87,7 +87,8 @@ void main() {
                 wo = sampleRoughConductor(bsdfSample, wi, microfacetType, 0.3f);
             } else if (model == kModelMicrofacet) {
                 bool sampledSpecular;
-                wo = sampleMicrofacet(bsdfSample, wi, 0.6f, microfacetType, 0.3f, sampledSpecular);
+                wo = sampleMicrofacet(
+                    bsdfSample, lobeSample, wi, 0.6f, microfacetType, 0.3f, sampledSpecular);
             } else {
                 wo = sampleLambertian(bsdfSample);
             }
@@ -198,6 +199,8 @@ void main() {
 
         vec2 dielectricNormalSample = bsdfSample;
         float dielectricLobeSample = lobeSample;
+
+        const float dielectricAlpha = operation == kOperationCriticalAngle ? 1e-4f : 0.3f;
         if (operation == kOperationCriticalAngle) {
             const float criticalSine = extIor / intIor;
             const bool aboveCriticalAngle = (index & 1u) != 0u;
@@ -208,7 +211,8 @@ void main() {
             results[index].wiAndAux.xyz = dielectricWi;
         }
 
-        const vec3 sampledNormal = sampleMicrofacetVisibleNormal(dielectricNormalSample, dielectricWi, microfacetType, 0.3f);
+        const vec3 sampledNormal =
+            sampleMicrofacetVisibleNormal(dielectricNormalSample, dielectricWi, microfacetType, dielectricAlpha);
         const float cosThetaIm = dot(dielectricWi, sampledNormal);
         float cosThetaTm;
         const float fresnel = fresnelDielectric(cosThetaIm, extIor, intIor, cosThetaTm);
@@ -234,15 +238,15 @@ void main() {
             extIor,
             intIor,
             microfacetType,
-            0.3f,
+            dielectricAlpha,
             dielectricWi,
             wo,
             sampledF,
             pdf);
         results[index].woAndPdf = vec4(wo, pdf);
         results[index].value = vec4(
-            evaluateRoughDielectric(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo),
-            computeRoughDielectricPdf(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo));
+            evaluateRoughDielectric(extIor, intIor, microfacetType, dielectricAlpha, dielectricWi, wo),
+            computeRoughDielectricPdf(extIor, intIor, microfacetType, dielectricAlpha, dielectricWi, wo));
         results[index].reverseValue.xyz = sampledF;
     }
 }
