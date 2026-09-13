@@ -211,9 +211,9 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F0, flo
     const float maxReflectionLod = float(max(textureQueryLevels(specularReflectanceMap) - 1, 0));
     const vec3 prefilter = textureLod(specularReflectanceMap, worldR, roughness * maxReflectionLod).rgb;
     const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
-    const vec3 specular = prefilter * (F0 * brdf.x + brdf.y);
+    const vec3 specularAlbedo = F0 * brdf.x + brdf.y;
 
-    return kD * diffuse * ao + specular;
+    return (1.0f - specularAlbedo) * kD * diffuse * ao + prefilter * specularAlbedo;
 }
 
 float computeDielectricF0(const float ior, const float weight) {
@@ -288,7 +288,7 @@ void main() {
     const vec3 dielectricF0 = computeDielectricF0(material.surface.specularIor, material.surface.specularWeight) *
         clamp(material.surface.specularColor, vec3(0.0f), vec3(1.0f));
     const vec3 F0 = mix(dielectricF0, baseColor, baseMetalness);
-    const vec3 envKd = (1.0f - fresnelSchlickRoughness(NdotV, F0, specularRoughness)) * (1.0f - baseMetalness);
+    const vec3 envKd = vec3(1.0f - baseMetalness);
 
     // Direct-light BRDF.
     const vec3 eyeH = normalize(eyeL + eyeV);
