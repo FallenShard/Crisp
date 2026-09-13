@@ -9,24 +9,24 @@ const int kLobeTypeGlossy = 1 << 2;
 
 const float kVacuumIor = 1.0f;
 
-const int kBrdfLambertian = 0;
-const int kBrdfDielectric = 1;
-const int kBrdfMirror = 2;
-const int kBrdfMicrofacet = 3;
-const int kBrdfOrenNayar = 4;
-const int kBrdfSmoothConductor = 5;
-const int kBrdfRoughConductor = 6;
-const int kBrdfRoughDielectric = 7;
-// One complex, layered type rather than one lobe. Must match kBrdfOpenPbr in Scenes/RayTracingSceneData.hpp,
+const int kBsdfLambertian = 0;
+const int kBsdfDielectric = 1;
+const int kBsdfMirror = 2;
+const int kBsdfMicrofacet = 3;
+const int kBsdfOrenNayar = 4;
+const int kBsdfSmoothConductor = 5;
+const int kBsdfRoughConductor = 6;
+const int kBsdfRoughDielectric = 7;
+// One complex, layered type rather than one lobe. Must match kBsdfOpenPbr in Scenes/RayTracingSceneData.hpp,
 // whose ordering also fixes the callable shader binding table.
-const int kBrdfOpenPbr = 8;
+const int kBsdfOpenPbr = 8;
 
 const int kLightArea = 0;
 const int kLightPoint = 1;
 const int kLightDirectional = 2;
 
-const uint kBrdfOperationSample = 0;
-const uint kBrdfOperationEvaluate = 1;
+const uint kBsdfOperationSample = 0;
+const uint kBsdfOperationEvaluate = 1;
 
 // Fixed layout of the sample vector. Every bounce restarts the sampler cursor at
 // kDimBounceBase + bounce * kDimsPerBounce, so a path that skips light sampling on a delta bounce
@@ -64,32 +64,28 @@ struct HitInfo {
     vec2 pad1;
 };
 
-// Callable payload shared by the closest-hit shader and every BRDF callable.
-struct BrdfSample {
-    vec2 unitSample; // In, samples a direction or microfacet normal.
-    float lobeSample; // In, independently selects a BRDF lobe.
-    float pad0;
-
-    vec3 normal;     // In, local space.
-    uint materialId; // In.
+// Callable payload shared by the closest-hit shader and every BSDF callable.
+struct BsdfSample {
+    vec2 unitSample;  // In, samples a direction or microfacet normal.
+    float lobeSample; // In, independently selects a BSDF lobe.
+    uint materialId;  // In.
 
     vec3 wi;        // In, local space.
     uint operation; // In, sample or evaluate.
 
-    vec3 f;    // Out, eval(wi, wo) * abs(dot(n, wo)).
+    vec3 f;    // Out, BSDF(wi, wo) * abs(dot(n, wo)).
     float pdf; // Out.
 
     vec3 wo;       // In for evaluation, out for sampling; local space.
     uint lobeType; // Out, diffuse, glossy, or delta.
 
     vec2 texCoord; // In.
-    vec2 pad1;
 };
 
-// Must match BrdfParameters in Scenes/RayTracingSceneParser.hpp. Parameters with an exact OpenPBR equivalent
-// use the canonical surface block even for legacy BRDF types; the trailing fields are legacy-only values and
+// Must match BsdfParameters in Scenes/RayTracingSceneParser.hpp. Parameters with an exact OpenPBR equivalent
+// use the canonical surface block even for legacy BSDF types; the trailing fields are legacy-only values and
 // texture metadata.
-struct BrdfParameters {
+struct BsdfParameters {
     OpenPbrSurfaceParams surface;
 
     vec3 complexIorEta;
@@ -104,8 +100,8 @@ struct BrdfParameters {
     int reflectanceSampler;
 };
 
-struct BrdfEval {
-    vec3 f; // eval(wi, wo) * abs(dot(n, wo)).
+struct BsdfEval {
+    vec3 f; // BSDF(wi, wo) * abs(dot(n, wo)).
     float pdf;
 };
 

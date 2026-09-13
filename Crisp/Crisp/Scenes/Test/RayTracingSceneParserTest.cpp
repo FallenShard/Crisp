@@ -98,10 +98,10 @@ TEST(RayTracingSceneParserTest, AssignsLogicalIndicesToBitmapReflectanceTextures
     ASSERT_EQ(scene.materialTextures.size(), 2);
     EXPECT_EQ(scene.materialTextures[0].filename, "Textures/uv_pattern.jpg");
     EXPECT_EQ(scene.materialTextures[1].filename, "brick.png");
-    ASSERT_EQ(scene.brdfs.size(), 2);
-    EXPECT_EQ(scene.brdfs[0].reflectanceTexture, 0);
-    EXPECT_EQ(scene.brdfs[1].reflectanceTexture, 1);
-    EXPECT_EQ(scene.brdfs[0].reflectanceSampler, -1);
+    ASSERT_EQ(scene.bsdfs.size(), 2);
+    EXPECT_EQ(scene.bsdfs[0].reflectanceTexture, 0);
+    EXPECT_EQ(scene.bsdfs[1].reflectanceTexture, 1);
+    EXPECT_EQ(scene.bsdfs[0].reflectanceSampler, -1);
 }
 
 TEST(RayTracingSceneParserTest, RejectsInvalidBitmapReflectanceTextures) {
@@ -144,11 +144,11 @@ TEST(RayTracingSceneParserTest, ReusesCanonicalSurfaceStorageForLegacyParameters
 
     const auto result = parseSceneDescription(shapes);
     ASSERT_TRUE(result.hasValue());
-    ASSERT_EQ(result->brdfs.size(), 3);
-    EXPECT_EQ(result->brdfs[0].surface.baseColor, glm::vec3(0.2f, 0.3f, 0.4f));
-    EXPECT_FLOAT_EQ(result->brdfs[1].surface.specularIor, 1.7f);
-    EXPECT_EQ(result->brdfs[2].surface.baseColor, glm::vec3(0.1f, 0.25f, 0.5f));
-    EXPECT_FLOAT_EQ(result->brdfs[2].surface.specularWeight, 0.5f);
+    ASSERT_EQ(result->bsdfs.size(), 3);
+    EXPECT_EQ(result->bsdfs[0].surface.baseColor, glm::vec3(0.2f, 0.3f, 0.4f));
+    EXPECT_FLOAT_EQ(result->bsdfs[1].surface.specularIor, 1.7f);
+    EXPECT_EQ(result->bsdfs[2].surface.baseColor, glm::vec3(0.1f, 0.25f, 0.5f));
+    EXPECT_FLOAT_EQ(result->bsdfs[2].surface.specularWeight, 0.5f);
 }
 
 TEST(RayTracingSceneParserTest, PropagatesNestedMaterialValidationErrors) {

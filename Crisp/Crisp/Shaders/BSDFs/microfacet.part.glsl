@@ -16,24 +16,24 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
     return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0f - cosTheta, 5.0f);
 }
 
-float distributionGGX(float NdotH, float alpha) {
+float distributionGgx(float NdotH, float alpha) {
     const float a2 = max(alpha * alpha, 1e-12f);
     const float denom = a2 * NdotH * NdotH + (1.0f - NdotH) * (1.0f + NdotH);
     return a2 / (PI * denom * denom);
 }
 
-float geometrySchlickGGX(float NdotV, float roughness) {
+float geometrySchlickGgx(float NdotV, float roughness) {
     const float r = roughness + 1.0f;
     const float k = r * r / 8.0f;
     return NdotV / (NdotV * (1.0f - k) + k);
 }
 
 float geometrySmith(float NdotV, float NdotL, float roughness) {
-    return geometrySchlickGGX(NdotV, roughness) * geometrySchlickGGX(NdotL, roughness);
+    return geometrySchlickGgx(NdotV, roughness) * geometrySchlickGgx(NdotL, roughness);
 }
 
 // Generalized GTR
-float distributionGGXAniso(float NdotH, float HdotT, float HdotB, float alphaU, float alphaV) {
+float distributionGgxAniso(float NdotH, float HdotT, float HdotB, float alphaU, float alphaV) {
     const float alphaU2 = alphaU * alphaU;
     const float alphaV2 = alphaV * alphaV;
 
@@ -52,7 +52,7 @@ float lambda(float XdotN, float XdotT, float XdotB, float alphaU, float alphaV) 
     return (-1.0f + sqrt(1 + alphaTerm)) * 0.5f;
 }
 
-float geometrySchlickGGXAniso(
+float geometrySchlickGgxAniso(
     float LdotH,
     float VdotH,
     float NdotV,
@@ -72,7 +72,7 @@ float geometrySchlickGGXAniso(
     return num1 * num2 / (1.0f + lambdaV + lambdaL);
 }
 
-vec3 sampleGGXNormal(vec2 unitSample, float alpha) {
+vec3 sampleGgxNormal(vec2 unitSample, float alpha) {
     const float tanThetaSquared = alpha * alpha * unitSample.y / (1.0f - unitSample.y);
     const float cosTheta = 1.0f / sqrt(1.0f + tanThetaSquared);
     const float phi = 2.0f * PI * unitSample.x;
@@ -90,7 +90,7 @@ vec3 sampleBeckmannNormal(vec2 unitSample, float alpha) {
 }
 
 float ggxDistribution(vec3 normal, float alpha) {
-    return normal.z > 0.0f ? distributionGGX(normal.z, alpha) : 0.0f;
+    return normal.z > 0.0f ? distributionGgx(normal.z, alpha) : 0.0f;
 }
 
 float beckmannDistribution(vec3 normal, float alpha) {
@@ -158,7 +158,7 @@ float beckmannGeometry(vec3 wi, vec3 wo, vec3 microfacetNormal, float alpha) {
 vec3 sampleMicrofacetNormal(vec2 unitSample, int microfacetType, float alpha) {
     return microfacetType == kMicrofacetBeckmann
         ? sampleBeckmannNormal(unitSample, alpha)
-        : sampleGGXNormal(unitSample, alpha);
+        : sampleGgxNormal(unitSample, alpha);
 }
 
 vec3 sampleMicrofacet(
@@ -186,11 +186,11 @@ float microfacetGeometry(vec3 wi, vec3 wo, vec3 microfacetNormal, int microfacet
         : ggxGeometry(wi, wo, microfacetNormal, alpha);
 }
 
-float microfacetNormalPdf(vec3 microfacetNormal, int microfacetType, float alpha) {
+float computeMicrofacetNormalPdf(vec3 microfacetNormal, int microfacetType, float alpha) {
     return microfacetDistribution(microfacetNormal, microfacetType, alpha) * abs(microfacetNormal.z);
 }
 
-float microfacetPdf(vec3 wi, vec3 wo, float ks, int microfacetType, float alpha) {
+float computeMicrofacetPdf(vec3 wi, vec3 wo, float ks, int microfacetType, float alpha) {
     if (wi.z <= 0.0f || wo.z <= 0.0f) {
         return 0.0f;
     }
@@ -198,7 +198,7 @@ float microfacetPdf(vec3 wi, vec3 wo, float ks, int microfacetType, float alpha)
     const float diffusePdf = wo.z / PI;
     const vec3 microfacetNormal = normalize(wi + wo);
     const float halfVectorJacobian = 1.0f / (4.0f * dot(microfacetNormal, wo));
-    const float specularPdf = microfacetNormalPdf(microfacetNormal, microfacetType, alpha) * halfVectorJacobian;
+    const float specularPdf = computeMicrofacetNormalPdf(microfacetNormal, microfacetType, alpha) * halfVectorJacobian;
 
     return mix(diffusePdf, specularPdf, ks);
 }

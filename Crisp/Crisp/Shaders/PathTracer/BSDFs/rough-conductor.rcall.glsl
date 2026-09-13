@@ -8,23 +8,23 @@
 #include "../Core/scene.part.glsl"
 #include "../../BSDFs/rough-conductor.part.glsl"
 
-layout(location = 0) callableDataInEXT BrdfSample brdf;
+layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
-    const BrdfParameters material = scene.materials.data[brdf.materialId];
-    if (brdf.operation == kBrdfOperationSample) {
-        brdf.wo = sampleRoughConductor(
-            brdf.unitSample, brdf.wi, material.microfacetType, material.microfacetAlpha);
+    const BsdfParameters material = scene.materials.data[bsdf.materialId];
+    if (bsdf.operation == kBsdfOperationSample) {
+        bsdf.wo = sampleRoughConductor(
+            bsdf.unitSample, bsdf.wi, material.microfacetType, material.microfacetAlpha);
     }
 
-    brdf.lobeType = kLobeTypeGlossy;
-    brdf.f = evaluateRoughConductor(
+    bsdf.lobeType = kLobeTypeGlossy;
+    bsdf.f = evaluateRoughConductor(
         material.complexIorEta,
         material.complexIorK,
         material.microfacetType,
         material.microfacetAlpha,
-        brdf.wi,
-        brdf.wo);
-    brdf.pdf = roughConductorPdf(
-        brdf.wi, brdf.wo, material.microfacetType, material.microfacetAlpha);
+        bsdf.wi,
+        bsdf.wo);
+    bsdf.pdf = computeRoughConductorPdf(
+        bsdf.wi, bsdf.wo, material.microfacetType, material.microfacetAlpha);
 }

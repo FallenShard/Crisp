@@ -10,15 +10,15 @@
 #include "../Textures/material-texture.part.glsl"
 #include "../../BSDFs/lambertian.part.glsl"
 
-layout(location = 0) callableDataInEXT BrdfSample brdf;
+layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
-    if (brdf.operation == kBrdfOperationSample) {
-        brdf.wo = sampleLambertian(brdf.unitSample);
+    if (bsdf.operation == kBsdfOperationSample) {
+        bsdf.wo = sampleLambertian(bsdf.unitSample);
     }
 
-    brdf.lobeType = kLobeTypeDiffuse;
-    const BrdfParameters material = scene.materials.data[brdf.materialId];
-    brdf.f = evaluateLambertian(evaluateMaterialReflectance(material, brdf.texCoord), brdf.wi, brdf.wo);
-    brdf.pdf = lambertianPdf(brdf.wi, brdf.wo);
+    bsdf.lobeType = kLobeTypeDiffuse;
+    const BsdfParameters material = scene.materials.data[bsdf.materialId];
+    bsdf.f = evaluateLambertian(evaluateMaterialReflectance(material, bsdf.texCoord), bsdf.wi, bsdf.wo);
+    bsdf.pdf = computeLambertianPdf(bsdf.wi, bsdf.wo);
 }

@@ -11,8 +11,8 @@ namespace crisp {
 // https://academysoftwarefoundation.github.io/OpenPBR/
 //
 // This is the one parameter vocabulary shared by the rasterizer and both path tracers. PbrMaterialParams
-// embeds it alongside Crisp's renderer extensions (uv scale, texture indices, alpha masking); BrdfParameters
-// uses it for kBrdfOpenPbr and as canonical storage for equivalent legacy values. Two evaluators of different
+// embeds it alongside Crisp's renderer extensions (uv scale, texture indices, alpha masking); BsdfParameters
+// uses it for kBsdfOpenPbr and as canonical storage for equivalent legacy values. Two evaluators of different
 // fidelity read the same record, and this is the single place its ABI is asserted.
 //
 // Nothing that the renderer needs but OpenPBR does not define belongs here -- that is what keeps the block

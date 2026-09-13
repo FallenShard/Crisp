@@ -56,7 +56,7 @@ heapIntegrators[];
 #define integrator heapIntegrators[kIntegratorSlot]
 #define environmentMap heapTexture2Ds[kEnvironmentMapSlot]
 #define environmentSampler heapSamplers[kEnvironmentSamplerSlot]
-// bsdf-eval.part.glsl evaluates kBrdfOpenPbr inline for next-event estimation, and that reaches the GGX
+// bsdf-eval.part.glsl evaluates kBsdfOpenPbr inline for next-event estimation, and that reaches the GGX
 // directional-albedo table even when no compensation mode is active.
 #define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
 
@@ -65,10 +65,10 @@ heapIntegrators[];
 #include "PathTracer/Textures/material-texture.part.glsl"
 #include "PathTracer/BSDFs/bsdf-eval.part.glsl"
 
-BrdfEval evaluateBrdfWorldSpace(vec3 normal, vec3 wi, vec3 wo, uint materialId, vec2 texCoord) {
+BsdfEval evaluateBsdfWorldSpace(vec3 normal, vec3 wi, vec3 wo, uint materialId, vec2 texCoord) {
     const mat3 coordinateFrame = createCoordinateFrame(normal);
     const mat3 worldToLocal = transpose(coordinateFrame);
-    return evaluateBrdf(scene.materials.data[materialId], texCoord, worldToLocal * wi, worldToLocal * wo);
+    return evaluateBsdf(scene.materials.data[materialId], texCoord, worldToLocal * wi, worldToLocal * wo);
 }
 
 #include "PathTracer/Core/tracing.part.glsl"
@@ -118,8 +118,8 @@ vec3 computeRadianceDirectLighting(inout Sampler rng) {
     const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf, lightIsDelta);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-            const BrdfEval lightDirectionBrdf = evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
-            L += radiance * lightDirectionBrdf.f;
+            const BsdfEval lightDirectionBsdf = evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
+            L += radiance * lightDirectionBsdf.f;
         }
     }
 
@@ -162,7 +162,7 @@ vec3 computeRadianceMis(inout Sampler rng) {
     const vec2 texCoord = hitInfo.texCoord;
     const bool deltaSample = hitInfo.sampleLobeType == kLobeTypeDelta;
 
-    // BRDF sampling.
+    // BSDF sampling.
     {
         const float samplePdf = hitInfo.samplePdf;
         const vec3 sampleDirection = hitInfo.sampleDirection;
@@ -188,10 +188,10 @@ vec3 computeRadianceMis(inout Sampler rng) {
     const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf, lightIsDelta);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-            const BrdfEval lightDirectionBrdf =
-                evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
-            const float misWeight = lightIsDelta ? 1.0f : powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
-            L += radiance * lightDirectionBrdf.f * misWeight;
+            const BsdfEval lightDirectionBsdf =
+                evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
+            const float misWeight = lightIsDelta ? 1.0f : powerHeuristic(lightPdf, lightDirectionBsdf.pdf);
+            L += radiance * lightDirectionBsdf.f * misWeight;
         }
     }
 
@@ -265,11 +265,11 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
                 sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf, lightIsDelta);
             if (lightPdf > 0.0f) {
                 if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-                    const BrdfEval lightDirectionBrdf =
-                        evaluateBrdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
+                    const BsdfEval lightDirectionBsdf =
+                        evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
                     const float misWeight =
-                        lightIsDelta ? 1.0f : powerHeuristic(lightPdf, lightDirectionBrdf.pdf);
-                    L += throughput * radiance * lightDirectionBrdf.f * misWeight;
+                        lightIsDelta ? 1.0f : powerHeuristic(lightPdf, lightDirectionBsdf.pdf);
+                    L += throughput * radiance * lightDirectionBsdf.f * misWeight;
                 }
             }
         }
@@ -317,7 +317,7 @@ vec3 computeRadiance(inout Sampler rng) {
     // Accumulated radiance L for this path.
     vec3 L = vec3(0.0f);
 
-    // Throughput of the current path, modulated by encountered BRDFs.
+    // Throughput of the current path, modulated by encountered BSDFs.
     vec3 throughput = vec3(1.0f);
 
     vec3 debugColor = vec3(0.0f);

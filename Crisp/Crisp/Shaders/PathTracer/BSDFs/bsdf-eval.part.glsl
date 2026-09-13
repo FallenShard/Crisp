@@ -1,5 +1,5 @@
-#ifndef CRISP_BRDF_EVAL_GLSL
-#define CRISP_BRDF_EVAL_GLSL
+#ifndef CRISP_BSDF_EVAL_GLSL
+#define CRISP_BSDF_EVAL_GLSL
 
 #include "../../BSDFs/lambertian.part.glsl"
 #include "../../BSDFs/microfacet.part.glsl"
@@ -9,13 +9,13 @@
 #include "../../BSDFs/OpenPbr/surface.part.glsl"
 #include "../Textures/material-texture.part.glsl"
 
-BrdfEval evaluateLambertian(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
-    return BrdfEval(
-        evaluateLambertian(evaluateMaterialReflectance(material, texCoord), wi, wo), lambertianPdf(wi, wo));
+BsdfEval evaluateLambertian(BsdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
+    return BsdfEval(
+        evaluateLambertian(evaluateMaterialReflectance(material, texCoord), wi, wo), computeLambertianPdf(wi, wo));
 }
 
-BrdfEval evaluateMicrofacet(BrdfParameters material, vec3 wi, vec3 wo) {
-    return BrdfEval(
+BsdfEval evaluateMicrofacet(BsdfParameters material, vec3 wi, vec3 wo) {
+    return BsdfEval(
         evaluateMicrofacet(
             material.surface.baseColor,
             material.surface.specularWeight,
@@ -25,18 +25,19 @@ BrdfEval evaluateMicrofacet(BrdfParameters material, vec3 wi, vec3 wo) {
             material.microfacetAlpha,
             wi,
             wo),
-        microfacetPdf(wi, wo, material.surface.specularWeight, material.microfacetType, material.microfacetAlpha));
+        computeMicrofacetPdf(
+            wi, wo, material.surface.specularWeight, material.microfacetType, material.microfacetAlpha));
 }
 
-BrdfEval evaluateOrenNayar(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
-    return BrdfEval(
+BsdfEval evaluateOrenNayar(BsdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
+    return BsdfEval(
         evaluateOrenNayar(
             evaluateMaterialReflectance(material, texCoord), material.orenNayarRoughness, wi, wo),
-        lambertianPdf(wi, wo));
+        computeLambertianPdf(wi, wo));
 }
 
-BrdfEval evaluateRoughConductor(BrdfParameters material, vec3 wi, vec3 wo) {
-    return BrdfEval(
+BsdfEval evaluateRoughConductor(BsdfParameters material, vec3 wi, vec3 wo) {
+    return BsdfEval(
         evaluateRoughConductor(
             material.complexIorEta,
             material.complexIorK,
@@ -44,11 +45,11 @@ BrdfEval evaluateRoughConductor(BrdfParameters material, vec3 wi, vec3 wo) {
             material.microfacetAlpha,
             wi,
             wo),
-        roughConductorPdf(wi, wo, material.microfacetType, material.microfacetAlpha));
+        computeRoughConductorPdf(wi, wo, material.microfacetType, material.microfacetAlpha));
 }
 
-BrdfEval evaluateRoughDielectric(BrdfParameters material, vec3 wi, vec3 wo) {
-    return BrdfEval(
+BsdfEval evaluateRoughDielectric(BsdfParameters material, vec3 wi, vec3 wo) {
+    return BsdfEval(
         evaluateRoughDielectric(
             kVacuumIor,
             material.surface.specularIor,
@@ -56,7 +57,7 @@ BrdfEval evaluateRoughDielectric(BrdfParameters material, vec3 wi, vec3 wo) {
             material.microfacetAlpha,
             wi,
             wo),
-        roughDielectricPdf(
+        computeRoughDielectricPdf(
             kVacuumIor,
             material.surface.specularIor,
             material.microfacetType,
@@ -65,30 +66,30 @@ BrdfEval evaluateRoughDielectric(BrdfParameters material, vec3 wi, vec3 wo) {
             wo));
 }
 
-BrdfEval evaluateOpenPbr(BrdfParameters material, vec3 wi, vec3 wo) {
+BsdfEval evaluateOpenPbr(BsdfParameters material, vec3 wi, vec3 wo) {
     // Compensation is a per-view setting the callable does not see, so next-event estimation and sampling agree
     // on None until it is plumbed through the material record. See docs/openpbr-path-tracer.md.
     const OpenPbrSurface surface = createOpenPbrSurface(material.surface, kEnergyCompensationNone);
-    return BrdfEval(evaluateOpenPbrSurface(surface, wi, wo), openPbrSurfacePdf(surface, wi, wo));
+    return BsdfEval(evaluateOpenPbrSurface(surface, wi, wo), computeOpenPbrSurfacePdf(surface, wi, wo));
 }
 
-BrdfEval evaluateBrdf(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
+BsdfEval evaluateBsdf(BsdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
     switch (material.type) {
-    case kBrdfLambertian:
+    case kBsdfLambertian:
         return evaluateLambertian(material, texCoord, wi, wo);
-    case kBrdfMicrofacet:
+    case kBsdfMicrofacet:
         return evaluateMicrofacet(material, wi, wo);
-    case kBrdfOrenNayar:
+    case kBsdfOrenNayar:
         return evaluateOrenNayar(material, texCoord, wi, wo);
-    case kBrdfRoughConductor:
+    case kBsdfRoughConductor:
         return evaluateRoughConductor(material, wi, wo);
-    case kBrdfRoughDielectric:
+    case kBsdfRoughDielectric:
         return evaluateRoughDielectric(material, wi, wo);
-    case kBrdfOpenPbr:
+    case kBsdfOpenPbr:
         return evaluateOpenPbr(material, wi, wo);
     default:
-        return BrdfEval(vec3(0.0f), 0.0f); // Delta materials.
+        return BsdfEval(vec3(0.0f), 0.0f); // Delta materials.
     }
 }
 
-#endif // CRISP_BRDF_EVAL_GLSL
+#endif // CRISP_BSDF_EVAL_GLSL

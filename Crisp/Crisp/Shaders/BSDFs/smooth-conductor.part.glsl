@@ -4,14 +4,13 @@
 #include "fresnel.part.glsl"
 
 void sampleSmoothConductor(
-    const vec3 normal,
     const vec3 wi,
     const vec3 eta,
     const vec3 k,
     out vec3 wo,
     out vec3 weight,
     out float pdf) {
-    const float cosThetaI = dot(normal, wi);
+    const float cosThetaI = wi.z;
     if (cosThetaI <= 0.0f) {
         wo = vec3(0.0f);
         weight = vec3(0.0f);
@@ -19,7 +18,7 @@ void sampleSmoothConductor(
         return;
     }
 
-    wo = reflect(-wi, normal);
+    wo = vec3(-wi.xy, wi.z);
     weight = fresnelConductor(cosThetaI, eta, k);
     pdf = 1.0f;
 }

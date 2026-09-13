@@ -11,17 +11,17 @@
 #include "../../BSDFs/lambertian.part.glsl"
 #include "../../BSDFs/oren-nayar.part.glsl"
 
-layout(location = 0) callableDataInEXT BrdfSample brdf;
+layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
-    const BrdfParameters material = scene.materials.data[brdf.materialId];
+    const BsdfParameters material = scene.materials.data[bsdf.materialId];
 
-    if (brdf.operation == kBrdfOperationSample) {
-        brdf.wo = sampleLambertian(brdf.unitSample);
+    if (bsdf.operation == kBsdfOperationSample) {
+        bsdf.wo = sampleLambertian(bsdf.unitSample);
     }
 
-    brdf.lobeType = kLobeTypeDiffuse;
-    brdf.f = evaluateOrenNayar(
-        evaluateMaterialReflectance(material, brdf.texCoord), material.orenNayarRoughness, brdf.wi, brdf.wo);
-    brdf.pdf = lambertianPdf(brdf.wi, brdf.wo);
+    bsdf.lobeType = kLobeTypeDiffuse;
+    bsdf.f = evaluateOrenNayar(
+        evaluateMaterialReflectance(material, bsdf.texCoord), material.orenNayarRoughness, bsdf.wi, bsdf.wo);
+    bsdf.pdf = computeLambertianPdf(bsdf.wi, bsdf.wo);
 }

@@ -9,7 +9,7 @@
 #include "Common/warp.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
-layout(location = 0) callableDataEXT BrdfSample bsdf;
+layout(location = 0) callableDataEXT BsdfSample bsdf;
 
 hitAttributeEXT vec2 barycentric;
 
@@ -42,21 +42,20 @@ void main() {
     hitInfo.normal = normal;
     hitInfo.texCoord = texCoord;
 
-    // Determine sampled BRDF and the new path direction.
+    // Determine the sampled BSDF and new path direction.
 
     const mat3 worldTransform = createCoordinateFrame(normal);
 
-    bsdf.normal = toLocal(normal, worldTransform);
     bsdf.wi = toLocal(-gl_WorldRayDirectionEXT, worldTransform);
     bsdf.materialId = instance.materialId;
-    bsdf.operation = kBrdfOperationSample;
+    bsdf.operation = kBsdfOperationSample;
     bsdf.texCoord = texCoord;
 
     bsdf.unitSample = hitInfo.bsdfSample;
     bsdf.lobeSample = hitInfo.bsdfLobeSample;
 
-    const int brdfType = scene.materials.data[instance.materialId].type;
-    executeCallableEXT(brdfType, /*location(bsdf)=*/0);
+    const int bsdfType = scene.materials.data[instance.materialId].type;
+    executeCallableEXT(bsdfType, /*location(bsdf)=*/0);
     hitInfo.sampleDirection = toWorld(bsdf.wo, worldTransform);
     hitInfo.samplePdf = bsdf.pdf;
     hitInfo.sampleWeight = bsdf.pdf > 0.0f ? bsdf.f / bsdf.pdf : vec3(0.0f);

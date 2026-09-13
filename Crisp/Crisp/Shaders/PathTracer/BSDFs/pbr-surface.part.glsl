@@ -4,7 +4,7 @@
 #include "../../BSDFs/OpenPbr/surface.part.glsl"
 
 // PathTracedView's view onto the shared OpenPBR surface. The maths lives in BSDFs/OpenPbr/surface.part.glsl so
-// that this tracer, the kBrdfOpenPbr callable and the analytic tracer's next-event-estimation switch cannot
+// that this tracer, the kBsdfOpenPbr callable and the analytic tracer's next-event-estimation switch cannot
 // drift apart; these are adapters from the raster material record, nothing more.
 //
 // They go away with pbr-path-trace.* once PathTracedView moves onto the shared shaders.
@@ -19,8 +19,8 @@ vec3 evaluatePbrSurface(const PbrSurface surface, const vec3 wi, const vec3 wo) 
     return evaluateOpenPbrSurface(surface, wi, wo);
 }
 
-float pbrSurfacePdf(const PbrSurface surface, const vec3 wi, const vec3 wo) {
-    return openPbrSurfacePdf(surface, wi, wo);
+float computePbrSurfacePdf(const PbrSurface surface, const vec3 wi, const vec3 wo) {
+    return computeOpenPbrSurfacePdf(surface, wi, wo);
 }
 
 vec3 samplePbrSurface(

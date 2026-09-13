@@ -10,22 +10,22 @@
 namespace crisp {
 
 // Material type tags. The value doubles as the callable's index in the shader binding table, because the hit
-// shader dispatches with executeCallableEXT(material.type, ...). So this list, kBrdfCallableShaders below, and
-// the kBrdf* constants in Shaders/PathTracer/Core/types.part.glsl are one ordering written three times; a
+// shader dispatches with executeCallableEXT(material.type, ...). So this list, kBsdfCallableShaders below, and
+// the kBsdf* constants in Shaders/PathTracer/Core/types.part.glsl are one ordering written three times; a
 // mismatch renders a silently wrong material rather than failing validation.
-inline constexpr int32_t kBrdfLambertian = 0;
-inline constexpr int32_t kBrdfDielectric = 1;
-inline constexpr int32_t kBrdfMirror = 2;
-inline constexpr int32_t kBrdfMicrofacet = 3;
-inline constexpr int32_t kBrdfOrenNayar = 4;
-inline constexpr int32_t kBrdfSmoothConductor = 5;
-inline constexpr int32_t kBrdfRoughConductor = 6;
-inline constexpr int32_t kBrdfRoughDielectric = 7;
-inline constexpr int32_t kBrdfOpenPbr = 8;
-inline constexpr size_t kBrdfTypeCount = 9;
+inline constexpr int32_t kBsdfLambertian = 0;
+inline constexpr int32_t kBsdfDielectric = 1;
+inline constexpr int32_t kBsdfMirror = 2;
+inline constexpr int32_t kBsdfMicrofacet = 3;
+inline constexpr int32_t kBsdfOrenNayar = 4;
+inline constexpr int32_t kBsdfSmoothConductor = 5;
+inline constexpr int32_t kBsdfRoughConductor = 6;
+inline constexpr int32_t kBsdfRoughDielectric = 7;
+inline constexpr int32_t kBsdfOpenPbr = 8;
+inline constexpr size_t kBsdfTypeCount = 9;
 
 // Indexed by the type tag above; the path tracer appends these to its core stages in this order.
-inline constexpr std::array<std::string_view, kBrdfTypeCount> kBrdfCallableShaders{
+inline constexpr std::array<std::string_view, kBsdfTypeCount> kBsdfCallableShaders{
     "PathTracer/BSDFs/lambertian.rcall",
     "PathTracer/BSDFs/dielectric.rcall",
     "PathTracer/BSDFs/mirror.rcall",

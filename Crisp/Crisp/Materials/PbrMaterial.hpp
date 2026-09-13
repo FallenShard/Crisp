@@ -33,7 +33,7 @@ inline constexpr std::array<std::string_view, kPbrMapTypeCount> kPbrMapNames = {
 // Mirrors PbrMaterialParameters in Shaders/pbr.frag.glsl, Shaders/pbr-heap.frag.glsl and
 // Shaders/PathTracer/Core/pbr-scene.part.glsl.
 //
-// The OpenPBR half is one contiguous named block so the rasterizer, the path tracers and BrdfParameters all
+// The OpenPBR half is one contiguous named block so the rasterizer, the path tracers and BsdfParameters all
 // read the same record; everything after it is a Crisp renderer extension, not an OpenPBR parameter.
 // 0 is the registry's fallback, so an unauthored map samples the checkerboard.
 struct PbrMaterialParams {

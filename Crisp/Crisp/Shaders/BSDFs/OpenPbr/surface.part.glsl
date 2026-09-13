@@ -8,7 +8,7 @@
 #include "energy-compensation.part.glsl"
 
 // The OpenPBR opaque surface, evaluated and sampled from one place. Both entry points into it -- the
-// kBrdfOpenPbr callable and the raygen's inlined next-event-estimation switch -- must call these functions
+// kBsdfOpenPbr callable and the raygen's inlined next-event-estimation switch -- must call these functions
 // rather than reimplementing them, or sampling and evaluation drift apart and MIS is silently biased.
 //
 // This is deliberately still the split-sum-shaped approximation the rasterizer uses, not OpenPBR proper: a
@@ -82,14 +82,15 @@ vec3 evaluateOpenPbrSurface(const OpenPbrSurface surface, const vec3 wi, const v
 
 // The full mixture density, not the sampled lobe's. Next-event estimation and BSDF sampling both weight with
 // this, so returning only the sampled lobe would bias every MIS combination.
-float openPbrSurfacePdf(const OpenPbrSurface surface, const vec3 wi, const vec3 wo) {
+float computeOpenPbrSurfacePdf(const OpenPbrSurface surface, const vec3 wi, const vec3 wo) {
     if (wi.z <= 0.0f || wo.z <= 0.0f) {
         return 0.0f;
     }
 
     const vec3 halfVector = normalize(wi + wo);
     const float specularPdf =
-        microfacetNormalPdf(halfVector, kMicrofacetGgx, surface.alpha) / (4.0f * max(dot(halfVector, wo), 1e-6f));
+        computeMicrofacetNormalPdf(halfVector, kMicrofacetGgx, surface.alpha) /
+        (4.0f * max(dot(halfVector, wo), 1e-6f));
     const float diffusePdf = wo.z / PI;
     return mix(diffusePdf, specularPdf, surface.specularProbability);
 }
@@ -105,14 +106,14 @@ vec3 sampleOpenPbrSurface(
     sampledSpecular = unitSample.x < surface.specularProbability;
     if (sampledSpecular) {
         unitSample.x /= surface.specularProbability;
-        const vec3 microfacetNormal = sampleGGXNormal(unitSample, surface.alpha);
+        const vec3 microfacetNormal = sampleGgxNormal(unitSample, surface.alpha);
         wo = 2.0f * dot(microfacetNormal, wi) * microfacetNormal - wi;
     } else {
         unitSample.x = (unitSample.x - surface.specularProbability) / (1.0f - surface.specularProbability);
         wo = squareToCosineHemisphere(unitSample);
     }
 
-    pdf = openPbrSurfacePdf(surface, wi, wo);
+    pdf = computeOpenPbrSurfacePdf(surface, wi, wo);
     if (pdf <= 0.0f || wo.z <= 0.0f) {
         pdf = 0.0f;
         return vec3(0.0f);

@@ -42,7 +42,7 @@ layout(buffer_reference, scalar, buffer_reference_align = 8) readonly buffer Pat
 };
 
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceMaterials {
-    BrdfParameters data[];
+    BsdfParameters data[];
 };
 
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceLights {

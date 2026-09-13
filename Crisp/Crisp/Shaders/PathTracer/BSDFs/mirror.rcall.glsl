@@ -3,19 +3,18 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "../Core/types.part.glsl"
+#include "../../BSDFs/mirror.part.glsl"
 
-layout(location = 0) callableDataInEXT BrdfSample brdf;
+layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
-    brdf.lobeType = kLobeTypeDelta;
-    if (brdf.operation == kBrdfOperationEvaluate) {
-        brdf.wo = vec3(0.0f);
-        brdf.pdf = 0.0f;
-        brdf.f = vec3(0.0f);
+    bsdf.lobeType = kLobeTypeDelta;
+    if (bsdf.operation == kBsdfOperationEvaluate) {
+        bsdf.wo = vec3(0.0f);
+        bsdf.pdf = 0.0f;
+        bsdf.f = vec3(0.0f);
         return;
     }
 
-    brdf.wo = reflect(-brdf.wi, brdf.normal);
-    brdf.pdf = 1.0f;
-    brdf.f = vec3(1.0f);
+    sampleMirror(bsdf.wi, bsdf.wo, bsdf.f, bsdf.pdf);
 }

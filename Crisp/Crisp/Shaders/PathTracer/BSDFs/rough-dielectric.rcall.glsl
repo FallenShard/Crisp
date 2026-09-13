@@ -8,38 +8,38 @@
 #include "../Core/scene.part.glsl"
 #include "../../BSDFs/rough-dielectric.part.glsl"
 
-layout(location = 0) callableDataInEXT BrdfSample brdf;
+layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
-    const BrdfParameters material = scene.materials.data[brdf.materialId];
-    brdf.lobeType = kLobeTypeGlossy;
-    if (brdf.operation == kBrdfOperationSample) {
+    const BsdfParameters material = scene.materials.data[bsdf.materialId];
+    bsdf.lobeType = kLobeTypeGlossy;
+    if (bsdf.operation == kBsdfOperationSample) {
         sampleRoughDielectric(
-            brdf.unitSample,
-            brdf.lobeSample,
+            bsdf.unitSample,
+            bsdf.lobeSample,
             kVacuumIor,
             material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,
-            brdf.wi,
-            brdf.wo,
-            brdf.f,
-            brdf.pdf);
+            bsdf.wi,
+            bsdf.wo,
+            bsdf.f,
+            bsdf.pdf);
         return;
     }
 
-    brdf.f = evaluateRoughDielectric(
+    bsdf.f = evaluateRoughDielectric(
         kVacuumIor,
         material.surface.specularIor,
         material.microfacetType,
         material.microfacetAlpha,
-        brdf.wi,
-        brdf.wo);
-    brdf.pdf = roughDielectricPdf(
+        bsdf.wi,
+        bsdf.wo);
+    bsdf.pdf = computeRoughDielectricPdf(
         kVacuumIor,
         material.surface.specularIor,
         material.microfacetType,
         material.microfacetAlpha,
-        brdf.wi,
-        brdf.wo);
+        bsdf.wi,
+        bsdf.wo);
 }

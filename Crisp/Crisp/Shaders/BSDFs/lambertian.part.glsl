@@ -7,7 +7,7 @@ vec3 sampleLambertian(vec2 unitSample) {
     return vec3(radius * cos(theta), radius * sin(theta), sqrt(max(0.0f, 1.0f - unitSample.y)));
 }
 
-float lambertianPdf(vec3 wi, vec3 wo) {
+float computeLambertianPdf(vec3 wi, vec3 wo) {
     if (wi.z <= 0.0f || wo.z <= 0.0f) {
         return 0.0f;
     }

@@ -10,7 +10,7 @@ layout(location = 0) in vec2 inTexCoord;
 
 #include "Common/openpbr-surface.part.glsl"
 
-// The OpenPBR half is one nested block shared with the rasterizer, the other tracer and BrdfParameters;
+// The OpenPBR half is one nested block shared with the rasterizer, the other tracer and BsdfParameters;
 // everything after it is a Crisp renderer extension. Must match PbrMaterialParams in Materials/PbrMaterial.hpp.
 struct PbrMaterialParameters {
     OpenPbrSurfaceParams surface;

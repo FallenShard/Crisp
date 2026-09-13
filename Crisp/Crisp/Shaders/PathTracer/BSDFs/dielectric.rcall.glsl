@@ -5,38 +5,26 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "../Core/types.part.glsl"
-#include "../../Common/math-constants.part.glsl"
 #include "../Core/scene.part.glsl"
-#include "../../BSDFs/fresnel.part.glsl"
+#include "../../BSDFs/smooth-dielectric.part.glsl"
 
-layout(location = 0) callableDataInEXT BrdfSample brdf;
+layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
-    brdf.lobeType = kLobeTypeDelta;
-    if (brdf.operation == kBrdfOperationEvaluate) {
-        brdf.wo = vec3(0.0f);
-        brdf.pdf = 0.0f;
-        brdf.f = vec3(0.0f);
+    bsdf.lobeType = kLobeTypeDelta;
+    if (bsdf.operation == kBsdfOperationEvaluate) {
+        bsdf.wo = vec3(0.0f);
+        bsdf.pdf = 0.0f;
+        bsdf.f = vec3(0.0f);
         return;
     }
 
-    const float intIOR = scene.materials.data[brdf.materialId].surface.specularIor;
-    const float extIOR = kVacuumIor;
-    const float etaRatio = intIOR / extIOR;
-    const float cosThetaI = dot(brdf.normal, brdf.wi);
-    const vec3 localNormal = cosThetaI < 0.0f ? -brdf.normal : brdf.normal;
-    const float eta = cosThetaI < 0.0f ? etaRatio : 1.0f / etaRatio;
-    const float cosine = cosThetaI < 0.0f ? etaRatio * cosThetaI : -cosThetaI;
-    float cosThetaT = 0.0f;
-    const float fresnel = fresnelDielectric(cosThetaI, extIOR, intIOR, cosThetaT);
-
-    if (brdf.unitSample[0] <= fresnel) {
-        brdf.wo = reflect(-brdf.wi, localNormal);
-        brdf.pdf = fresnel;
-        brdf.f = vec3(fresnel);
-    } else {
-        brdf.wo = refract(-brdf.wi, localNormal, eta);
-        brdf.pdf = 1.0f - fresnel;
-        brdf.f = vec3(brdf.pdf * eta * eta);
-    }
+    sampleSmoothDielectric(
+        bsdf.unitSample,
+        bsdf.wi,
+        kVacuumIor,
+        scene.materials.data[bsdf.materialId].surface.specularIor,
+        bsdf.wo,
+        bsdf.f,
+        bsdf.pdf);
 }

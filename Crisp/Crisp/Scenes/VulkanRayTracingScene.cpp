@@ -116,7 +116,7 @@ constexpr uint32_t kMaterialSamplerSlot = 1;
 constexpr uint32_t kGgxAlbedoLutSamplerSlot = 2;
 constexpr uint32_t kSamplerHeapSlotCount = 3;
 
-// The three core stages, then one callable per material type in kBrdfCallableShaders order -- the tag doubles
+// The three core stages, then one callable per material type in kBsdfCallableShaders order -- the tag doubles
 // as the callable's index, so the ordering is not free.
 constexpr std::array<PathTracerShaderStage, 3> kCoreShaderStages{{
     {"path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
@@ -126,7 +126,7 @@ constexpr std::array<PathTracerShaderStage, 3> kCoreShaderStages{{
 
 std::vector<PathTracerShaderStage> createShaderStages() {
     std::vector<PathTracerShaderStage> stages(kCoreShaderStages.begin(), kCoreShaderStages.end());
-    for (const auto& callable : kBrdfCallableShaders) {
+    for (const auto& callable : kBsdfCallableShaders) {
         stages.push_back({callable, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR});
     }
     return stages;
@@ -170,7 +170,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
             image.getPixelByteSize() == 4 * sizeof(float) ? VK_FORMAT_R32G32B32A32_SFLOAT : VK_FORMAT_R8G8B8A8_SRGB;
         m_materialImages.push_back(createVulkanImage(*renderer, image, format));
     }
-    for (auto& material : m_sceneDesc.brdfs) {
+    for (auto& material : m_sceneDesc.bsdfs) {
         if (material.reflectanceTexture < 0) {
             continue;
         }
@@ -187,10 +187,10 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     m_integratorParams.lightCount =
         static_cast<int32_t>(m_sceneDesc.lights.size()) + m_integratorParams.environmentEnabled;
 
-    m_sceneDesc.brdfs.push_back(createMicrofacetBrdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
+    m_sceneDesc.bsdfs.push_back(createMicrofacetBsdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
 
-    m_brdfParamsBuffer = m_resourceContext->createStorageBuffer(
-        "brdfParams", m_sceneDesc.brdfs, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
+    m_bsdfParamsBuffer = m_resourceContext->createStorageBuffer(
+        "bsdfParams", m_sceneDesc.bsdfs, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
     const std::vector<LightParameters> gpuLights =
         m_sceneDesc.lights.empty() ? std::vector{LightParameters{}} : m_sceneDesc.lights;
     m_lightParamsBuffer =
@@ -257,7 +257,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
 
     m_sceneAddresses = {
         .instances = m_instancePropsBuffer->getDeviceAddress(),
-        .materials = m_brdfParamsBuffer->getDeviceAddress(),
+        .materials = m_bsdfParamsBuffer->getDeviceAddress(),
         .lights = m_lightParamsBuffer->getDeviceAddress(),
         .environmentCdf = m_environmentCdfBuffer ? m_environmentCdfBuffer->getDeviceAddress() : 0,
     };
@@ -280,7 +280,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     // The table is endpoint-mapped, so repeating would wrap the grazing corner onto the normal-incidence one.
     samplerHeap.write(kGgxAlbedoLutSamplerSlot, createLinearClampSamplerCreateInfo());
 
-    // The kBrdfOpenPbr callable reads this unconditionally: directional-albedo.part.glsl refuses to compile
+    // The kBsdfOpenPbr callable reads this unconditionally: directional-albedo.part.glsl refuses to compile
     // without the sampler, rather than silently degrading every compensation mode to a no-op.
     m_ggxAlbedoLut =
         loadGgxAlbedoLut(m_renderer->getDevice(), m_renderer->getResourcesPath() / "Textures/GgxAlbedoLut.exr");
@@ -347,7 +347,7 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     m_pathTracer->uploadFrameData(frameContext, structAsBytes(m_integratorParams));
 
     frameContext.commandEncoder.insertBarrier(kRayTracingRead >> kTransferWrite);
-    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_brdfParamsBuffer, 0, m_sceneDesc.brdfs);
+    frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_bsdfParamsBuffer, 0, m_sceneDesc.bsdfs);
     if (!m_sceneDesc.lights.empty()) {
         frameContext.stagingBelt->uploadBuffer(frameContext.commandEncoder, *m_lightParamsBuffer, 0, m_sceneDesc.lights);
     }
@@ -429,8 +429,8 @@ void VulkanRayTracingScene::drawGui() {
             m_pathTracer->resetAccumulation();
         }
     }
-    if (m_sceneDesc.brdfs.size() > 5 &&
-        ImGui::SliderFloat("Int IOR", &m_sceneDesc.brdfs[5].surface.specularIor, 1.0f, 10.0f)) {
+    if (m_sceneDesc.bsdfs.size() > 5 &&
+        ImGui::SliderFloat("Int IOR", &m_sceneDesc.bsdfs[5].surface.specularIor, 1.0f, 10.0f)) {
         m_pathTracer->resetAccumulation();
     }
 

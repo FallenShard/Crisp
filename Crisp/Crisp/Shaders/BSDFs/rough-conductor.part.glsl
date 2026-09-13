@@ -19,13 +19,13 @@ vec3 evaluateRoughConductor(
     return fresnel * distribution * geometry / (4.0f * cosThetaI);
 }
 
-float roughConductorPdf(vec3 wi, vec3 wo, int microfacetType, float alpha) {
+float computeRoughConductorPdf(vec3 wi, vec3 wo, int microfacetType, float alpha) {
     if (wi.z <= 0.0f || wo.z <= 0.0f) {
         return 0.0f;
     }
 
     const vec3 microfacetNormal = normalize(wi + wo);
-    return microfacetNormalPdf(microfacetNormal, microfacetType, alpha) /
+    return computeMicrofacetNormalPdf(microfacetNormal, microfacetType, alpha) /
         (4.0f * dot(microfacetNormal, wo));
 }
 

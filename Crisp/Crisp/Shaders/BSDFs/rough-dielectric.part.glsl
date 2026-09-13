@@ -57,7 +57,7 @@ vec3 evaluateRoughDielectric(
     return vec3(value);
 }
 
-float roughDielectricPdf(
+float computeRoughDielectricPdf(
     float extIor, float intIor, int microfacetType, float alpha, vec3 wi, vec3 wo) {
     vec3 microfacetNormal;
     float etaTi;
@@ -70,7 +70,7 @@ float roughDielectricPdf(
     const float cosThetaOm = dot(wo, microfacetNormal);
     float cosThetaTm;
     const float fresnel = fresnelDielectric(cosThetaIm, extIor, intIor, cosThetaTm);
-    const float normalPdf = microfacetNormalPdf(microfacetNormal, microfacetType, alpha);
+    const float normalPdf = computeMicrofacetNormalPdf(microfacetNormal, microfacetType, alpha);
 
     if (reflection) {
         return fresnel * normalPdf / (4.0f * abs(cosThetaOm));
@@ -126,7 +126,7 @@ void sampleRoughDielectric(
     }
 
     f = evaluateRoughDielectric(extIor, intIor, microfacetType, alpha, wi, wo);
-    pdf = roughDielectricPdf(extIor, intIor, microfacetType, alpha, wi, wo);
+    pdf = computeRoughDielectricPdf(extIor, intIor, microfacetType, alpha, wi, wo);
     if (pdf <= 0.0f) {
         wo = vec3(0.0f);
         f = vec3(0.0f);

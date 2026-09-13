@@ -77,7 +77,7 @@ private:
 
     IntegratorParameters m_integratorParams;
 
-    VulkanBuffer* m_brdfParamsBuffer{};
+    VulkanBuffer* m_bsdfParamsBuffer{};
     VulkanBuffer* m_lightParamsBuffer{};
     VulkanBuffer* m_instancePropsBuffer{};
     VulkanBuffer* m_environmentCdfBuffer{};

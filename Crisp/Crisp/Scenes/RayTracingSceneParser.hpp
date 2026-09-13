@@ -34,7 +34,7 @@ struct RayTracingRenderSettings {
     float zFar{1000.0f};
 };
 
-struct BrdfParameters {
+struct BsdfParameters {
     OpenPbrSurfaceParams surface;
 
     glm::vec3 complexIorEta;
@@ -49,13 +49,13 @@ struct BrdfParameters {
     int32_t reflectanceSampler{-1};
 };
 
-static_assert(sizeof(BrdfParameters) == 112);
-static_assert(std::is_standard_layout_v<BrdfParameters>);
-static_assert(offsetof(BrdfParameters, surface) == 0);
-static_assert(offsetof(BrdfParameters, complexIorEta) == 64);
-static_assert(offsetof(BrdfParameters, complexIorK) == 80);
-static_assert(offsetof(BrdfParameters, type) == 96);
-static_assert(offsetof(BrdfParameters, reflectanceTexture) == 104);
+static_assert(sizeof(BsdfParameters) == 112);
+static_assert(std::is_standard_layout_v<BsdfParameters>);
+static_assert(offsetof(BsdfParameters, surface) == 0);
+static_assert(offsetof(BsdfParameters, complexIorEta) == 64);
+static_assert(offsetof(BsdfParameters, complexIorK) == 80);
+static_assert(offsetof(BsdfParameters, type) == 96);
+static_assert(offsetof(BsdfParameters, reflectanceTexture) == 104);
 
 struct MaterialTextureDescription {
     std::string filename;
@@ -112,7 +112,7 @@ struct SceneDescription {
     std::vector<std::string> meshFilenames;
     std::vector<glm::mat4> transforms;
     std::vector<InstanceProperties> props;
-    std::vector<BrdfParameters> brdfs;
+    std::vector<BsdfParameters> bsdfs;
     std::vector<MaterialTextureDescription> materialTextures;
     std::vector<LightParameters> lights;
     std::optional<EnvironmentLightDescription> environment;
@@ -121,7 +121,7 @@ struct SceneDescription {
 Result<glm::vec3> parseVec3(const nlohmann::json& json);
 Result<RayTracingRenderSettings> parseRayTracingRenderSettings(const nlohmann::json& json);
 
-BrdfParameters createMicrofacetBrdf(glm::vec3 kd, float alpha, int32_t microfacetType = 0);
+BsdfParameters createMicrofacetBsdf(glm::vec3 kd, float alpha, int32_t microfacetType = 0);
 
 Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, const nlohmann::json& lightList = {});
 

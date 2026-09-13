@@ -8,24 +8,23 @@
 #include "../Core/scene.part.glsl"
 #include "../../BSDFs/smooth-conductor.part.glsl"
 
-layout(location = 0) callableDataInEXT BrdfSample brdf;
+layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
-    brdf.lobeType = kLobeTypeDelta;
-    if (brdf.operation == kBrdfOperationEvaluate) {
-        brdf.wo = vec3(0.0f);
-        brdf.pdf = 0.0f;
-        brdf.f = vec3(0.0f);
+    bsdf.lobeType = kLobeTypeDelta;
+    if (bsdf.operation == kBsdfOperationEvaluate) {
+        bsdf.wo = vec3(0.0f);
+        bsdf.pdf = 0.0f;
+        bsdf.f = vec3(0.0f);
         return;
     }
 
-    const BrdfParameters material = scene.materials.data[brdf.materialId];
+    const BsdfParameters material = scene.materials.data[bsdf.materialId];
     sampleSmoothConductor(
-        brdf.normal,
-        brdf.wi,
+        bsdf.wi,
         material.complexIorEta,
         material.complexIorK,
-        brdf.wo,
-        brdf.f,
-        brdf.pdf);
+        bsdf.wo,
+        bsdf.f,
+        bsdf.pdf);
 }

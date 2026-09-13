@@ -147,7 +147,7 @@ vec3 estimateEnvironmentDirect(const vec3 wiWorld, const vec2 lightSample) {
         return vec3(0.0f);
     }
 
-    const float bsdfPdf = pbrSurfacePdf(surface, wi, wo);
+    const float bsdfPdf = computePbrSurfacePdf(surface, wi, wo);
     const vec3 radiance = evaluateEnvironmentRadiance(direction) * integrator.environmentIntensity;
     return f * radiance * environmentMisWeight(lightPdf, bsdfPdf) / lightPdf;
 }

@@ -96,7 +96,7 @@ void main() {
         if (model == kModelLambertian) {
             results[index].value = vec4(evaluateLambertian(vec3(0.8f, 0.6f, 0.4f), wi, wo), 0.0f);
             results[index].reverseValue = vec4(evaluateLambertian(vec3(0.8f, 0.6f, 0.4f), wo, wi), 0.0f);
-            results[index].woAndPdf = vec4(wo, lambertianPdf(wi, wo));
+            results[index].woAndPdf = vec4(wo, computeLambertianPdf(wi, wo));
             return;
         }
 
@@ -105,7 +105,7 @@ void main() {
             results[index].value = vec4(evaluateOrenNayar(vec3(0.8f, 0.6f, 0.4f), roughness, wi, wo), 0.0f);
             results[index].reverseValue =
                 vec4(evaluateOrenNayar(vec3(0.8f, 0.6f, 0.4f), roughness, wo, wi), 0.0f);
-            results[index].woAndPdf = vec4(wo, lambertianPdf(wi, wo));
+            results[index].woAndPdf = vec4(wo, computeLambertianPdf(wi, wo));
             return;
         }
 
@@ -116,7 +116,7 @@ void main() {
                 vec4(evaluateRoughConductor(goldEta, goldK, microfacetType, 0.3f, wi, wo), 0.0f);
             results[index].reverseValue =
                 vec4(evaluateRoughConductor(goldEta, goldK, microfacetType, 0.3f, wo, wi), 0.0f);
-            results[index].woAndPdf = vec4(wo, roughConductorPdf(wi, wo, microfacetType, 0.3f));
+            results[index].woAndPdf = vec4(wo, computeRoughConductorPdf(wi, wo, microfacetType, 0.3f));
             return;
         }
 
@@ -126,7 +126,7 @@ void main() {
         results[index].reverseValue = vec4(
             evaluateMicrofacet(vec3(0.4f, 0.3f, 0.2f), 0.6f, 1.0f, 1.5046f, microfacetType, 0.3f, wo, wi),
             0.0f);
-        results[index].woAndPdf = vec4(wo, microfacetPdf(wi, wo, 0.6f, microfacetType, 0.3f));
+        results[index].woAndPdf = vec4(wo, computeMicrofacetPdf(wi, wo, 0.6f, microfacetType, 0.3f));
         return;
     }
 
@@ -155,7 +155,7 @@ void main() {
         vec3 wo;
         vec3 weight;
         float pdf;
-        sampleSmoothConductor(vec3(0.0f, 0.0f, 1.0f), wi, goldEta, goldK, wo, weight, pdf);
+        sampleSmoothConductor(wi, goldEta, goldK, wo, weight, pdf);
         results[index].woAndPdf = vec4(wo, pdf);
         results[index].value = vec4(weight, 0.0f);
         return;
@@ -166,7 +166,7 @@ void main() {
             ? sampleMicrofacetNormal(bsdfSample, microfacetType, 0.3f)
             : uniformWo;
         results[index].woAndPdf =
-            vec4(microfacetNormal, microfacetNormalPdf(microfacetNormal, microfacetType, 0.3f));
+            vec4(microfacetNormal, computeMicrofacetNormalPdf(microfacetNormal, microfacetType, 0.3f));
         results[index].value.x = microfacetDistribution(microfacetNormal, microfacetType, 0.3f);
         return;
     }
@@ -186,7 +186,7 @@ void main() {
             }
             results[index].woAndPdf = vec4(
                 wo,
-                roughDielectricPdf(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo));
+                computeRoughDielectricPdf(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo));
             results[index].value = vec4(
                 evaluateRoughDielectric(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo),
                 0.0f);
@@ -242,7 +242,7 @@ void main() {
         results[index].woAndPdf = vec4(wo, pdf);
         results[index].value = vec4(
             evaluateRoughDielectric(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo),
-            roughDielectricPdf(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo));
+            computeRoughDielectricPdf(extIor, intIor, microfacetType, 0.3f, dielectricWi, wo));
         results[index].reverseValue.xyz = sampledF;
     }
 }

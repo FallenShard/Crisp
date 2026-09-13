@@ -48,7 +48,7 @@ layout(set = 1, binding = 6) uniform accelerationStructureEXT shadowSceneBvh;
 // Material-specific parameters. Must match PbrMaterialParams in Materials/PbrMaterial.hpp.
 #include "Common/openpbr-surface.part.glsl"
 
-// The OpenPBR half is one nested block shared with the rasterizer, the other tracer and BrdfParameters;
+// The OpenPBR half is one nested block shared with the rasterizer, the other tracer and BsdfParameters;
 // everything after it is a Crisp renderer extension. Must match PbrMaterialParams in Materials/PbrMaterial.hpp.
 struct PbrMaterialParameters {
     OpenPbrSurfaceParams surface;
@@ -305,7 +305,7 @@ void main() {
         eyeV,
         NdotL,
         NdotV);
-    const float D = distributionGGX(NdotH, alpha);
+    const float D = distributionGgx(NdotH, alpha);
     const float G = geometrySmith(NdotV, NdotL, specularRoughness);
     const vec3 directSpecular = D * G * directF / max(4.0f * NdotV * NdotL, 0.001);
 

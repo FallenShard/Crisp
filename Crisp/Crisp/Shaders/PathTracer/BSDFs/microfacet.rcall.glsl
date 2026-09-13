@@ -10,31 +10,31 @@
 #include "../Core/scene.part.glsl"
 #include "../../BSDFs/microfacet.part.glsl"
 
-layout(location = 0) callableDataInEXT BrdfSample brdf;
+layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
-    const BrdfParameters material = scene.materials.data[brdf.materialId];
+    const BsdfParameters material = scene.materials.data[bsdf.materialId];
     const float ks = material.surface.specularWeight;
     const float alpha = material.microfacetAlpha;
     const int microfacetType = material.microfacetType;
 
-    if (brdf.operation == kBrdfOperationSample) {
+    if (bsdf.operation == kBsdfOperationSample) {
         bool sampledSpecular;
-        brdf.wo = sampleMicrofacet(brdf.unitSample, brdf.wi, ks, microfacetType, alpha, sampledSpecular);
-        brdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
+        bsdf.wo = sampleMicrofacet(bsdf.unitSample, bsdf.wi, ks, microfacetType, alpha, sampledSpecular);
+        bsdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
     } else {
-        brdf.lobeType = kLobeTypeGlossy | kLobeTypeDiffuse;
+        bsdf.lobeType = kLobeTypeGlossy | kLobeTypeDiffuse;
     }
 
-    brdf.f = evaluateMicrofacet(
+    bsdf.f = evaluateMicrofacet(
         material.surface.baseColor,
         material.surface.specularWeight,
         kVacuumIor,
         material.surface.specularIor,
         material.microfacetType,
         material.microfacetAlpha,
-        brdf.wi,
-        brdf.wo);
-    brdf.pdf = microfacetPdf(
-        brdf.wi, brdf.wo, material.surface.specularWeight, material.microfacetType, material.microfacetAlpha);
+        bsdf.wi,
+        bsdf.wo);
+    bsdf.pdf = computeMicrofacetPdf(
+        bsdf.wi, bsdf.wo, material.surface.specularWeight, material.microfacetType, material.microfacetAlpha);
 }

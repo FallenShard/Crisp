@@ -7,7 +7,7 @@
 layout(descriptor_heap, descriptor_stride = 64) uniform texture2D heapTexture2Ds[];
 layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 
-vec3 evaluateMaterialReflectance(const BrdfParameters material, const vec2 texCoord) {
+vec3 evaluateMaterialReflectance(const BsdfParameters material, const vec2 texCoord) {
     if (material.reflectanceTexture < 0 || material.reflectanceSampler < 0) {
         return material.surface.baseColor;
     }

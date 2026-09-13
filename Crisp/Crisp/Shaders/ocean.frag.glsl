@@ -164,7 +164,7 @@ void main() {
 
     const vec3 eyeH = normalize(eyeL + eyeV);
     const float NdotH = max(dot(eyeN, eyeH), 0.0f);
-    const float D = distributionGGX(NdotH, alpha); // GGX takes alpha, not perceptual roughness.
+    const float D = distributionGgx(NdotH, alpha); // GGX takes alpha, not perceptual roughness.
     const float G = geometrySmith(NdotV, NdotL, roughness);
     const vec3 sunFresnel = fresnelSchlick(max(dot(eyeV, eyeH), 0.0f), F0);
     const vec3 sunSpecular = (D * G * sunFresnel / max(4.0f * NdotV * NdotL, 0.001f)) * NdotL * sunIrradiance;
