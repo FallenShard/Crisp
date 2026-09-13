@@ -27,11 +27,6 @@ layout(location = 0) callableDataInEXT BsdfSample bsdf;
 // Sampling reports the FULL mixture value and density, never just the lobe that was picked. The raygen weights
 // next-event estimation against exactly this pdf, so reporting a single lobe's density would bias every MIS
 // combination without producing a visibly wrong image.
-//
-// What does not hold yet: lobe selection still consumes unitSample.x and then rescales it for the direction,
-// so the two are correlated. bsdf.lobeSample exists for exactly this and is deliberately left unused here --
-// switching to it changes the image, and this callable is byte-for-byte what PathTracedView already renders.
-// It lands with the real multi-lobe sampler; see docs/openpbr-path-tracer.md.
 void main() {
     // Compensation is a per-view setting the callable cannot see; evaluateOpenPbr in bsdf-eval.part.glsl must
     // agree with this, or sampling and next-event estimation disagree.
@@ -39,8 +34,7 @@ void main() {
                                                         kEnergyCompensationNone);
 
     bool sampledSpecular = false;
-    const vec3 weight =
-        sampleOpenPbrSurface(surface, bsdf.unitSample, bsdf.wi, bsdf.wo, bsdf.pdf, sampledSpecular);
+    const vec3 weight = sampleOpenPbrSurface(surface, bsdf.unitSample, bsdf.lobeSample, bsdf.wi, bsdf.wo, bsdf.pdf, sampledSpecular);
     bsdf.f = weight * bsdf.pdf; // Recover f (BSDF * abs(cosThetaO)) from the sampled f / pdf weight.
     bsdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
 }

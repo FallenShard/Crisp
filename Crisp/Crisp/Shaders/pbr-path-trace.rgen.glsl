@@ -69,14 +69,15 @@ layout(location = 0) rayPayloadEXT PbrHitInfo hitInfo;
 // own base so a path that terminates early still consumes the same dimensions as one that does not.
 const uint kDimPixelFilter = 0u;
 const uint kDimBounceBase = 2u;
-const uint kDimsPerBounce = 5u;
-const uint kDimBsdf = 0u;            // 2 dimensions, relative to the bounce base.
-const uint kDimLight = 2u;           // 2 dimensions.
-const uint kDimRussianRoulette = 4u; // 1 dimension.
+const uint kDimsPerBounce = 6u;
+const uint kDimBsdf = 0u;            // 3 dimensions, relative to the bounce base.
+const uint kDimLight = 3u;           // 2 dimensions.
+const uint kDimRussianRoulette = 5u; // 1 dimension.
 
 void traceBounce(inout Sampler rng, const uint bounceDim, const vec3 origin, const vec3 direction) {
     setDimension(rng, bounceDim + kDimBsdf);
     hitInfo.unitSample = next2D(rng);
+    hitInfo.lobeSample = next1D(rng);
     traceRayEXT(
         sceneBvh,
         gl_RayFlagsOpaqueEXT,

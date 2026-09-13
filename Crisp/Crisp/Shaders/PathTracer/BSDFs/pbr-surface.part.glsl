@@ -26,11 +26,12 @@ float computePbrSurfacePdf(const PbrSurface surface, const vec3 wi, const vec3 w
 vec3 samplePbrSurface(
     const PbrSurface surface,
     const vec2 unitSample,
+    const float lobeSample,
     const vec3 wi,
     out vec3 wo,
     out float pdf,
     out bool sampledSpecular) {
-    return sampleOpenPbrSurface(surface, unitSample, wi, wo, pdf, sampledSpecular);
+    return sampleOpenPbrSurface(surface, unitSample, lobeSample, wi, wo, pdf, sampledSpecular);
 }
 
 #endif // CRISP_PBR_SURFACE_GLSL

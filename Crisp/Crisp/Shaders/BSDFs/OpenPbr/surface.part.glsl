@@ -99,18 +99,17 @@ float computeOpenPbrSurfacePdf(const OpenPbrSurface surface, const vec3 wi, cons
 // Returns f * cos(wo) / pdf for the sampled direction, or zero when the sample leaves the upper hemisphere.
 vec3 sampleOpenPbrSurface(
     const OpenPbrSurface surface,
-    vec2 unitSample,
+    const vec2 unitSample,
+    const float lobeSample,
     const vec3 wi,
     out vec3 wo,
     out float pdf,
     out bool sampledSpecular) {
-    sampledSpecular = unitSample.x < surface.specularProbability;
+    sampledSpecular = lobeSample < surface.specularProbability;
     if (sampledSpecular) {
-        unitSample.x /= surface.specularProbability;
         const vec3 microfacetNormal = sampleGgxNormal(unitSample, surface.alpha);
         wo = 2.0f * dot(microfacetNormal, wi) * microfacetNormal - wi;
     } else {
-        unitSample.x = (unitSample.x - surface.specularProbability) / (1.0f - surface.specularProbability);
         wo = squareToCosineHemisphere(unitSample);
     }
 

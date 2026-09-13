@@ -110,7 +110,7 @@ void main() {
     vec3 wo;
     float pdf;
     bool sampledSpecular;
-    const vec3 weight = samplePbrSurface(surface, hitInfo.unitSample, wi, wo, pdf, sampledSpecular);
+    const vec3 weight = samplePbrSurface(surface, hitInfo.unitSample, hitInfo.lobeSample, wi, wo, pdf, sampledSpecular);
 
     hitInfo.sampleDirection = frame * wo;
     hitInfo.samplePdf = pdf;

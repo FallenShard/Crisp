@@ -21,8 +21,9 @@ struct PbrHitInfo {
     vec3 normal;                // Out, world-space shading normal, after normal mapping.
     uint materialTextureOffset; // Out, kInvalidMaterialTextureOffset when the material is untextured.
 
-    vec2 unitSample; // In, the BSDF sample the raygen hands to the hit shader.
-    vec2 texCoord;   // Out, unscaled; applyMaterialTextures applies the material's uvScale.
+    vec2 unitSample;  // In, samples a direction or microfacet normal.
+    float lobeSample; // In, independently selects a BSDF lobe.
+    vec2 texCoord;    // Out, unscaled; applyMaterialTextures applies the material's uvScale.
 };
 
 #endif // CRISP_PATH_TRACER_PBR_HIT_GLSL
