@@ -52,6 +52,12 @@ private:
 };
 
 std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const VulkanImage& equirectMap);
+
+inline constexpr const char* kWhiteFurnaceEnvironmentName{"(White Furnace)"};
+
+ImageBasedLightingData createWhiteFurnaceIblData();
+Image createWhiteFurnaceEquirect();
+
 // Must match LUT_SIZE in tools/bake_brdf_lut.py.
 inline constexpr uint32_t kBrdfLutExtent = 512;
 

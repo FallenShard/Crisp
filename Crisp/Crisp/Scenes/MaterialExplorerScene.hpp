@@ -36,7 +36,6 @@ private:
     void createRenderResources(const std::string& environmentMapName);
     void createSceneObjects(const std::filesystem::path& shaderBallPath);
     void createWhiteFurnaceResources();
-    void bindPathTracedEnvironment(bool whiteFurnace);
     void createRayTracedShadowResources();
     void createPathTracedView();
     void setRenderMode(RenderMode mode);
@@ -75,12 +74,8 @@ private:
     std::unique_ptr<VulkanImage> m_environmentEquirect;
     std::unique_ptr<VulkanImageView> m_environmentEquirectView;
     glm::uvec2 m_environmentExtent{0, 0};
-    std::unique_ptr<VulkanImage> m_whiteFurnaceEnvironmentMap;
-    std::unique_ptr<VulkanImage> m_whiteFurnaceEquirect;
-    std::unique_ptr<VulkanImageView> m_whiteFurnaceEquirectView;
-    Distribution2D m_whiteFurnaceDistribution;
-    glm::uvec2 m_whiteFurnaceExtent{0, 0};
     float m_environmentIntensityBeforeFurnace{1.0f};
+    std::string m_environmentNameBeforeFurnace;
     std::vector<PathTracedGeometry> m_pathTracedGeometry;
     RenderMode m_renderMode{RenderMode::Rasterized};
 

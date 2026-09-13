@@ -105,34 +105,6 @@ PbrImageGroup createMaterialExplorerImageGroup() {
     return imageGroup;
 }
 
-Image createUnitRadianceImage() {
-    constexpr std::array<float, 4> kUnitRadiance{1.0f, 1.0f, 1.0f, 1.0f};
-    std::vector<uint8_t> bytes(sizeof(kUnitRadiance));
-    std::memcpy(bytes.data(), kUnitRadiance.data(), sizeof(kUnitRadiance));
-    return Image(std::move(bytes), 1, 1, 4, 4 * sizeof(float));
-}
-
-constexpr uint32_t kWhiteFurnaceEquirectWidth = 64;
-constexpr uint32_t kWhiteFurnaceEquirectHeight = 32;
-
-Image createConstantRadianceEquirect() {
-    const std::vector<float> texels(
-        static_cast<size_t>(kWhiteFurnaceEquirectWidth) * kWhiteFurnaceEquirectHeight * 4, 1.0f);
-    std::vector<uint8_t> bytes(texels.size() * sizeof(float));
-    std::memcpy(bytes.data(), texels.data(), bytes.size());
-    return Image(std::move(bytes), kWhiteFurnaceEquirectWidth, kWhiteFurnaceEquirectHeight, 4, 4 * sizeof(float));
-}
-
-std::unique_ptr<VulkanImage> createWhiteFurnaceCubeMap(Renderer& renderer) {
-    std::vector<Image> faces;
-    faces.reserve(kCubeMapFaceCount);
-    for (uint32_t face = 0; face < kCubeMapFaceCount; ++face) {
-        faces.push_back(createUnitRadianceImage());
-    }
-    const std::array<std::vector<Image>, 1> mipLevels{std::move(faces)};
-    return createVulkanCubeMap(renderer, mipLevels, VK_FORMAT_R32G32B32A32_SFLOAT);
-}
-
 } // namespace
 
 MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window, const nlohmann::json& args)
@@ -211,6 +183,18 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
     createSceneObjects(shaderBallPath);
     m_showFloor = args.value("showFloor", true);
     m_floorNode->isVisible = m_showFloor;
+
+    // Used for white furnace test.
+    if (args.contains("baseColor")) {
+        const auto baseColor = args["baseColor"].get<std::vector<float>>();
+        CRISP_CHECK_EQ(baseColor.size(), 3);
+        m_shaderBallParams.surface.baseColor = glm::vec3(baseColor[0], baseColor[1], baseColor[2]);
+    }
+    m_shaderBallParams.surface.specularRoughness =
+        args.value("specularRoughness", m_shaderBallParams.surface.specularRoughness);
+    m_shaderBallParams.surface.baseMetalness = args.value("baseMetalness", m_shaderBallParams.surface.baseMetalness);
+    m_pbrMaterialTable->update(m_shaderBallMaterialHandle, m_shaderBallParams);
+
     createWhiteFurnaceResources();
     createRayTracedShadowResources();
     createPathTracedView();
@@ -236,6 +220,7 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
     }
     std::sort(m_materialPresetNames.begin() + 1, m_materialPresetNames.end());
 
+    m_environmentMapNames.emplace_back(kWhiteFurnaceEnvironmentName);
     const auto environmentMapsPath = m_renderer->getResourcesPath() / "Textures/EnvironmentMaps";
     for (const auto& entry : std::filesystem::directory_iterator(environmentMapsPath)) {
         if (entry.is_directory()) {
@@ -607,44 +592,6 @@ void MaterialExplorerScene::createWhiteFurnaceResources() {
         .triangleCount = sphereMesh.getTriangleCount(),
         .sceneIndex = kWhiteFurnaceSceneIndex,
     });
-    m_whiteFurnaceEnvironmentMap = createWhiteFurnaceCubeMap(*m_renderer);
-
-    // The cube map alone does not make a furnace: pbr-path-trace.rgen and .rmiss both take their radiance from
-    // the equirect slot, so the distribution has to be swapped with it or the furnace renders the real sky.
-    const auto equirect = createConstantRadianceEquirect();
-    std::vector<float> weights(static_cast<size_t>(kWhiteFurnaceEquirectWidth) * kWhiteFurnaceEquirectHeight);
-    for (uint32_t y = 0; y < kWhiteFurnaceEquirectHeight; ++y) {
-        const float sinTheta = std::sin(
-            std::numbers::pi_v<float> * (static_cast<float>(y) + 0.5f) /
-            static_cast<float>(kWhiteFurnaceEquirectHeight));
-        for (uint32_t x = 0; x < kWhiteFurnaceEquirectWidth; ++x) {
-            weights[static_cast<size_t>(y) * kWhiteFurnaceEquirectWidth + x] = sinTheta;
-        }
-    }
-    m_whiteFurnaceDistribution = Distribution2D(weights, kWhiteFurnaceEquirectWidth, kWhiteFurnaceEquirectHeight);
-    m_whiteFurnaceEquirect = createVulkanImage(*m_renderer, equirect, VK_FORMAT_R32G32B32A32_SFLOAT);
-    m_whiteFurnaceEquirectView = createView(m_renderer->getDevice(), *m_whiteFurnaceEquirect, VK_IMAGE_VIEW_TYPE_2D);
-    m_whiteFurnaceExtent = {kWhiteFurnaceEquirectWidth, kWhiteFurnaceEquirectHeight};
-}
-
-void MaterialExplorerScene::bindPathTracedEnvironment(const bool whiteFurnace) {
-    if (!m_pathTracedView) {
-        return;
-    }
-
-    if (whiteFurnace) {
-        m_pathTracedView->setEnvironmentMap(m_whiteFurnaceEnvironmentMap->getView());
-        m_pathTracedView->setEnvironmentDistribution(
-            *m_whiteFurnaceEquirectView,
-            m_whiteFurnaceDistribution.getCdf(),
-            m_whiteFurnaceExtent.x,
-            m_whiteFurnaceExtent.y);
-        return;
-    }
-
-    m_pathTracedView->setEnvironmentMap(m_lightSystem->getEnvironmentLight()->getCubeMapView());
-    m_pathTracedView->setEnvironmentDistribution(
-        *m_environmentEquirectView, m_environmentDistribution.getCdf(), m_environmentExtent.x, m_environmentExtent.y);
 }
 
 void MaterialExplorerScene::createRayTracedShadowResources() {
@@ -702,14 +649,20 @@ void MaterialExplorerScene::setRenderMode(const RenderMode mode) {
     if (m_pathTracedView) {
         if (mode == RenderMode::WhiteFurnace) {
             m_environmentIntensityBeforeFurnace = m_pathTracedView->getEnvironmentIntensity();
-            bindPathTracedEnvironment(true);
+            m_environmentNameBeforeFurnace = m_lightSystem->getEnvironmentLight()->getName();
             m_pathTracedView->setSceneIndex(kWhiteFurnaceSceneIndex);
             m_pathTracedView->setEnvironmentIntensity(1.0f);
-        } else if (mode == RenderMode::PathTraced) {
-            bindPathTracedEnvironment(false);
-            m_pathTracedView->setSceneIndex(kMaterialExplorerSceneIndex);
-            m_pathTracedView->setEnvironmentIntensity(m_environmentIntensityBeforeFurnace);
+            setEnvironmentMap(kWhiteFurnaceEnvironmentName);
         } else {
+            if (mode == RenderMode::PathTraced) {
+                m_pathTracedView->setSceneIndex(kMaterialExplorerSceneIndex);
+            }
+            // Only a furnace entered through the mode is undone here; one picked from the combo box stays.
+            if (!m_environmentNameBeforeFurnace.empty()) {
+                m_pathTracedView->setEnvironmentIntensity(m_environmentIntensityBeforeFurnace);
+                const auto previous = std::exchange(m_environmentNameBeforeFurnace, std::string{});
+                setEnvironmentMap(previous);
+            }
             m_pathTracedView->resetAccumulation();
         }
     }
@@ -814,15 +767,18 @@ void MaterialExplorerScene::updateForwardDrawParameters() {
 }
 
 void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapName) {
+    const bool whiteFurnace = environmentMapName == kWhiteFurnaceEnvironmentName;
     const auto environmentMapPath = m_renderer->getResourcesPath() / "Textures/EnvironmentMaps" / environmentMapName;
     CRISP_CHECK(
-        std::filesystem::is_directory(environmentMapPath), "Environment map does not exist: {}", environmentMapName);
+        whiteFurnace || std::filesystem::is_directory(environmentMapPath),
+        "Environment map does not exist: {}",
+        environmentMapName);
 
     // Rebuilding the skybox and reconfiguring the forward material rewrite descriptor sets that in-flight command
     // buffers still reference, so this needs the same idle as a render-mode switch. Harmless during construction.
     m_renderer->finish();
 
-    auto iblData = loadImageBasedLightingData(environmentMapPath).unwrap();
+    auto iblData = whiteFurnace ? createWhiteFurnaceIblData() : loadImageBasedLightingData(environmentMapPath).unwrap();
 
     // Next-event estimation needs the equirectangular map and a CDF over it. Weight each texel by luminance and
     // sin(theta): without the sine the poles, which an equirect massively oversamples, would dominate the
@@ -831,7 +787,9 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
         // loadImageBasedLightingData flips Y for the cube-map conversion, but environmentDirectionToUv maps
         // +Y to v = 0. Reusing that copy puts the sky underfoot, so load the source in its own orientation.
         const auto equirect =
-            loadImage(environmentMapPath / fmt::format("{}.hdr", environmentMapName), 4, FlipAxis::None).unwrap();
+            whiteFurnace
+                ? createWhiteFurnaceEquirect()
+                : loadImage(environmentMapPath / fmt::format("{}.hdr", environmentMapName), 4, FlipAxis::None).unwrap();
         const uint32_t width = equirect.getWidth();
         const uint32_t height = equirect.getHeight();
         const uint32_t channels = equirect.getChannelCount();
@@ -868,7 +826,7 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
     if (m_forwardPassMaterial) {
         configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
     }
-    if (m_pathTracedView && m_renderMode == RenderMode::PathTraced) {
+    if (m_pathTracedView && m_renderMode != RenderMode::Rasterized) {
         m_pathTracedView->setEnvironmentMap(m_lightSystem->getEnvironmentLight()->getCubeMapView());
         m_pathTracedView->setEnvironmentDistribution(
             *m_environmentEquirectView, m_environmentDistribution.getCdf(), m_environmentExtent.x, m_environmentExtent.y);

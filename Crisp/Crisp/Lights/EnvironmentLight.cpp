@@ -70,6 +70,47 @@ void EnvironmentLight::update(Renderer& renderer, const ImageBasedLightingData& 
     }
 }
 
+namespace {
+constexpr uint32_t kWhiteFurnaceEquirectWidth{64};
+constexpr uint32_t kWhiteFurnaceEquirectHeight{32};
+constexpr uint32_t kWhiteFurnaceIrradianceFaceSize{128};
+constexpr uint32_t kWhiteFurnaceReflectionMipLevelCount{9};
+
+Image createConstantRadianceImage(const uint32_t width, const uint32_t height) {
+    const std::vector<float> texels(static_cast<size_t>(width) * height * 4, 1.0f);
+    std::vector<uint8_t> bytes(texels.size() * sizeof(float));
+    std::memcpy(bytes.data(), texels.data(), bytes.size());
+    return {std::move(bytes), width, height, 4, 4 * sizeof(float)};
+}
+} // namespace
+
+Image createWhiteFurnaceEquirect() {
+    return createConstantRadianceImage(kWhiteFurnaceEquirectWidth, kWhiteFurnaceEquirectHeight);
+}
+
+ImageBasedLightingData createWhiteFurnaceIblData() {
+    ImageBasedLightingData data{};
+    data.equirectangularEnvironmentMap = createWhiteFurnaceEquirect();
+
+    data.diffuseIrradianceCubeMap.reserve(kCubeMapFaceCount);
+    for (uint32_t face = 0; face < kCubeMapFaceCount; ++face) {
+        data.diffuseIrradianceCubeMap.push_back(
+            createConstantRadianceImage(kWhiteFurnaceIrradianceFaceSize, kWhiteFurnaceIrradianceFaceSize));
+    }
+
+    data.specularReflectanceMapMipLevels.reserve(kWhiteFurnaceReflectionMipLevelCount);
+    for (uint32_t level = 0; level < kWhiteFurnaceReflectionMipLevelCount; ++level) {
+        const uint32_t faceSize = 1u << (kWhiteFurnaceReflectionMipLevelCount - level);
+        std::vector<Image> faces;
+        faces.reserve(kCubeMapFaceCount);
+        for (uint32_t face = 0; face < kCubeMapFaceCount; ++face) {
+            faces.push_back(createConstantRadianceImage(faceSize, faceSize));
+        }
+        data.specularReflectanceMapMipLevels.push_back(std::move(faces));
+    }
+    return data;
+}
+
 std::unique_ptr<VulkanImage> convertEquirectToCubeMap(Renderer* renderer, const VulkanImage& equirectMap) {
     auto& device = renderer->getDevice();
     const auto cubeMapSize = equirectMap.getHeight() / 2;
