@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Bake Resources/Textures/GgxAlbedoLut.exr: R = E(mu, alpha), G = E_avg(alpha), second axis sqrt(alpha).
+"""Bake Resources/Textures/GgxAlbedoLut.exr: R = E(mu, alpha), G = E_avg(alpha), B = the Schlick-bias term,
+second axis sqrt(alpha).
+
+E is the directional albedo with F = 1, so it is the split sum's A + B. Baking B beside it lets a shader form
+the Fresnel-weighted albedo F0 * A + B = F0 * E + (1 - F0) * B without a second table -- the same quantity
+tools/bake_brdf_lut.py gives the rasterizer, which is what keeps the two renderers on one definition.
 
 The lobe MUST stay a transcription of Crisp/Crisp/Shaders/BSDFs/Microfacet/ggx.part.glsl -- sampleGgxNormal and the
 separable ggxSmithG1 product. See docs/openpbr-path-tracer.md.
@@ -68,9 +73,12 @@ def ggx_smith_g1(v: np.ndarray, microfacet_normals: np.ndarray, alpha: float) ->
     return np.where(v_dot_h * v_z <= 0.0, 0.0, g1)
 
 
-def directional_albedo(mu: float, alpha: float, microfacet_normals: np.ndarray) -> float:
-    """E(mu, alpha) with F = 1. Sampling the NDF cancels D against the pdf, which is why this converges at
-    every alpha where a uniform hemisphere quadrature cannot resolve the lobe below alpha ~0.1."""
+def directional_albedo_and_bias(mu: float, alpha: float, microfacet_normals: np.ndarray) -> tuple[float, float]:
+    """E(mu, alpha) with F = 1, and the same integral weighted by Schlick's (1 - V.H)^5.
+
+    Sampling the NDF cancels D against the pdf, which is why this converges at every alpha where a uniform
+    hemisphere quadrature cannot resolve the lobe below alpha ~0.1. The weighting mirrors the fc term in
+    tools/bake_brdf_lut.py, so E - B and B are that table's A and B on this parameterisation."""
     wi = np.array([np.sqrt(max(0.0, 1.0 - mu * mu)), 0.0, mu])
 
     h_dot_i = microfacet_normals @ wi
@@ -84,12 +92,20 @@ def directional_albedo(mu: float, alpha: float, microfacet_normals: np.ndarray) 
         * np.einsum("ij,ij->i", wo, microfacet_normals)
         / (mu * microfacet_normals[:, 2])
     )
-    return float(np.sum(np.where(valid, integrand, 0.0)) / len(microfacet_normals))
+    bias_weight = np.power(np.maximum(1.0 - np.maximum(h_dot_i, 0.0), 0.0), 5.0)
+    count = len(microfacet_normals)
+    albedo = float(np.sum(np.where(valid, integrand, 0.0)) / count)
+    bias = float(np.sum(np.where(valid, integrand * bias_weight, 0.0)) / count)
+    return albedo, bias
+
+
+def directional_albedo(mu: float, alpha: float, microfacet_normals: np.ndarray) -> float:
+    return directional_albedo_and_bias(mu, alpha, microfacet_normals)[0]
 
 
 def bake() -> np.ndarray:
-    """Returns the (LUT_SIZE, LUT_SIZE, 2) table, row = roughness, column = mu."""
-    table = np.zeros((LUT_SIZE, LUT_SIZE, 2), dtype=np.float64)
+    """Returns the (LUT_SIZE, LUT_SIZE, 4) table, row = roughness, column = mu."""
+    table = np.zeros((LUT_SIZE, LUT_SIZE, 4), dtype=np.float64)
 
     # Endpoint-mapped: texel i holds parameter i / (N - 1). ggxAlbedoLutUv is the matching forward remap.
     params = np.arange(LUT_SIZE, dtype=np.float64) / (LUT_SIZE - 1)
@@ -108,7 +124,8 @@ def bake() -> np.ndarray:
         microfacet_normals = sample_ggx_normal(unit_samples, alpha)
 
         for column, mu in enumerate(mus):
-            table[row, column, 0] = directional_albedo(mu, alpha, microfacet_normals)
+            table[row, column, 0], table[row, column, 2] = directional_albedo_and_bias(
+                mu, alpha, microfacet_normals)
 
         average = 2.0 * float(
             np.mean([directional_albedo(mu, alpha, microfacet_normals) * mu for mu in average_mus])
@@ -182,7 +199,12 @@ def write_exr(table: np.ndarray, output_path: Path) -> None:
     import OpenEXR
 
     header = {"compression": OpenEXR.ZIP_COMPRESSION, "type": OpenEXR.scanlineimage}
-    channels = {"R": table[:, :, 0].astype(np.float32), "G": table[:, :, 1].astype(np.float32)}
+    channels = {
+        "R": table[:, :, 0].astype(np.float32),
+        "G": table[:, :, 1].astype(np.float32),
+        "B": table[:, :, 2].astype(np.float32),
+        "A": table[:, :, 3].astype(np.float32),
+    }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with OpenEXR.File(header, channels) as exr:
@@ -194,9 +216,13 @@ def read_exr(path: Path) -> np.ndarray:
 
     with OpenEXR.File(str(path)) as exr:
         channels = exr.channels()
-        table = np.zeros((LUT_SIZE, LUT_SIZE, 2), dtype=np.float64)
-        table[:, :, 0] = channels["R"].pixels
-        table[:, :, 1] = channels["G"].pixels
+        table = np.zeros((LUT_SIZE, LUT_SIZE, 4), dtype=np.float64)
+        # OpenEXR hands back the four channels merged when they are named R/G/B/A, and separately otherwise.
+        if "RGBA" in channels:
+            table[:] = np.asarray(channels["RGBA"].pixels, dtype=np.float64)
+        else:
+            for index, name in enumerate("RGBA"):
+                table[:, :, index] = channels[name].pixels
     return table
 
 

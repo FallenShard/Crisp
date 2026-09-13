@@ -7,6 +7,7 @@
 #include "../lambertian.part.glsl"
 #include "../Microfacet/ggx.part.glsl"
 #include "energy-compensation.part.glsl"
+#include "layering.part.glsl"
 
 // The OpenPBR opaque surface, evaluated and sampled from one place. Both entry points into it -- the
 // kBsdfOpenPbr callable and the raygen's inlined next-event-estimation switch -- must call these functions
@@ -22,7 +23,6 @@ struct OpenPbrSurface {
     vec3 diffuseAlbedo;
     vec3 f0;
     float alpha;
-    float specularProbability;
     uint energyCompensation;
 };
 
@@ -49,14 +49,22 @@ OpenPbrSurface createOpenPbrSurface(const OpenPbrSurfaceParams params, const uin
     const float roughness = clamp(params.specularRoughness, 1e-3f, 1.0f);
     surface.alpha = roughness * roughness;
     surface.energyCompensation = energyCompensation;
-
-    // Selecting the lobe by its approximate share of the reflected energy keeps a black dielectric from
-    // spending every sample on a diffuse lobe that returns nothing.
-    const float diffuseWeight = openPbrLuminance(surface.diffuseAlbedo);
-    const float specularWeight = openPbrLuminance(surface.f0);
-    const float total = diffuseWeight + specularWeight;
-    surface.specularProbability = total > 0.0f ? clamp(specularWeight / total, 0.1f, 0.9f) : 1.0f;
     return surface;
+}
+
+float openPbrSpecularProbability(const OpenPbrSurface surface, const float cosThetaI) {
+    const vec3 layerAlbedo = specularDirectionalAlbedo(cosThetaI, surface.alpha, surface.f0);
+    const float specularWeight = openPbrLuminance(layerAlbedo);
+    const float diffuseWeight = openPbrLuminance((1.0f - layerAlbedo) * surface.diffuseAlbedo);
+
+    if (diffuseWeight <= 0.0f) {
+        return 1.0f;
+    }
+    if (specularWeight <= 0.0f) {
+        return 0.0f;
+    }
+
+    return clamp(specularWeight / (specularWeight + diffuseWeight), 0.05f, 0.95f);
 }
 
 vec3 evaluateOpenPbrSurface(const OpenPbrSurface surface, const vec3 wi, const vec3 wo) {
@@ -67,7 +75,7 @@ vec3 evaluateOpenPbrSurface(const OpenPbrSurface surface, const vec3 wi, const v
     const vec3 halfVector = microfacetReflectionHalfVector(wi, wo);
     const vec3 fresnel = fresnelSchlick(max(dot(wi, halfVector), 0.0f), surface.f0);
 
-    const vec3 diffuse = (1.0f - fresnel) * surface.diffuseAlbedo / PI;
+    const vec3 diffuse = surface.diffuseAlbedo / PI;
     const float distribution = ggxDistribution(halfVector, surface.alpha);
     const float geometry = ggxGeometry(wi, wo, halfVector, surface.alpha);
     vec3 specular = fresnel * distribution * geometry / (4.0f * wi.z * wo.z);
@@ -78,7 +86,8 @@ vec3 evaluateOpenPbrSurface(const OpenPbrSurface surface, const vec3 wi, const v
         specular += kullaContyLobe(wi.z, wo.z, surface.alpha, schlickFresnelAverage(surface.f0));
     }
 
-    return (diffuse + specular) * wo.z;
+    const vec3 layerAlbedo = specularDirectionalAlbedo(wi.z, surface.alpha, surface.f0);
+    return composeLayer(specular, diffuse, layerAlbedo, kUnitTransmittance) * wo.z;
 }
 
 // The full mixture density, not the sampled lobe's. Next-event estimation and BSDF sampling both weight with
@@ -93,7 +102,7 @@ float computeOpenPbrSurfacePdf(const OpenPbrSurface surface, const vec3 wi, cons
         computeGgxVisibleNormalPdf(wi, halfVector, surface.alpha) /
         (4.0f * max(dot(halfVector, wo), 1e-6f));
     const float diffusePdf = wo.z / PI;
-    return mix(diffusePdf, specularPdf, surface.specularProbability);
+    return mix(diffusePdf, specularPdf, openPbrSpecularProbability(surface, wi.z));
 }
 
 // Returns f * cos(wo) / pdf for the sampled direction, or zero when the sample leaves the upper hemisphere.
@@ -105,7 +114,7 @@ vec3 sampleOpenPbrSurface(
     out vec3 wo,
     out float pdf,
     out bool sampledSpecular) {
-    sampledSpecular = lobeSample < surface.specularProbability;
+    sampledSpecular = lobeSample < openPbrSpecularProbability(surface, wi.z);
     if (sampledSpecular) {
         const vec3 microfacetNormal = sampleGgxVisibleNormal(unitSample, wi, surface.alpha);
         wo = 2.0f * dot(microfacetNormal, wi) * microfacetNormal - wi;

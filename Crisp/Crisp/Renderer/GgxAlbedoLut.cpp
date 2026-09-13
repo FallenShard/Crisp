@@ -12,12 +12,12 @@ std::unique_ptr<VulkanImage> loadGgxAlbedoLut(VulkanDevice& device, const std::f
 
     CRISP_CHECK_EQ(exr.width, kGgxAlbedoLutExtent);
     CRISP_CHECK_EQ(exr.height, kGgxAlbedoLutExtent);
-    CRISP_CHECK_EQ(exr.channelCount, 2, "GgxAlbedoLut.exr must hold exactly the R and G channels.");
+    CRISP_CHECK_EQ(exr.channelCount, 4, "GgxAlbedoLut.exr must hold R, G, B and A.");
 
     auto lut = std::make_unique<VulkanImage>(
         device,
         VulkanImageDescription{
-            .format = VK_FORMAT_R32G32_SFLOAT,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
             .extent = {kGgxAlbedoLutExtent, kGgxAlbedoLutExtent, 1},
             .mipLevelCount = 1,
             .layerCount = 1,

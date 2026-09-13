@@ -20,6 +20,11 @@ vec3 composeLayer(
     return coat + coatTransmittance * (1.0f - coatDirectionalAlbedo) * substrate;
 }
 
+vec3 composeLayer(
+    const vec3 coat, const vec3 substrate, const vec3 coatDirectionalAlbedo, const float coatTransmittance) {
+    return coat + coatTransmittance * (1.0f - coatDirectionalAlbedo) * substrate;
+}
+
 // Weighted form, for a coat whose presence is itself a weight rather than all-or-nothing. Lerping the substrate
 // factor rather than the substrate keeps weight zero exactly equal to the unlayered substrate.
 vec3 composeWeightedLayer(
