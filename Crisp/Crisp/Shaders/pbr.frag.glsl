@@ -199,7 +199,7 @@ vec3 getCascadeDebugColor(const float viewDepth) {
     return mix(cascadeColors[cascadeIndex], cascadeColors[cascadeIndex + 1], blend);
 }
 
-vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, float roughness, float ao) {
+vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F0, float roughness, float ao) {
     const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
     const vec3 irradiance = texture(diffuseIrradianceMap, worldN).rgb;
     const vec3 diffuse = irradiance * albedo;
@@ -211,7 +211,7 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F, floa
     const float maxReflectionLod = float(max(textureQueryLevels(specularReflectanceMap) - 1, 0));
     const vec3 prefilter = textureLod(specularReflectanceMap, worldR, roughness * maxReflectionLod).rgb;
     const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
-    const vec3 specular = prefilter * (F * brdf.x + brdf.y);
+    const vec3 specular = prefilter * (F0 * brdf.x + brdf.y);
 
     return kD * diffuse * ao + specular;
 }
@@ -288,8 +288,7 @@ void main() {
     const vec3 dielectricF0 = computeDielectricF0(material.surface.specularIor, material.surface.specularWeight) *
         clamp(material.surface.specularColor, vec3(0.0f), vec3(1.0f));
     const vec3 F0 = mix(dielectricF0, baseColor, baseMetalness);
-    const vec3 envF = fresnelSchlickRoughness(NdotV, F0, specularRoughness);
-    const vec3 envKd = (1.0f - envF) * (1.0f - baseMetalness);
+    const vec3 envKd = (1.0f - fresnelSchlickRoughness(NdotV, F0, specularRoughness)) * (1.0f - baseMetalness);
 
     // Direct-light BRDF.
     const vec3 eyeH = normalize(eyeL + eyeV);
@@ -318,7 +317,7 @@ void main() {
     }
 
     const vec3 directRadiance = (directDiffuse + directSpecular) * Le * NdotL;
-    const vec3 environmentRadiance = computeEnvRadiance(eyeN, eyeV, envKd, baseColor, envF, specularRoughness, ao);
+    const vec3 environmentRadiance = computeEnvRadiance(eyeN, eyeV, envKd, baseColor, F0, specularRoughness, ao);
 
     vec3 color = clamp(material.surface.baseWeight, 0.0f, 1.0f) * (environmentRadiance + shadowCoeff * directRadiance) + emission;
     if (cascadedLight[0].position.w > 0.5f) {

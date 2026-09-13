@@ -69,7 +69,7 @@ layout(set = 3, binding = 0) readonly buffer LightGrid {
 };
 
 vec3 computeEnvRadiance(
-    const vec3 eyeN, const vec3 eyeV, const vec3 kD, const vec3 albedo, const vec3 F, const float roughness) {
+    const vec3 eyeN, const vec3 eyeV, const vec3 kD, const vec3 albedo, const vec3 F0, const float roughness) {
     const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).xyz;
     const vec3 diffuse = texture(irrMap, worldN).rgb * albedo;
 
@@ -78,7 +78,7 @@ vec3 computeEnvRadiance(
     const vec3 prefilter = textureLod(refMap, worldR, roughness * kMaxReflectionLod).rgb;
     const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
 
-    return kD * diffuse + prefilter * (F * brdf.x + brdf.y);
+    return kD * diffuse + prefilter * (F0 * brdf.x + brdf.y);
 }
 
 vec3 evalPointLightRadiance(const LightDescriptor light, out vec3 eyeL) {
@@ -148,9 +148,8 @@ void main() {
         Lo += (diffuse + specular) * Le * NdotL;
     }
 
-    const vec3 Fenv = fresnelSchlickRoughness(NdotV, F0, roughness);
-    const vec3 kD = (1.0f - Fenv) * (1.0f - metallic);
-    Lo += computeEnvRadiance(eyeN, eyeV, kD, albedo, Fenv, roughness);
+    const vec3 kD = (1.0f - fresnelSchlickRoughness(NdotV, F0, roughness)) * (1.0f - metallic);
+    Lo += computeEnvRadiance(eyeN, eyeV, kD, albedo, F0, roughness);
 
     fragColor = vec4(Lo, 1.0f);
 }

@@ -69,7 +69,7 @@ vec3 computeEnvLightRadiance(
     vec3 eyeV,
     vec3 kD,
     vec3 albedo,
-    vec3 F,
+    vec3 F0,
     float roughness,
     float ao) {
     const mat4 invV = inverse(viewMatrix);
@@ -84,7 +84,7 @@ vec3 computeEnvLightRadiance(
     const float MaxReflectionLod = 4.0f;
     const vec3 prefilter = textureLod(specularIrradianceMap, worldR, roughness * MaxReflectionLod).rgb;
     const vec2 brdf = texture(brdfLut, vec2(NdotV, roughness)).xy;
-    const vec3 specular = prefilter * (F * brdf.x + brdf.y);
+    const vec3 specular = prefilter * (F0 * brdf.x + brdf.y);
 
     return (kD * diffuse + specular) * ao;
 }
