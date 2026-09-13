@@ -29,7 +29,7 @@ void main() {
     brdf.f = evaluateMicrofacet(
         material.surface.baseColor,
         material.surface.specularWeight,
-        material.exteriorIor,
+        kVacuumIor,
         material.surface.specularIor,
         material.microfacetType,
         material.microfacetAlpha,

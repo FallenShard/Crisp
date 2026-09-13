@@ -29,7 +29,6 @@
             "bsdf": {
                 "type": "rough-dielectric",
                 "interiorIor": 1.5046,
-                "exteriorIor": 1.0,
                 "microfacetDistribution": "ggx",
                 "microfacetAlpha": 0.2
             }
@@ -41,7 +40,6 @@
             "bsdf": {
                 "type": "rough-dielectric",
                 "interiorIor": 1.5046,
-                "exteriorIor": 1.0,
                 "microfacetDistribution": "beckmann",
                 "microfacetAlpha": 0.35
             }

@@ -134,7 +134,7 @@ TEST(RayTracingSceneParserTest, RejectsUnsupportedBsdfInsteadOfUsingFallbackMate
 TEST(RayTracingSceneParserTest, ReusesCanonicalSurfaceStorageForLegacyParameters) {
     const nlohmann::json shapes = nlohmann::json::array({
         createShape({{"type", "lambertian"}, {"reflectance", {0.2f, 0.3f, 0.4f}}}),
-        createShape({{"type", "dielectric"}, {"interiorIor", 1.7f}, {"exteriorIor", 1.1f}}),
+        createShape({{"type", "dielectric"}, {"interiorIor", 1.7f}}),
         createShape({
             {"type", "microfacet"},
             {"diffuseReflectance", {0.1f, 0.25f, 0.5f}},
@@ -147,7 +147,6 @@ TEST(RayTracingSceneParserTest, ReusesCanonicalSurfaceStorageForLegacyParameters
     ASSERT_EQ(result->brdfs.size(), 3);
     EXPECT_EQ(result->brdfs[0].surface.baseColor, glm::vec3(0.2f, 0.3f, 0.4f));
     EXPECT_FLOAT_EQ(result->brdfs[1].surface.specularIor, 1.7f);
-    EXPECT_FLOAT_EQ(result->brdfs[1].exteriorIor, 1.1f);
     EXPECT_EQ(result->brdfs[2].surface.baseColor, glm::vec3(0.1f, 0.25f, 0.5f));
     EXPECT_FLOAT_EQ(result->brdfs[2].surface.specularWeight, 0.5f);
 }
@@ -162,10 +161,15 @@ TEST(RayTracingSceneParserTest, PropagatesNestedMaterialValidationErrors) {
 
     const auto invalidIors = nlohmann::json::array({createShape({
         {"type", "dielectric"},
-        {"interiorIor", 1.0f},
+        {"interiorIor", 0.0f},
+    })});
+    EXPECT_THAT(parseSceneDescription(invalidIors), HasErrorWithMessageRegex("IOR must be finite"));
+
+    const auto materialExteriorIor = nlohmann::json::array({createShape({
+        {"type", "dielectric"},
         {"exteriorIor", 1.0f},
     })});
-    EXPECT_THAT(parseSceneDescription(invalidIors), HasErrorWithMessageRegex("IORs must be finite"));
+    EXPECT_THAT(parseSceneDescription(materialExteriorIor), HasErrorWithMessageRegex("exteriorIor.*vacuum"));
 
     const auto invalidReflectance = nlohmann::json::array({createShape({
         {"type", "lambertian"},

@@ -7,6 +7,8 @@ const int kLobeTypeDiffuse = 1 << 0;
 const int kLobeTypeDelta = 1 << 1;
 const int kLobeTypeGlossy = 1 << 2;
 
+const float kVacuumIor = 1.0f;
+
 const int kBrdfLambertian = 0;
 const int kBrdfDielectric = 1;
 const int kBrdfMirror = 2;
@@ -96,7 +98,6 @@ struct BrdfParameters {
     vec3 complexIorK;
     float orenNayarRoughness;
 
-    float exteriorIor;
     int type;
     int microfacetType;
     int reflectanceTexture;

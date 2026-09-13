@@ -19,7 +19,7 @@ BrdfEval evaluateMicrofacet(BrdfParameters material, vec3 wi, vec3 wo) {
         evaluateMicrofacet(
             material.surface.baseColor,
             material.surface.specularWeight,
-            material.exteriorIor,
+            kVacuumIor,
             material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,
@@ -50,14 +50,14 @@ BrdfEval evaluateRoughConductor(BrdfParameters material, vec3 wi, vec3 wo) {
 BrdfEval evaluateRoughDielectric(BrdfParameters material, vec3 wi, vec3 wo) {
     return BrdfEval(
         evaluateRoughDielectric(
-            material.exteriorIor,
+            kVacuumIor,
             material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,
             wi,
             wo),
         roughDielectricPdf(
-            material.exteriorIor,
+            kVacuumIor,
             material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,

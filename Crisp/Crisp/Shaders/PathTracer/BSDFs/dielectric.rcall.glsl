@@ -21,7 +21,7 @@ void main() {
     }
 
     const float intIOR = scene.materials.data[brdf.materialId].surface.specularIor;
-    const float extIOR = scene.materials.data[brdf.materialId].exteriorIor;
+    const float extIOR = kVacuumIor;
     const float etaRatio = intIOR / extIOR;
     const float cosThetaI = dot(brdf.normal, brdf.wi);
     const vec3 localNormal = cosThetaI < 0.0f ? -brdf.normal : brdf.normal;

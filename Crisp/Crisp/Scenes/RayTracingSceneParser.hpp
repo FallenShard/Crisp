@@ -43,20 +43,19 @@ struct BrdfParameters {
     glm::vec3 complexIorK;
     float orenNayarRoughness;
 
-    float exteriorIor{getIor(IorMaterial::Vacuum)};
     int32_t type;
     int32_t microfacetType;
     int32_t reflectanceTexture{-1};
     int32_t reflectanceSampler{-1};
 };
 
-static_assert(sizeof(BrdfParameters) == 116);
+static_assert(sizeof(BrdfParameters) == 112);
 static_assert(std::is_standard_layout_v<BrdfParameters>);
 static_assert(offsetof(BrdfParameters, surface) == 0);
 static_assert(offsetof(BrdfParameters, complexIorEta) == 64);
 static_assert(offsetof(BrdfParameters, complexIorK) == 80);
-static_assert(offsetof(BrdfParameters, exteriorIor) == 96);
-static_assert(offsetof(BrdfParameters, reflectanceTexture) == 108);
+static_assert(offsetof(BrdfParameters, type) == 96);
+static_assert(offsetof(BrdfParameters, reflectanceTexture) == 104);
 
 struct MaterialTextureDescription {
     std::string filename;

@@ -20,18 +20,17 @@ BrdfParameters createLambertianBrdf(glm::vec3 albedo) {
     return material;
 }
 
-Result<> validateDielectricIors(const float intIor, const float extIor) {
-    if (!std::isfinite(intIor) || !std::isfinite(extIor) || intIor <= 0.0f || extIor <= 0.0f || intIor == extIor) {
-        return resultError("Interior and exterior IORs must be finite, positive, and different");
+Result<> validateDielectricIor(const float interiorIor) {
+    if (!std::isfinite(interiorIor) || interiorIor <= 0.0f) {
+        return resultError("Interior IOR must be finite and positive");
     }
     return {};
 }
 
-Result<BrdfParameters> createDielectricBrdf(const float intIor, const float extIor) {
-    CRISP_TRY(validateDielectricIors(intIor, extIor));
+Result<BrdfParameters> createDielectricBrdf(const float interiorIor) {
+    CRISP_TRY(validateDielectricIor(interiorIor));
     BrdfParameters material{};
-    material.surface.specularIor = intIor;
-    material.exteriorIor = extIor;
+    material.surface.specularIor = interiorIor;
     material.type = kBrdfDielectric;
     return material;
 }
@@ -73,12 +72,11 @@ BrdfParameters createRoughConductorBrdf(const std::string& iorPreset, const int3
 }
 
 Result<BrdfParameters> createRoughDielectricBrdf(
-    const float intIor, const float extIor, const int32_t microfacetType, const float alpha) {
-    CRISP_TRY(validateDielectricIors(intIor, extIor));
+    const float interiorIor, const int32_t microfacetType, const float alpha) {
+    CRISP_TRY(validateDielectricIor(interiorIor));
     BrdfParameters material{};
-    material.surface.specularIor = intIor;
+    material.surface.specularIor = interiorIor;
     material.microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f);
-    material.exteriorIor = extIor;
     material.type = kBrdfRoughDielectric;
     material.microfacetType = microfacetType;
     return material;
@@ -168,6 +166,9 @@ Result<BrdfParameters> parseBrdfParameters(const nlohmann::json& brdf) {
         return resultError("BSDF must be an object with a string 'type' field");
     }
     const auto& type{brdf["type"]};
+    if ((type == "dielectric" || type == "rough-dielectric") && brdf.contains("exteriorIor")) {
+        return resultError("exteriorIor is fixed to vacuum and cannot be set on a material");
+    }
     if (type == "openpbr") {
         return parseOpenPbrBrdf(brdf);
     }
@@ -195,13 +196,11 @@ Result<BrdfParameters> parseBrdfParameters(const nlohmann::json& brdf) {
             parseMicrofacetType(brdf.value("microfacetDistribution", std::string("beckmann"))));
         return createRoughDielectricBrdf(
             brdf.value("interiorIor", getIor(IorMaterial::Glass)),
-            brdf.value("exteriorIor", getIor(IorMaterial::Air)),
             microfacetType,
             brdf.value("microfacetAlpha", 0.1f));
     }
     if (type == "dielectric") {
-        return createDielectricBrdf(
-            brdf.value("interiorIor", getIor(IorMaterial::Glass)), brdf.value("exteriorIor", getIor(IorMaterial::Air)));
+        return createDielectricBrdf(brdf.value("interiorIor", getIor(IorMaterial::Glass)));
     }
     if (type == "mirror") {
         return createMirrorBrdf();

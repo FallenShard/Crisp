@@ -17,7 +17,7 @@ void main() {
         sampleRoughDielectric(
             brdf.unitSample,
             brdf.lobeSample,
-            material.exteriorIor,
+            kVacuumIor,
             material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,
@@ -29,14 +29,14 @@ void main() {
     }
 
     brdf.f = evaluateRoughDielectric(
-        material.exteriorIor,
+        kVacuumIor,
         material.surface.specularIor,
         material.microfacetType,
         material.microfacetAlpha,
         brdf.wi,
         brdf.wo);
     brdf.pdf = roughDielectricPdf(
-        material.exteriorIor,
+        kVacuumIor,
         material.surface.specularIor,
         material.microfacetType,
         material.microfacetAlpha,
