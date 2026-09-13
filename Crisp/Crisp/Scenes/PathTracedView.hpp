@@ -111,6 +111,10 @@ public:
 
     void setEnergyCompensation(EnergyCompensation mode);
 
+    float getEnvironmentIntensity() const {
+        return m_integratorParams.environmentIntensity;
+    }
+
     EnergyCompensation getEnergyCompensation() const {
         return static_cast<EnergyCompensation>(m_integratorParams.energyCompensation);
     }

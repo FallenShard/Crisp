@@ -21,7 +21,7 @@ constexpr uint32_t kHeight = 360;
 
 // The camera damps toward its configured orientation; accumulation restarts on every frame it still moves, so
 // the image only converges once it has settled.
-constexpr uint32_t kWarmupFrames = 24;
+constexpr uint32_t kWarmupFrames = 256;
 constexpr uint32_t kResizeFrame = 3;
 constexpr float kFixedDeltaTime = 1.0f / 60.0f;
 
@@ -84,6 +84,7 @@ std::vector<float> renderPathTracedView(bool& supported) {
         {"renderMode", "path-traced"},
         {"modelPath", "Models/sphere.obj"},
         {"environmentMap", "NewportLoft"},
+        {"showFloor", false},
     };
     MaterialExplorerScene scene(&renderer, &window, args);
 

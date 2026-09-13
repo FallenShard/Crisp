@@ -15,12 +15,12 @@
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Gui/ImGuiCameraUtils.hpp>
 #include <Crisp/Gui/ImGuiUtils.hpp>
+#include <Crisp/Image/Io/Utils.hpp>
 #include <Crisp/Lights/EnvironmentLightIo.hpp>
+#include <Crisp/Math/Distribution2D.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Mesh/TriangleMeshUtils.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
-#include <Crisp/Image/Io/Utils.hpp>
-#include <Crisp/Math/Distribution2D.hpp>
 #include <Crisp/Renderer/RenderPasses/ForwardLightingPass.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 
@@ -112,6 +112,17 @@ Image createUnitRadianceImage() {
     return Image(std::move(bytes), 1, 1, 4, 4 * sizeof(float));
 }
 
+constexpr uint32_t kWhiteFurnaceEquirectWidth = 64;
+constexpr uint32_t kWhiteFurnaceEquirectHeight = 32;
+
+Image createConstantRadianceEquirect() {
+    const std::vector<float> texels(
+        static_cast<size_t>(kWhiteFurnaceEquirectWidth) * kWhiteFurnaceEquirectHeight * 4, 1.0f);
+    std::vector<uint8_t> bytes(texels.size() * sizeof(float));
+    std::memcpy(bytes.data(), texels.data(), bytes.size());
+    return Image(std::move(bytes), kWhiteFurnaceEquirectWidth, kWhiteFurnaceEquirectHeight, 4, 4 * sizeof(float));
+}
+
 std::unique_ptr<VulkanImage> createWhiteFurnaceCubeMap(Renderer& renderer) {
     std::vector<Image> faces;
     faces.reserve(kCubeMapFaceCount);
@@ -198,9 +209,15 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
     const std::filesystem::path shaderBallPath = args.value(
         "modelPath", std::string{"glTFSamples/2.0/USDShaderBallForGltf/glTF-Binary/USDShaderBallForGltf.glb"});
     createSceneObjects(shaderBallPath);
+    m_showFloor = args.value("showFloor", true);
+    m_floorNode->isVisible = m_showFloor;
     createWhiteFurnaceResources();
     createRayTracedShadowResources();
     createPathTracedView();
+    if (m_pathTracedView) {
+        m_pathTracedView->setVisibilityMask(
+            m_showFloor ? kModelVisibilityMask | kFloorVisibilityMask : kModelVisibilityMask);
+    }
     rebuildDrawCommands();
 
     const auto renderMode = args.value("renderMode", std::string{"rasterized"});
@@ -315,19 +332,20 @@ void MaterialExplorerScene::drawGui() {
     ImGui::Separator();
 
     gui::drawComboBox(
-        "Texture Set",
-        m_materialPresetName,
-        m_materialPresetNames,
-        [this](const std::string& selectedItem) { setMaterialPreset(selectedItem); });
+        "Texture Set", m_materialPresetName, m_materialPresetNames, [this](const std::string& selectedItem) {
+            setMaterialPreset(selectedItem);
+        });
 
     bool materialChanged = false;
     materialChanged |= ImGui::SliderFloat("Base Weight", &m_shaderBallParams.surface.baseWeight, 0.0f, 1.0f, "%.3f");
     materialChanged |= ImGui::ColorEdit3("Base Color", &m_shaderBallParams.surface.baseColor.x);
     materialChanged |= ImGui::SliderFloat("Geometry Opacity", &m_shaderBallParams.geometryOpacity, 0.0f, 1.0f, "%.3f");
-    materialChanged |= ImGui::SliderFloat("Base Metalness", &m_shaderBallParams.surface.baseMetalness, 0.0f, 1.0f, "%.3f");
     materialChanged |=
-        ImGui::SliderFloat("Base Diffuse Roughness", &m_shaderBallParams.surface.baseDiffuseRoughness, 0.0f, 1.0f, "%.3f");
-    materialChanged |= ImGui::SliderFloat("Specular Weight", &m_shaderBallParams.surface.specularWeight, 0.0f, 1.0f, "%.3f");
+        ImGui::SliderFloat("Base Metalness", &m_shaderBallParams.surface.baseMetalness, 0.0f, 1.0f, "%.3f");
+    materialChanged |= ImGui::SliderFloat(
+        "Base Diffuse Roughness", &m_shaderBallParams.surface.baseDiffuseRoughness, 0.0f, 1.0f, "%.3f");
+    materialChanged |=
+        ImGui::SliderFloat("Specular Weight", &m_shaderBallParams.surface.specularWeight, 0.0f, 1.0f, "%.3f");
     materialChanged |= ImGui::ColorEdit3("Specular Color", &m_shaderBallParams.surface.specularColor.x);
     materialChanged |=
         ImGui::SliderFloat("Specular Roughness", &m_shaderBallParams.surface.specularRoughness, 0.001f, 1.0f, "%.3f");
@@ -405,7 +423,8 @@ void MaterialExplorerScene::drawGui() {
             rebuildDrawCommands();
         }
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
-            ImGui::SetTooltip("Compare hard, opaque-geometry BVH visibility rays against cascaded shadow maps with PCF.");
+            ImGui::SetTooltip(
+                "Compare hard, opaque-geometry BVH visibility rays against cascaded shadow maps with PCF.");
         }
     } else {
         ImGui::TextDisabled("Ray-traced shadows unavailable (ray queries unsupported)");
@@ -579,8 +598,7 @@ void MaterialExplorerScene::createWhiteFurnaceResources() {
         VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT |
         VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
     auto& geometry = m_resourceContext->addGeometry(
-        "white-furnace-sphere",
-        createGeometry(*m_renderer, sphereMesh, kPbrVertexFormat, kAccelerationStructureUsage));
+        "white-furnace-sphere", createGeometry(*m_renderer, sphereMesh, kPbrVertexFormat, kAccelerationStructureUsage));
     m_whiteFurnaceMaterialHandle = m_pbrMaterialTable->add(m_shaderBallParams);
     m_pathTracedGeometry.push_back({
         .geometry = &geometry,
@@ -590,6 +608,43 @@ void MaterialExplorerScene::createWhiteFurnaceResources() {
         .sceneIndex = kWhiteFurnaceSceneIndex,
     });
     m_whiteFurnaceEnvironmentMap = createWhiteFurnaceCubeMap(*m_renderer);
+
+    // The cube map alone does not make a furnace: pbr-path-trace.rgen and .rmiss both take their radiance from
+    // the equirect slot, so the distribution has to be swapped with it or the furnace renders the real sky.
+    const auto equirect = createConstantRadianceEquirect();
+    std::vector<float> weights(static_cast<size_t>(kWhiteFurnaceEquirectWidth) * kWhiteFurnaceEquirectHeight);
+    for (uint32_t y = 0; y < kWhiteFurnaceEquirectHeight; ++y) {
+        const float sinTheta = std::sin(
+            std::numbers::pi_v<float> * (static_cast<float>(y) + 0.5f) /
+            static_cast<float>(kWhiteFurnaceEquirectHeight));
+        for (uint32_t x = 0; x < kWhiteFurnaceEquirectWidth; ++x) {
+            weights[static_cast<size_t>(y) * kWhiteFurnaceEquirectWidth + x] = sinTheta;
+        }
+    }
+    m_whiteFurnaceDistribution = Distribution2D(weights, kWhiteFurnaceEquirectWidth, kWhiteFurnaceEquirectHeight);
+    m_whiteFurnaceEquirect = createVulkanImage(*m_renderer, equirect, VK_FORMAT_R32G32B32A32_SFLOAT);
+    m_whiteFurnaceEquirectView = createView(m_renderer->getDevice(), *m_whiteFurnaceEquirect, VK_IMAGE_VIEW_TYPE_2D);
+    m_whiteFurnaceExtent = {kWhiteFurnaceEquirectWidth, kWhiteFurnaceEquirectHeight};
+}
+
+void MaterialExplorerScene::bindPathTracedEnvironment(const bool whiteFurnace) {
+    if (!m_pathTracedView) {
+        return;
+    }
+
+    if (whiteFurnace) {
+        m_pathTracedView->setEnvironmentMap(m_whiteFurnaceEnvironmentMap->getView());
+        m_pathTracedView->setEnvironmentDistribution(
+            *m_whiteFurnaceEquirectView,
+            m_whiteFurnaceDistribution.getCdf(),
+            m_whiteFurnaceExtent.x,
+            m_whiteFurnaceExtent.y);
+        return;
+    }
+
+    m_pathTracedView->setEnvironmentMap(m_lightSystem->getEnvironmentLight()->getCubeMapView());
+    m_pathTracedView->setEnvironmentDistribution(
+        *m_environmentEquirectView, m_environmentDistribution.getCdf(), m_environmentExtent.x, m_environmentExtent.y);
 }
 
 void MaterialExplorerScene::createRayTracedShadowResources() {
@@ -646,12 +701,14 @@ void MaterialExplorerScene::setRenderMode(const RenderMode mode) {
     m_renderMode = mode;
     if (m_pathTracedView) {
         if (mode == RenderMode::WhiteFurnace) {
-            m_pathTracedView->setEnvironmentMap(m_whiteFurnaceEnvironmentMap->getView());
+            m_environmentIntensityBeforeFurnace = m_pathTracedView->getEnvironmentIntensity();
+            bindPathTracedEnvironment(true);
             m_pathTracedView->setSceneIndex(kWhiteFurnaceSceneIndex);
             m_pathTracedView->setEnvironmentIntensity(1.0f);
         } else if (mode == RenderMode::PathTraced) {
-            m_pathTracedView->setEnvironmentMap(m_lightSystem->getEnvironmentLight()->getCubeMapView());
+            bindPathTracedEnvironment(false);
             m_pathTracedView->setSceneIndex(kMaterialExplorerSceneIndex);
+            m_pathTracedView->setEnvironmentIntensity(m_environmentIntensityBeforeFurnace);
         } else {
             m_pathTracedView->resetAccumulation();
         }
@@ -682,10 +739,11 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
     // Every node feeds the path tracer, including ones that cast no shadow, so the usage bits cannot be gated
     // on castsShadow the way the shadow BLAS below is.
     const bool needsAccelerationStructure = m_rayTracedShadowsSupported || m_pathTracingSupported;
-    const VkBufferUsageFlags2 accelerationStructureUsage = needsAccelerationStructure
-        ? VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT |
-            VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
-        : 0;
+    const VkBufferUsageFlags2 accelerationStructureUsage =
+        needsAccelerationStructure
+            ? VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT |
+                  VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
+            : 0;
     auto& geometry = m_resourceContext->addGeometry(
         nodeId, createGeometry(*m_renderer, mesh, kPbrVertexFormat, accelerationStructureUsage));
     auto& node = createRenderNode(nodeId);
@@ -693,11 +751,12 @@ PbrMaterialHandle MaterialExplorerScene::addPbrNode(
     node.transformPack->M = modelMatrix;
 
     if (castsShadow && m_rayTracedShadowsSupported) {
-        m_shadowBlases.push_back(std::make_unique<VulkanAccelerationStructure>(
-            m_renderer->getDevice(),
-            createAccelerationStructureGeometry(geometry, 0),
-            mesh.getTriangleCount(),
-            modelMatrix));
+        m_shadowBlases.push_back(
+            std::make_unique<VulkanAccelerationStructure>(
+                m_renderer->getDevice(),
+                createAccelerationStructureGeometry(geometry, 0),
+                mesh.getTriangleCount(),
+                modelMatrix));
         m_shadowBlases.back()->setDebugName(m_renderer->getDevice(), fmt::format("Material Explorer {} BLAS", nodeId));
     }
 
@@ -780,7 +839,8 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
 
         std::vector<float> weights(static_cast<size_t>(width) * height);
         for (uint32_t y = 0; y < height; ++y) {
-            const float sinTheta = std::sin(std::numbers::pi_v<float> * (static_cast<float>(y) + 0.5f) / static_cast<float>(height));
+            const float sinTheta =
+                std::sin(std::numbers::pi_v<float> * (static_cast<float>(y) + 0.5f) / static_cast<float>(height));
             for (uint32_t x = 0; x < width; ++x) {
                 const auto* texel = pixels + (static_cast<size_t>(y) * width + x) * channels;
                 const float luminance = 0.2126f * texel[0] + 0.7152f * texel[1] + 0.0722f * texel[2];
@@ -811,10 +871,7 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
     if (m_pathTracedView && m_renderMode == RenderMode::PathTraced) {
         m_pathTracedView->setEnvironmentMap(m_lightSystem->getEnvironmentLight()->getCubeMapView());
         m_pathTracedView->setEnvironmentDistribution(
-            *m_environmentEquirectView,
-            m_environmentDistribution.getCdf(),
-            m_environmentExtent.x,
-            m_environmentExtent.y);
+            *m_environmentEquirectView, m_environmentDistribution.getCdf(), m_environmentExtent.x, m_environmentExtent.y);
     }
 }
 
@@ -839,8 +896,7 @@ void MaterialExplorerScene::setMaterialPreset(const std::string& materialPresetN
     } else {
         auto found = m_materialPresets.find(materialPresetName);
         if (found == m_materialPresets.end()) {
-            const auto materialPath =
-                m_renderer->getResourcesPath() / "Textures/PbrMaterials" / materialPresetName;
+            const auto materialPath = m_renderer->getResourcesPath() / "Textures/PbrMaterials" / materialPresetName;
             auto [material, images] = loadPbrMaterial(materialPath);
             addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
             found = m_materialPresets.emplace(materialPresetName, std::move(material)).first;
