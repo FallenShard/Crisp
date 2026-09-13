@@ -315,8 +315,8 @@ void ShadowMappingScene::createShowcase() {
     }
 
     PbrMaterialParams floorMaterial;
-    floorMaterial.baseColor = glm::vec3(0.32f, 0.38f, 0.25f);
-    floorMaterial.specularRoughness = 0.82f;
+    floorMaterial.surface.baseColor = glm::vec3(0.32f, 0.38f, 0.25f);
+    floorMaterial.surface.specularRoughness = 0.82f;
     addObject("floor", floorGeometry, floorMesh.getBoundingBox(), glm::mat4(1.0f), floorMaterial, false);
 
     constexpr std::array<glm::vec3, 5> kColors{
@@ -336,9 +336,9 @@ void ShadowMappingScene::createShowcase() {
             glm::scale(glm::vec3(1.5f, height, 1.5f));
 
         PbrMaterialParams material;
-        material.baseColor = kColors[index];
-        material.specularRoughness = 0.25f + 0.12f * static_cast<float>(index);
-        material.baseMetalness = index == 2 ? 0.65f : 0.0f;
+        material.surface.baseColor = kColors[index];
+        material.surface.specularRoughness = 0.25f + 0.12f * static_cast<float>(index);
+        material.surface.baseMetalness = index == 2 ? 0.65f : 0.0f;
         addObject(fmt::format("pillar-{}", index), cubeGeometry, cubeMesh.getBoundingBox(), transform, material);
     }
 
@@ -348,9 +348,9 @@ void ShadowMappingScene::createShowcase() {
         const glm::mat4 transform = glm::translate(glm::vec3(3.0f, radius, z)) * glm::scale(glm::vec3(radius));
 
         PbrMaterialParams material;
-        material.baseColor = kColors[kColors.size() - index - 1];
-        material.specularRoughness = 0.12f + 0.17f * static_cast<float>(index);
-        material.baseMetalness = index % 2 == 0 ? 0.8f : 0.0f;
+        material.surface.baseColor = kColors[kColors.size() - index - 1];
+        material.surface.specularRoughness = 0.12f + 0.17f * static_cast<float>(index);
+        material.surface.baseMetalness = index % 2 == 0 ? 0.8f : 0.0f;
         addObject(fmt::format("sphere-{}", index), sphereGeometry, sphereMesh.getBoundingBox(), transform, material);
     }
 }

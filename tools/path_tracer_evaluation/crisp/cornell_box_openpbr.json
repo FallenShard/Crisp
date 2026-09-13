@@ -1,0 +1,133 @@
+{
+    "integrator": {
+        "type": "mis-path-tracer",
+        "maxDepth": 32
+    },
+    "sampler": {
+        "type": "independent",
+        "samplesPerPixel": 1024,
+        "seed": 0
+    },
+    "camera": {
+        "type": "perspective",
+        "imageSize": [
+            1920,
+            1080
+        ],
+        "fovY": 27.7856,
+        "zNear": 0.1,
+        "zFar": 1000.0,
+        "position": [
+            0.0,
+            0.919769,
+            5.41159
+        ],
+        "target": [
+            0.0,
+            0.919769,
+            4.41159
+        ],
+        "up": [
+            0.0,
+            1.0,
+            0.0
+        ],
+        "reconstructionFilter": {
+            "type": "box"
+        }
+    },
+    "shapes": [
+        {
+            "type": "mesh",
+            "filename": "walls.obj",
+            "bsdf": {
+                "type": "openpbr",
+                "base_color": [
+                    0.725,
+                    0.71,
+                    0.68
+                ],
+                "base_metalness": 0.0,
+                "specular_weight": 0.0,
+                "base_diffuse_roughness": 0.0
+            }
+        },
+        {
+            "type": "mesh",
+            "filename": "rightwall.obj",
+            "bsdf": {
+                "type": "openpbr",
+                "base_color": [
+                    0.161,
+                    0.133,
+                    0.427
+                ],
+                "base_metalness": 0.0,
+                "specular_weight": 0.0,
+                "base_diffuse_roughness": 0.0
+            }
+        },
+        {
+            "type": "mesh",
+            "filename": "leftwall.obj",
+            "bsdf": {
+                "type": "openpbr",
+                "base_color": [
+                    0.63,
+                    0.065,
+                    0.05
+                ],
+                "base_metalness": 0.0,
+                "specular_weight": 0.0,
+                "base_diffuse_roughness": 0.0
+            }
+        },
+        {
+            "type": "mesh",
+            "filename": "light.obj",
+            "bsdf": {
+                "type": "openpbr",
+                "base_color": [
+                    0.5,
+                    0.5,
+                    0.5
+                ],
+                "base_metalness": 0.0,
+                "specular_weight": 0.0,
+                "base_diffuse_roughness": 0.0
+            },
+            "light": {
+                "type": "area",
+                "radiance": [
+                    15.0,
+                    15.0,
+                    15.0
+                ]
+            }
+        },
+        {
+            "type": "sphere",
+            "center": [
+                -0.4214,
+                0.3321,
+                -0.28
+            ],
+            "radius": 0.3263,
+            "bsdf": {
+                "type": "mirror"
+            }
+        },
+        {
+            "type": "sphere",
+            "center": [
+                0.4458,
+                0.3321,
+                0.3767
+            ],
+            "radius": 0.3263,
+            "bsdf": {
+                "type": "dielectric"
+            }
+        }
+    ]
+}

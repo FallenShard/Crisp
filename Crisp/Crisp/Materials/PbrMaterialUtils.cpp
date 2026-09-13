@@ -40,9 +40,9 @@ const std::vector<FlatStringHashSet> kTextureFileAliases = {
 
 PbrMaterialParams createLegacyMaterialParams() {
     PbrMaterialParams params{};
-    params.baseColor = glm::vec3(1.0f);
-    params.baseMetalness = 1.0f;
-    params.specularRoughness = 1.0f;
+    params.surface.baseColor = glm::vec3(1.0f);
+    params.surface.baseMetalness = 1.0f;
+    params.surface.specularRoughness = 1.0f;
     return params;
 }
 
@@ -122,7 +122,7 @@ std::pair<PbrMaterial, PbrImageGroup> loadPbrMaterial(const std::filesystem::pat
     material.textureKeys[2] = group.ormMaps.empty() ? "" : keyCreator.createOrmMapKey(0);
     material.textureKeys[3] = group.emissiveMaps.empty() ? "" : keyCreator.createEmissiveMapKey(0);
     if (!group.emissiveMaps.empty()) {
-        material.params.emissionLuminance = 1.0f;
+        material.params.surface.emissionLuminance = 1.0f;
     }
 
     return {std::move(material), std::move(group)};

@@ -451,7 +451,7 @@ void PbrScene::createObjSceneObject(const std::filesystem::path& path) {
 
     PbrMaterial material{};
     material.name = path.stem().string();
-    material.params.baseColor = glm::vec3(0.5f);
+    material.params.surface.baseColor = glm::vec3(0.5f);
 
     addSceneObject(
         material.name, mesh, material, glm::translate(glm::vec3(0.0f, kFloorHeight - mesh.getBoundingBox().min.y, 0.0f)));

@@ -46,22 +46,14 @@ layout(set = 1, binding = 5) uniform sampler2D brdfLut;
 layout(set = 1, binding = 6) uniform accelerationStructureEXT shadowSceneBvh;
 
 // Material-specific parameters. Must match PbrMaterialParams in Materials/PbrMaterial.hpp.
+#include "Common/openpbr-surface.part.glsl"
+
+// The OpenPBR half is one nested block shared with the rasterizer, the other tracer and BrdfParameters;
+// everything after it is a Crisp renderer extension. Must match PbrMaterialParams in Materials/PbrMaterial.hpp.
 struct PbrMaterialParameters {
-    vec3 baseColor;
-    float baseWeight;
-
-    vec3 specularColor;
-    float specularWeight;
-
-    vec3 emissionColor;
-    float emissionLuminance;
+    OpenPbrSurfaceParams surface;
 
     vec2 uvScale;
-    float baseMetalness;
-    float baseDiffuseRoughness;
-
-    float specularRoughness;
-    float specularIor;
     float normalScale;
     float aoStrength;
 
@@ -283,18 +275,18 @@ void main() {
     if ((material.flags & 1u) != 0u && opacity < material.alphaCutoff) {
         discard;
     }
-    const vec3 baseColor = baseColorSample.rgb * material.baseColor;
+    const vec3 baseColor = baseColorSample.rgb * material.surface.baseColor;
     const vec3 orm = sampleMaterial(material, material.ormTex, uvCoord).rgb;
-    const float specularRoughness = clamp(orm.g * material.specularRoughness, 0.001f, 1.0f);
+    const float specularRoughness = clamp(orm.g * material.surface.specularRoughness, 0.001f, 1.0f);
     const float alpha = specularRoughness * specularRoughness;
-    const float baseMetalness = clamp(orm.b * material.baseMetalness, 0.0f, 1.0f);
+    const float baseMetalness = clamp(orm.b * material.surface.baseMetalness, 0.0f, 1.0f);
     const float ao = mix(1.0f, orm.r, clamp(material.aoStrength, 0.0f, 1.0f));
-    const vec3 emission = sampleMaterial(material, material.emissionTex, uvCoord).rgb * material.emissionColor *
-        max(material.emissionLuminance, 0.0f);
+    const vec3 emission = sampleMaterial(material, material.emissionTex, uvCoord).rgb * material.surface.emissionColor *
+        max(material.surface.emissionLuminance, 0.0f);
 
     // Environment BRDF.
-    const vec3 dielectricF0 = computeDielectricF0(material.specularIor, material.specularWeight) *
-        clamp(material.specularColor, vec3(0.0f), vec3(1.0f));
+    const vec3 dielectricF0 = computeDielectricF0(material.surface.specularIor, material.surface.specularWeight) *
+        clamp(material.surface.specularColor, vec3(0.0f), vec3(1.0f));
     const vec3 F0 = mix(dielectricF0, baseColor, baseMetalness);
     const vec3 envF = fresnelSchlickRoughness(NdotV, F0, specularRoughness);
     const vec3 envKd = (1.0f - envF) * (1.0f - baseMetalness);
@@ -307,7 +299,7 @@ void main() {
     const vec3 directKd = (1.0f - directF) * (1.0f - baseMetalness);
     const vec3 directDiffuse = directKd * evaluateOrenNayarDiffuse(
         baseColor,
-        clamp(material.baseDiffuseRoughness, 0.0f, 1.0f),
+        clamp(material.surface.baseDiffuseRoughness, 0.0f, 1.0f),
         eyeN,
         eyeL,
         eyeV,
@@ -328,7 +320,7 @@ void main() {
     const vec3 directRadiance = (directDiffuse + directSpecular) * Le * NdotL;
     const vec3 environmentRadiance = computeEnvRadiance(eyeN, eyeV, envKd, baseColor, envF, specularRoughness, ao);
 
-    vec3 color = clamp(material.baseWeight, 0.0f, 1.0f) * (environmentRadiance + shadowCoeff * directRadiance) + emission;
+    vec3 color = clamp(material.surface.baseWeight, 0.0f, 1.0f) * (environmentRadiance + shadowCoeff * directRadiance) + emission;
     if (cascadedLight[0].position.w > 0.5f) {
         color = mix(color, getCascadeDebugColor(-eyePosition.z), 0.45f);
     }

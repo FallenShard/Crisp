@@ -21,7 +21,9 @@ const uint kImageSlot = 1;
 const uint kViewSlot = 2;
 const uint kIntegratorSlot = 3;
 const uint kEnvironmentMapSlot = 4;
+const uint kGgxAlbedoLutSlot = 5;
 const uint kEnvironmentSamplerSlot = 0;
+const uint kGgxAlbedoLutSamplerSlot = 2;
 
 // This doesn't work yet in a descriptor_heap: Nvidia driver bug.
 layout(set = 1, binding = 0) uniform accelerationStructureEXT sceneBvh;
@@ -54,6 +56,9 @@ heapIntegrators[];
 #define integrator heapIntegrators[kIntegratorSlot]
 #define environmentMap heapTexture2Ds[kEnvironmentMapSlot]
 #define environmentSampler heapSamplers[kEnvironmentSamplerSlot]
+// bsdf-eval.part.glsl evaluates kBrdfOpenPbr inline for next-event estimation, and that reaches the GGX
+// directional-albedo table even when no compensation mode is active.
+#define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
 
 #include "PathTracer/Core/scene.part.glsl"
 #include "PathTracer/Core/intersection.part.glsl"

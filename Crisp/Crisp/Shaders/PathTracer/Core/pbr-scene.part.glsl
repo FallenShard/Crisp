@@ -3,22 +3,14 @@
 
 // Material-specific parameters. Must match PbrMaterialParams in Materials/PbrMaterial.hpp and the copy in
 // Shaders/pbr.frag.glsl -- one material table feeds the raster and the path-traced view.
+#include "../../Common/openpbr-surface.part.glsl"
+
+// The OpenPBR half is one nested block shared with the rasterizer, the other tracer and BrdfParameters;
+// everything after it is a Crisp renderer extension. Must match PbrMaterialParams in Materials/PbrMaterial.hpp.
 struct PbrMaterialParameters {
-    vec3 baseColor;
-    float baseWeight;
-
-    vec3 specularColor;
-    float specularWeight;
-
-    vec3 emissionColor;
-    float emissionLuminance;
+    OpenPbrSurfaceParams surface;
 
     vec2 uvScale;
-    float baseMetalness;
-    float baseDiffuseRoughness;
-
-    float specularRoughness;
-    float specularIor;
     float normalScale;
     float aoStrength;
 

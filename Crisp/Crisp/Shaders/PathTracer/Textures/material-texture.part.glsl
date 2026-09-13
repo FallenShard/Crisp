@@ -9,7 +9,7 @@ layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 
 vec3 evaluateMaterialReflectance(const BrdfParameters material, const vec2 texCoord) {
     if (material.reflectanceTexture < 0 || material.reflectanceSampler < 0) {
-        return material.albedo;
+        return material.surface.baseColor;
     }
 
     const int textureIndex = nonuniformEXT(material.reflectanceTexture);

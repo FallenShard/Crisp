@@ -321,17 +321,17 @@ void MaterialExplorerScene::drawGui() {
         [this](const std::string& selectedItem) { setMaterialPreset(selectedItem); });
 
     bool materialChanged = false;
-    materialChanged |= ImGui::SliderFloat("Base Weight", &m_shaderBallParams.baseWeight, 0.0f, 1.0f, "%.3f");
-    materialChanged |= ImGui::ColorEdit3("Base Color", &m_shaderBallParams.baseColor.x);
+    materialChanged |= ImGui::SliderFloat("Base Weight", &m_shaderBallParams.surface.baseWeight, 0.0f, 1.0f, "%.3f");
+    materialChanged |= ImGui::ColorEdit3("Base Color", &m_shaderBallParams.surface.baseColor.x);
     materialChanged |= ImGui::SliderFloat("Geometry Opacity", &m_shaderBallParams.geometryOpacity, 0.0f, 1.0f, "%.3f");
-    materialChanged |= ImGui::SliderFloat("Base Metalness", &m_shaderBallParams.baseMetalness, 0.0f, 1.0f, "%.3f");
+    materialChanged |= ImGui::SliderFloat("Base Metalness", &m_shaderBallParams.surface.baseMetalness, 0.0f, 1.0f, "%.3f");
     materialChanged |=
-        ImGui::SliderFloat("Base Diffuse Roughness", &m_shaderBallParams.baseDiffuseRoughness, 0.0f, 1.0f, "%.3f");
-    materialChanged |= ImGui::SliderFloat("Specular Weight", &m_shaderBallParams.specularWeight, 0.0f, 1.0f, "%.3f");
-    materialChanged |= ImGui::ColorEdit3("Specular Color", &m_shaderBallParams.specularColor.x);
+        ImGui::SliderFloat("Base Diffuse Roughness", &m_shaderBallParams.surface.baseDiffuseRoughness, 0.0f, 1.0f, "%.3f");
+    materialChanged |= ImGui::SliderFloat("Specular Weight", &m_shaderBallParams.surface.specularWeight, 0.0f, 1.0f, "%.3f");
+    materialChanged |= ImGui::ColorEdit3("Specular Color", &m_shaderBallParams.surface.specularColor.x);
     materialChanged |=
-        ImGui::SliderFloat("Specular Roughness", &m_shaderBallParams.specularRoughness, 0.001f, 1.0f, "%.3f");
-    materialChanged |= ImGui::SliderFloat("Specular IOR", &m_shaderBallParams.specularIor, 1.0f, 3.0f, "%.3f");
+        ImGui::SliderFloat("Specular Roughness", &m_shaderBallParams.surface.specularRoughness, 0.001f, 1.0f, "%.3f");
+    materialChanged |= ImGui::SliderFloat("Specular IOR", &m_shaderBallParams.surface.specularIor, 1.0f, 3.0f, "%.3f");
     materialChanged |= ImGui::SliderFloat("Ambient Occlusion", &m_shaderBallParams.aoStrength, 0.0f, 1.0f, "%.3f");
     materialChanged |= ImGui::SliderFloat("Normal Strength", &m_shaderBallParams.normalScale, 0.0f, 2.0f, "%.3f");
     const glm::vec2 previousUvScale = m_shaderBallParams.uvScale;
@@ -348,9 +348,9 @@ void MaterialExplorerScene::drawGui() {
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
         ImGui::SetTooltip("Hold Alt while editing to set both UV axes.");
     }
-    materialChanged |= ImGui::ColorEdit3("Emission Color", &m_shaderBallParams.emissionColor.x);
+    materialChanged |= ImGui::ColorEdit3("Emission Color", &m_shaderBallParams.surface.emissionColor.x);
     materialChanged |=
-        ImGui::SliderFloat("Emission Luminance", &m_shaderBallParams.emissionLuminance, 0.0f, 20.0f, "%.3f");
+        ImGui::SliderFloat("Emission Luminance", &m_shaderBallParams.surface.emissionLuminance, 0.0f, 20.0f, "%.3f");
 
     const uint32_t previousFlags = m_shaderBallParams.flags;
     bool alphaMasked = (m_shaderBallParams.flags & PbrMaterialAlphaMask) != 0;
@@ -512,9 +512,9 @@ void MaterialExplorerScene::createSceneObjects(const std::filesystem::path& shad
         for (auto&& [modelIndex, model] : std::views::enumerate(sceneData.models)) {
             const bool isEditableMaterial = model.material.name == kEditableGltfMaterialName;
             if (isEditableMaterial) {
-                model.material.params.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
-                model.material.params.baseMetalness = 0.0f;
-                model.material.params.specularRoughness = 0.28f;
+                model.material.params.surface.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
+                model.material.params.surface.baseMetalness = 0.0f;
+                model.material.params.surface.specularRoughness = 0.28f;
                 model.material.textureKeys[kPbrOrmMapIndex] = PbrImageKeyCreator{"material-explorer"}.createOrmMapKey(0);
             }
 
@@ -549,9 +549,9 @@ void MaterialExplorerScene::createSceneObjects(const std::filesystem::path& shad
             keyCreator.createOrmMapKey(0),
             keyCreator.createEmissiveMapKey(0),
         };
-        shaderBallMaterial.params.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
-        shaderBallMaterial.params.baseMetalness = 0.0f;
-        shaderBallMaterial.params.specularRoughness = 0.28f;
+        shaderBallMaterial.params.surface.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
+        shaderBallMaterial.params.surface.baseMetalness = 0.0f;
+        shaderBallMaterial.params.surface.specularRoughness = 0.28f;
         m_shaderBallMaterialHandle =
             addPbrNode(kShaderBallNodeId, shaderBallMesh, shaderBallMaterial, shaderBallTransform, true);
         m_editableMaterialNode = m_renderNodes.at(std::string{kShaderBallNodeId}).get();
@@ -562,8 +562,8 @@ void MaterialExplorerScene::createSceneObjects(const std::filesystem::path& shad
     const auto floorMesh = createPlaneMesh(12.0f, 12.0f);
     const auto floorMaterialPath = m_renderer->getResourcesPath() / "Textures/PbrMaterials/Grass";
     auto [floorMaterial, floorImages] = loadPbrMaterial(floorMaterialPath);
-    floorMaterial.params.baseMetalness = 0.0f;
-    floorMaterial.params.specularRoughness = 0.85f;
+    floorMaterial.params.surface.baseMetalness = 0.0f;
+    floorMaterial.params.surface.specularRoughness = 0.85f;
     floorMaterial.params.uvScale = glm::vec2(8.0f);
     addPbrImageGroupToImageCache(floorImages, m_resourceContext->imageCache);
     addPbrNode(kFloorNodeId, floorMesh, floorMaterial, glm::mat4(1.0f), false);
@@ -833,8 +833,8 @@ void MaterialExplorerScene::setMaterialPreset(const std::string& materialPresetN
             keyCreator.createOrmMapKey(0),
             keyCreator.createEmissiveMapKey(0),
         };
-        parameterOnlyMaterial.params.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
-        parameterOnlyMaterial.params.specularRoughness = 0.28f;
+        parameterOnlyMaterial.params.surface.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
+        parameterOnlyMaterial.params.surface.specularRoughness = 0.28f;
         preset = &parameterOnlyMaterial;
     } else {
         auto found = m_materialPresets.find(materialPresetName);
@@ -851,11 +851,11 @@ void MaterialExplorerScene::setMaterialPreset(const std::string& materialPresetN
     auto params = createGpuPbrParams(*preset, m_resourceContext->imageCache);
 
     // Texture sets author these values; the remaining OpenPBR controls stay under the explorer sliders.
-    params.baseWeight = m_shaderBallParams.baseWeight;
-    params.baseDiffuseRoughness = m_shaderBallParams.baseDiffuseRoughness;
-    params.specularColor = m_shaderBallParams.specularColor;
-    params.specularWeight = m_shaderBallParams.specularWeight;
-    params.specularIor = m_shaderBallParams.specularIor;
+    params.surface.baseWeight = m_shaderBallParams.surface.baseWeight;
+    params.surface.baseDiffuseRoughness = m_shaderBallParams.surface.baseDiffuseRoughness;
+    params.surface.specularColor = m_shaderBallParams.surface.specularColor;
+    params.surface.specularWeight = m_shaderBallParams.surface.specularWeight;
+    params.surface.specularIor = m_shaderBallParams.surface.specularIor;
     params.uvScale = m_shaderBallParams.uvScale;
     params.geometryOpacity = m_shaderBallParams.geometryOpacity;
     params.alphaCutoff = m_shaderBallParams.alphaCutoff;
@@ -881,9 +881,9 @@ void MaterialExplorerScene::resetMaterial() {
     const auto emissionTex = m_shaderBallParams.emissionTex;
 
     m_shaderBallParams = {};
-    m_shaderBallParams.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
-    m_shaderBallParams.baseMetalness = 0.0f;
-    m_shaderBallParams.specularRoughness = 0.28f;
+    m_shaderBallParams.surface.baseColor = glm::vec3(0.72f, 0.24f, 0.12f);
+    m_shaderBallParams.surface.baseMetalness = 0.0f;
+    m_shaderBallParams.surface.specularRoughness = 0.28f;
     m_shaderBallParams.samplerIndex = samplerIndex;
     m_shaderBallParams.baseColorTex = baseColorTex;
     m_shaderBallParams.normalTex = normalTex;

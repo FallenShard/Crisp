@@ -557,18 +557,18 @@ PbrMaterial createPbrMaterialFromGltfMaterial(
     }
 
     const glm::vec4 baseColorFactor = toGlm<glm::vec4>(material.pbrMetallicRoughness.baseColorFactor);
-    pbrMaterial.params.baseColor = glm::vec3(baseColorFactor);
+    pbrMaterial.params.surface.baseColor = glm::vec3(baseColorFactor);
     pbrMaterial.params.geometryOpacity = baseColorFactor.a;
 
     const glm::vec3 emissiveFactor = toGlm<glm::vec3>(material.emissiveFactor);
-    pbrMaterial.params.emissionLuminance = std::max({emissiveFactor.r, emissiveFactor.g, emissiveFactor.b});
-    pbrMaterial.params.emissionColor =
-        pbrMaterial.params.emissionLuminance > 0.0f
-            ? emissiveFactor / pbrMaterial.params.emissionLuminance
+    pbrMaterial.params.surface.emissionLuminance = std::max({emissiveFactor.r, emissiveFactor.g, emissiveFactor.b});
+    pbrMaterial.params.surface.emissionColor =
+        pbrMaterial.params.surface.emissionLuminance > 0.0f
+            ? emissiveFactor / pbrMaterial.params.surface.emissionLuminance
             : glm::vec3(1.0f);
     pbrMaterial.params.normalScale = static_cast<float>(material.normalTexture.scale);
-    pbrMaterial.params.baseMetalness = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
-    pbrMaterial.params.specularRoughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
+    pbrMaterial.params.surface.baseMetalness = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+    pbrMaterial.params.surface.specularRoughness = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
     pbrMaterial.params.aoStrength = static_cast<float>(material.occlusionTexture.strength);
 
     return pbrMaterial;
@@ -693,9 +693,9 @@ void createModelDataFromNode(
                 modelData.material = *cachedMaterial;
             } else {
                 // glTF's implicit material uses metallic-roughness defaults, not the OpenPBR constructor defaults.
-                modelData.material.params.baseColor = glm::vec3(1.0f);
-                modelData.material.params.baseMetalness = 1.0f;
-                modelData.material.params.specularRoughness = 1.0f;
+                modelData.material.params.surface.baseColor = glm::vec3(1.0f);
+                modelData.material.params.surface.baseMetalness = 1.0f;
+                modelData.material.params.surface.specularRoughness = 1.0f;
             }
 
             models.push_back(std::move(modelData));

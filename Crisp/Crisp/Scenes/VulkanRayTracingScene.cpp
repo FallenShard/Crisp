@@ -12,6 +12,7 @@
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Math/AliasTable.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
+#include <Crisp/Renderer/GgxAlbedoLut.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Scenes/EnvironmentLightSampling.hpp>
@@ -107,25 +108,29 @@ Image createConstantEnvironmentImage(const glm::vec3 radiance) {
 // Must match the heap array subscripts in Shaders/path-trace.rgen.glsl. Slots 0-3 are the shared ones
 // PathTracer owns.
 constexpr uint32_t kEnvironmentMapSlot = kPathTracerFirstFreeSlot;
-constexpr uint32_t kMaterialTextureFirstSlot = kPathTracerFirstFreeSlot + 1;
+constexpr uint32_t kGgxAlbedoLutSlot = kPathTracerFirstFreeSlot + 1;
+constexpr uint32_t kMaterialTextureFirstSlot = kPathTracerFirstFreeSlot + 2;
 
 constexpr uint32_t kEnvironmentSamplerSlot = 0;
 constexpr uint32_t kMaterialSamplerSlot = 1;
-constexpr uint32_t kSamplerHeapSlotCount = 2;
+constexpr uint32_t kGgxAlbedoLutSamplerSlot = 2;
+constexpr uint32_t kSamplerHeapSlotCount = 3;
 
-constexpr std::array<PathTracerShaderStage, 11> kShaderStages{{
+// The three core stages, then one callable per material type in kBrdfCallableShaders order -- the tag doubles
+// as the callable's index, so the ordering is not free.
+constexpr std::array<PathTracerShaderStage, 3> kCoreShaderStages{{
     {"path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     {"path-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     {"path-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
-    {"Brdf/path-trace-lambertian.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"Brdf/path-trace-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"Brdf/path-trace-mirror.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"Brdf/path-trace-microfacet.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"Brdf/path-trace-oren-nayar.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"Brdf/path-trace-smooth-conductor.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"Brdf/path-trace-rough-conductor.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"Brdf/path-trace-rough-dielectric.rcall", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
 }};
+
+std::vector<PathTracerShaderStage> createShaderStages() {
+    std::vector<PathTracerShaderStage> stages(kCoreShaderStages.begin(), kCoreShaderStages.end());
+    for (const auto& callable : kBrdfCallableShaders) {
+        stages.push_back({callable, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR});
+    }
+    return stages;
+}
 
 } // namespace
 
@@ -257,11 +262,12 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         .environmentCdf = m_environmentCdfBuffer ? m_environmentCdfBuffer->getDeviceAddress() : 0,
     };
 
+    const std::vector<PathTracerShaderStage> shaderStages = createShaderStages();
     m_pathTracer = std::make_unique<PathTracer>(
         *m_renderer,
         PathTracerCreateInfo{
             .debugName = "Path Tracer",
-            .shaderStages = kShaderStages,
+            .shaderStages = shaderStages,
             .resourceHeapSlotCount = kMaterialTextureFirstSlot + static_cast<uint32_t>(m_materialImages.size()),
             .samplerHeapSlotCount = kSamplerHeapSlotCount,
             .integratorParamsSize = sizeof(IntegratorParameters),
@@ -271,6 +277,15 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     auto& samplerHeap = m_pathTracer->getSamplerHeap();
     samplerHeap.write(kEnvironmentSamplerSlot, createLatLongEnvironmentSamplerCreateInfo());
     samplerHeap.write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo());
+    // The table is endpoint-mapped, so repeating would wrap the grazing corner onto the normal-incidence one.
+    samplerHeap.write(kGgxAlbedoLutSamplerSlot, createLinearClampSamplerCreateInfo());
+
+    // The kBrdfOpenPbr callable reads this unconditionally: directional-albedo.part.glsl refuses to compile
+    // without the sampler, rather than silently degrading every compensation mode to a no-op.
+    m_ggxAlbedoLut =
+        loadGgxAlbedoLut(m_renderer->getDevice(), m_renderer->getResourcesPath() / "Textures/GgxAlbedoLut.exr");
+    m_pathTracer->getResourceHeap().writeSampledImage(
+        kGgxAlbedoLutSlot, m_ggxAlbedoLut->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     buildRenderGraph();
 }
@@ -414,7 +429,8 @@ void VulkanRayTracingScene::drawGui() {
             m_pathTracer->resetAccumulation();
         }
     }
-    if (m_sceneDesc.brdfs.size() > 5 && ImGui::SliderFloat("Int IOR", &m_sceneDesc.brdfs[5].intIor, 1.0f, 10.0f)) {
+    if (m_sceneDesc.brdfs.size() > 5 &&
+        ImGui::SliderFloat("Int IOR", &m_sceneDesc.brdfs[5].surface.specularIor, 1.0f, 10.0f)) {
         m_pathTracer->resetAccumulation();
     }
 

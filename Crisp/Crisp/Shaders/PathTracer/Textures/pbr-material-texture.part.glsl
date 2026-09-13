@@ -21,21 +21,18 @@ vec4 sampleMaterialTexture(const uint textureOffset, const uint textureIndex, co
     return textureLod(CRISP_MATERIAL_TEXTURE(heapIndex), texCoord, 0.0f);
 }
 
-// Folds the textured channels into the material record and returns the surface's emitted radiance. The hit
-// shader samples a BSDF from the result and the raygen evaluates the same BSDF for next-event estimation, so
-// the two have to agree to the bit; that is why this lives in one function rather than in both shaders.
 vec3 applyMaterialTextures(inout PbrMaterialParameters material, const uint textureOffset, const vec2 texCoord) {
-    const vec3 emission = max(material.emissionColor, vec3(0.0f)) * max(material.emissionLuminance, 0.0f);
+    const vec3 emission = max(material.surface.emissionColor, vec3(0.0f)) * max(material.surface.emissionLuminance, 0.0f);
     if (textureOffset == kInvalidMaterialTextureOffset) {
         return emission;
     }
 
     const vec2 scaledTexCoord = texCoord * material.uvScale;
-    material.baseColor *= sampleMaterialTexture(textureOffset, kMaterialBaseColorTexture, scaledTexCoord).rgb;
+    material.surface.baseColor *= sampleMaterialTexture(textureOffset, kMaterialBaseColorTexture, scaledTexCoord).rgb;
 
     const vec3 ormSample = sampleMaterialTexture(textureOffset, kMaterialOrmTexture, scaledTexCoord).rgb;
-    material.baseMetalness *= ormSample.b;
-    material.specularRoughness *= ormSample.g;
+    material.surface.baseMetalness *= ormSample.b;
+    material.surface.specularRoughness *= ormSample.g;
 
     return sampleMaterialTexture(textureOffset, kMaterialEmissionTexture, scaledTexCoord).rgb * emission;
 }

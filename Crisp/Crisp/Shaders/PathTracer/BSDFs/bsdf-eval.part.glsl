@@ -6,6 +6,7 @@
 #include "../../Brdf/oren-nayar.part.glsl"
 #include "../../Brdf/rough-conductor.part.glsl"
 #include "../../Brdf/rough-dielectric.part.glsl"
+#include "../../Brdf/OpenPbr/surface.part.glsl"
 #include "../Textures/material-texture.part.glsl"
 
 BrdfEval evaluateLambertian(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
@@ -16,15 +17,15 @@ BrdfEval evaluateLambertian(BrdfParameters material, vec2 texCoord, vec3 wi, vec
 BrdfEval evaluateMicrofacet(BrdfParameters material, vec3 wi, vec3 wo) {
     return BrdfEval(
         evaluateMicrofacet(
-            material.kd,
-            material.ks,
+            material.surface.baseColor,
+            material.surface.specularWeight,
             material.extIor,
-            material.intIor,
+            material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,
             wi,
             wo),
-        microfacetPdf(wi, wo, material.ks, material.microfacetType, material.microfacetAlpha));
+        microfacetPdf(wi, wo, material.surface.specularWeight, material.microfacetType, material.microfacetAlpha));
 }
 
 BrdfEval evaluateOrenNayar(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
@@ -49,18 +50,25 @@ BrdfEval evaluateRoughDielectric(BrdfParameters material, vec3 wi, vec3 wo) {
     return BrdfEval(
         evaluateRoughDielectric(
             material.extIor,
-            material.intIor,
+            material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,
             wi,
             wo),
         roughDielectricPdf(
             material.extIor,
-            material.intIor,
+            material.surface.specularIor,
             material.microfacetType,
             material.microfacetAlpha,
             wi,
             wo));
+}
+
+BrdfEval evaluateOpenPbr(BrdfParameters material, vec3 wi, vec3 wo) {
+    // Compensation is a per-view setting the callable does not see, so next-event estimation and sampling agree
+    // on None until it is plumbed through the material record. See docs/openpbr-path-tracer.md.
+    const OpenPbrSurface surface = createOpenPbrSurface(material.surface, kEnergyCompensationNone);
+    return BrdfEval(evaluateOpenPbrSurface(surface, wi, wo), openPbrSurfacePdf(surface, wi, wo));
 }
 
 BrdfEval evaluateBrdf(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
@@ -75,6 +83,8 @@ BrdfEval evaluateBrdf(BrdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) 
         return evaluateRoughConductor(material, wi, wo);
     case kBrdfRoughDielectric:
         return evaluateRoughDielectric(material, wi, wo);
+    case kBrdfOpenPbr:
+        return evaluateOpenPbr(material, wi, wo);
     default:
         return BrdfEval(vec3(0.0f), 0.0f); // Delta materials.
     }

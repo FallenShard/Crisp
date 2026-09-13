@@ -118,14 +118,14 @@ TEST(GltfLoaderTest, LoadsEmbeddedImagesInSourceOrder) {
     EXPECT_EQ(loaded.models[0].material.textureKeys[1], "TexturedTriangle-normal-0");
     EXPECT_EQ(loaded.models[0].material.textureKeys[2], "TexturedTriangle-orm-0");
     EXPECT_EQ(loaded.models[0].material.name, "TestMaterial");
-    EXPECT_EQ(loaded.models[0].material.params.baseColor, glm::vec3(0.2f, 0.4f, 0.6f));
+    EXPECT_EQ(loaded.models[0].material.params.surface.baseColor, glm::vec3(0.2f, 0.4f, 0.6f));
     EXPECT_FLOAT_EQ(loaded.models[0].material.params.geometryOpacity, 0.8f);
-    EXPECT_FLOAT_EQ(loaded.models[0].material.params.baseMetalness, 0.35f);
-    EXPECT_FLOAT_EQ(loaded.models[0].material.params.specularRoughness, 0.65f);
-    EXPECT_FLOAT_EQ(loaded.models[0].material.params.emissionColor.r, 1.0f / 3.0f);
-    EXPECT_FLOAT_EQ(loaded.models[0].material.params.emissionColor.g, 2.0f / 3.0f);
-    EXPECT_FLOAT_EQ(loaded.models[0].material.params.emissionColor.b, 1.0f);
-    EXPECT_FLOAT_EQ(loaded.models[0].material.params.emissionLuminance, 0.75f);
+    EXPECT_FLOAT_EQ(loaded.models[0].material.params.surface.baseMetalness, 0.35f);
+    EXPECT_FLOAT_EQ(loaded.models[0].material.params.surface.specularRoughness, 0.65f);
+    EXPECT_FLOAT_EQ(loaded.models[0].material.params.surface.emissionColor.r, 1.0f / 3.0f);
+    EXPECT_FLOAT_EQ(loaded.models[0].material.params.surface.emissionColor.g, 2.0f / 3.0f);
+    EXPECT_FLOAT_EQ(loaded.models[0].material.params.surface.emissionColor.b, 1.0f);
+    EXPECT_FLOAT_EQ(loaded.models[0].material.params.surface.emissionLuminance, 0.75f);
     EXPECT_FLOAT_EQ(loaded.models[0].material.params.normalScale, 0.25f);
     EXPECT_FLOAT_EQ(loaded.models[0].material.params.aoStrength, 0.5f);
 }

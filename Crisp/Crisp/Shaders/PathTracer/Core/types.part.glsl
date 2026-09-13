@@ -1,6 +1,8 @@
 #ifndef CRISP_PATH_TRACER_TYPES_GLSL
 #define CRISP_PATH_TRACER_TYPES_GLSL
 
+#include "../../Common/openpbr-surface.part.glsl"
+
 const int kLobeTypeDiffuse = 1 << 0;
 const int kLobeTypeDelta = 1 << 1;
 const int kLobeTypeGlossy = 1 << 2;
@@ -13,6 +15,9 @@ const int kBrdfOrenNayar = 4;
 const int kBrdfSmoothConductor = 5;
 const int kBrdfRoughConductor = 6;
 const int kBrdfRoughDielectric = 7;
+// One complex, layered type rather than one lobe. Must match kBrdfOpenPbr in Scenes/RayTracingSceneData.hpp,
+// whose ordering also fixes the callable shader binding table.
+const int kBrdfOpenPbr = 8;
 
 const int kLightArea = 0;
 const int kLightPoint = 1;
@@ -80,16 +85,7 @@ struct BrdfSample {
 };
 
 struct BrdfParameters {
-    vec3 albedo;
-    int type;
-
-    float intIor;
-    float extIor;
-    int lobe;
-    int microfacetType;
-
-    vec3 kd;
-    float ks;
+    OpenPbrSurfaceParams surface;
 
     vec3 complexIorEta;
     float microfacetAlpha;
@@ -97,10 +93,11 @@ struct BrdfParameters {
     vec3 complexIorK;
     float roughness;
 
+    float extIor;
+    int type;
+    int microfacetType;
     int reflectanceTexture;
     int reflectanceSampler;
-    int pad0;
-    int pad1;
 };
 
 struct BrdfEval {

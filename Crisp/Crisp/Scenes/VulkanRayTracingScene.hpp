@@ -51,6 +51,7 @@ private:
     glm::ivec2 m_renderResolution{1920, 1080};
 
     std::unique_ptr<VulkanImage> m_environmentImage;
+    std::unique_ptr<VulkanImage> m_ggxAlbedoLut;
     std::vector<std::unique_ptr<VulkanImage>> m_materialImages;
 
     struct IntegratorParameters {

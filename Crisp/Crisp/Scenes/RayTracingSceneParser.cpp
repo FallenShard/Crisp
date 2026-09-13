@@ -1,28 +1,23 @@
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 
+#include <Crisp/Scenes/RayTracingSceneData.hpp>
+
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <ranges>
 
 namespace crisp {
 namespace {
-constexpr int32_t kBrdfLambertian = 0;
-constexpr int32_t kBrdfDielectric = 1;
-constexpr int32_t kBrdfMirror = 2;
-constexpr int32_t kBrdfMicrofacet = 3;
-constexpr int32_t kBrdfOrenNayar = 4;
-constexpr int32_t kBrdfSmoothConductor = 5;
-constexpr int32_t kBrdfRoughConductor = 6;
-constexpr int32_t kBrdfRoughDielectric = 7;
-
 constexpr int32_t kMicrofacetGgx = 0;
 constexpr int32_t kMicrofacetBeckmann = 1;
 
 BrdfParameters createLambertianBrdf(glm::vec3 albedo) {
-    return {
-        .albedo = albedo,
-        .type = kBrdfLambertian,
-    };
+    BrdfParameters material{};
+    material.surface.baseColor = albedo;
+    material.type = kBrdfLambertian;
+    return material;
 }
 
 Result<> validateDielectricIors(const float intIor, const float extIor) {
@@ -34,59 +29,59 @@ Result<> validateDielectricIors(const float intIor, const float extIor) {
 
 Result<BrdfParameters> createDielectricBrdf(const float intIor, const float extIor) {
     CRISP_TRY(validateDielectricIors(intIor, extIor));
-    return BrdfParameters{
-        .type = kBrdfDielectric,
-        .intIor = intIor,
-        .extIor = extIor,
-    };
+    BrdfParameters material{};
+    material.surface.specularIor = intIor;
+    material.extIor = extIor;
+    material.type = kBrdfDielectric;
+    return material;
 }
 
 BrdfParameters createMirrorBrdf() {
-    return BrdfParameters{
-        .type = kBrdfMirror,
-    };
+    BrdfParameters material{};
+    material.type = kBrdfMirror;
+    return material;
 }
 
 BrdfParameters createOrenNayarBrdf(const glm::vec3 reflectance, const float roughnessDegrees) {
-    return {
-        .albedo = reflectance,
-        .type = kBrdfOrenNayar,
-        .roughness = glm::radians(glm::clamp(roughnessDegrees, 0.0f, 90.0f)),
-    };
+    BrdfParameters material{};
+    material.surface.baseColor = reflectance;
+    material.roughness = glm::radians(glm::clamp(roughnessDegrees, 0.0f, 90.0f));
+    material.type = kBrdfOrenNayar;
+    return material;
 }
 
 BrdfParameters createSmoothConductorBrdf(const std::string& iorPreset) {
     const auto* ior = findComplexIor(iorPreset);
     ior = ior != nullptr ? ior : findComplexIor("Au");
-    return {
-        .type = kBrdfSmoothConductor,
-        .complexIorEta = ior->eta,
-        .complexIorK = ior->k,
-    };
+    BrdfParameters material{};
+    material.complexIorEta = ior->eta;
+    material.complexIorK = ior->k;
+    material.type = kBrdfSmoothConductor;
+    return material;
 }
 
 BrdfParameters createRoughConductorBrdf(const std::string& iorPreset, const int32_t microfacetType, const float alpha) {
     const auto* ior = findComplexIor(iorPreset);
     ior = ior != nullptr ? ior : findComplexIor("Au");
-    return {
-        .type = kBrdfRoughConductor,
-        .microfacetType = microfacetType,
-        .complexIorEta = ior->eta,
-        .microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f),
-        .complexIorK = ior->k,
-    };
+    BrdfParameters material{};
+    material.complexIorEta = ior->eta;
+    material.microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f);
+    material.complexIorK = ior->k;
+    material.type = kBrdfRoughConductor;
+    material.microfacetType = microfacetType;
+    return material;
 }
 
 Result<BrdfParameters> createRoughDielectricBrdf(
     const float intIor, const float extIor, const int32_t microfacetType, const float alpha) {
     CRISP_TRY(validateDielectricIors(intIor, extIor));
-    return BrdfParameters{
-        .type = kBrdfRoughDielectric,
-        .intIor = intIor,
-        .extIor = extIor,
-        .microfacetType = microfacetType,
-        .microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f),
-    };
+    BrdfParameters material{};
+    material.surface.specularIor = intIor;
+    material.microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f);
+    material.extIor = extIor;
+    material.type = kBrdfRoughDielectric;
+    material.microfacetType = microfacetType;
+    return material;
 }
 
 Result<int32_t> parseMicrofacetType(const std::string_view type) {
@@ -99,11 +94,83 @@ Result<int32_t> parseMicrofacetType(const std::string_view type) {
     return resultError("Unsupported microfacet distribution: {}", type);
 }
 
+// Every key is optional and defaults to the OpenPBR spec default. Unknown keys are rejected rather than
+// ignored: a material with ten optional parameters is exactly where a typo like "specular_roughenss" would
+// otherwise render as a plausible-looking wrong image.
+Result<BrdfParameters> parseOpenPbrBrdf(const nlohmann::json& brdf) {
+    static constexpr std::array kKnownKeys{
+        std::string_view{"type"},
+        std::string_view{"base_weight"},
+        std::string_view{"base_color"},
+        std::string_view{"base_metalness"},
+        std::string_view{"base_diffuse_roughness"},
+        std::string_view{"specular_weight"},
+        std::string_view{"specular_color"},
+        std::string_view{"specular_roughness"},
+        std::string_view{"specular_ior"},
+        std::string_view{"emission_color"},
+        std::string_view{"emission_luminance"},
+    };
+    for (const auto& item : brdf.items()) {
+        if (std::ranges::find(kKnownKeys, item.key()) == kKnownKeys.end()) {
+            return resultError("Unknown or unsupported openpbr parameter '{}'", item.key());
+        }
+    }
+
+    OpenPbrSurfaceParams params{};
+    if (brdf.contains("base_color")) {
+        CRISP_TRY(params.baseColor, parseVec3(brdf["base_color"]));
+    }
+    if (brdf.contains("specular_color")) {
+        CRISP_TRY(params.specularColor, parseVec3(brdf["specular_color"]));
+    }
+    if (brdf.contains("emission_color")) {
+        CRISP_TRY(params.emissionColor, parseVec3(brdf["emission_color"]));
+    }
+    params.baseWeight = brdf.value("base_weight", params.baseWeight);
+    params.baseMetalness = brdf.value("base_metalness", params.baseMetalness);
+    params.baseDiffuseRoughness = brdf.value("base_diffuse_roughness", params.baseDiffuseRoughness);
+    params.specularWeight = brdf.value("specular_weight", params.specularWeight);
+    params.specularRoughness = brdf.value("specular_roughness", params.specularRoughness);
+    params.specularIor = brdf.value("specular_ior", params.specularIor);
+    params.emissionLuminance = brdf.value("emission_luminance", params.emissionLuminance);
+
+    if (params.baseWeight < 0.0f || params.baseWeight > 1.0f) {
+        return resultError("openpbr base_weight must be in [0, 1]");
+    }
+    if (params.baseMetalness < 0.0f || params.baseMetalness > 1.0f) {
+        return resultError("openpbr base_metalness must be in [0, 1]");
+    }
+    if (params.baseDiffuseRoughness < 0.0f || params.baseDiffuseRoughness > 1.0f) {
+        return resultError("openpbr base_diffuse_roughness must be in [0, 1]");
+    }
+    if (params.specularWeight < 0.0f || params.specularWeight > 1.0f) {
+        return resultError("openpbr specular_weight must be in [0, 1]");
+    }
+    if (params.specularRoughness < 0.0f || params.specularRoughness > 1.0f) {
+        return resultError("openpbr specular_roughness must be in [0, 1]");
+    }
+    if (params.specularIor < 1.0f) {
+        return resultError("openpbr specular_ior must be at least 1");
+    }
+    if (params.emissionLuminance < 0.0f) {
+        return resultError("openpbr emission_luminance must be non-negative");
+    }
+
+    BrdfParameters material{};
+    material.type = kBrdfOpenPbr;
+    material.surface = params;
+    return material;
+}
+
 Result<BrdfParameters> parseBrdfParameters(const nlohmann::json& brdf) {
     if (!brdf.is_object() || !brdf.contains("type") || !brdf["type"].is_string()) {
         return resultError("BSDF must be an object with a string 'type' field");
     }
     const auto& type{brdf["type"]};
+    if (type == "openpbr") {
+        return parseOpenPbrBrdf(brdf);
+    }
     if (type == "lambertian") {
         CRISP_TRY(const auto reflectance, parseVec3(brdf["reflectance"]));
         return createLambertianBrdf(reflectance);
@@ -202,14 +269,14 @@ Result<glm::mat4> parseTransform(const nlohmann::json& shape) {
 } // namespace
 
 BrdfParameters createMicrofacetBrdf(const glm::vec3 kd, const float alpha, const int32_t microfacetType) {
-    return {
-        .type = kBrdfMicrofacet,
-        .intIor = getIor(IorMaterial::Glass),
-        .microfacetType = microfacetType,
-        .kd = kd,
-        .ks = 1.0f - std::max(kd.x, std::max(kd.y, kd.z)),
-        .microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f),
-    };
+    BrdfParameters material{};
+    material.surface.baseColor = kd;
+    material.surface.specularWeight = 1.0f - std::max(kd.x, std::max(kd.y, kd.z));
+    material.surface.specularIor = getIor(IorMaterial::Glass);
+    material.microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f);
+    material.type = kBrdfMicrofacet;
+    material.microfacetType = microfacetType;
+    return material;
 }
 
 Result<glm::vec3> parseVec3(const nlohmann::json& json) {

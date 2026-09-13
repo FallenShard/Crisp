@@ -11,9 +11,9 @@ TEST_F(PbrMaterialTableTest, AssignsStableIndicesAndDrawParameters) {
     PbrMaterialTable table(*device_, 4);
 
     PbrMaterialParams first{};
-    first.baseMetalness = 0.25f;
+    first.surface.baseMetalness = 0.25f;
     PbrMaterialParams second{};
-    second.specularRoughness = 0.75f;
+    second.surface.specularRoughness = 0.75f;
 
     const auto firstHandle = table.add(first);
     const auto secondHandle = table.add(second);
@@ -34,7 +34,7 @@ TEST_F(PbrMaterialTableTest, UploadsPopulatedPrefixThroughStagingBelt) {
     PbrMaterialTable table(*device_, 4);
 
     PbrMaterialParams first{};
-    first.baseColor = glm::vec3(0.1f, 0.2f, 0.3f);
+    first.surface.baseColor = glm::vec3(0.1f, 0.2f, 0.3f);
     first.geometryOpacity = 0.4f;
     first.samplerIndex = 3;
     PbrMaterialParams second{};
@@ -52,7 +52,7 @@ TEST_F(PbrMaterialTableTest, UploadsPopulatedPrefixThroughStagingBelt) {
 
     const auto uploaded = toStdVec<PbrMaterialParams>(table.getDeviceBuffer());
     ASSERT_EQ(uploaded.size(), table.getCapacity());
-    EXPECT_FLOAT_EQ(uploaded[0].baseColor.x, first.baseColor.x);
+    EXPECT_FLOAT_EQ(uploaded[0].surface.baseColor.x, first.surface.baseColor.x);
     EXPECT_FLOAT_EQ(uploaded[0].geometryOpacity, first.geometryOpacity);
     EXPECT_EQ(uploaded[0].samplerIndex, first.samplerIndex);
     EXPECT_EQ(uploaded[1].baseColorTex, second.baseColorTex);
@@ -64,10 +64,10 @@ TEST_F(PbrMaterialTableTest, UpdatesAnExistingMaterialWithoutChangingItsHandle) 
     const auto handle = table.add(PbrMaterialParams{});
 
     PbrMaterialParams updated{};
-    updated.baseColor = glm::vec3(0.2f, 0.4f, 0.6f);
+    updated.surface.baseColor = glm::vec3(0.2f, 0.4f, 0.6f);
     updated.geometryOpacity = 0.8f;
-    updated.baseMetalness = 0.75f;
-    updated.specularRoughness = 0.15f;
+    updated.surface.baseMetalness = 0.75f;
+    updated.surface.specularRoughness = 0.15f;
     table.update(handle, updated);
 
     VulkanStagingBelt stagingBelt(*device_, 4096);
@@ -80,10 +80,10 @@ TEST_F(PbrMaterialTableTest, UpdatesAnExistingMaterialWithoutChangingItsHandle) 
     const auto uploaded = toStdVec<PbrMaterialParams>(table.getDeviceBuffer());
     EXPECT_EQ(table.getMaterialCount(), 1);
     EXPECT_EQ(table.createDrawParameters(handle).materialIndex, handle.index);
-    EXPECT_EQ(uploaded[handle.index].baseColor, updated.baseColor);
+    EXPECT_EQ(uploaded[handle.index].surface.baseColor, updated.surface.baseColor);
     EXPECT_FLOAT_EQ(uploaded[handle.index].geometryOpacity, updated.geometryOpacity);
-    EXPECT_FLOAT_EQ(uploaded[handle.index].baseMetalness, updated.baseMetalness);
-    EXPECT_FLOAT_EQ(uploaded[handle.index].specularRoughness, updated.specularRoughness);
+    EXPECT_FLOAT_EQ(uploaded[handle.index].surface.baseMetalness, updated.surface.baseMetalness);
+    EXPECT_FLOAT_EQ(uploaded[handle.index].surface.specularRoughness, updated.surface.specularRoughness);
 }
 
 } // namespace

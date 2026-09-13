@@ -14,7 +14,7 @@ layout(location = 0) callableDataInEXT BrdfSample brdf;
 
 void main() {
     const BrdfParameters material = scene.materials.data[brdf.materialId];
-    const float ks = material.ks;
+    const float ks = material.surface.specularWeight;
     const float alpha = material.microfacetAlpha;
     const int microfacetType = material.microfacetType;
 
@@ -27,13 +27,14 @@ void main() {
     }
 
     brdf.f = evaluateMicrofacet(
-        material.kd,
-        material.ks,
+        material.surface.baseColor,
+        material.surface.specularWeight,
         material.extIor,
-        material.intIor,
+        material.surface.specularIor,
         material.microfacetType,
         material.microfacetAlpha,
         brdf.wi,
         brdf.wo);
-    brdf.pdf = microfacetPdf(brdf.wi, brdf.wo, material.ks, material.microfacetType, material.microfacetAlpha);
+    brdf.pdf = microfacetPdf(
+        brdf.wi, brdf.wo, material.surface.specularWeight, material.microfacetType, material.microfacetAlpha);
 }

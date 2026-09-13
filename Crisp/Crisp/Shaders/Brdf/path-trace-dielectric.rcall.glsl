@@ -20,7 +20,7 @@ void main() {
         return;
     }
 
-    const float intIOR = scene.materials.data[brdf.materialId].intIor;
+    const float intIOR = scene.materials.data[brdf.materialId].surface.specularIor;
     const float extIOR = scene.materials.data[brdf.materialId].extIor;
     const float etaRatio = intIOR / extIOR;
     const float cosThetaI = dot(brdf.normal, brdf.wi);

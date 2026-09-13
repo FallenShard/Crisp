@@ -9,6 +9,7 @@
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Materials/Ior.hpp>
+#include <Crisp/Materials/OpenPbrSurface.hpp>
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
@@ -34,16 +35,7 @@ struct RayTracingRenderSettings {
 };
 
 struct BrdfParameters {
-    glm::vec3 albedo{1.0f, 1.0f, 1.0f};
-    int32_t type;
-
-    float intIor{getIor(IorMaterial::Glass)};
-    float extIor{getIor(IorMaterial::Vacuum)};
-    int32_t lobe;
-    int32_t microfacetType;
-
-    glm::vec3 kd;
-    float ks;
+    OpenPbrSurfaceParams surface;
 
     glm::vec3 complexIorEta;
     float microfacetAlpha;
@@ -51,19 +43,20 @@ struct BrdfParameters {
     glm::vec3 complexIorK;
     float roughness;
 
+    float extIor{getIor(IorMaterial::Vacuum)};
+    int32_t type;
+    int32_t microfacetType;
     int32_t reflectanceTexture{-1};
     int32_t reflectanceSampler{-1};
-    int32_t pad0{};
-    int32_t pad1{};
 };
 
-static_assert(sizeof(BrdfParameters) == 96);
+static_assert(sizeof(BrdfParameters) == 116);
 static_assert(std::is_standard_layout_v<BrdfParameters>);
-static_assert(offsetof(BrdfParameters, albedo) == 0);
-static_assert(offsetof(BrdfParameters, kd) == 32);
-static_assert(offsetof(BrdfParameters, complexIorEta) == 48);
-static_assert(offsetof(BrdfParameters, complexIorK) == 64);
-static_assert(offsetof(BrdfParameters, reflectanceTexture) == 80);
+static_assert(offsetof(BrdfParameters, surface) == 0);
+static_assert(offsetof(BrdfParameters, complexIorEta) == 64);
+static_assert(offsetof(BrdfParameters, complexIorK) == 80);
+static_assert(offsetof(BrdfParameters, extIor) == 96);
+static_assert(offsetof(BrdfParameters, reflectanceTexture) == 108);
 
 struct MaterialTextureDescription {
     std::string filename;
