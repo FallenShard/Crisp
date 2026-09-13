@@ -25,12 +25,12 @@ float computeRoughConductorPdf(vec3 wi, vec3 wo, int microfacetType, float alpha
     }
 
     const vec3 microfacetNormal = microfacetReflectionHalfVector(wi, wo);
-    return computeMicrofacetNormalPdf(microfacetNormal, microfacetType, alpha) *
+    return computeMicrofacetVisibleNormalPdf(wi, microfacetNormal, microfacetType, alpha) *
         microfacetReflectionJacobian(microfacetNormal, wo);
 }
 
 vec3 sampleRoughConductor(vec2 unitSample, vec3 wi, int microfacetType, float alpha) {
-    const vec3 microfacetNormal = sampleMicrofacetNormal(unitSample, microfacetType, alpha);
+    const vec3 microfacetNormal = sampleMicrofacetVisibleNormal(unitSample, wi, microfacetType, alpha);
     return 2.0f * dot(microfacetNormal, wi) * microfacetNormal - wi;
 }
 

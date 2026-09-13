@@ -208,7 +208,7 @@ void main() {
             results[index].wiAndAux.xyz = dielectricWi;
         }
 
-        const vec3 sampledNormal = sampleMicrofacetNormal(dielectricNormalSample, microfacetType, 0.3f);
+        const vec3 sampledNormal = sampleMicrofacetVisibleNormal(dielectricNormalSample, dielectricWi, microfacetType, 0.3f);
         const float cosThetaIm = dot(dielectricWi, sampledNormal);
         float cosThetaTm;
         const float fresnel = fresnelDielectric(cosThetaIm, extIor, intIor, cosThetaTm);

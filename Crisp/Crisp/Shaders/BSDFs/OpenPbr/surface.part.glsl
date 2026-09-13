@@ -90,7 +90,7 @@ float computeOpenPbrSurfacePdf(const OpenPbrSurface surface, const vec3 wi, cons
 
     const vec3 halfVector = microfacetReflectionHalfVector(wi, wo);
     const float specularPdf =
-        computeGgxNormalPdf(halfVector, surface.alpha) /
+        computeGgxVisibleNormalPdf(wi, halfVector, surface.alpha) /
         (4.0f * max(dot(halfVector, wo), 1e-6f));
     const float diffusePdf = wo.z / PI;
     return mix(diffusePdf, specularPdf, surface.specularProbability);
@@ -107,7 +107,7 @@ vec3 sampleOpenPbrSurface(
     out bool sampledSpecular) {
     sampledSpecular = lobeSample < surface.specularProbability;
     if (sampledSpecular) {
-        const vec3 microfacetNormal = sampleGgxNormal(unitSample, surface.alpha);
+        const vec3 microfacetNormal = sampleGgxVisibleNormal(unitSample, wi, surface.alpha);
         wo = 2.0f * dot(microfacetNormal, wi) * microfacetNormal - wi;
     } else {
         wo = squareToCosineHemisphere(unitSample);

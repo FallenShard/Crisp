@@ -14,16 +14,27 @@ vec3 sampleMicrofacetNormal(vec2 unitSample, int microfacetType, float alpha) {
         : sampleGgxNormal(unitSample, alpha);
 }
 
+vec3 sampleMicrofacetVisibleNormal(
+    const vec2 unitSample, const vec3 wi, const int microfacetType, const float alpha) {
+    return microfacetType == kMicrofacetBeckmann
+        ? sampleBeckmannVisibleNormal(unitSample, wi, alpha)
+        : sampleGgxVisibleNormal(unitSample, wi, alpha);
+}
+
 vec3 sampleMicrofacet(
-    vec2 unitSample, vec3 wi, float specularProbability, int microfacetType, float alpha, out bool sampledSpecular) {
-    sampledSpecular = unitSample.x < specularProbability;
+    const vec2 unitSample,
+    const float lobeSample,
+    const vec3 wi,
+    const float specularProbability,
+    const int microfacetType,
+    const float alpha,
+    out bool sampledSpecular) {
+    sampledSpecular = lobeSample < specularProbability;
     if (sampledSpecular) {
-        unitSample.x /= specularProbability;
-        const vec3 microfacetNormal = sampleMicrofacetNormal(unitSample, microfacetType, alpha);
+        const vec3 microfacetNormal = sampleMicrofacetVisibleNormal(unitSample, wi, microfacetType, alpha);
         return 2.0f * dot(microfacetNormal, wi) * microfacetNormal - wi;
     }
 
-    unitSample.x = (unitSample.x - specularProbability) / (1.0f - specularProbability);
     return squareToCosineHemisphere(unitSample);
 }
 
@@ -45,6 +56,13 @@ float computeMicrofacetNormalPdf(vec3 microfacetNormal, int microfacetType, floa
         : computeGgxNormalPdf(microfacetNormal, alpha);
 }
 
+float computeMicrofacetVisibleNormalPdf(
+    const vec3 wi, const vec3 microfacetNormal, const int microfacetType, const float alpha) {
+    return microfacetType == kMicrofacetBeckmann
+        ? computeBeckmannVisibleNormalPdf(wi, microfacetNormal, alpha)
+        : computeGgxVisibleNormalPdf(wi, microfacetNormal, alpha);
+}
+
 float computeMicrofacetPdf(vec3 wi, vec3 wo, float ks, int microfacetType, float alpha) {
     if (wi.z <= 0.0f || wo.z <= 0.0f) {
         return 0.0f;
@@ -52,7 +70,7 @@ float computeMicrofacetPdf(vec3 wi, vec3 wo, float ks, int microfacetType, float
 
     const float diffusePdf = wo.z / PI;
     const vec3 microfacetNormal = microfacetReflectionHalfVector(wi, wo);
-    const float specularPdf = computeMicrofacetNormalPdf(microfacetNormal, microfacetType, alpha) *
+    const float specularPdf = computeMicrofacetVisibleNormalPdf(wi, microfacetNormal, microfacetType, alpha) *
         microfacetReflectionJacobian(microfacetNormal, wo);
 
     return mix(diffusePdf, specularPdf, ks);

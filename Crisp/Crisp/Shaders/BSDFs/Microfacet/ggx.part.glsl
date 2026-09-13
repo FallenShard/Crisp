@@ -69,6 +69,28 @@ vec3 sampleGgxNormal(vec2 unitSample, float alpha) {
     return vec3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 }
 
+vec3 sampleGgxVisibleNormal(const vec2 unitSample, const vec3 wi, const float alpha) {
+    const vec3 upperWi = wi.z < 0.0f ? -wi : wi;
+    const vec3 stretchedWi = normalize(vec3(alpha * upperWi.xy, upperWi.z));
+
+    const float xyLengthSquared = dot(stretchedWi.xy, stretchedWi.xy);
+    const vec3 tangent = xyLengthSquared > 0.0f
+        ? vec3(-stretchedWi.y, stretchedWi.x, 0.0f) * inversesqrt(xyLengthSquared)
+        : vec3(1.0f, 0.0f, 0.0f);
+    const vec3 bitangent = cross(stretchedWi, tangent);
+
+    const float radius = sqrt(unitSample.x);
+    const float phi = 2.0f * PI * unitSample.y;
+    const float diskX = radius * cos(phi);
+    float diskY = radius * sin(phi);
+    const float projectedArea = 0.5f * (1.0f + stretchedWi.z);
+    diskY = mix(sqrt(max(0.0f, 1.0f - diskX * diskX)), diskY, projectedArea);
+
+    const float hemisphereZ = sqrt(max(0.0f, 1.0f - diskX * diskX - diskY * diskY));
+    const vec3 stretchedNormal = diskX * tangent + diskY * bitangent + hemisphereZ * stretchedWi;
+    return normalize(vec3(alpha * stretchedNormal.xy, max(0.0f, stretchedNormal.z)));
+}
+
 float ggxDistribution(vec3 normal, float alpha) {
     return normal.z > 0.0f ? distributionGgx(normal.z, alpha) : 0.0f;
 }
@@ -93,6 +115,14 @@ float ggxGeometry(vec3 wi, vec3 wo, vec3 microfacetNormal, float alpha) {
 
 float computeGgxNormalPdf(vec3 microfacetNormal, float alpha) {
     return ggxDistribution(microfacetNormal, alpha) * abs(microfacetNormal.z);
+}
+
+float computeGgxVisibleNormalPdf(const vec3 wi, const vec3 microfacetNormal, const float alpha) {
+    if (wi.z == 0.0f || microfacetNormal.z <= 0.0f) {
+        return 0.0f;
+    }
+    return ggxDistribution(microfacetNormal, alpha) * ggxSmithG1(wi, microfacetNormal, alpha) *
+        abs(dot(wi, microfacetNormal)) / abs(wi.z);
 }
 
 #endif // CRISP_MICROFACET_GGX_GLSL

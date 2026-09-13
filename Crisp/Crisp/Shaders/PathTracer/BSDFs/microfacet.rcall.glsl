@@ -19,7 +19,8 @@ void main() {
     const int microfacetType = material.microfacetType;
 
     bool sampledSpecular;
-    bsdf.wo = sampleMicrofacet(bsdf.unitSample, bsdf.wi, ks, microfacetType, alpha, sampledSpecular);
+    bsdf.wo =
+        sampleMicrofacet(bsdf.unitSample, bsdf.lobeSample, bsdf.wi, ks, microfacetType, alpha, sampledSpecular);
     bsdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
 
     bsdf.f = evaluateMicrofacet(
