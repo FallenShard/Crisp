@@ -25,9 +25,6 @@ const int kLightArea = 0;
 const int kLightPoint = 1;
 const int kLightDirectional = 2;
 
-const uint kBsdfOperationSample = 0;
-const uint kBsdfOperationEvaluate = 1;
-
 // Fixed layout of the sample vector. Every bounce restarts the sampler cursor at
 // kDimBounceBase + bounce * kDimsPerBounce, so a path that skips light sampling on a delta bounce
 // or has not reached the Russian-roulette cutoff still consumes the same dimensions as one that
@@ -70,13 +67,12 @@ struct BsdfSample {
     float lobeSample; // In, independently selects a BSDF lobe.
     uint materialId;  // In.
 
-    vec3 wi;        // In, local space.
-    uint operation; // In, sample or evaluate.
+    vec3 wi; // In, local space.
 
     vec3 f;    // Out, BSDF(wi, wo) * abs(dot(n, wo)).
     float pdf; // Out.
 
-    vec3 wo;       // In for evaluation, out for sampling; local space.
+    vec3 wo;       // Out, sampled direction in local space.
     uint lobeType; // Out, diffuse, glossy, or delta.
 
     vec2 texCoord; // In.

@@ -18,13 +18,9 @@ void main() {
     const float alpha = material.microfacetAlpha;
     const int microfacetType = material.microfacetType;
 
-    if (bsdf.operation == kBsdfOperationSample) {
-        bool sampledSpecular;
-        bsdf.wo = sampleMicrofacet(bsdf.unitSample, bsdf.wi, ks, microfacetType, alpha, sampledSpecular);
-        bsdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
-    } else {
-        bsdf.lobeType = kLobeTypeGlossy | kLobeTypeDiffuse;
-    }
+    bool sampledSpecular;
+    bsdf.wo = sampleMicrofacet(bsdf.unitSample, bsdf.wi, ks, microfacetType, alpha, sampledSpecular);
+    bsdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
 
     bsdf.f = evaluateMicrofacet(
         material.surface.baseColor,

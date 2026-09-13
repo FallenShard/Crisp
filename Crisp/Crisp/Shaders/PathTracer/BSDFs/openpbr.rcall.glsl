@@ -24,9 +24,9 @@ layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 // The first material type that is layered rather than a single lobe, which changes two things.
 //
-// What already holds: both operations report the FULL mixture value and density, never just the lobe that was
-// picked. The raygen weights next-event estimation against exactly this pdf, so reporting a single lobe's
-// density would bias every MIS combination without producing a visibly wrong image.
+// Sampling reports the FULL mixture value and density, never just the lobe that was picked. The raygen weights
+// next-event estimation against exactly this pdf, so reporting a single lobe's density would bias every MIS
+// combination without producing a visibly wrong image.
 //
 // What does not hold yet: lobe selection still consumes unitSample.x and then rescales it for the direction,
 // so the two are correlated. bsdf.lobeSample exists for exactly this and is deliberately left unused here --
@@ -39,17 +39,8 @@ void main() {
                                                         kEnergyCompensationNone);
 
     bool sampledSpecular = false;
-    if (bsdf.operation == kBsdfOperationSample) {
-        float pdf;
-        vec3 wo;
-        const vec3 weight = sampleOpenPbrSurface(surface, bsdf.unitSample, bsdf.wi, wo, pdf, sampledSpecular);
-        bsdf.wo = wo;
-        bsdf.f = weight * pdf; // Recover f (BSDF * abs(cosThetaO)) from the sampled f / pdf weight.
-        bsdf.pdf = pdf;
-    } else {
-        bsdf.f = evaluateOpenPbrSurface(surface, bsdf.wi, bsdf.wo);
-        bsdf.pdf = computeOpenPbrSurfacePdf(surface, bsdf.wi, bsdf.wo);
-    }
-
+    const vec3 weight =
+        sampleOpenPbrSurface(surface, bsdf.unitSample, bsdf.wi, bsdf.wo, bsdf.pdf, sampledSpecular);
+    bsdf.f = weight * bsdf.pdf; // Recover f (BSDF * abs(cosThetaO)) from the sampled f / pdf weight.
     bsdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
 }

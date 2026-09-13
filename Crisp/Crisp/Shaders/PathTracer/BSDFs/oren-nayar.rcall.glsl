@@ -15,11 +15,7 @@ layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
     const BsdfParameters material = scene.materials.data[bsdf.materialId];
-
-    if (bsdf.operation == kBsdfOperationSample) {
-        bsdf.wo = sampleLambertian(bsdf.unitSample);
-    }
-
+    bsdf.wo = sampleLambertian(bsdf.unitSample);
     bsdf.lobeType = kLobeTypeDiffuse;
     bsdf.f = evaluateOrenNayar(
         evaluateMaterialReflectance(material, bsdf.texCoord), material.orenNayarRoughness, bsdf.wi, bsdf.wo);

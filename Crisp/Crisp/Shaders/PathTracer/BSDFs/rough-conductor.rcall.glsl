@@ -12,11 +12,8 @@ layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
     const BsdfParameters material = scene.materials.data[bsdf.materialId];
-    if (bsdf.operation == kBsdfOperationSample) {
-        bsdf.wo = sampleRoughConductor(
-            bsdf.unitSample, bsdf.wi, material.microfacetType, material.microfacetAlpha);
-    }
-
+    bsdf.wo = sampleRoughConductor(
+        bsdf.unitSample, bsdf.wi, material.microfacetType, material.microfacetAlpha);
     bsdf.lobeType = kLobeTypeGlossy;
     bsdf.f = evaluateRoughConductor(
         material.complexIorEta,

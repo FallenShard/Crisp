@@ -13,33 +13,15 @@ layout(location = 0) callableDataInEXT BsdfSample bsdf;
 void main() {
     const BsdfParameters material = scene.materials.data[bsdf.materialId];
     bsdf.lobeType = kLobeTypeGlossy;
-    if (bsdf.operation == kBsdfOperationSample) {
-        sampleRoughDielectric(
-            bsdf.unitSample,
-            bsdf.lobeSample,
-            kVacuumIor,
-            material.surface.specularIor,
-            material.microfacetType,
-            material.microfacetAlpha,
-            bsdf.wi,
-            bsdf.wo,
-            bsdf.f,
-            bsdf.pdf);
-        return;
-    }
-
-    bsdf.f = evaluateRoughDielectric(
+    sampleRoughDielectric(
+        bsdf.unitSample,
+        bsdf.lobeSample,
         kVacuumIor,
         material.surface.specularIor,
         material.microfacetType,
         material.microfacetAlpha,
         bsdf.wi,
-        bsdf.wo);
-    bsdf.pdf = computeRoughDielectricPdf(
-        kVacuumIor,
-        material.surface.specularIor,
-        material.microfacetType,
-        material.microfacetAlpha,
-        bsdf.wi,
-        bsdf.wo);
+        bsdf.wo,
+        bsdf.f,
+        bsdf.pdf);
 }

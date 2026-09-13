@@ -13,10 +13,7 @@
 layout(location = 0) callableDataInEXT BsdfSample bsdf;
 
 void main() {
-    if (bsdf.operation == kBsdfOperationSample) {
-        bsdf.wo = sampleLambertian(bsdf.unitSample);
-    }
-
+    bsdf.wo = sampleLambertian(bsdf.unitSample);
     bsdf.lobeType = kLobeTypeDiffuse;
     const BsdfParameters material = scene.materials.data[bsdf.materialId];
     bsdf.f = evaluateLambertian(evaluateMaterialReflectance(material, bsdf.texCoord), bsdf.wi, bsdf.wo);

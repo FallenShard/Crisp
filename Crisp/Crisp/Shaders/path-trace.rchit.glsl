@@ -48,7 +48,6 @@ void main() {
 
     bsdf.wi = toLocal(-gl_WorldRayDirectionEXT, worldTransform);
     bsdf.materialId = instance.materialId;
-    bsdf.operation = kBsdfOperationSample;
     bsdf.texCoord = texCoord;
 
     bsdf.unitSample = hitInfo.bsdfSample;
