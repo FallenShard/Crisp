@@ -12,7 +12,7 @@
 #include "../Common/view.part.glsl"
 #include "../Common/warp.part.glsl"
 #include "Core/heap-slots.part.glsl"
-#include "Core/pbr-hit.part.glsl"
+#include "Core/hit-info.part.glsl"
 
 const int kRussianRouletteCutoff = 3;
 
@@ -51,7 +51,7 @@ layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 #include "Lights/pbr-environment.part.glsl"
 #include "Cameras/perspective.part.glsl"
 
-layout(location = 0) rayPayloadEXT PbrHitInfo hitInfo;
+layout(location = 0) rayPayloadEXT HitInfo hitInfo;
 
 // Fixed sampler layout, for the same reason as the analytic tracer's: every bounce restarts the cursor at its
 // own base so a path that terminates early still consumes the same dimensions as one that does not.
@@ -64,8 +64,8 @@ const uint kDimRussianRoulette = 5u; // 1 dimension.
 
 void traceBounce(inout Sampler rng, const uint bounceDim, const vec3 origin, const vec3 direction) {
     setDimension(rng, bounceDim + kDimBsdf);
-    hitInfo.unitSample = next2D(rng);
-    hitInfo.lobeSample = next1D(rng);
+    hitInfo.bsdfSample = next2D(rng);
+    hitInfo.bsdfLobeSample = next1D(rng);
     traceRayEXT(
         sceneBvh,
         gl_RayFlagsOpaqueEXT,
@@ -122,7 +122,7 @@ vec3 estimateEnvironmentDirect(const vec3 wiWorld, const vec2 lightSample) {
         return vec3(0.0f);
     }
 
-    PbrMaterialParameters material = scene.materials.data[hitInfo.materialIndex];
+    PbrMaterialParameters material = scene.materials.data[hitInfo.materialId];
     applyMaterialTextures(material, hitInfo.materialTextureOffset, hitInfo.texCoord);
     const PbrSurface surface = createPbrSurface(material, integrator.energyCompensation);
 
@@ -166,7 +166,7 @@ vec3 computeRadiance(inout Sampler rng) {
         traceBounce(rng, bounceDim, rayOrigin.xyz, rayDirection.xyz);
 
         if (hitInfo.tHit < 0.0f) { // Missed: the environment is the only light in this view.
-            const vec3 radiance = hitInfo.emission * integrator.environmentIntensity;
+            const vec3 radiance = evaluateEnvironmentRadiance(rayDirection.xyz) * integrator.environmentIntensity;
             // The camera ray takes the full contribution; everything else splits with the light sampler.
             float weight = 1.0f;
             if (!cameFromCamera) {
@@ -181,7 +181,7 @@ vec3 computeRadiance(inout Sampler rng) {
             break;
         }
 
-        L += throughput * hitInfo.emission;
+        L += throughput * hitInfo.Le;
 
         setDimension(rng, bounceDim + kDimLight);
         L += throughput * estimateEnvironmentDirect(-rayDirection.xyz, next2D(rng));

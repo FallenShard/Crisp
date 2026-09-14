@@ -2,10 +2,7 @@
 #define CRISP_PATH_TRACER_TYPES_GLSL
 
 #include "../../Common/openpbr-surface.part.glsl"
-
-const int kLobeTypeDiffuse = 1 << 0;
-const int kLobeTypeDelta = 1 << 1;
-const int kLobeTypeGlossy = 1 << 2;
+#include "hit-info.part.glsl"
 
 const float kVacuumIor = 1.0f;
 
@@ -35,31 +32,6 @@ const uint kDimsPerBounce = 9u;
 const uint kDimBsdf = 0u;            // 3 dimensions, relative to the bounce base.
 const uint kDimLight = 3u;           // 5 dimensions.
 const uint kDimRussianRoulette = 8u; // 1 dimension.
-
-// This structure is used to communicate hit information across path tracing shaders.
-struct HitInfo {
-    vec3 position; // Out.
-    float tHit;    // Out.
-
-    vec3 sampleDirection; // Out.
-    float samplePdf;      // Out.
-
-    vec3 Le;     // Out.
-    int lightId; // Out.
-
-    vec3 sampleWeight; // Out, sampled f / pdf.
-    uint materialId;   // Out.
-
-    vec3 normal;         // Out.
-    uint sampleLobeType; // Out.
-
-    vec2 bsdfSample;       // In, the unit-square sample the hit shader hands to the BSDF.
-    float bsdfLobeSample;  // In, independent sample for selecting a BSDF lobe.
-    float pad0;
-
-    vec2 texCoord; // Out.
-    vec2 pad1;
-};
 
 // Callable payload shared by the closest-hit shader and every BSDF callable.
 struct BsdfSample {

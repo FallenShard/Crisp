@@ -9,10 +9,10 @@
 #include "../Common/math-constants.part.glsl"
 #include "../Common/warp.part.glsl"
 #include "Core/heap-slots.part.glsl"
-#include "Core/pbr-hit.part.glsl"
+#include "Core/hit-info.part.glsl"
 #include "Core/pbr-scene.part.glsl"
 
-layout(location = 0) rayPayloadInEXT PbrHitInfo hitInfo;
+layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
 
 hitAttributeEXT vec2 barycentric;
 
@@ -61,7 +61,7 @@ void main() {
 
     hitInfo.position = gl_WorldRayOriginEXT + gl_HitTEXT * gl_WorldRayDirectionEXT;
     hitInfo.tHit = gl_HitTEXT;
-    hitInfo.materialIndex = instance.materialIndex;
+    hitInfo.materialId = instance.materialIndex;
     hitInfo.materialTextureOffset = instance.materialTextureOffset;
     hitInfo.texCoord = texCoord;
 
@@ -71,7 +71,7 @@ void main() {
     const vec3 wiWorld = -gl_WorldRayDirectionEXT;
     vec3 shadingNormal = dot(worldNormal, wiWorld) < 0.0f ? -worldNormal : worldNormal;
 
-    hitInfo.emission = applyMaterialTextures(material, instance.materialTextureOffset, texCoord);
+    hitInfo.Le = applyMaterialTextures(material, instance.materialTextureOffset, texCoord);
 
     if (instance.materialTextureOffset != kInvalidMaterialTextureOffset) {
         // Match the raster path's tangent-space normal decoding. Geometry without valid UV tangents keeps its
@@ -105,10 +105,10 @@ void main() {
     vec3 wo;
     float pdf;
     bool sampledSpecular;
-    const vec3 weight = samplePbrSurface(surface, hitInfo.unitSample, hitInfo.lobeSample, wi, wo, pdf, sampledSpecular);
+    const vec3 weight = samplePbrSurface(surface, hitInfo.bsdfSample, hitInfo.bsdfLobeSample, wi, wo, pdf, sampledSpecular);
 
     hitInfo.sampleDirection = frame * wo;
     hitInfo.samplePdf = pdf;
     hitInfo.sampleWeight = weight;
-    hitInfo.sampleIsSpecular = sampledSpecular ? 1u : 0u;
+    hitInfo.sampleLobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
 }

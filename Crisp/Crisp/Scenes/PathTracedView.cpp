@@ -16,7 +16,7 @@ constexpr std::array<const char*, 3> kEnergyCompensationNames{"None", "Kulla-Con
 
 constexpr std::array<PathTracerShaderStage, 3> kShaderStages{{
     {"PathTracer/pbr-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"PathTracer/pbr-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"PathTracer/trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     {"PathTracer/pbr-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
 }};
 
@@ -27,9 +27,7 @@ struct PathTracedPassData {
 } // namespace
 
 PathTracedView::PathTracedView(
-    Renderer& renderer,
-    const std::span<const PathTracedGeometry> instances,
-    const VkDeviceAddress materialTableAddress)
+    Renderer& renderer, const std::span<const PathTracedGeometry> instances, const VkDeviceAddress materialTableAddress)
     : m_renderer(&renderer) {
     CRISP_CHECK(!instances.empty(), "A path-traced view needs at least one instance.");
 
@@ -75,8 +73,7 @@ PathTracedView::PathTracedView(
         const auto& geometry = *instance.geometry;
         uint32_t materialTextureOffset = std::numeric_limits<uint32_t>::max();
         if (std::ranges::all_of(instance.materialTextures, [](const VulkanImageView* view) { return view != nullptr; })) {
-            materialTextureOffset =
-                    kPathTracerMaterialTextureFirstSlot + static_cast<uint32_t>(idx) * kPbrMapTypeCount;
+            materialTextureOffset = kPathTracerMaterialTextureFirstSlot + static_cast<uint32_t>(idx) * kPbrMapTypeCount;
             for (uint32_t textureIndex = 0; textureIndex < kPbrMapTypeCount; ++textureIndex) {
                 resourceHeap.writeSampledImage(
                     materialTextureOffset + textureIndex,
@@ -149,8 +146,8 @@ void PathTracedView::setEnvironmentDistribution(
     m_pathTracer->getResourceHeap().writeSampledImage(
         kPathTracerEnvironmentSlot, equirectView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    m_environmentCdfBuffer = createStorageBuffer(
-        device, cdf.size() * sizeof(float), VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
+    m_environmentCdfBuffer =
+        createStorageBuffer(device, cdf.size() * sizeof(float), VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
     device.setObjectName(*m_environmentCdfBuffer, "Path-Traced View Environment CDF");
     fillDeviceBuffer(*m_renderer, m_environmentCdfBuffer.get(), cdf.data(), cdf.size() * sizeof(float));
 

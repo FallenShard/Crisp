@@ -1,12 +1,12 @@
 #version 460
-#extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_ray_tracing : require
 #extension GL_GOOGLE_include_directive : require
 
-#include "Core/types.part.glsl"
+#include "Core/hit-info.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
 
 void main() {
-    hitInfo.tHit = -1;
+    hitInfo.tHit = -1.0f;
     hitInfo.lightId = -1;
 }
