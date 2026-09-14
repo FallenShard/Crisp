@@ -41,7 +41,7 @@ vec3 sampleEnvironmentLight(
 }
 
 float sampleSurfaceCoord(inout Sampler rng, in uint meshId, out vec3 position, out vec3 normal) {
-    InstanceProperties instance = scene.instances.data[meshId];
+    PathTracedInstance instance = scene.instances.data[meshId];
     const uint triCount = instance.aliasTable.data[0].j; // Header entry, written by createAliasTable.
 
     const uint elemIdx = 1 + nextRange(rng, triCount); // Add 1 to skip the header entry.
@@ -57,7 +57,7 @@ float sampleSurfaceCoord(inout Sampler rng, in uint meshId, out vec3 position, o
     const uvec3 sampledTriangle = instance.triangles.data[sampledTriIdx];
 
     position = interpolatePosition(instance.positions, sampledTriangle, bary);
-    normal = interpolateNormal(instance.normals, sampledTriangle, bary);
+    normal = interpolateNormal(instance.attributes, sampledTriangle, bary);
 
     return instance.aliasTable.data[0].tau;
 }

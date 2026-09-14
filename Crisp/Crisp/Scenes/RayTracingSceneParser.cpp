@@ -459,7 +459,8 @@ Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, 
                 }
 
                 const auto lightIdx = static_cast<int32_t>(scene.lights.size());
-                scene.props.push_back({.materialId = static_cast<int32_t>(scene.bsdfs.size() - 1), .lightId = lightIdx});
+                scene.props.push_back(
+                    {.materialIndex = static_cast<int32_t>(scene.bsdfs.size() - 1), .lightId = lightIdx});
 
                 const auto meshIdx = static_cast<int32_t>(scene.meshFilenames.size() - 1);
                 scene.lights.push_back({
@@ -468,7 +469,7 @@ Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, 
                     .emission = radiance,
                 });
             } else {
-                scene.props.push_back({.materialId = static_cast<int32_t>(scene.bsdfs.size() - 1), .lightId = -1});
+                scene.props.push_back({.materialIndex = static_cast<int32_t>(scene.bsdfs.size() - 1), .lightId = -1});
             }
 
             CRISP_TRY(auto transform, parseTransform(shape));

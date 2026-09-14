@@ -71,7 +71,7 @@ PathTracedView::PathTracedView(
     instanceRecords.reserve(instances.size());
     for (auto&& [idx, instance] : std::views::enumerate(instances)) {
         const auto& geometry = *instance.geometry;
-        uint32_t materialTextureOffset = std::numeric_limits<uint32_t>::max();
+        uint32_t materialTextureOffset = kInvalidMaterialTextureOffset;
         if (std::ranges::all_of(instance.materialTextures, [](const VulkanImageView* view) { return view != nullptr; })) {
             materialTextureOffset = kPathTracerMaterialTextureFirstSlot + static_cast<uint32_t>(idx) * kPbrMapTypeCount;
             for (uint32_t textureIndex = 0; textureIndex < kPbrMapTypeCount; ++textureIndex) {
@@ -89,7 +89,7 @@ PathTracedView::PathTracedView(
             .positions = geometry.getVertexBuffer(0)->getDeviceAddress(),
             .attributes = geometry.getVertexBuffer(1)->getDeviceAddress(),
             .triangles = geometry.getIndexBuffer()->getDeviceAddress(),
-            .materialIndex = instance.materialIndex,
+            .materialIndex = static_cast<int32_t>(instance.materialIndex),
             .materialTextureOffset = materialTextureOffset,
         });
     }

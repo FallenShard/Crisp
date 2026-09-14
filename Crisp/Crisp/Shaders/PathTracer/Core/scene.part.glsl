@@ -1,45 +1,7 @@
 #ifndef CRISP_PATH_TRACER_SCENE_GLSL
 #define CRISP_PATH_TRACER_SCENE_GLSL
 
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceVertices {
-    vec3 data[];
-};
-
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceNormals {
-    vec3 data[];
-};
-
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceTexCoords {
-    vec2 data[];
-};
-
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceTriangles {
-    uvec3 data[];
-};
-
-struct AliasTableElement {
-    float tau;
-    uint j;
-};
-
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceAliasTable {
-    AliasTableElement data[];
-};
-
-// Must match InstanceProperties in Scenes/RayTracingSceneParser.hpp.
-struct InstanceProperties {
-    int materialId;
-    int lightId;
-    PathTraceVertices positions;
-    PathTraceNormals normals;
-    PathTraceTexCoords texCoords;
-    PathTraceTriangles triangles;
-    PathTraceAliasTable aliasTable;
-};
-
-layout(buffer_reference, scalar, buffer_reference_align = 8) readonly buffer PathTraceInstances {
-    InstanceProperties data[];
-};
+#include "instance.part.glsl"
 
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceMaterials {
     BsdfParameters data[];
@@ -56,7 +18,7 @@ layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Env
 
 // Must match RayTracingSceneAddresses in Scenes/RayTracingSceneData.hpp.
 layout(push_constant, scalar) uniform RayTracingSceneAddresses {
-    PathTraceInstances instances;
+    PathTracedInstances instances;
     PathTraceMaterials materials;
     PathTraceLights lights;
     EnvironmentCdf environmentCdf;

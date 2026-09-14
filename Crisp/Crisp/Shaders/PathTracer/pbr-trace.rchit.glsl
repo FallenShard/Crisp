@@ -10,6 +10,7 @@
 #include "../Common/warp.part.glsl"
 #include "Core/heap-slots.part.glsl"
 #include "Core/hit-info.part.glsl"
+#include "Core/intersection.part.glsl"
 #include "Core/pbr-scene.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
@@ -42,18 +43,9 @@ void main() {
     const uvec3 triangle = instance.triangles.data[gl_PrimitiveID];
 
     const vec3 baryCoord = vec3(1.0f - barycentric.x - barycentric.y, barycentric.x, barycentric.y);
-    const vec3 objectNormal = normalize(
-        instance.attributes.data[triangle.x].normal * baryCoord.x +
-        instance.attributes.data[triangle.y].normal * baryCoord.y +
-        instance.attributes.data[triangle.z].normal * baryCoord.z);
-    const vec2 texCoord =
-        (instance.attributes.data[triangle.x].texCoord * baryCoord.x +
-         instance.attributes.data[triangle.y].texCoord * baryCoord.y +
-         instance.attributes.data[triangle.z].texCoord * baryCoord.z);
-    const vec4 objectTangent =
-        (instance.attributes.data[triangle.x].tangent * baryCoord.x +
-         instance.attributes.data[triangle.y].tangent * baryCoord.y +
-         instance.attributes.data[triangle.z].tangent * baryCoord.z);
+    const vec3 objectNormal = interpolateNormal(instance.attributes, triangle, baryCoord);
+    const vec2 texCoord = interpolateTexCoord(instance.attributes, triangle, baryCoord);
+    const vec4 objectTangent = interpolateTangent(instance.attributes, triangle, baryCoord);
 
     // Normals transform by the inverse transpose; gl_WorldToObjectEXT already is the inverse, so a row-vector
     // multiply transposes it without inverting anything here.

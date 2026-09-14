@@ -18,24 +18,6 @@
 
 namespace crisp {
 
-// One TLAS instance: geometry in its own per-node buffers, plus the index of its record in the shared
-// PbrMaterialTable. Mirrors PathTracedInstance in Shaders/PathTracer/Core/pbr-scene.part.glsl.
-struct PathTracedInstance {
-    VkDeviceAddress positions{0};
-    VkDeviceAddress attributes{0};
-    VkDeviceAddress triangles{0};
-    uint32_t materialIndex{0};
-    uint32_t materialTextureOffset{std::numeric_limits<uint32_t>::max()};
-};
-
-static_assert(sizeof(PathTracedInstance) == 32);
-static_assert(std::is_standard_layout_v<PathTracedInstance>);
-static_assert(offsetof(PathTracedInstance, positions) == 0);
-static_assert(offsetof(PathTracedInstance, attributes) == 8);
-static_assert(offsetof(PathTracedInstance, triangles) == 16);
-static_assert(offsetof(PathTracedInstance, materialIndex) == 24);
-static_assert(offsetof(PathTracedInstance, materialTextureOffset) == 28);
-
 // Mirrors PathTracedViewAddresses in Shaders/PathTracer/Core/pbr-scene.part.glsl.
 struct PathTracedViewAddresses {
     VkDeviceAddress instances{0};

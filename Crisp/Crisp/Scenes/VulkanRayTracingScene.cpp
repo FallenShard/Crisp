@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Geometry/VertexLayout.hpp>
 #include <Crisp/Gui/ImGuiCameraUtils.hpp>
 #include <Crisp/Gui/ImGuiUtils.hpp>
 #include <Crisp/Image/Io/Exr.hpp>
@@ -57,7 +58,7 @@ Geometry createRayTracingGeometry(Renderer& renderer, const TriangleMesh& mesh) 
     return createGeometry(
         renderer,
         mesh,
-        {{VertexAttribute::Position}, {VertexAttribute::Normal}, {VertexAttribute::TexCoord}},
+        kPbrVertexFormat,
         VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT |
             VK_BUFFER_USAGE_2_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR);
 }
@@ -216,8 +217,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
 
         auto& props = m_sceneDesc.props[idx];
         props.positions = geometry.getVertexBuffer(0)->getDeviceAddress();
-        props.normals = geometry.getVertexBuffer(1)->getDeviceAddress();
-        props.texCoords = geometry.getVertexBuffer(2)->getDeviceAddress();
+        props.attributes = geometry.getVertexBuffer(1)->getDeviceAddress();
         props.triangles = geometry.getIndexBuffer()->getDeviceAddress();
 
         if (props.lightId != -1) {

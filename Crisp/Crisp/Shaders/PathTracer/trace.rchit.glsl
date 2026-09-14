@@ -26,15 +26,15 @@ vec3 toWorld(const vec3 dir, const mat3 coordinateFrame) {
 }
 
 void main() {
-    InstanceProperties instance = scene.instances.data[gl_InstanceCustomIndexEXT];
+    PathTracedInstance instance = scene.instances.data[gl_InstanceCustomIndexEXT];
 
     // Formulate the triangle at the hit.
     const uvec3 hitTriangle = instance.triangles.data[gl_PrimitiveID];
 
     const vec3 baryCoord = vec3(1.0 - barycentric.x - barycentric.y, barycentric.x, barycentric.y);
-    const vec3 normal = interpolateNormal(instance.normals, hitTriangle, baryCoord);
+    const vec3 normal = interpolateNormal(instance.attributes, hitTriangle, baryCoord);
     const vec3 position = interpolatePosition(instance.positions, hitTriangle, baryCoord);
-    const vec2 texCoord = interpolateTexCoord(instance.texCoords, hitTriangle, baryCoord);
+    const vec2 texCoord = interpolateTexCoord(instance.attributes, hitTriangle, baryCoord);
 
     // Record the hit info for the calling shader.
     hitInfo.position = position;
@@ -47,19 +47,19 @@ void main() {
     const mat3 worldTransform = createCoordinateFrame(normal);
 
     bsdf.wi = toLocal(-gl_WorldRayDirectionEXT, worldTransform);
-    bsdf.materialId = instance.materialId;
+    bsdf.materialId = instance.materialIndex;
     bsdf.texCoord = texCoord;
 
     bsdf.unitSample = hitInfo.bsdfSample;
     bsdf.lobeSample = hitInfo.bsdfLobeSample;
 
-    const int bsdfType = scene.materials.data[instance.materialId].type;
+    const int bsdfType = scene.materials.data[instance.materialIndex].type;
     executeCallableEXT(bsdfType, /*location(bsdf)=*/0);
     hitInfo.sampleDirection = toWorld(bsdf.wo, worldTransform);
     hitInfo.samplePdf = bsdf.pdf;
     hitInfo.sampleWeight = bsdf.pdf > 0.0f ? bsdf.f / bsdf.pdf : vec3(0.0f);
     hitInfo.sampleLobeType = bsdf.lobeType;
-    hitInfo.materialId = instance.materialId;
+    hitInfo.materialId = instance.materialIndex;
 
     // Account for any lights hit.
     hitInfo.Le = vec3(0.0f);

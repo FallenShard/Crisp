@@ -41,6 +41,30 @@ inline constexpr uint32_t kPathTracerMaterialSamplerSlot = 1;
 inline constexpr uint32_t kPathTracerGgxAlbedoLutSamplerSlot = 2;
 inline constexpr uint32_t kPathTracerSamplerHeapSlotCount = 3;
 
+inline constexpr uint32_t kInvalidMaterialTextureOffset = 0xFFFFFFFFu;
+
+// One record per TLAS instance. Must match PathTracedInstance in Shaders/PathTracer/Core/instance.part.glsl.
+struct PathTracedInstance {
+    VkDeviceAddress positions{0};
+    VkDeviceAddress attributes{0};
+    VkDeviceAddress triangles{0};
+    VkDeviceAddress aliasTable{0}; // Null unless the shape is an area light.
+    int32_t materialIndex{-1};
+    int32_t lightId{-1};
+    uint32_t materialTextureOffset{kInvalidMaterialTextureOffset};
+    uint32_t pad0{0};
+};
+
+static_assert(sizeof(PathTracedInstance) == 48);
+static_assert(std::is_standard_layout_v<PathTracedInstance>);
+static_assert(offsetof(PathTracedInstance, positions) == 0);
+static_assert(offsetof(PathTracedInstance, attributes) == 8);
+static_assert(offsetof(PathTracedInstance, triangles) == 16);
+static_assert(offsetof(PathTracedInstance, aliasTable) == 24);
+static_assert(offsetof(PathTracedInstance, materialIndex) == 32);
+static_assert(offsetof(PathTracedInstance, lightId) == 36);
+static_assert(offsetof(PathTracedInstance, materialTextureOffset) == 40);
+
 struct PathTracerInstance {
     const Geometry* geometry{nullptr};
     glm::mat4 transform{1.0f};
