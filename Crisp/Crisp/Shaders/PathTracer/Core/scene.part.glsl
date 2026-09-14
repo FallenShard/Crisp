@@ -1,10 +1,11 @@
 #ifndef CRISP_PATH_TRACER_SCENE_GLSL
 #define CRISP_PATH_TRACER_SCENE_GLSL
 
+#include "../../Common/pbr-material.part.glsl"
 #include "instance.part.glsl"
 
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceMaterials {
-    BsdfParameters data[];
+    PbrMaterialParameters data[];
 };
 
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer PathTraceLights {

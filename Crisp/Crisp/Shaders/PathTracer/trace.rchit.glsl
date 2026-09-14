@@ -4,17 +4,22 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
+#include "Core/heap-slots.part.glsl"
 #include "Core/types.part.glsl"
 #include "../Common/math-constants.part.glsl"
 #include "../Common/warp.part.glsl"
 
 layout(location = 0) rayPayloadInEXT HitInfo hitInfo;
-layout(location = 0) callableDataEXT BsdfSample bsdf;
 
 hitAttributeEXT vec2 barycentric;
 
+// The OpenPBR lobe reads the GGX directional-albedo table unconditionally, even with compensation
+// off; material-texture.part.glsl declares the heap arrays this expands to.
+#define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
+
 #include "Core/scene.part.glsl"
 #include "Core/intersection.part.glsl"
+#include "BSDFs/bsdf-sample.part.glsl"
 #include "Lights/area-light.part.glsl"
 
 vec3 toLocal(const vec3 dir, const mat3 coordinateFrame) {
@@ -46,6 +51,7 @@ void main() {
 
     const mat3 worldTransform = createCoordinateFrame(normal);
 
+    BsdfSample bsdf;
     bsdf.wi = toLocal(-gl_WorldRayDirectionEXT, worldTransform);
     bsdf.materialId = instance.materialIndex;
     bsdf.texCoord = texCoord;
@@ -53,8 +59,7 @@ void main() {
     bsdf.unitSample = hitInfo.bsdfSample;
     bsdf.lobeSample = hitInfo.bsdfLobeSample;
 
-    const int bsdfType = scene.materials.data[instance.materialIndex].type;
-    executeCallableEXT(bsdfType, /*location(bsdf)=*/0);
+    sampleBsdf(bsdf);
     hitInfo.sampleDirection = toWorld(bsdf.wo, worldTransform);
     hitInfo.samplePdf = bsdf.pdf;
     hitInfo.sampleWeight = bsdf.pdf > 0.0f ? bsdf.f / bsdf.pdf : vec3(0.0f);

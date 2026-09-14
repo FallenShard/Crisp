@@ -9,7 +9,7 @@
 #include <Crisp/Core/Result.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Materials/Ior.hpp>
-#include <Crisp/Materials/OpenPbrSurface.hpp>
+#include <Crisp/Materials/PbrMaterial.hpp>
 #include <Crisp/Math/Headers.hpp>
 #include <Crisp/Scenes/PathTracer.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
@@ -34,29 +34,6 @@ struct RayTracingRenderSettings {
     float zNear{0.1f};
     float zFar{1000.0f};
 };
-
-struct BsdfParameters {
-    OpenPbrSurfaceParams surface;
-
-    glm::vec3 complexIorEta;
-    float microfacetAlpha;
-
-    glm::vec3 complexIorK;
-    float orenNayarRoughness;
-
-    int32_t type;
-    int32_t microfacetType;
-    int32_t reflectanceTexture{-1};
-    int32_t reflectanceSampler{-1};
-};
-
-static_assert(sizeof(BsdfParameters) == 112);
-static_assert(std::is_standard_layout_v<BsdfParameters>);
-static_assert(offsetof(BsdfParameters, surface) == 0);
-static_assert(offsetof(BsdfParameters, complexIorEta) == 64);
-static_assert(offsetof(BsdfParameters, complexIorK) == 80);
-static_assert(offsetof(BsdfParameters, type) == 96);
-static_assert(offsetof(BsdfParameters, reflectanceTexture) == 104);
 
 struct MaterialTextureDescription {
     std::string filename;
@@ -93,7 +70,7 @@ struct SceneDescription {
     std::vector<std::string> meshFilenames;
     std::vector<glm::mat4> transforms;
     std::vector<PathTracedInstance> props;
-    std::vector<BsdfParameters> bsdfs;
+    std::vector<PbrMaterialParams> bsdfs;
     std::vector<MaterialTextureDescription> materialTextures;
     std::vector<LightParameters> lights;
     std::optional<EnvironmentLightDescription> environment;
@@ -102,7 +79,7 @@ struct SceneDescription {
 Result<glm::vec3> parseVec3(const nlohmann::json& json);
 Result<RayTracingRenderSettings> parseRayTracingRenderSettings(const nlohmann::json& json);
 
-BsdfParameters createMicrofacetBsdf(glm::vec3 kd, float alpha, int32_t microfacetType = 0);
+PbrMaterialParams createMicrofacetBsdf(glm::vec3 kd, float alpha, int32_t microfacetType = 0);
 
 Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, const nlohmann::json& lightList = {});
 

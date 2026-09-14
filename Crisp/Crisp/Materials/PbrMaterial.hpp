@@ -30,10 +30,20 @@ inline constexpr std::array<std::string_view, kPbrMapTypeCount> kPbrMapNames = {
     "emissive",
 };
 
+inline constexpr int32_t kBsdfLambertian = 0;
+inline constexpr int32_t kBsdfDielectric = 1;
+inline constexpr int32_t kBsdfMirror = 2;
+inline constexpr int32_t kBsdfMicrofacet = 3;
+inline constexpr int32_t kBsdfOrenNayar = 4;
+inline constexpr int32_t kBsdfSmoothConductor = 5;
+inline constexpr int32_t kBsdfRoughConductor = 6;
+inline constexpr int32_t kBsdfRoughDielectric = 7;
+inline constexpr int32_t kBsdfOpenPbr = 8;
+
 // Mirrors PbrMaterialParameters in Shaders/pbr.frag.glsl, Shaders/pbr-heap.frag.glsl and
 // Shaders/PathTracer/Core/pbr-scene.part.glsl.
 //
-// The OpenPBR half is one contiguous named block so the rasterizer, the path tracers and BsdfParameters all
+// The OpenPBR half is one contiguous named block so the rasterizer and the path tracers all
 // read the same record; everything after it is a Crisp renderer extension, not an OpenPBR parameter.
 // 0 is the registry's fallback, so an unauthored map samples the checkerboard.
 struct PbrMaterialParams {
@@ -52,9 +62,28 @@ struct PbrMaterialParams {
     float geometryOpacity{1.0f};
     float alphaCutoff{0.5f};
     uint32_t flags{0};
+
+    // Per-lobe parameters, selected by `type`. Anything with an exact OpenPBR equivalent lives in `surface`
+    // instead, so only values with no shared representation appear here; exactly one lobe's fields are live at
+    // a time. The rasteriser reads nothing past `flags`, but must still declare the full record: the struct's
+    // size is the array stride.
+    glm::vec3 complexIorEta{0.0f};
+    float microfacetAlpha{0.0f};
+
+    glm::vec3 complexIorK{0.0f};
+    float orenNayarRoughness{0.0f};
+
+    int32_t type{kBsdfOpenPbr};
+    int32_t microfacetType{0};
+    int32_t reflectanceTexture{-1};
+    int32_t reflectanceSampler{-1};
 };
 
-static_assert(sizeof(PbrMaterialParams) == 112);
+static_assert(sizeof(PbrMaterialParams) == 160);
+static_assert(offsetof(PbrMaterialParams, complexIorEta) == 112);
+static_assert(offsetof(PbrMaterialParams, complexIorK) == 128);
+static_assert(offsetof(PbrMaterialParams, type) == 144);
+static_assert(offsetof(PbrMaterialParams, reflectanceTexture) == 152);
 static_assert(std::is_standard_layout_v<PbrMaterialParams>);
 static_assert(offsetof(PbrMaterialParams, surface) == 0);
 static_assert(offsetof(PbrMaterialParams, uvScale) == 64);

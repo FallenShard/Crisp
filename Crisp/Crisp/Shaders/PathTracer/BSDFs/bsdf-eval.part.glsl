@@ -9,12 +9,12 @@
 #include "../../BSDFs/OpenPbr/surface.part.glsl"
 #include "../Textures/material-texture.part.glsl"
 
-BsdfEval evaluateLambertian(BsdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
+BsdfEval evaluateLambertian(PbrMaterialParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
     return BsdfEval(
         evaluateLambertian(evaluateMaterialReflectance(material, texCoord), wi, wo), computeLambertianPdf(wi, wo));
 }
 
-BsdfEval evaluateMicrofacet(BsdfParameters material, vec3 wi, vec3 wo) {
+BsdfEval evaluateMicrofacet(PbrMaterialParameters material, vec3 wi, vec3 wo) {
     return BsdfEval(
         evaluateMicrofacet(
             material.surface.baseColor,
@@ -29,14 +29,14 @@ BsdfEval evaluateMicrofacet(BsdfParameters material, vec3 wi, vec3 wo) {
             wi, wo, material.surface.specularWeight, material.microfacetType, material.microfacetAlpha));
 }
 
-BsdfEval evaluateOrenNayar(BsdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
+BsdfEval evaluateOrenNayar(PbrMaterialParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
     return BsdfEval(
         evaluateOrenNayar(
             evaluateMaterialReflectance(material, texCoord), material.orenNayarRoughness, wi, wo),
         computeLambertianPdf(wi, wo));
 }
 
-BsdfEval evaluateRoughConductor(BsdfParameters material, vec3 wi, vec3 wo) {
+BsdfEval evaluateRoughConductor(PbrMaterialParameters material, vec3 wi, vec3 wo) {
     return BsdfEval(
         evaluateRoughConductor(
             material.complexIorEta,
@@ -48,7 +48,7 @@ BsdfEval evaluateRoughConductor(BsdfParameters material, vec3 wi, vec3 wo) {
         computeRoughConductorPdf(wi, wo, material.microfacetType, material.microfacetAlpha));
 }
 
-BsdfEval evaluateRoughDielectric(BsdfParameters material, vec3 wi, vec3 wo) {
+BsdfEval evaluateRoughDielectric(PbrMaterialParameters material, vec3 wi, vec3 wo) {
     return BsdfEval(
         evaluateRoughDielectric(
             kVacuumIor,
@@ -66,14 +66,14 @@ BsdfEval evaluateRoughDielectric(BsdfParameters material, vec3 wi, vec3 wo) {
             wo));
 }
 
-BsdfEval evaluateOpenPbr(BsdfParameters material, vec3 wi, vec3 wo) {
+BsdfEval evaluateOpenPbr(PbrMaterialParameters material, vec3 wi, vec3 wo) {
     // Compensation is a per-view setting the callable does not see, so next-event estimation and sampling agree
     // on None until it is plumbed through the material record. See docs/openpbr-path-tracer.md.
     const OpenPbrSurface surface = createOpenPbrSurface(material.surface, kEnergyCompensationNone);
     return BsdfEval(evaluateOpenPbrSurface(surface, wi, wo), computeOpenPbrSurfacePdf(surface, wi, wo));
 }
 
-BsdfEval evaluateBsdf(BsdfParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
+BsdfEval evaluateBsdf(PbrMaterialParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
     switch (material.type) {
     case kBsdfLambertian:
         return evaluateLambertian(material, texCoord, wi, wo);

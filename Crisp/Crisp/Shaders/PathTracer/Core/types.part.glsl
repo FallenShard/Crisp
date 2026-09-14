@@ -1,7 +1,7 @@
 #ifndef CRISP_PATH_TRACER_TYPES_GLSL
 #define CRISP_PATH_TRACER_TYPES_GLSL
 
-#include "../../Common/openpbr-surface.part.glsl"
+#include "../../Common/pbr-material.part.glsl"
 #include "hit-info.part.glsl"
 
 const float kVacuumIor = 1.0f;
@@ -48,24 +48,6 @@ struct BsdfSample {
     uint lobeType; // Out, diffuse, glossy, or delta.
 
     vec2 texCoord; // In.
-};
-
-// Must match BsdfParameters in Scenes/RayTracingSceneParser.hpp. Parameters with an exact OpenPBR equivalent
-// use the canonical surface block even for legacy BSDF types; the trailing fields are legacy-only values and
-// texture metadata.
-struct BsdfParameters {
-    OpenPbrSurfaceParams surface;
-
-    vec3 complexIorEta;
-    float microfacetAlpha;
-
-    vec3 complexIorK;
-    float orenNayarRoughness;
-
-    int type;
-    int microfacetType;
-    int reflectanceTexture;
-    int reflectanceSampler;
 };
 
 struct BsdfEval {

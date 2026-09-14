@@ -45,28 +45,7 @@ layout(set = 1, binding = 4) uniform sampler2D cascadedShadowMaps[4];
 layout(set = 1, binding = 5) uniform sampler2D brdfLut;
 layout(set = 1, binding = 6) uniform accelerationStructureEXT shadowSceneBvh;
 
-// Material-specific parameters. Must match PbrMaterialParams in Materials/PbrMaterial.hpp.
-#include "../Common/openpbr-surface.part.glsl"
-
-// The OpenPBR half is one nested block shared with the rasterizer, the other tracer and BsdfParameters;
-// everything after it is a Crisp renderer extension. Must match PbrMaterialParams in Materials/PbrMaterial.hpp.
-struct PbrMaterialParameters {
-    OpenPbrSurfaceParams surface;
-
-    vec2 uvScale;
-    float normalScale;
-    float aoStrength;
-
-    uint samplerIndex;
-    uint baseColorTex;
-    uint normalTex;
-    uint ormTex;
-
-    uint emissionTex;
-    float geometryOpacity;
-    float alphaCutoff;
-    uint flags;
-};
+#include "../Common/pbr-material.part.glsl"
 
 layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer PbrMaterialTable {
     PbrMaterialParameters materials[];

@@ -100,21 +100,11 @@ Image createConstantEnvironmentImage(const glm::vec3 radiance) {
     return {std::move(bytes), 1, 1, 4, 4 * sizeof(float)};
 }
 
-// The three core stages, then one callable per material type in kBsdfCallableShaders order -- the tag doubles
-// as the callable's index, so the ordering is not free.
-constexpr std::array<PathTracerShaderStage, 3> kCoreShaderStages{{
+constexpr std::array<PathTracerShaderStage, 3> kShaderStages{{
     {"PathTracer/trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     {"PathTracer/trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     {"PathTracer/trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
 }};
-
-std::vector<PathTracerShaderStage> createShaderStages() {
-    std::vector<PathTracerShaderStage> stages(kCoreShaderStages.begin(), kCoreShaderStages.end());
-    for (const auto& callable : kBsdfCallableShaders) {
-        stages.push_back({callable, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR});
-    }
-    return stages;
-}
 
 } // namespace
 
@@ -245,12 +235,11 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         .environmentCdf = m_environmentCdfBuffer ? m_environmentCdfBuffer->getDeviceAddress() : 0,
     };
 
-    const std::vector<PathTracerShaderStage> shaderStages = createShaderStages();
     m_pathTracer = std::make_unique<PathTracer>(
         *m_renderer,
         PathTracerCreateInfo{
             .debugName = "Path Tracer",
-            .shaderStages = shaderStages,
+            .shaderStages = kShaderStages,
             .resourceHeapSlotCount = kPathTracerMaterialTextureFirstSlot + static_cast<uint32_t>(m_materialImages.size()),
             .samplerHeapSlotCount = kPathTracerSamplerHeapSlotCount,
             .integratorParamsSize = sizeof(IntegratorParameters),
@@ -261,7 +250,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     samplerHeap.write(kPathTracerEnvironmentSamplerSlot, createLatLongEnvironmentSamplerCreateInfo());
     samplerHeap.write(kPathTracerMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo());
 
-    // The kBsdfOpenPbr callable reads this unconditionally: directional-albedo.part.glsl refuses to compile
+    // The kBsdfOpenPbr branch reads this unconditionally: directional-albedo.part.glsl refuses to compile
     // without the sampler, rather than silently degrading every compensation mode to a no-op.
     m_ggxAlbedoLut = bindGgxAlbedoLut(*m_renderer, *m_pathTracer);
 
