@@ -625,11 +625,8 @@ void MaterialExplorerScene::createPathTracedView() {
         return;
     }
 
-    m_pathTracedView = std::make_unique<PathTracedView>(
-        *m_renderer,
-        m_pathTracedGeometry,
-        m_pbrMaterialTable->getDeviceAddress(),
-        m_lightSystem->getEnvironmentLight()->getCubeMapView());
+    m_pathTracedView =
+        std::make_unique<PathTracedView>(*m_renderer, m_pathTracedGeometry, m_pbrMaterialTable->getDeviceAddress());
     m_pathTracedView->setEnvironmentDistribution(
         *m_environmentEquirectView, m_environmentDistribution.getCdf(), m_environmentExtent.x, m_environmentExtent.y);
     m_pathTracedView->updateDescriptorHeap(*m_renderGraph);
@@ -827,7 +824,6 @@ void MaterialExplorerScene::setEnvironmentMap(const std::string& environmentMapN
         configureForwardLightingPassMaterial(*m_forwardPassMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
     }
     if (m_pathTracedView && m_renderMode != RenderMode::Rasterized) {
-        m_pathTracedView->setEnvironmentMap(m_lightSystem->getEnvironmentLight()->getCubeMapView());
         m_pathTracedView->setEnvironmentDistribution(
             *m_environmentEquirectView, m_environmentDistribution.getCdf(), m_environmentExtent.x, m_environmentExtent.y);
     }

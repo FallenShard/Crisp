@@ -5,6 +5,8 @@
 #include <ranges>
 
 #include <Crisp/Core/Checks.hpp>
+#include <Crisp/Renderer/GgxAlbedoLut.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 namespace crisp {
 
@@ -177,6 +179,16 @@ void PathTracer::trace(
     encoder.bindSamplerHeap(*m_samplerHeap);
     encoder.pushData(pushData);
     encoder.traceRays(m_shaderBindingTable.bindings, extent);
+}
+
+std::unique_ptr<VulkanImage> bindGgxAlbedoLut(Renderer& renderer, PathTracer& pathTracer) {
+    // The table is endpoint-mapped, so repeating would wrap the grazing corner onto the normal-incidence one.
+    pathTracer.getSamplerHeap().write(kPathTracerGgxAlbedoLutSamplerSlot, createLinearClampSamplerCreateInfo());
+
+    auto lut = loadGgxAlbedoLut(renderer.getDevice(), renderer.getResourcesPath() / "Textures/GgxAlbedoLut.exr");
+    pathTracer.getResourceHeap().writeSampledImage(
+        kPathTracerGgxAlbedoLutSlot, lut->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    return lut;
 }
 
 } // namespace crisp

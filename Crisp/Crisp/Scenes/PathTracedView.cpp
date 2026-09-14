@@ -6,29 +6,11 @@
 #include <imgui.h>
 
 #include <Crisp/Core/Checks.hpp>
-#include <Crisp/Renderer/GgxAlbedoLut.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanSampler.hpp>
 
 namespace crisp {
 namespace {
-
-template <typename T>
-std::span<const std::byte> structAsBytes(const T& value) {
-    return std::span<const std::byte>{reinterpret_cast<const std::byte*>(&value), sizeof(value)}; // NOLINT
-}
-
-// Must match the heap subscripts in Shaders/pbr-path-trace.rgen.glsl, .rmiss.glsl and .rchit.glsl. Slots 0-3
-// are the shared ones PathTracer owns.
-constexpr uint32_t kEnvironmentMapSlot = kPathTracerFirstFreeSlot;
-constexpr uint32_t kGgxAlbedoLutSlot = kPathTracerFirstFreeSlot + 1;
-constexpr uint32_t kEnvironmentEquirectSlot = kPathTracerFirstFreeSlot + 2;
-constexpr uint32_t kMaterialTextureFirstSlot = kPathTracerFirstFreeSlot + 3;
-
-constexpr uint32_t kEnvironmentSamplerSlot = 0;
-constexpr uint32_t kMaterialSamplerSlot = 1;
-constexpr uint32_t kGgxAlbedoLutSamplerSlot = 2;
-constexpr uint32_t kSamplerHeapSlotCount = 3;
 
 constexpr std::array<const char*, 3> kEnergyCompensationNames{"None", "Kulla-Conty", "Turquin"};
 
@@ -47,10 +29,8 @@ struct PathTracedPassData {
 PathTracedView::PathTracedView(
     Renderer& renderer,
     const std::span<const PathTracedGeometry> instances,
-    const VkDeviceAddress materialTableAddress,
-    const VulkanImageView& environmentMapView)
-    : m_renderer(&renderer)
-    , m_environmentMapView(&environmentMapView) {
+    const VkDeviceAddress materialTableAddress)
+    : m_renderer(&renderer) {
     CRISP_CHECK(!instances.empty(), "A path-traced view needs at least one instance.");
 
     auto& device = m_renderer->getDevice();
@@ -74,8 +54,8 @@ PathTracedView::PathTracedView(
         PathTracerCreateInfo{
             .debugName = "Path-Traced View",
             .shaderStages = kShaderStages,
-            .resourceHeapSlotCount = kMaterialTextureFirstSlot + materialTextureSlotCount,
-            .samplerHeapSlotCount = kSamplerHeapSlotCount,
+            .resourceHeapSlotCount = kPathTracerMaterialTextureFirstSlot + materialTextureSlotCount,
+            .samplerHeapSlotCount = kPathTracerSamplerHeapSlotCount,
             .integratorParamsSize = sizeof(IntegratorParameters),
         },
         tracerInstances);
@@ -83,16 +63,11 @@ PathTracedView::PathTracedView(
     auto& resourceHeap = m_pathTracer->getResourceHeap();
     auto& samplerHeap = m_pathTracer->getSamplerHeap();
 
-    // The environment clamps at cube edges; PBR material textures repeat just like the raster path.
-    samplerHeap.write(kEnvironmentSamplerSlot, createLinearClampSamplerCreateInfo());
-    samplerHeap.write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo(MaxAnisotropy));
+    samplerHeap.write(kPathTracerEnvironmentSamplerSlot, createLinearClampSamplerCreateInfo());
+    // PBR material textures repeat just like the raster path.
+    samplerHeap.write(kPathTracerMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo(MaxAnisotropy));
 
-    // The table is endpoint-mapped, so repeating would wrap the grazing corner onto the normal-incidence one.
-    samplerHeap.write(kGgxAlbedoLutSamplerSlot, createLinearClampSamplerCreateInfo());
-
-    m_ggxAlbedoLut = loadGgxAlbedoLut(device, m_renderer->getResourcesPath() / "Textures/GgxAlbedoLut.exr");
-    resourceHeap.writeSampledImage(
-        kGgxAlbedoLutSlot, m_ggxAlbedoLut->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    m_ggxAlbedoLut = bindGgxAlbedoLut(renderer, *m_pathTracer);
 
     std::vector<PathTracedInstance> instanceRecords;
     instanceRecords.reserve(instances.size());
@@ -100,7 +75,8 @@ PathTracedView::PathTracedView(
         const auto& geometry = *instance.geometry;
         uint32_t materialTextureOffset = std::numeric_limits<uint32_t>::max();
         if (std::ranges::all_of(instance.materialTextures, [](const VulkanImageView* view) { return view != nullptr; })) {
-            materialTextureOffset = kMaterialTextureFirstSlot + static_cast<uint32_t>(idx) * kPbrMapTypeCount;
+            materialTextureOffset =
+                    kPathTracerMaterialTextureFirstSlot + static_cast<uint32_t>(idx) * kPbrMapTypeCount;
             for (uint32_t textureIndex = 0; textureIndex < kPbrMapTypeCount; ++textureIndex) {
                 resourceHeap.writeSampledImage(
                     materialTextureOffset + textureIndex,
@@ -156,21 +132,11 @@ const VulkanImageView& getPathTracedViewImage(const rg::RenderGraph& renderGraph
 }
 
 void PathTracedView::updateDescriptorHeap(const rg::RenderGraph& renderGraph) {
-    auto& resourceHeap = m_pathTracer->getResourceHeap();
     m_pathTracer->setStorageImage(renderGraph.getImageView<&PathTracedPassData::image>());
-    resourceHeap.writeSampledImage(
-        kEnvironmentMapSlot, *m_environmentMapView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    if (m_environmentEquirectView != nullptr) {
-        resourceHeap.writeSampledImage(
-            kEnvironmentEquirectSlot, *m_environmentEquirectView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    if (m_environmentView != nullptr) {
+        m_pathTracer->getResourceHeap().writeSampledImage(
+            kPathTracerEnvironmentSlot, *m_environmentView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
-}
-
-void PathTracedView::setEnvironmentMap(const VulkanImageView& environmentMapView) {
-    m_environmentMapView = &environmentMapView;
-    m_pathTracer->getResourceHeap().writeSampledImage(
-        kEnvironmentMapSlot, *m_environmentMapView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    resetAccumulation();
 }
 
 void PathTracedView::setEnvironmentDistribution(
@@ -179,9 +145,9 @@ void PathTracedView::setEnvironmentDistribution(
     CRISP_CHECK_EQ(cdf.size(), static_cast<size_t>(height) + 1 + static_cast<size_t>(height) * (width + 1));
 
     auto& device = m_renderer->getDevice();
-    m_environmentEquirectView = &equirectView;
+    m_environmentView = &equirectView;
     m_pathTracer->getResourceHeap().writeSampledImage(
-        kEnvironmentEquirectSlot, equirectView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        kPathTracerEnvironmentSlot, equirectView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     m_environmentCdfBuffer = createStorageBuffer(
         device, cdf.size() * sizeof(float), VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);

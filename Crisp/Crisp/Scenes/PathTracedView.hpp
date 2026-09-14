@@ -68,10 +68,7 @@ const VulkanImageView& getPathTracedViewImage(const rg::RenderGraph& renderGraph
 class PathTracedView {
 public:
     PathTracedView(
-        Renderer& renderer,
-        std::span<const PathTracedGeometry> instances,
-        VkDeviceAddress materialTableAddress,
-        const VulkanImageView& environmentMapView);
+        Renderer& renderer, std::span<const PathTracedGeometry> instances, VkDeviceAddress materialTableAddress);
     ~PathTracedView();
 
     PathTracedView(const PathTracedView&) = delete;
@@ -91,12 +88,6 @@ public:
     void drawGui(bool allowEnvironmentIntensity = true);
 
     int32_t getAccumulatedSampleCount() const;
-
-    bool isEnvironmentBound() const {
-        return m_environmentMapView != nullptr;
-    }
-
-    void setEnvironmentMap(const VulkanImageView& environmentMapView);
 
     // Next-event estimation samples the equirectangular map through its own CDF, so the miss shader has to read
     // the same image: MIS weights are only valid when both strategies see one environment function.
@@ -126,12 +117,10 @@ private:
     Renderer* m_renderer;
     std::unique_ptr<PathTracer> m_pathTracer;
 
-    const VulkanImageView* m_environmentMapView{nullptr};
-
     std::unique_ptr<VulkanBuffer> m_instanceBuffer;
 
     std::unique_ptr<VulkanBuffer> m_environmentCdfBuffer;
-    const VulkanImageView* m_environmentEquirectView{nullptr};
+    const VulkanImageView* m_environmentView{nullptr};
 
     std::unique_ptr<VulkanImage> m_ggxAlbedoLut;
 

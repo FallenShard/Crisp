@@ -6,6 +6,7 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
+#include "Core/heap-slots.part.glsl"
 #include "Core/types.part.glsl"
 #include "../Common/math-constants.part.glsl"
 #include "../Common/rng.part.glsl"
@@ -16,14 +17,6 @@ const int kRussianRouletteCutoff = 3;
 
 const int kPayloadIndex = 0;
 layout(location = kPayloadIndex) rayPayloadEXT HitInfo hitInfo;
-
-const uint kImageSlot = 1;
-const uint kViewSlot = 2;
-const uint kIntegratorSlot = 3;
-const uint kEnvironmentMapSlot = 4;
-const uint kGgxAlbedoLutSlot = 5;
-const uint kEnvironmentSamplerSlot = 0;
-const uint kGgxAlbedoLutSamplerSlot = 2;
 
 // This doesn't work yet in a descriptor_heap: Nvidia driver bug.
 layout(set = 1, binding = 0) uniform accelerationStructureEXT sceneBvh;
@@ -54,7 +47,7 @@ heapIntegrators[];
 #define image heapStorageImages[kImageSlot]
 #define view heapViews[kViewSlot].params
 #define integrator heapIntegrators[kIntegratorSlot]
-#define environmentMap heapTexture2Ds[kEnvironmentMapSlot]
+#define environmentMap heapTexture2Ds[kEnvironmentSlot]
 #define environmentSampler heapSamplers[kEnvironmentSamplerSlot]
 // bsdf-eval.part.glsl evaluates kBsdfOpenPbr inline for next-event estimation, and that reaches the GGX
 // directional-albedo table even when no compensation mode is active.

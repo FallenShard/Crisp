@@ -8,18 +8,13 @@
 
 #include "../Common/math-constants.part.glsl"
 #include "../Common/warp.part.glsl"
+#include "Core/heap-slots.part.glsl"
 #include "Core/pbr-hit.part.glsl"
 #include "Core/pbr-scene.part.glsl"
 
 layout(location = 0) rayPayloadInEXT PbrHitInfo hitInfo;
 
 hitAttributeEXT vec2 barycentric;
-
-const uint kIntegratorSlot = 3u;
-const uint kGgxAlbedoLutSlot = 5u;
-
-const uint kMaterialSamplerSlot = 1u;
-const uint kGgxAlbedoLutSamplerSlot = 2u;
 
 layout(descriptor_heap, descriptor_stride = 64) uniform texture2D heapTexture2Ds[];
 layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];

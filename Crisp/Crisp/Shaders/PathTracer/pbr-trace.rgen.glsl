@@ -11,15 +11,10 @@
 #include "../Common/rng.part.glsl"
 #include "../Common/view.part.glsl"
 #include "../Common/warp.part.glsl"
+#include "Core/heap-slots.part.glsl"
 #include "Core/pbr-hit.part.glsl"
 
 const int kRussianRouletteCutoff = 3;
-
-// Must match the heap slots in Scenes/PathTracedView.cpp. The BVH is reached through a (set, binding) mapping
-// rather than a subscript because acceleration structures cannot be heap arrays yet; see docs/descriptor-heap.md.
-const uint kImageSlot = 1;
-const uint kViewSlot = 2;
-const uint kIntegratorSlot = 3;
 
 layout(set = 1, binding = 0) uniform accelerationStructureEXT sceneBvh;
 layout(descriptor_heap, descriptor_stride = 64, rgba32f) uniform image2D heapStorageImages[];
@@ -43,17 +38,10 @@ layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
 #define view heapViews[kViewSlot].params
 #define integrator heapIntegrators[kIntegratorSlot]
 
-const uint kGgxAlbedoLutSlot = 5;
-const uint kEnvironmentEquirectSlot = 6;
-
-const uint kEnvironmentSamplerSlot = 0;
-const uint kMaterialSamplerSlot = 1;
-const uint kGgxAlbedoLutSamplerSlot = 2;
-
 layout(descriptor_heap, descriptor_stride = 64) uniform texture2D heapTexture2Ds[];
 layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 
-#define CRISP_ENVIRONMENT_EQUIRECT     sampler2D(heapTexture2Ds[kEnvironmentEquirectSlot], heapSamplers[kEnvironmentSamplerSlot])
+#define CRISP_ENVIRONMENT_EQUIRECT     sampler2D(heapTexture2Ds[kEnvironmentSlot], heapSamplers[kEnvironmentSamplerSlot])
 #define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
 #define CRISP_MATERIAL_TEXTURE(heapIndex) sampler2D(heapTexture2Ds[heapIndex], heapSamplers[kMaterialSamplerSlot])
 

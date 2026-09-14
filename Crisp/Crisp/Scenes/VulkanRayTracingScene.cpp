@@ -12,7 +12,6 @@
 #include <Crisp/Io/JsonUtils.hpp>
 #include <Crisp/Math/AliasTable.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
-#include <Crisp/Renderer/GgxAlbedoLut.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
 #include <Crisp/Renderer/VulkanImageUtils.hpp>
 #include <Crisp/Scenes/EnvironmentLightSampling.hpp>
@@ -23,11 +22,6 @@
 
 namespace crisp {
 namespace {
-
-template <typename T>
-std::span<const std::byte> structAsBytes(const T& value) {
-    return std::span<const std::byte>{reinterpret_cast<const std::byte*>(&value), sizeof(value)}; // NOLINT
-}
 
 struct PathTracingPassData {
     RenderGraphResourceHandle image;
@@ -105,17 +99,6 @@ Image createConstantEnvironmentImage(const glm::vec3 radiance) {
     return {std::move(bytes), 1, 1, 4, 4 * sizeof(float)};
 }
 
-// Must match the heap array subscripts in Shaders/path-trace.rgen.glsl. Slots 0-3 are the shared ones
-// PathTracer owns.
-constexpr uint32_t kEnvironmentMapSlot = kPathTracerFirstFreeSlot;
-constexpr uint32_t kGgxAlbedoLutSlot = kPathTracerFirstFreeSlot + 1;
-constexpr uint32_t kMaterialTextureFirstSlot = kPathTracerFirstFreeSlot + 2;
-
-constexpr uint32_t kEnvironmentSamplerSlot = 0;
-constexpr uint32_t kMaterialSamplerSlot = 1;
-constexpr uint32_t kGgxAlbedoLutSamplerSlot = 2;
-constexpr uint32_t kSamplerHeapSlotCount = 3;
-
 // The three core stages, then one callable per material type in kBsdfCallableShaders order -- the tag doubles
 // as the callable's index, so the ordering is not free.
 constexpr std::array<PathTracerShaderStage, 3> kCoreShaderStages{{
@@ -174,8 +157,8 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         if (material.reflectanceTexture < 0) {
             continue;
         }
-        material.reflectanceTexture += static_cast<int32_t>(kMaterialTextureFirstSlot);
-        material.reflectanceSampler = static_cast<int32_t>(kMaterialSamplerSlot);
+        material.reflectanceTexture += static_cast<int32_t>(kPathTracerMaterialTextureFirstSlot);
+        material.reflectanceSampler = static_cast<int32_t>(kPathTracerMaterialSamplerSlot);
     }
 
     // Camera
@@ -268,24 +251,19 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         PathTracerCreateInfo{
             .debugName = "Path Tracer",
             .shaderStages = shaderStages,
-            .resourceHeapSlotCount = kMaterialTextureFirstSlot + static_cast<uint32_t>(m_materialImages.size()),
-            .samplerHeapSlotCount = kSamplerHeapSlotCount,
+            .resourceHeapSlotCount = kPathTracerMaterialTextureFirstSlot + static_cast<uint32_t>(m_materialImages.size()),
+            .samplerHeapSlotCount = kPathTracerSamplerHeapSlotCount,
             .integratorParamsSize = sizeof(IntegratorParameters),
         },
         instances);
 
     auto& samplerHeap = m_pathTracer->getSamplerHeap();
-    samplerHeap.write(kEnvironmentSamplerSlot, createLatLongEnvironmentSamplerCreateInfo());
-    samplerHeap.write(kMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo());
-    // The table is endpoint-mapped, so repeating would wrap the grazing corner onto the normal-incidence one.
-    samplerHeap.write(kGgxAlbedoLutSamplerSlot, createLinearClampSamplerCreateInfo());
+    samplerHeap.write(kPathTracerEnvironmentSamplerSlot, createLatLongEnvironmentSamplerCreateInfo());
+    samplerHeap.write(kPathTracerMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo());
 
     // The kBsdfOpenPbr callable reads this unconditionally: directional-albedo.part.glsl refuses to compile
     // without the sampler, rather than silently degrading every compensation mode to a no-op.
-    m_ggxAlbedoLut =
-        loadGgxAlbedoLut(m_renderer->getDevice(), m_renderer->getResourcesPath() / "Textures/GgxAlbedoLut.exr");
-    m_pathTracer->getResourceHeap().writeSampledImage(
-        kGgxAlbedoLutSlot, m_ggxAlbedoLut->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    m_ggxAlbedoLut = bindGgxAlbedoLut(*m_renderer, *m_pathTracer);
 
     buildRenderGraph();
 }
@@ -473,11 +451,13 @@ void VulkanRayTracingScene::updateDescriptorHeap() {
     auto& resourceHeap = m_pathTracer->getResourceHeap();
     if (m_environmentImage) {
         resourceHeap.writeSampledImage(
-            kEnvironmentMapSlot, m_environmentImage->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            kPathTracerEnvironmentSlot, m_environmentImage->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
     for (uint32_t i = 0; i < m_materialImages.size(); ++i) {
         resourceHeap.writeSampledImage(
-            kMaterialTextureFirstSlot + i, m_materialImages[i]->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            kPathTracerMaterialTextureFirstSlot + i,
+            m_materialImages[i]->getView(),
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 }
 

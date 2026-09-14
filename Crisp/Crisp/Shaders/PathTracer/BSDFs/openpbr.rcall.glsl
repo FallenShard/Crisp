@@ -5,13 +5,10 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_GOOGLE_include_directive : require
 
+#include "../Core/heap-slots.part.glsl"
 #include "../Core/types.part.glsl"
 #include "../../Common/math-constants.part.glsl"
 #include "../Core/scene.part.glsl"
-
-// Must match the heap slots in Scenes/VulkanRayTracingScene.cpp.
-const uint kGgxAlbedoLutSlot = 5u;
-const uint kGgxAlbedoLutSamplerSlot = 2u;
 
 layout(descriptor_heap, descriptor_stride = 64) uniform texture2D heapTexture2Ds[];
 layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];

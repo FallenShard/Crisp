@@ -5,6 +5,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 #include <Crisp/Camera/Camera.hpp>
@@ -17,13 +18,28 @@
 
 namespace crisp {
 
-// Resource heap slots every path tracer shares. Must match the subscripts in Shaders/path-trace.rgen.glsl and
-// Shaders/pbr-path-trace.rgen.glsl.
+// The descriptor heap layout shared by every path tracer. Must match
+// Shaders/PathTracer/Core/heap-slots.part.glsl; nothing in the build checks the two against each other.
+//
+// Slots 0-3 are written by PathTracer itself, the rest by the tracer built on top of it. Both halves live
+// here because the two tracers previously agreed on these numbers only by coincidence.
 inline constexpr uint32_t kPathTracerBvhSlot = 0;
 inline constexpr uint32_t kPathTracerImageSlot = 1;
 inline constexpr uint32_t kPathTracerViewSlot = 2;
 inline constexpr uint32_t kPathTracerIntegratorSlot = 3;
 inline constexpr uint32_t kPathTracerFirstFreeSlot = 4;
+
+// The equirectangular environment map. The miss shader and next-event estimation must read the same image, or
+// the MIS weights combine two different functions.
+inline constexpr uint32_t kPathTracerEnvironmentSlot = 4;
+inline constexpr uint32_t kPathTracerGgxAlbedoLutSlot = 5;
+// Material textures run from here to the end of the heap.
+inline constexpr uint32_t kPathTracerMaterialTextureFirstSlot = 6;
+
+inline constexpr uint32_t kPathTracerEnvironmentSamplerSlot = 0;
+inline constexpr uint32_t kPathTracerMaterialSamplerSlot = 1;
+inline constexpr uint32_t kPathTracerGgxAlbedoLutSamplerSlot = 2;
+inline constexpr uint32_t kPathTracerSamplerHeapSlotCount = 3;
 
 struct PathTracerInstance {
     const Geometry* geometry{nullptr};
@@ -116,5 +132,17 @@ private:
     int32_t m_frameIndex{0};
     int32_t m_accumulatedSampleCount{0};
 };
+
+// Every integrator uploads its parameter block and its scene addresses as opaque bytes, so the layout stays the
+// shader's business rather than PathTracer's.
+template <typename T>
+std::span<const std::byte> structAsBytes(const T& value) {
+    static_assert(std::is_standard_layout_v<T>, "Only a standard-layout struct has a defined byte image.");
+    return std::span<const std::byte>{reinterpret_cast<const std::byte*>(&value), sizeof(value)}; // NOLINT
+}
+
+// Writes the GGX directional-albedo table and its sampler into the tracer's heaps. The caller owns the image:
+// the heap holds a plain view, so it has to outlive the tracer.
+std::unique_ptr<VulkanImage> bindGgxAlbedoLut(Renderer& renderer, PathTracer& pathTracer);
 
 } // namespace crisp
