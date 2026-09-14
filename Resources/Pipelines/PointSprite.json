@@ -1,5 +1,5 @@
 {
-    "shaders"            : { "vert": "point-sphere-sprite.vert", "frag": "point-sphere-sprite.frag" },
+    "shaders"            : { "vert": "Particles/point-sphere-sprite.vert", "frag": "Particles/point-sphere-sprite.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" },
         { "locations": [ 1 ], "inputRate": "vertex" }

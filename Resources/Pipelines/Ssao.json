@@ -1,5 +1,5 @@
 {
-    "shaders": { "vert": "fullscreen-quad.vert", "frag": "ssao.frag" },
+    "shaders": { "vert": "PostProcess/fullscreen-quad.vert", "frag": "PostProcess/ssao.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }
     ],

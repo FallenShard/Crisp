@@ -1,7 +1,7 @@
 {
     "shaders"            : {
-        "vert": "physically-based-clustered-lights.vert",
-        "frag": "physically-based-clustered-lights.frag"
+        "vert": "Lighting/physically-based-clustered-lights.vert",
+        "frag": "Lighting/physically-based-clustered-lights.frag"
     },
     "vertexInputBindings": [
         { "locations": [ 0       ], "inputRate": "vertex" },

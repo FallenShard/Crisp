@@ -1,5 +1,5 @@
 {
-    "shaders": { "vert": "shadow-map.vert", "frag": "shadow-map.frag" },
+    "shaders": { "vert": "Shadows/shadow-map.vert", "frag": "Shadows/shadow-map.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }
     ],

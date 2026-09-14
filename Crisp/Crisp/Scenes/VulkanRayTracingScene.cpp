@@ -119,9 +119,9 @@ constexpr uint32_t kSamplerHeapSlotCount = 3;
 // The three core stages, then one callable per material type in kBsdfCallableShaders order -- the tag doubles
 // as the callable's index, so the ordering is not free.
 constexpr std::array<PathTracerShaderStage, 3> kCoreShaderStages{{
-    {"path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"path-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"path-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
+    {"PathTracer/trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"PathTracer/trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"PathTracer/trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
 }};
 
 std::vector<PathTracerShaderStage> createShaderStages() {

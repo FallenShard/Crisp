@@ -18,8 +18,8 @@ using OceanTest = VulkanTest;
 
 const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispOceanTest";
 const TestShaderMap kTestShaders{
-    kShaderSourceDirectory / "ocean-spectrum.comp.glsl",
-    kShaderSourceDirectory / "ifft.comp.glsl",
+    kShaderSourceDirectory / "Ocean" / "spectrum.comp.glsl",
+    kShaderSourceDirectory / "Ocean" / "ifft.comp.glsl",
 };
 
 TEST(OceanClipmapTest, RingsTileTheLevelBelow) {
@@ -199,7 +199,7 @@ TEST_F(OceanTest, SpectralJacobianMatchesFiniteDifferencedDisplacement) {
     auto packedJacobianView = createView(device, *packedJacobian, VK_IMAGE_VIEW_TYPE_2D_ARRAY);
 
     auto spectrumPipeline =
-        createComputePipeline(device, kTestShaders.getSpirvPath("ocean-spectrum.comp.glsl"), workGroupSize);
+        createComputePipeline(device, kTestShaders.getSpirvPath("spectrum.comp.glsl"), workGroupSize);
     Material spectrumMaterial(spectrumPipeline.get());
     spectrumMaterial.writeDescriptor(0, 0, seedView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
     spectrumMaterial.writeDescriptor(0, 1, packedDisplacementView->getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));

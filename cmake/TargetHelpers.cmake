@@ -114,13 +114,15 @@ function(target_add_test_file targetName sourceFile)
     configure_file("${sourcePath}" "${outputPath}" COPYONLY)
 endfunction()
 
-# Stages a tracked GLSL fixture for in-process compilation by its test executable.
+# Stages a tracked GLSL fixture for in-process compilation by its test executable. Forwards the
+# optional relative output path so a fixture that lives in a shader subdirectory keeps the same
+# depth to its #include targets.
 function(target_add_test_shader targetName sourceFile)
     if(NOT TARGET ${targetName})
         return()
     endif()
 
-    target_add_test_file(${targetName} "${sourceFile}")
+    target_add_test_file(${targetName} "${sourceFile}" ${ARGN})
     target_link_libraries(
         ${targetName}
         PRIVATE Crisp::FileUtils Crisp::ShaderCompiler Crisp::UniqueTemporaryFile)

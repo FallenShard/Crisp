@@ -24,7 +24,7 @@ constexpr const char* kVolumeGeometryId = "skyCameraVolumesGeometry";
 std::unique_ptr<VulkanPipeline> createMultiScatteringPipeline(Renderer& renderer, const VkExtent3D& workGroupSize) {
     auto result = createComputePipeline(
         renderer.getDevice(),
-        renderer.getAssetPaths().getShaderSpvPath("sky-multiple-scattering.comp"),
+        renderer.getAssetPaths().getShaderSpvPath("Sky/multiple-scattering.comp"),
         workGroupSize,
         [](PipelineLayoutBuilder& builder) { builder.setDescriptorDynamic(0, 0, true); });
     result->setDebugName(renderer.getDevice(), MultipleScatteringPass);

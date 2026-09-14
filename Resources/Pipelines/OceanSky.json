@@ -1,5 +1,5 @@
 {
-    "shaders"            : { "vert": "ocean-sky.vert", "frag": "ocean-sky.frag" },
+    "shaders"            : { "vert": "Ocean/sky.vert", "frag": "Ocean/sky.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }
     ],

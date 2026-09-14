@@ -33,9 +33,9 @@ constexpr uint32_t kSamplerHeapSlotCount = 3;
 constexpr std::array<const char*, 3> kEnergyCompensationNames{"None", "Kulla-Conty", "Turquin"};
 
 constexpr std::array<PathTracerShaderStage, 3> kShaderStages{{
-    {"pbr-path-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"pbr-path-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"pbr-path-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
+    {"PathTracer/pbr-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"PathTracer/pbr-trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"PathTracer/pbr-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
 }};
 
 struct PathTracedPassData {

@@ -1,8 +1,8 @@
 {
     "shaders"            : {
-        "vert": "sky-camera-volumes.vert",
-        "geom": "sky-camera-volumes.geom",
-        "frag": "sky-camera-volumes.frag"
+        "vert": "Sky/camera-volumes.vert",
+        "geom": "Sky/camera-volumes.geom",
+        "frag": "Sky/camera-volumes.frag"
     },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }

@@ -1,5 +1,5 @@
 {
-    "shaders"            : { "vert": "pbr.vert", "frag": "pbr.frag" },
+    "shaders"            : { "vert": "Lighting/pbr.vert", "frag": "Lighting/pbr.frag" },
     "vertexInputBindings": [
         { "locations": [ 0       ], "inputRate": "vertex" },
         { "locations": [ 1, 2, 3 ], "inputRate": "vertex" }

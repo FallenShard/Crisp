@@ -54,7 +54,8 @@ target_link_libraries(CrispOceanTest
     PRIVATE Crisp::VulkanTestUtils
     PRIVATE Crisp::Models
 )
-target_add_test_shader(CrispOceanTest "../Shaders/ocean-spectrum.comp.glsl")
-target_add_test_shader(CrispOceanTest "../Shaders/ifft.comp.glsl")
+target_add_test_shader(
+    CrispOceanTest "../Shaders/Ocean/spectrum.comp.glsl" "Ocean/spectrum.comp.glsl")
+target_add_test_shader(CrispOceanTest "../Shaders/Ocean/ifft.comp.glsl" "Ocean/ifft.comp.glsl")
 target_add_test_file(
     CrispOceanTest "../Shaders/Common/math-constants.part.glsl" "Common/math-constants.part.glsl")

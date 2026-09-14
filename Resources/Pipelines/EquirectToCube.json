@@ -1,7 +1,7 @@
 {
     "shaders": {
-        "vert": "equirect-to-cube.vert",
-        "frag": "equirect-to-cube.frag"
+        "vert": "Environment/equirect-to-cube.vert",
+        "frag": "Environment/equirect-to-cube.frag"
     },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }

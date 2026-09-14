@@ -1,5 +1,5 @@
 {
-    "shaders"            : { "vert": "fullscreen-quad.vert", "frag": "sky-trans-lut.frag" },
+    "shaders"            : { "vert": "PostProcess/fullscreen-quad.vert", "frag": "Sky/trans-lut.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }
     ],

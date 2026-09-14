@@ -1,5 +1,5 @@
 {
-    "shaders": { "vert": "fullscreen-quad.vert", "frag": "tonemap.frag" },
+    "shaders": { "vert": "PostProcess/fullscreen-quad.vert", "frag": "PostProcess/tonemap.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }
     ],

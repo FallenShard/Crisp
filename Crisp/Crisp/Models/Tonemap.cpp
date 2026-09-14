@@ -106,7 +106,9 @@ void addTonemapComputePass(
             constexpr VkExtent3D kWorkGroupSize{8, 8, 1};
             if (pipeline == nullptr) {
                 pipeline = createComputePipeline(
-                    renderer.getDevice(), renderer.getAssetPaths().getShaderSpvPath("tonemap.comp"), kWorkGroupSize);
+                    renderer.getDevice(),
+                    renderer.getAssetPaths().getShaderSpvPath("PostProcess/tonemap.comp"),
+                    kWorkGroupSize);
                 material = std::make_shared<Material>(pipeline.get());
                 material->writeDescriptor(0, 0, *resourceContext.getRingBuffer(kTonemapBufferId));
             }

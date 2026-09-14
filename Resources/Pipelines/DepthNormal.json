@@ -1,5 +1,5 @@
 {
-    "shaders": { "vert": "depth-normal.vert", "frag": "depth-normal.frag" },
+    "shaders": { "vert": "Geometry/depth-normal.vert", "frag": "Geometry/depth-normal.frag" },
     "vertexInputBindings": [
         { "locations": [ 0, 1 ], "inputRate": "vertex" }
     ],

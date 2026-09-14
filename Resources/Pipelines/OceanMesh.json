@@ -1,5 +1,5 @@
 {
-    "shaders"            : { "task": "ocean.task", "mesh": "ocean.mesh", "frag": "ocean.frag" },
+    "shaders"            : { "task": "Ocean/surface.task", "mesh": "Ocean/surface.mesh", "frag": "Ocean/surface.frag" },
     "descriptorSets"     : [
         { "buffered": false, "dynamicBuffers": [ 0 ] },
         { "buffered": false, "dynamicBuffers": [ 0 ] },

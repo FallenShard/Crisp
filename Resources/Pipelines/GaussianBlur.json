@@ -1,7 +1,7 @@
 {
     "shaders": {
-        "vert": "fullscreen-quad.vert",
-        "frag": "gaussian-blur.frag"
+        "vert": "PostProcess/fullscreen-quad.vert",
+        "frag": "PostProcess/gaussian-blur.frag"
     },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }

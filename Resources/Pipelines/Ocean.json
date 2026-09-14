@@ -1,5 +1,5 @@
 {
-    "shaders"            : { "vert": "ocean.vert", "frag": "ocean.frag" },
+    "shaders"            : { "vert": "Ocean/surface.vert", "frag": "Ocean/surface.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }
     ],

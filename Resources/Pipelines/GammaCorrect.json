@@ -1,5 +1,5 @@
 {
-    "shaders": { "vert": "fullscreen-quad.vert", "frag": "GammaCorrect.frag" },
+    "shaders": { "vert": "PostProcess/fullscreen-quad.vert", "frag": "PostProcess/GammaCorrect.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }
     ],

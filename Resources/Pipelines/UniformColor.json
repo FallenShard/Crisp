@@ -1,5 +1,5 @@
 {
-    "shaders": { "vert": "unif-col.vert", "frag": "unif-col.frag" },
+    "shaders": { "vert": "Geometry/unif-col.vert", "frag": "Geometry/unif-col.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }
     ],

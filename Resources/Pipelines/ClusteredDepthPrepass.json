@@ -1,5 +1,5 @@
 {
-    "shaders"            : { "vert": "depth-map.vert", "frag": "depth-map.frag" },
+    "shaders"            : { "vert": "Shadows/depth-map.vert", "frag": "Shadows/depth-map.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }
     ],

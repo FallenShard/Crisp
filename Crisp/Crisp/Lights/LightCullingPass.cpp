@@ -38,7 +38,7 @@ void addLightCullingPass(
             if (pipeline == nullptr) {
                 pipeline = createComputePipeline(
                     renderer.getDevice(),
-                    renderer.getAssetPaths().getShaderSpvPath("light-culling.comp"),
+                    renderer.getAssetPaths().getShaderSpvPath("Lighting/light-culling.comp"),
                     kWorkGroupSize);
                 material = std::make_shared<Material>(pipeline.get());
             }

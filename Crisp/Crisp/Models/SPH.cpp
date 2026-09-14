@@ -167,15 +167,15 @@ SPH::SPH(Renderer& renderer, const SphConfig& config)
     m_cellCount.material->writeDescriptor(0, 1, *m_cellCountBuffer);
     m_cellCount.material->writeDescriptor(0, 2, *m_cellIdBuffer);
 
-    m_scan = createDispatch("prefix-scan.comp", kLinearWorkGroup, VkExtent3D{m_scanBlockCount, 1, 1});
+    m_scan = createDispatch("Particles/prefix-scan.comp", kLinearWorkGroup, VkExtent3D{m_scanBlockCount, 1, 1});
     m_scan.material->writeDescriptor(0, 0, *m_cellCountBuffer);
     m_scan.material->writeDescriptor(0, 1, *m_blockSumBuffer);
 
-    m_scanBlock = createDispatch("prefix-scan.comp", {scanBlockWorkGroupSize, 1, 1}, VkExtent3D{1, 1, 1});
+    m_scanBlock = createDispatch("Particles/prefix-scan.comp", {scanBlockWorkGroupSize, 1, 1}, VkExtent3D{1, 1, 1});
     m_scanBlock.material->writeDescriptor(0, 0, *m_blockSumBuffer);
     m_scanBlock.material->writeDescriptor(0, 1, *m_blockSumBuffer);
 
-    m_scanCombine = createDispatch("prefix-scan-combine.comp", kLinearWorkGroup, perCell);
+    m_scanCombine = createDispatch("Particles/prefix-scan-combine.comp", kLinearWorkGroup, perCell);
     m_scanCombine.material->writeDescriptor(0, 0, *m_cellCountBuffer);
     m_scanCombine.material->writeDescriptor(0, 1, *m_blockSumBuffer);
 

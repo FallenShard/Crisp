@@ -156,7 +156,7 @@ ComputeDispatch createOscillationPassDispatch(Renderer& renderer, const ImageCac
     dispatch.workGroupSize = {16, 16, 1};
     dispatch.dispatchSize = computeWorkGroupCount(glm::uvec3(N, N, 1), dispatch.workGroupSize);
     dispatch.pipeline = createComputePipeline(
-        renderer.getDevice(), renderer.getAssetPaths().getShaderSpvPath("ocean-spectrum.comp"), dispatch.workGroupSize);
+        renderer.getDevice(), renderer.getAssetPaths().getShaderSpvPath("Ocean/spectrum.comp"), dispatch.workGroupSize);
     dispatch.material = std::make_unique<Material>(dispatch.pipeline.get());
     dispatch.material->writeDescriptor(
         0, 0, imageCache.getImageView("randImageView").getDescriptorInfo(nullptr, VK_IMAGE_LAYOUT_GENERAL));
@@ -181,7 +181,7 @@ ComputeDispatch createIfftDispatch(Renderer& renderer) {
     }
     dispatch.pipeline = createComputePipeline(
         renderer.getDevice(),
-        renderer.getAssetPaths().getShaderSpvPath("ifft.comp"),
+        renderer.getAssetPaths().getShaderSpvPath("Ocean/ifft.comp"),
         dispatch.workGroupSize,
         {},
         specializationConstants);
@@ -849,7 +849,7 @@ void OceanScene::buildRenderGraph() {
         computeWorkGroupCount(glm::uvec3(kFoamGridSize, kFoamGridSize, 1), foamDispatch.workGroupSize);
     foamDispatch.pipeline = createComputePipeline(
         m_renderer->getDevice(),
-        m_renderer->getAssetPaths().getShaderSpvPath("ocean-foam.comp"),
+        m_renderer->getAssetPaths().getShaderSpvPath("Ocean/foam.comp"),
         foamDispatch.workGroupSize);
     foamDispatch.material = std::make_unique<Material>(foamDispatch.pipeline.get());
     createFftDispatches<0>(*m_passResources, *m_renderer);

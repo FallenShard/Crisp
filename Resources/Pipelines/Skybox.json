@@ -1,5 +1,5 @@
 {
-    "shaders": { "vert": "skybox.vert", "frag": "skybox.frag" },
+    "shaders": { "vert": "Environment/skybox.vert", "frag": "Environment/skybox.frag" },
     "vertexInputBindings": [
         { "locations": [ 0 ], "inputRate": "vertex" }
     ],
