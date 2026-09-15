@@ -140,12 +140,10 @@ void PathTracer::updateCamera(const CameraParameters& cameraParams) {
 }
 
 void PathTracer::resetAccumulation() {
-    m_frameIndex = 0;
     m_accumulatedSampleCount = 0;
 }
 
 void PathTracer::advance(const int32_t sampleCount) {
-    ++m_frameIndex;
     m_accumulatedSampleCount += sampleCount;
 }
 

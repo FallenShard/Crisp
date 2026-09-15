@@ -113,7 +113,6 @@ void sampleOpenPbrBsdf(const PbrMaterialParameters material, inout BsdfSample bs
     bool sampledSpecular = false;
     bsdf.weight =
         sampleOpenPbrSurface(surface, bsdf.unitSample, bsdf.lobeSample, bsdf.wi, bsdf.wo, bsdf.pdf, sampledSpecular);
-    bsdf.f = bsdf.weight * bsdf.pdf; // Recover f (BSDF * abs(cosThetaO)) for callers that want the value itself.
     bsdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
 }
 

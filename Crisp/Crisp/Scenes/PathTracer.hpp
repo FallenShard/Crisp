@@ -47,31 +47,25 @@ inline constexpr uint32_t kInvalidMaterialTextureOffset = 0xFFFFFFFFu;
 struct PathTracedIntegratorParams {
     int32_t maxBounces{8};
     int32_t sampleCount{1};
-    int32_t frameIdx{0};
     int32_t sampleOffset{0};
-
     uint32_t seed{0};
+
     int32_t reconstructionFilter{0};
     int32_t lightCount{0};
-    int32_t shapeCount{0};
-
     int32_t samplingMode{0};
     int32_t environmentEnabled{0};
+
     int32_t environmentWidth{0};
     int32_t environmentHeight{0};
-
     float environmentIntensity{1.0f};
     uint32_t visibilityMask{0xFFu};
-    uint32_t pad0{0};
-    uint32_t pad1{0};
 };
 
-static_assert(sizeof(PathTracedIntegratorParams) == 64);
+static_assert(sizeof(PathTracedIntegratorParams) == 48);
 static_assert(std::is_standard_layout_v<PathTracedIntegratorParams>);
-static_assert(offsetof(PathTracedIntegratorParams, seed) == 16);
-static_assert(offsetof(PathTracedIntegratorParams, samplingMode) == 32);
-static_assert(offsetof(PathTracedIntegratorParams, environmentIntensity) == 48);
-static_assert(offsetof(PathTracedIntegratorParams, visibilityMask) == 52);
+static_assert(offsetof(PathTracedIntegratorParams, reconstructionFilter) == 16);
+static_assert(offsetof(PathTracedIntegratorParams, environmentWidth) == 32);
+static_assert(offsetof(PathTracedIntegratorParams, visibilityMask) == 44);
 
 // Mirrors PathTracedSceneAddresses in Shaders/PathTracer/Core/scene-addresses.part.glsl.
 struct PathTracedSceneAddresses {
@@ -171,10 +165,6 @@ public:
 
     void resetAccumulation();
 
-    int32_t getFrameIndex() const {
-        return m_frameIndex;
-    }
-
     int32_t getAccumulatedSampleCount() const {
         return m_accumulatedSampleCount;
     }
@@ -206,7 +196,6 @@ private:
     uint32_t m_integratorParamsSize{0};
 
     CameraParameters m_cameraParams{};
-    int32_t m_frameIndex{0};
     int32_t m_accumulatedSampleCount{0};
 };
 

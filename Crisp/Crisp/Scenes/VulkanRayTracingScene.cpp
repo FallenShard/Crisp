@@ -156,7 +156,6 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
     setCameraParameters(*m_cameraController, renderSettings);
 
-    m_integratorParams.shapeCount = static_cast<int32_t>(m_sceneDesc.meshFilenames.size());
     m_integratorParams.environmentEnabled = m_sceneDesc.environment.has_value() ? 1 : 0;
     m_integratorParams.lightCount =
         static_cast<int32_t>(m_sceneDesc.lights.size()) + m_integratorParams.environmentEnabled;
@@ -300,7 +299,6 @@ void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     CRISP_TRACE_VK_SCOPE("VulkanRayTracingScene::render", frameContext.commandEncoder);
 
     const int32_t accumulatedSamples = m_pathTracer->getAccumulatedSampleCount();
-    m_integratorParams.frameIdx = m_pathTracer->getFrameIndex();
     m_integratorParams.sampleOffset = accumulatedSamples;
     m_integratorParams.sampleCount = m_samplesPerFrame;
     if (m_captureAfterSamples > 0) {

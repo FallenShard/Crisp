@@ -61,8 +61,7 @@ PathTracedView::PathTracedView(
     auto& resourceHeap = m_pathTracer->getResourceHeap();
     auto& samplerHeap = m_pathTracer->getSamplerHeap();
 
-    samplerHeap.write(kPathTracerEnvironmentSamplerSlot, createLinearClampSamplerCreateInfo());
-    // PBR material textures repeat just like the raster path.
+    samplerHeap.write(kPathTracerEnvironmentSamplerSlot, createLatLongEnvironmentSamplerCreateInfo());
     samplerHeap.write(kPathTracerMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo(MaxAnisotropy));
 
     m_ggxAlbedoLut = bindGgxAlbedoLut(renderer, *m_pathTracer);
@@ -216,7 +215,6 @@ int32_t PathTracedView::getAccumulatedSampleCount() const {
 }
 
 void PathTracedView::uploadFrameData(const FrameContext& frameContext) {
-    m_integratorParams.frameIdx = m_pathTracer->getFrameIndex();
     m_integratorParams.sampleOffset = m_pathTracer->getAccumulatedSampleCount();
     m_pathTracer->uploadFrameData(frameContext, structAsBytes(m_integratorParams));
 }

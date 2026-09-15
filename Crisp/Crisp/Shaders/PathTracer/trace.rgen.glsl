@@ -16,23 +16,18 @@
 layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
     int maxBounces;
     int sampleCount;
-    int frameIdx;
     int sampleOffset;
-
     uint seed;
+
     int reconstructionFilter;
     int lightCount;
-    int shapeCount;
-
     int samplingMode;
     int environmentEnabled;
+
     int environmentWidth;
     int environmentHeight;
-
     float environmentIntensity;
     uint visibilityMask;
-    uint pad0;
-    uint pad1;
 } heapIntegrators[];
 
 #define integrator heapIntegrators[kIntegratorSlot]
