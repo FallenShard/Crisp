@@ -7,12 +7,35 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "Core/heap-slots.part.glsl"
-#include "Core/integrator.part.glsl"
 #include "Core/types.part.glsl"
 #include "../Common/math-constants.part.glsl"
 #include "../Common/rng.part.glsl"
 #include "../Common/warp.part.glsl"
 #include "../Common/view.part.glsl"
+
+layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
+    int maxBounces;
+    int sampleCount;
+    int frameIdx;
+    int sampleOffset;
+
+    uint seed;
+    int reconstructionFilter;
+    int lightCount;
+    int shapeCount;
+
+    int samplingMode;
+    int environmentEnabled;
+    int environmentWidth;
+    int environmentHeight;
+
+    float environmentIntensity;
+    uint visibilityMask;
+    uint pad0;
+    uint pad1;
+} heapIntegrators[];
+
+#define integrator heapIntegrators[kIntegratorSlot]
 
 const int kRussianRouletteCutoff = 3;
 
@@ -53,7 +76,40 @@ BsdfEval evaluateBsdfWorldSpace(
     return evaluateBsdf(material, texCoord, worldToLocal * wi, worldToLocal * wo);
 }
 
-#include "Core/tracing.part.glsl"
+void traceRay(
+    inout Sampler rng, in uint bounceDimBase, in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
+    setDimension(rng, bounceDimBase + kDimBsdf);
+    hitInfo.bsdfSample = next2D(rng);
+    hitInfo.bsdfLobeSample = next1D(rng);
+    traceRayEXT(
+        sceneBvh,
+        gl_RayFlagsOpaqueEXT,
+        integrator.visibilityMask,
+        0,
+        0,
+        0,
+        rayOrigin,
+        tMin,
+        rayDirection,
+        tMax,
+        kPayloadIndex);
+}
+
+bool traceShadowRay(in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
+    rayQueryEXT rayQuery;
+    rayQueryInitializeEXT(
+        rayQuery,
+        sceneBvh,
+        gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT,
+        integrator.visibilityMask,
+        rayOrigin,
+        tMin,
+        rayDirection,
+        tMax);
+    rayQueryProceedEXT(rayQuery);
+    return rayQueryGetIntersectionTypeEXT(rayQuery, true) != gl_RayQueryCommittedIntersectionNoneEXT;
+}
+
 #include "Cameras/perspective.part.glsl"
 #include "Lights/light-sampling.part.glsl"
 

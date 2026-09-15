@@ -4,7 +4,13 @@
 #include "../../Common/pbr-material.part.glsl"
 #include "../Lights/light-types.part.glsl"
 #include "hit-info.part.glsl"
-#include "sample-dimensions.part.glsl"
+
+const uint kDimPixelFilter = 0u; // 2 dimensions.
+const uint kDimBounceBase = 2u;
+const uint kDimsPerBounce = 9u;
+const uint kDimBsdf = 0u;            // 3 dimensions, relative to the bounce base.
+const uint kDimLight = 3u;           // 5 dimensions.
+const uint kDimRussianRoulette = 8u; // 1 dimension.
 
 const float kVacuumIor = 1.0f;
 
