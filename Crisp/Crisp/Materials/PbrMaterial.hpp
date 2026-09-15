@@ -72,22 +72,17 @@ struct PbrMaterialParams {
     // a time. The rasteriser reads nothing past `flags`, but must still declare the full record: the struct's
     // size is the array stride.
     glm::vec3 complexIorEta{0.0f};
-    float orenNayarRoughness{0.0f};
+    int32_t microfacetType{0};
 
     glm::vec3 complexIorK{0.0f};
     int32_t type{kBsdfOpenPbr};
-
-    int32_t microfacetType{0};
-    uint32_t pad0{0};
-    uint32_t pad1{0};
-    uint32_t pad2{0};
 };
 
-static_assert(sizeof(PbrMaterialParams) == 160);
+static_assert(sizeof(PbrMaterialParams) == 144);
 static_assert(offsetof(PbrMaterialParams, complexIorEta) == 112);
+static_assert(offsetof(PbrMaterialParams, microfacetType) == 124);
 static_assert(offsetof(PbrMaterialParams, complexIorK) == 128);
 static_assert(offsetof(PbrMaterialParams, type) == 140);
-static_assert(offsetof(PbrMaterialParams, microfacetType) == 144);
 static_assert(std::is_standard_layout_v<PbrMaterialParams>);
 static_assert(offsetof(PbrMaterialParams, surface) == 0);
 static_assert(offsetof(PbrMaterialParams, uvScale) == 64);

@@ -5,24 +5,26 @@
 #include "../../Common/openpbr-surface.part.glsl"
 #include "../../Common/warp.part.glsl"
 #include "../lambertian.part.glsl"
+#include "../oren-nayar.part.glsl"
 #include "../Microfacet/ggx.part.glsl"
 #include "energy-compensation.part.glsl"
 #include "layering.part.glsl"
 
-// The OpenPBR opaque surface, evaluated and sampled from one place. Both entry points into it -- the
-// kBsdfOpenPbr callable and the raygen's inlined next-event-estimation switch -- must call these functions
-// rather than reimplementing them, or sampling and evaluation drift apart and MIS is silently biased.
+// The OpenPBR opaque surface, evaluated and sampled from one place. The sample and evaluate switches in
+// PathTracer/BSDFs both enter through these functions rather than reimplementing them, or sampling and
+// evaluation drift apart and MIS is silently biased.
 //
-// This is deliberately still the split-sum-shaped approximation the rasterizer uses, not OpenPBR proper: a
-// Schlick Fresnel, a metalness lerp on F0, and a (1 - F) diffuse factor. Getting it to the actual model means
-// EON diffuse, albedo-scaled layering via layering.part.glsl, and an F82-tint metal lobe. See
-// docs/openpbr-path-tracer.md. Keeping the plumbing and the maths as separate changes is the point: this
-// version is byte-for-byte what PathTracedView already renders.
+// The diffuse lobe is the specified one -- Oren-Nayar, in its energy-preserving form; see
+// BSDFs/oren-nayar.part.glsl. The specular half is still the split-sum-shaped approximation the rasterizer
+// uses rather than OpenPBR proper: a Schlick Fresnel, a metalness lerp on F0, and a (1 - F) diffuse factor.
+// Reaching the actual model from here means albedo-scaled layering via layering.part.glsl and an F82-tint
+// metal lobe.
 
 struct OpenPbrSurface {
     vec3 diffuseAlbedo;
     vec3 f0;
     float alpha;
+    float diffuseRoughness;
     uint energyCompensation;
 };
 
@@ -41,6 +43,7 @@ OpenPbrSurface createOpenPbrSurface(const OpenPbrSurfaceParams params, const uin
     surface.diffuseAlbedo = baseColor * (1.0f - metalness);
     surface.f0 = mix(dielectric, baseColor, metalness);
     surface.alpha = params.specularRoughness * params.specularRoughness;
+    surface.diffuseRoughness = params.baseDiffuseRoughness;
     surface.energyCompensation = energyCompensation;
     return surface;
 }
@@ -68,7 +71,7 @@ vec3 evaluateOpenPbrSurface(const OpenPbrSurface surface, const vec3 wi, const v
     const vec3 halfVector = microfacetReflectionHalfVector(wi, wo);
     const vec3 fresnel = fresnelSchlick(max(dot(wi, halfVector), 0.0f), surface.f0);
 
-    const vec3 diffuse = surface.diffuseAlbedo / PI;
+    const vec3 diffuse = evaluateOrenNayarBsdf(surface.diffuseAlbedo, surface.diffuseRoughness, wi.z, wo.z, dot(wi, wo));
     const float distribution = ggxDistribution(halfVector, surface.alpha);
     const float geometry = ggxGeometry(wi, wo, halfVector, surface.alpha);
     vec3 specular = fresnel * distribution * geometry / (4.0f * wi.z * wo.z);

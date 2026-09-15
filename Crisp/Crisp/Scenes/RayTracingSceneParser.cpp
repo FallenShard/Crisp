@@ -39,10 +39,10 @@ PbrMaterialParams createMirrorBsdf() {
     return material;
 }
 
-PbrMaterialParams createOrenNayarBsdf(const glm::vec3 reflectance, const float roughnessDegrees) {
+PbrMaterialParams createOrenNayarBsdf(const glm::vec3 reflectance, const float roughness) {
     PbrMaterialParams material{};
     material.surface.baseColor = reflectance;
-    material.orenNayarRoughness = glm::radians(glm::clamp(roughnessDegrees, 0.0f, 90.0f));
+    material.surface.baseDiffuseRoughness = glm::clamp(roughness, 0.0f, 1.0f);
     material.type = kBsdfOrenNayar;
     return material;
 }
@@ -177,7 +177,7 @@ Result<PbrMaterialParams> parsePbrMaterialParams(const nlohmann::json& bsdf) {
     }
     if (type == "oren-nayar") {
         CRISP_TRY(const auto reflectance, parseVec3(bsdf["reflectance"]));
-        return createOrenNayarBsdf(reflectance, bsdf.value("roughnessDegrees", 0.0f));
+        return createOrenNayarBsdf(reflectance, bsdf.value("roughness", 0.0f));
     }
     if (type == "smooth-conductor") {
         return createSmoothConductorBsdf(bsdf.value("conductorIorPreset", std::string("Au")));

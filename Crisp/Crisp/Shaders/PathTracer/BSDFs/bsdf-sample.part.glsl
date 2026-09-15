@@ -67,7 +67,10 @@ void sampleOrenNayarBsdf(const PbrMaterialParameters material, inout BsdfSample 
     bsdf.wo = sampleLambertian(bsdf.unitSample);
     bsdf.lobeType = kLobeTypeDiffuse;
     bsdf.f = evaluateOrenNayar(
-        evaluateMaterialReflectance(material, bsdf.texCoord), material.orenNayarRoughness, bsdf.wi, bsdf.wo);
+        evaluateMaterialReflectance(material, bsdf.texCoord),
+        material.surface.baseDiffuseRoughness,
+        bsdf.wi,
+        bsdf.wo);
     bsdf.pdf = computeLambertianPdf(bsdf.wi, bsdf.wo);
 }
 

@@ -33,7 +33,7 @@ BsdfEval evaluateMicrofacet(PbrMaterialParameters material, vec3 wi, vec3 wo) {
 BsdfEval evaluateOrenNayar(PbrMaterialParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
     return BsdfEval(
         evaluateOrenNayar(
-            evaluateMaterialReflectance(material, texCoord), material.orenNayarRoughness, wi, wo),
+            evaluateMaterialReflectance(material, texCoord), material.surface.baseDiffuseRoughness, wi, wo),
         computeLambertianPdf(wi, wo));
 }
 

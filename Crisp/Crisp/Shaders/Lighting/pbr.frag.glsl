@@ -9,6 +9,7 @@
 #include "../Common/math-constants.part.glsl"
 #include "../Common/diffuse-irradiance-sh.part.glsl"
 #include "../BSDFs/Microfacet/ggx.part.glsl"
+#include "../BSDFs/oren-nayar.part.glsl"
 #include "../Common/bindless.part.glsl"
 #include "../Common/view.part.glsl"
 
@@ -199,22 +200,6 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F0, flo
     return (1.0f - specularAlbedo) * kD * diffuse * ao + prefilter * specularAlbedo;
 }
 
-vec3 evaluateOrenNayarDiffuse(
-    const vec3 color,
-    const float roughness,
-    const vec3 eyeN,
-    const vec3 eyeL,
-    const vec3 eyeV,
-    const float NdotL,
-    const float NdotV) {
-    const float sigma2 = roughness * roughness;
-    const float A = 1.0f - 0.5f * sigma2 / (sigma2 + 0.33f);
-    const float B = 0.45f * sigma2 / (sigma2 + 0.09f);
-    const float s = dot(eyeL, eyeV) - NdotL * NdotV;
-    const float t = s > 0.0f ? max(NdotL, NdotV) : 1.0f;
-    return color * (A + B * s / max(t, 0.001f)) / PI;
-}
-
 vec3 decodeNormal(const PbrMaterialParameters material, in vec2 uv) {
     vec3 normal = normalize(eyeNormal);
     // Have to check this because without UVs, computed tangents will be NaN.
@@ -273,14 +258,8 @@ void main() {
     const float VdotH = max(dot(eyeV, eyeH), 0.0f);
     const vec3 directF = fresnelSchlick(VdotH, F0);
     const vec3 directKd = (1.0f - directF) * (1.0f - baseMetalness);
-    const vec3 directDiffuse = directKd * evaluateOrenNayarDiffuse(
-        baseColor,
-        material.surface.baseDiffuseRoughness,
-        eyeN,
-        eyeL,
-        eyeV,
-        NdotL,
-        NdotV);
+    const vec3 directDiffuse = directKd * evaluateOrenNayarBsdf(
+        baseColor, material.surface.baseDiffuseRoughness, NdotV, NdotL, dot(eyeL, eyeV));
     const float D = distributionGgx(NdotH, alpha);
     const float G = geometrySmith(NdotV, NdotL, specularRoughness);
     const vec3 directSpecular = D * G * directF / max(4.0f * NdotV * NdotL, 0.001);
