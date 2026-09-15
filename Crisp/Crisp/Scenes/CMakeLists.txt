@@ -283,10 +283,6 @@ target_add_test_file(
     "PathTracer/Lights/environment-distribution.part.glsl")
 target_add_test_file(
     CrispEnvironmentSamplingTest
-    "../Shaders/PathTracer/Core/environment-cdf.part.glsl"
-    "PathTracer/Core/environment-cdf.part.glsl")
-target_add_test_file(
-    CrispEnvironmentSamplingTest
     "../Shaders/PathTracer/Lights/point-light.part.glsl"
     "PathTracer/Lights/point-light.part.glsl")
 target_add_test_file(

@@ -3,7 +3,7 @@
 
 #include "../../Common/pbr-material.part.glsl"
 #include "../Lights/light-types.part.glsl"
-#include "environment-cdf.part.glsl"
+#include "../Lights/environment-distribution.part.glsl"
 #include "instance.part.glsl"
 
 layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer PathTracedMaterials {
