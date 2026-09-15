@@ -32,6 +32,7 @@ inline constexpr std::array<std::string_view, kPbrMapTypeCount> kPbrMapNames = {
 };
 
 inline constexpr float kMinSpecularRoughness = 1e-3f;
+inline constexpr float kMinSpecularIor = 1e-3f;
 
 inline constexpr int32_t kBsdfLambertian = 0;
 inline constexpr int32_t kBsdfDielectric = 1;
@@ -167,7 +168,21 @@ Image createPbrOrmMap(const PbrOrmSources& sources);
 PbrImageGroup createDefaultPbrImageGroup();
 
 inline void clampToGpuRange(PbrMaterialParams& params) {
-    params.surface.specularRoughness = std::clamp(params.surface.specularRoughness, kMinSpecularRoughness, 1.0f);
+    auto& surface = params.surface;
+    surface.baseWeight = std::clamp(surface.baseWeight, 0.0f, 1.0f);
+    surface.baseColor = glm::max(surface.baseColor, glm::vec3(0.0f));
+    surface.baseMetalness = std::clamp(surface.baseMetalness, 0.0f, 1.0f);
+    surface.baseDiffuseRoughness = std::clamp(surface.baseDiffuseRoughness, 0.0f, 1.0f);
+
+    surface.specularWeight = std::max(surface.specularWeight, 0.0f);
+    surface.specularColor = glm::clamp(surface.specularColor, glm::vec3(0.0f), glm::vec3(1.0f));
+    surface.specularRoughness = std::clamp(surface.specularRoughness, kMinSpecularRoughness, 1.0f);
+    surface.specularIor = std::max(surface.specularIor, kMinSpecularIor);
+
+    surface.emissionColor = glm::max(surface.emissionColor, glm::vec3(0.0f));
+    surface.emissionLuminance = std::max(surface.emissionLuminance, 0.0f);
+
+    params.aoStrength = std::clamp(params.aoStrength, 0.0f, 1.0f);
 }
 
 } // namespace crisp

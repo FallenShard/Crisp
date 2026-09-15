@@ -26,12 +26,6 @@ struct OpenPbrSurface {
     uint energyCompensation;
 };
 
-float openPbrDielectricF0(const float ior, const float weight) {
-    const float eta = max(ior, 0.001f);
-    const float unweighted = pow((1.0f - eta) / (1.0f + eta), 2.0f);
-    return clamp(max(weight, 0.0f) * unweighted, 0.0f, 0.9999f);
-}
-
 float openPbrLuminance(const vec3 value) {
     return dot(value, vec3(0.2126f, 0.7152f, 0.0722f));
 }

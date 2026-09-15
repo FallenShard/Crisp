@@ -195,12 +195,6 @@ vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F0, flo
     return (1.0f - specularAlbedo) * kD * diffuse * ao + prefilter * specularAlbedo;
 }
 
-float computeDielectricF0(const float ior, const float weight) {
-    const float eta = max(ior, 0.001f);
-    const float unweightedF0 = pow((1.0f - eta) / (1.0f + eta), 2.0f);
-    return clamp(max(weight, 0.0f) * unweightedF0, 0.0f, 0.9999f);
-}
-
 vec3 evaluateOrenNayarDiffuse(
     const vec3 color,
     const float roughness,
@@ -254,18 +248,18 @@ void main() {
     if ((material.flags & 1u) != 0u && opacity < material.alphaCutoff) {
         discard;
     }
-    const vec3 baseColor = baseColorSample.rgb * material.surface.baseColor;
+    const vec3 baseColor = baseColorSample.rgb * material.surface.baseColor * material.surface.baseWeight;
     const vec3 orm = sampleMaterial(material, material.ormTex, uvCoord).rgb;
-    const float specularRoughness = clamp(orm.g * material.surface.specularRoughness, 0.001f, 1.0f);
+    const float specularRoughness = orm.g * material.surface.specularRoughness;
     const float alpha = specularRoughness * specularRoughness;
-    const float baseMetalness = clamp(orm.b * material.surface.baseMetalness, 0.0f, 1.0f);
-    const float ao = mix(1.0f, orm.r, clamp(material.aoStrength, 0.0f, 1.0f));
+    const float baseMetalness = orm.b * material.surface.baseMetalness;
+    const float ao = mix(1.0f, orm.r, material.aoStrength);
     const vec3 emission = sampleMaterial(material, material.emissionTex, uvCoord).rgb * material.surface.emissionColor *
-        max(material.surface.emissionLuminance, 0.0f);
+        material.surface.emissionLuminance;
 
     // Environment BRDF.
-    const vec3 dielectricF0 = computeDielectricF0(material.surface.specularIor, material.surface.specularWeight) *
-        clamp(material.surface.specularColor, vec3(0.0f), vec3(1.0f));
+    const vec3 dielectricF0 = openPbrDielectricF0(material.surface.specularIor, material.surface.specularWeight) *
+        material.surface.specularColor;
     const vec3 F0 = mix(dielectricF0, baseColor, baseMetalness);
     const vec3 envKd = vec3(1.0f - baseMetalness);
 
@@ -277,7 +271,7 @@ void main() {
     const vec3 directKd = (1.0f - directF) * (1.0f - baseMetalness);
     const vec3 directDiffuse = directKd * evaluateOrenNayarDiffuse(
         baseColor,
-        clamp(material.surface.baseDiffuseRoughness, 0.0f, 1.0f),
+        material.surface.baseDiffuseRoughness,
         eyeN,
         eyeL,
         eyeV,
@@ -298,7 +292,7 @@ void main() {
     const vec3 directRadiance = (directDiffuse + directSpecular) * Le * NdotL;
     const vec3 environmentRadiance = computeEnvRadiance(eyeN, eyeV, envKd, baseColor, F0, specularRoughness, ao);
 
-    vec3 color = clamp(material.surface.baseWeight, 0.0f, 1.0f) * (environmentRadiance + shadowCoeff * directRadiance) + emission;
+    vec3 color = environmentRadiance + shadowCoeff * directRadiance + emission;
     if (cascadedLight[0].position.w > 0.5f) {
         color = mix(color, getCascadeDebugColor(-eyePosition.z), 0.45f);
     }
