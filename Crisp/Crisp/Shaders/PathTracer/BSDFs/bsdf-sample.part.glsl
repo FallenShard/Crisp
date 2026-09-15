@@ -95,7 +95,9 @@ void sampleRoughConductorBsdf(const PbrMaterialParameters material, inout BsdfSa
 
 void sampleRoughDielectricBsdf(const PbrMaterialParameters material, inout BsdfSample bsdf) {
     const float alpha = material.surface.specularRoughness * material.surface.specularRoughness;
-    bsdf.lobeType = kLobeTypeGlossy;
+    bsdf.lobeType = abs(material.surface.specularIor - kVacuumIor) <= 1e-4f
+        ? kLobeTypeDelta
+        : kLobeTypeGlossy;
     sampleRoughDielectric(
         bsdf.unitSample,
         bsdf.lobeSample,

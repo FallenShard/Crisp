@@ -20,12 +20,15 @@ bool roughDielectricHalfVector(
         microfacetNormal = -microfacetNormal;
     }
 
-    return dot(wi, microfacetNormal) * wi.z > 0.0f &&
-        dot(wo, microfacetNormal) * wo.z > 0.0f;
+    return dot(wi, microfacetNormal) * wi.z > 0.0f && dot(wo, microfacetNormal) * wo.z > 0.0f;
 }
 
 vec3 evaluateRoughDielectric(
     float extIor, float intIor, int microfacetType, float alpha, vec3 wi, vec3 wo) {
+    if (abs(intIor - extIor) <= 1e-4f) {
+        return vec3(0.0f);
+    }
+
     vec3 microfacetNormal;
     float etaTi;
     if (!roughDielectricHalfVector(wi, wo, extIor, intIor, microfacetNormal, etaTi)) {
@@ -59,6 +62,10 @@ vec3 evaluateRoughDielectric(
 
 float computeRoughDielectricPdf(
     float extIor, float intIor, int microfacetType, float alpha, vec3 wi, vec3 wo) {
+    if (abs(intIor - extIor) <= 1e-4f) {
+        return 0.0f;
+    }
+
     vec3 microfacetNormal;
     float etaTi;
     if (!roughDielectricHalfVector(wi, wo, extIor, intIor, microfacetNormal, etaTi)) {
@@ -99,6 +106,13 @@ void sampleRoughDielectric(
     f = vec3(0.0f);
     pdf = 0.0f;
     if (wi.z == 0.0f) {
+        return;
+    }
+
+    if (abs(intIor - extIor) <= 1e-4f) {
+        wo = -wi;
+        f = vec3(1.0f);
+        pdf = 1.0f;
         return;
     }
 
