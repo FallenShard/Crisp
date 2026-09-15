@@ -54,7 +54,7 @@ void main() {
     vec3 shadingNormal = twoSided && dot(normal, wiWorld) < 0.0f ? -normal : normal;
 
     // Folds the material's maps into its parameters. A no-op for an instance with no texture block, which is how
-    // a scene that reaches its reflectance through material.reflectanceTexture instead is left untouched.
+    // a scene that reaches its albedo map through material.baseColorTex instead is left untouched.
     hitInfo.Le = applyMaterialTextures(material, instance.materialTextureOffset, texCoord);
 
     if (instance.materialTextureOffset != kInvalidMaterialTextureOffset) {

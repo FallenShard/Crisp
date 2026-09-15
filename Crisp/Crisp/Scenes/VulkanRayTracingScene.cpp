@@ -144,13 +144,6 @@ VulkanRayTracingScene::VulkanRayTracingScene(
             image.getPixelByteSize() == 4 * sizeof(float) ? VK_FORMAT_R32G32B32A32_SFLOAT : VK_FORMAT_R8G8B8A8_SRGB;
         m_materialImages.push_back(createVulkanImage(*renderer, image, format));
     }
-    for (auto& material : m_sceneDesc.bsdfs) {
-        if (material.reflectanceTexture < 0) {
-            continue;
-        }
-        material.reflectanceTexture += static_cast<int32_t>(kPathTracerMaterialTextureFirstSlot);
-        material.reflectanceSampler = static_cast<int32_t>(kPathTracerMaterialSamplerSlot);
-    }
 
     // Camera
     m_cameraController = std::make_unique<FreeCameraController>(*m_window);
@@ -161,6 +154,10 @@ VulkanRayTracingScene::VulkanRayTracingScene(
         static_cast<int32_t>(m_sceneDesc.lights.size()) + m_integratorParams.environmentEnabled;
 
     m_sceneDesc.bsdfs.push_back(createMicrofacetBsdf(glm::vec3(0.5f, 0.2f, 0.01f), 0.01f));
+
+    for (auto& material : m_sceneDesc.bsdfs) {
+        clampToGpuRange(material);
+    }
 
     m_bsdfParamsBuffer = m_resourceContext->createStorageBuffer(
         "bsdfParams", m_sceneDesc.bsdfs, VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);

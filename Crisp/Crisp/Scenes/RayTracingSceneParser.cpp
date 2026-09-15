@@ -63,7 +63,7 @@ PbrMaterialParams createRoughConductorBsdf(
     ior = ior != nullptr ? ior : findComplexIor("Au");
     PbrMaterialParams material{};
     material.complexIorEta = ior->eta;
-    material.microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f);
+    material.surface.specularRoughness = std::sqrt(glm::clamp(alpha, 1e-4f, 1.0f));
     material.complexIorK = ior->k;
     material.type = kBsdfRoughConductor;
     material.microfacetType = microfacetType;
@@ -75,7 +75,7 @@ Result<PbrMaterialParams> createRoughDielectricBsdf(
     CRISP_TRY(validateDielectricIor(interiorIor));
     PbrMaterialParams material{};
     material.surface.specularIor = interiorIor;
-    material.microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f);
+    material.surface.specularRoughness = std::sqrt(glm::clamp(alpha, 1e-4f, 1.0f));
     material.type = kBsdfRoughDielectric;
     material.microfacetType = microfacetType;
     return material;
@@ -269,7 +269,7 @@ PbrMaterialParams createMicrofacetBsdf(const glm::vec3 kd, const float alpha, co
     material.surface.baseColor = kd;
     material.surface.specularWeight = 1.0f - std::max(kd.x, std::max(kd.y, kd.z));
     material.surface.specularIor = getIor(IorMaterial::Glass);
-    material.microfacetAlpha = glm::clamp(alpha, 1e-4f, 1.0f);
+    material.surface.specularRoughness = std::sqrt(glm::clamp(alpha, 1e-4f, 1.0f));
     material.type = kBsdfMicrofacet;
     material.microfacetType = microfacetType;
     return material;
@@ -440,7 +440,10 @@ Result<SceneDescription> parseSceneDescription(const nlohmann::json& shapeList, 
                     return resultError("Shape {} uses reflectanceTexture on a non-diffuse GPU material", shapeIndex);
                 }
                 CRISP_TRY(auto texture, parseReflectanceTexture(shape["bsdf"]["reflectanceTexture"]));
-                material.reflectanceTexture = static_cast<int32_t>(scene.materialTextures.size());
+                // The final heap slot, not a bare index: 0 has to keep meaning "no map".
+                material.baseColorTex =
+                    kPathTracerMaterialTextureFirstSlot + static_cast<uint32_t>(scene.materialTextures.size());
+                material.samplerIndex = kPathTracerMaterialSamplerSlot;
                 scene.materialTextures.push_back(std::move(texture));
             }
             scene.bsdfs.push_back(material);

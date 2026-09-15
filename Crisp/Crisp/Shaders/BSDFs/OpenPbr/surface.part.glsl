@@ -46,8 +46,7 @@ OpenPbrSurface createOpenPbrSurface(const OpenPbrSurfaceParams params, const uin
     OpenPbrSurface surface;
     surface.diffuseAlbedo = baseColor * (1.0f - metalness);
     surface.f0 = mix(dielectric, baseColor, metalness);
-    const float roughness = clamp(params.specularRoughness, 1e-3f, 1.0f);
-    surface.alpha = roughness * roughness;
+    surface.alpha = params.specularRoughness * params.specularRoughness;
     surface.energyCompensation = energyCompensation;
     return surface;
 }

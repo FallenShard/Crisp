@@ -22,6 +22,7 @@ PbrMaterialHandle PbrMaterialTable::add(const PbrMaterialParams& params) {
     CRISP_CHECK_LT(m_materialCount, m_materials.size(), "PBR material table capacity exhausted.");
     const PbrMaterialHandle handle{m_materialCount++};
     m_materials[handle.index] = params;
+    clampToGpuRange(m_materials[handle.index]);
     m_isDirty = true;
     return handle;
 }
@@ -29,6 +30,7 @@ PbrMaterialHandle PbrMaterialTable::add(const PbrMaterialParams& params) {
 void PbrMaterialTable::update(const PbrMaterialHandle handle, const PbrMaterialParams& params) {
     CRISP_CHECK_LT(handle.index, m_materialCount);
     m_materials[handle.index] = params;
+    clampToGpuRange(m_materials[handle.index]);
     m_isDirty = true;
 }
 

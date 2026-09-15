@@ -99,9 +99,9 @@ TEST(RayTracingSceneParserTest, AssignsLogicalIndicesToBitmapReflectanceTextures
     EXPECT_EQ(scene.materialTextures[0].filename, "Textures/uv_pattern.jpg");
     EXPECT_EQ(scene.materialTextures[1].filename, "brick.png");
     ASSERT_EQ(scene.bsdfs.size(), 2);
-    EXPECT_EQ(scene.bsdfs[0].reflectanceTexture, 0);
-    EXPECT_EQ(scene.bsdfs[1].reflectanceTexture, 1);
-    EXPECT_EQ(scene.bsdfs[0].reflectanceSampler, -1);
+    EXPECT_EQ(scene.bsdfs[0].baseColorTex, kPathTracerMaterialTextureFirstSlot);
+    EXPECT_EQ(scene.bsdfs[1].baseColorTex, kPathTracerMaterialTextureFirstSlot + 1);
+    EXPECT_EQ(scene.bsdfs[0].samplerIndex, kPathTracerMaterialSamplerSlot);
 }
 
 TEST(RayTracingSceneParserTest, RejectsInvalidBitmapReflectanceTextures) {
@@ -149,6 +149,9 @@ TEST(RayTracingSceneParserTest, ReusesCanonicalSurfaceStorageForLegacyParameters
     EXPECT_FLOAT_EQ(result->bsdfs[1].surface.specularIor, 1.7f);
     EXPECT_EQ(result->bsdfs[2].surface.baseColor, glm::vec3(0.1f, 0.25f, 0.5f));
     EXPECT_FLOAT_EQ(result->bsdfs[2].surface.specularWeight, 0.5f);
+    // microfacetAlpha is stored as the perceptual roughness it squares from, so a microfacet material has one
+    // specular roughness rather than a live alpha beside an inert surface.specularRoughness.
+    EXPECT_FLOAT_EQ(result->bsdfs[2].surface.specularRoughness, std::sqrt(0.2f));
 }
 
 TEST(RayTracingSceneParserTest, PropagatesNestedMaterialValidationErrors) {

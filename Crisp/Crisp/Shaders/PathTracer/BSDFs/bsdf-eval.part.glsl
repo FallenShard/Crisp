@@ -15,6 +15,7 @@ BsdfEval evaluateLambertian(PbrMaterialParameters material, vec2 texCoord, vec3 
 }
 
 BsdfEval evaluateMicrofacet(PbrMaterialParameters material, vec3 wi, vec3 wo) {
+    const float alpha = material.surface.specularRoughness * material.surface.specularRoughness;
     return BsdfEval(
         evaluateMicrofacet(
             material.surface.baseColor,
@@ -22,11 +23,11 @@ BsdfEval evaluateMicrofacet(PbrMaterialParameters material, vec3 wi, vec3 wo) {
             kVacuumIor,
             material.surface.specularIor,
             material.microfacetType,
-            material.microfacetAlpha,
+            alpha,
             wi,
             wo),
         computeMicrofacetPdf(
-            wi, wo, material.surface.specularWeight, material.microfacetType, material.microfacetAlpha));
+            wi, wo, material.surface.specularWeight, material.microfacetType, alpha));
 }
 
 BsdfEval evaluateOrenNayar(PbrMaterialParameters material, vec2 texCoord, vec3 wi, vec3 wo) {
@@ -37,31 +38,33 @@ BsdfEval evaluateOrenNayar(PbrMaterialParameters material, vec2 texCoord, vec3 w
 }
 
 BsdfEval evaluateRoughConductor(PbrMaterialParameters material, vec3 wi, vec3 wo) {
+    const float alpha = material.surface.specularRoughness * material.surface.specularRoughness;
     return BsdfEval(
         evaluateRoughConductor(
             material.complexIorEta,
             material.complexIorK,
             material.microfacetType,
-            material.microfacetAlpha,
+            alpha,
             wi,
             wo),
-        computeRoughConductorPdf(wi, wo, material.microfacetType, material.microfacetAlpha));
+        computeRoughConductorPdf(wi, wo, material.microfacetType, alpha));
 }
 
 BsdfEval evaluateRoughDielectric(PbrMaterialParameters material, vec3 wi, vec3 wo) {
+    const float alpha = material.surface.specularRoughness * material.surface.specularRoughness;
     return BsdfEval(
         evaluateRoughDielectric(
             kVacuumIor,
             material.surface.specularIor,
             material.microfacetType,
-            material.microfacetAlpha,
+            alpha,
             wi,
             wo),
         computeRoughDielectricPdf(
             kVacuumIor,
             material.surface.specularIor,
             material.microfacetType,
-            material.microfacetAlpha,
+            alpha,
             wi,
             wo));
 }

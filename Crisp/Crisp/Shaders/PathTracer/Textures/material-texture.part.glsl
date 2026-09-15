@@ -10,12 +10,12 @@ layout(descriptor_heap, descriptor_stride = 64) uniform texture2D heapTexture2Ds
 layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 
 vec3 evaluateMaterialReflectance(const PbrMaterialParameters material, const vec2 texCoord) {
-    if (material.reflectanceTexture < 0 || material.reflectanceSampler < 0) {
+    if (material.baseColorTex == 0u) {
         return material.surface.baseColor;
     }
 
-    const int textureIndex = nonuniformEXT(material.reflectanceTexture);
-    const int samplerIndex = nonuniformEXT(material.reflectanceSampler);
+    const uint textureIndex = nonuniformEXT(material.baseColorTex);
+    const uint samplerIndex = nonuniformEXT(material.samplerIndex);
     return texture(sampler2D(heapTexture2Ds[textureIndex], heapSamplers[samplerIndex]), texCoord).rgb;
 }
 

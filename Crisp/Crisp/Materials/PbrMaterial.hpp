@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <string>
@@ -29,6 +30,8 @@ inline constexpr std::array<std::string_view, kPbrMapTypeCount> kPbrMapNames = {
     "orm",
     "emissive",
 };
+
+inline constexpr float kMinSpecularRoughness = 1e-3f;
 
 inline constexpr int32_t kBsdfLambertian = 0;
 inline constexpr int32_t kBsdfDielectric = 1;
@@ -68,22 +71,22 @@ struct PbrMaterialParams {
     // a time. The rasteriser reads nothing past `flags`, but must still declare the full record: the struct's
     // size is the array stride.
     glm::vec3 complexIorEta{0.0f};
-    float microfacetAlpha{0.0f};
-
-    glm::vec3 complexIorK{0.0f};
     float orenNayarRoughness{0.0f};
 
+    glm::vec3 complexIorK{0.0f};
     int32_t type{kBsdfOpenPbr};
+
     int32_t microfacetType{0};
-    int32_t reflectanceTexture{-1};
-    int32_t reflectanceSampler{-1};
+    uint32_t pad0{0};
+    uint32_t pad1{0};
+    uint32_t pad2{0};
 };
 
 static_assert(sizeof(PbrMaterialParams) == 160);
 static_assert(offsetof(PbrMaterialParams, complexIorEta) == 112);
 static_assert(offsetof(PbrMaterialParams, complexIorK) == 128);
-static_assert(offsetof(PbrMaterialParams, type) == 144);
-static_assert(offsetof(PbrMaterialParams, reflectanceTexture) == 152);
+static_assert(offsetof(PbrMaterialParams, type) == 140);
+static_assert(offsetof(PbrMaterialParams, microfacetType) == 144);
 static_assert(std::is_standard_layout_v<PbrMaterialParams>);
 static_assert(offsetof(PbrMaterialParams, surface) == 0);
 static_assert(offsetof(PbrMaterialParams, uvScale) == 64);
@@ -162,5 +165,9 @@ struct PbrOrmSources {
 Image createPbrOrmMap(const PbrOrmSources& sources);
 
 PbrImageGroup createDefaultPbrImageGroup();
+
+inline void clampToGpuRange(PbrMaterialParams& params) {
+    params.surface.specularRoughness = std::clamp(params.surface.specularRoughness, kMinSpecularRoughness, 1.0f);
+}
 
 } // namespace crisp

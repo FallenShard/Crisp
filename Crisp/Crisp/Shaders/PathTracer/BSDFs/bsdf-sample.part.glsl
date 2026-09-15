@@ -39,6 +39,7 @@ void sampleMirrorBsdf(inout BsdfSample bsdf) {
 }
 
 void sampleMicrofacetBsdf(const PbrMaterialParameters material, inout BsdfSample bsdf) {
+    const float alpha = material.surface.specularRoughness * material.surface.specularRoughness;
     bool sampledSpecular;
     bsdf.wo = sampleMicrofacet(
         bsdf.unitSample,
@@ -46,7 +47,7 @@ void sampleMicrofacetBsdf(const PbrMaterialParameters material, inout BsdfSample
         bsdf.wi,
         material.surface.specularWeight,
         material.microfacetType,
-        material.microfacetAlpha,
+        alpha,
         sampledSpecular);
     bsdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
 
@@ -56,11 +57,10 @@ void sampleMicrofacetBsdf(const PbrMaterialParameters material, inout BsdfSample
         kVacuumIor,
         material.surface.specularIor,
         material.microfacetType,
-        material.microfacetAlpha,
+        alpha,
         bsdf.wi,
         bsdf.wo);
-    bsdf.pdf = computeMicrofacetPdf(
-        bsdf.wi, bsdf.wo, material.surface.specularWeight, material.microfacetType, material.microfacetAlpha);
+    bsdf.pdf = computeMicrofacetPdf(bsdf.wi, bsdf.wo, material.surface.specularWeight, material.microfacetType, alpha);
 }
 
 void sampleOrenNayarBsdf(const PbrMaterialParameters material, inout BsdfSample bsdf) {
@@ -77,19 +77,21 @@ void sampleSmoothConductorBsdf(const PbrMaterialParameters material, inout BsdfS
 }
 
 void sampleRoughConductorBsdf(const PbrMaterialParameters material, inout BsdfSample bsdf) {
-    bsdf.wo = sampleRoughConductor(bsdf.unitSample, bsdf.wi, material.microfacetType, material.microfacetAlpha);
+    const float alpha = material.surface.specularRoughness * material.surface.specularRoughness;
+    bsdf.wo = sampleRoughConductor(bsdf.unitSample, bsdf.wi, material.microfacetType, alpha);
     bsdf.lobeType = kLobeTypeGlossy;
     bsdf.f = evaluateRoughConductor(
         material.complexIorEta,
         material.complexIorK,
         material.microfacetType,
-        material.microfacetAlpha,
+        alpha,
         bsdf.wi,
         bsdf.wo);
-    bsdf.pdf = computeRoughConductorPdf(bsdf.wi, bsdf.wo, material.microfacetType, material.microfacetAlpha);
+    bsdf.pdf = computeRoughConductorPdf(bsdf.wi, bsdf.wo, material.microfacetType, alpha);
 }
 
 void sampleRoughDielectricBsdf(const PbrMaterialParameters material, inout BsdfSample bsdf) {
+    const float alpha = material.surface.specularRoughness * material.surface.specularRoughness;
     bsdf.lobeType = kLobeTypeGlossy;
     sampleRoughDielectric(
         bsdf.unitSample,
@@ -97,7 +99,7 @@ void sampleRoughDielectricBsdf(const PbrMaterialParameters material, inout BsdfS
         kVacuumIor,
         material.surface.specularIor,
         material.microfacetType,
-        material.microfacetAlpha,
+        alpha,
         bsdf.wi,
         bsdf.wo,
         bsdf.f,

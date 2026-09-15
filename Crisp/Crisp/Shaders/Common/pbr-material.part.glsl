@@ -31,15 +31,15 @@ struct PbrMaterialParameters {
     // Per-lobe parameters, selected by `type`; exactly one lobe's fields are live at a time. The rasteriser
     // reads nothing past `flags` but must still declare them: the struct's size is the array stride.
     vec3 complexIorEta;
-    float microfacetAlpha;
-
-    vec3 complexIorK;
     float orenNayarRoughness;
 
+    vec3 complexIorK;
     int type;
+
     int microfacetType;
-    int reflectanceTexture;
-    int reflectanceSampler;
+    uint pad0;
+    uint pad1;
+    uint pad2;
 };
 
 #endif // CRISP_PBR_MATERIAL_GLSL
