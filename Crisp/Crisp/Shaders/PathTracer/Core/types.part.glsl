@@ -4,6 +4,7 @@
 #include "../../Common/pbr-material.part.glsl"
 #include "../Lights/light-types.part.glsl"
 #include "hit-info.part.glsl"
+#include "sample-dimensions.part.glsl"
 
 const float kVacuumIor = 1.0f;
 
@@ -17,17 +18,6 @@ const int kBsdfRoughConductor = 6;
 const int kBsdfRoughDielectric = 7;
 // One complex, layered type rather than one lobe. Must match kBsdfOpenPbr in Materials/PbrMaterial.hpp.
 const int kBsdfOpenPbr = 8;
-
-// Fixed layout of the sample vector. Every bounce restarts the sampler cursor at
-// kDimBounceBase + bounce * kDimsPerBounce, so a path that skips light sampling on a delta bounce
-// or has not reached the Russian-roulette cutoff still consumes the same dimensions as one that
-// does. A free-running cursor would let neighbouring pixels disagree on what dimension d means.
-const uint kDimPixelFilter = 0u; // 2 dimensions.
-const uint kDimBounceBase = 2u;
-const uint kDimsPerBounce = 9u;
-const uint kDimBsdf = 0u;            // 3 dimensions, relative to the bounce base.
-const uint kDimLight = 3u;           // 5 dimensions.
-const uint kDimRussianRoulette = 8u; // 1 dimension.
 
 // Scratch record the closest-hit stage hands to the switches in BSDFs/. It stopped being a callable payload
 // when callable dispatch was retired, so its layout is no longer an ABI.

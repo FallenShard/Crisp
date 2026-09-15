@@ -106,23 +106,7 @@ private:
 
     std::vector<MaterialTextureBinding> m_materialTextureBindings;
 
-    // Must match the IntegratorParams block in Shaders/PathTracer/pbr-trace.rgen.glsl.
-    struct IntegratorParameters {
-        int32_t maxBounces{8};
-        int32_t sampleCount{1};
-        int32_t frameIdx{0};
-        float environmentIntensity{1.0f};
-        uint32_t visibilityMask{0xFF};
-        int32_t environmentWidth{0};
-        int32_t environmentHeight{0};
-    };
-
-    static_assert(sizeof(IntegratorParameters) == 28);
-    static_assert(offsetof(IntegratorParameters, visibilityMask) == 16);
-    static_assert(offsetof(IntegratorParameters, environmentWidth) == 20);
-    static_assert(offsetof(IntegratorParameters, environmentHeight) == 24);
-
-    IntegratorParameters m_integratorParams;
+    PathTracedIntegratorParams m_integratorParams;
 };
 
 } // namespace crisp

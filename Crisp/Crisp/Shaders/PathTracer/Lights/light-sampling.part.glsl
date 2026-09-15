@@ -10,7 +10,7 @@ vec3 evaluateEnvironment(const vec3 direction) {
         return vec3(0.0f);
     }
     const vec2 uv = environmentDirectionToUv(direction);
-    return integrator.environmentScale *
+    return integrator.environmentIntensity *
         textureLod(sampler2D(environmentMap, environmentSampler), uv, 0.0f).rgb;
 }
 

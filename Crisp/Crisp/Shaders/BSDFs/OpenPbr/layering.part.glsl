@@ -9,7 +9,7 @@
 //   f_layer = f_coat + T_coat * (1 - E_coat) * f_sub
 //
 // This is what replaces the ad-hoc couplings currently in the tree -- the hand-authored ks split in
-// BSDFs/microfacet.part.glsl and the (1 - F) diffuse factor in PathTracer/BSDFs/pbr-surface.part.glsl. Neither
+// BSDFs/microfacet.part.glsl and the (1 - F) diffuse factor the path tracer used before it. Neither
 // composes correctly.
 
 // Transmittance of the layer above, for a non-absorbing layer. Coat absorption multiplies into this later.

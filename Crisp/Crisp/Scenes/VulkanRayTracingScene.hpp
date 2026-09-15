@@ -53,28 +53,10 @@ private:
     std::unique_ptr<VulkanImage> m_ggxAlbedoLut;
     std::vector<std::unique_ptr<VulkanImage>> m_materialImages;
 
-    struct IntegratorParameters {
-        int32_t maxBounces{32};
-        int32_t sampleCount{1};
-        int32_t frameIdx{0};
-        int32_t sampleOffset{0};
-        uint32_t seed{0};
-        int32_t reconstructionFilter{static_cast<int32_t>(ReconstructionFilterType::Box)};
-        int32_t lightCount{0};
-        int32_t shapeCount{0};
-        int32_t samplingMode{0};
-        int32_t environmentEnabled{0};
-        int32_t environmentWidth{0};
-        int32_t environmentHeight{0};
-        float environmentScale{1.0f};
-    };
-
-    static_assert(sizeof(IntegratorParameters) == 52);
-
     SceneDescription m_sceneDesc;
     PathTracedSceneAddresses m_sceneAddresses;
 
-    IntegratorParameters m_integratorParams;
+    PathTracedIntegratorParams m_integratorParams;
 
     VulkanBuffer* m_bsdfParamsBuffer{};
     VulkanBuffer* m_lightParamsBuffer{};

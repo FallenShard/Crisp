@@ -9,7 +9,18 @@ void traceRay(
     setDimension(rng, bounceDimBase + kDimBsdf);
     hitInfo.bsdfSample = next2D(rng);
     hitInfo.bsdfLobeSample = next1D(rng);
-    traceRayEXT(sceneBvh, gl_RayFlagsOpaqueEXT, 0xFF, 0, 0, 0, rayOrigin, tMin, rayDirection, tMax, kPayloadIndex);
+    traceRayEXT(
+        sceneBvh,
+        gl_RayFlagsOpaqueEXT,
+        integrator.visibilityMask,
+        0,
+        0,
+        0,
+        rayOrigin,
+        tMin,
+        rayDirection,
+        tMax,
+        kPayloadIndex);
 }
 
 bool traceShadowRay(in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in float tMax) {
@@ -18,7 +29,7 @@ bool traceShadowRay(in vec3 rayOrigin, in float tMin, in vec3 rayDirection, in f
         rayQuery,
         sceneBvh,
         gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT,
-        0xFF,
+        integrator.visibilityMask,
         rayOrigin,
         tMin,
         rayDirection,

@@ -189,7 +189,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
 
         m_integratorParams.environmentWidth = static_cast<int32_t>(environmentImage.getWidth());
         m_integratorParams.environmentHeight = static_cast<int32_t>(environmentImage.getHeight());
-        m_integratorParams.environmentScale = m_sceneDesc.environment->radianceScale;
+        m_integratorParams.environmentIntensity = m_sceneDesc.environment->radianceScale;
         m_environmentImage = createVulkanImage(*renderer, environmentImage, VK_FORMAT_R32G32B32A32_SFLOAT);
         m_environmentCdfBuffer = m_resourceContext->createStorageBuffer(
             "environmentCdf", distribution.getCdf(), VK_BUFFER_USAGE_2_SHADER_DEVICE_ADDRESS_BIT);
@@ -242,7 +242,7 @@ VulkanRayTracingScene::VulkanRayTracingScene(
             .shaderStages = kShaderStages,
             .resourceHeapSlotCount = kPathTracerMaterialTextureFirstSlot + static_cast<uint32_t>(m_materialImages.size()),
             .samplerHeapSlotCount = kPathTracerSamplerHeapSlotCount,
-            .integratorParamsSize = sizeof(IntegratorParameters),
+            .integratorParamsSize = sizeof(PathTracedIntegratorParams),
         },
         instances);
 

@@ -7,6 +7,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "Core/heap-slots.part.glsl"
+#include "Core/integrator.part.glsl"
 #include "Core/types.part.glsl"
 #include "../Common/math-constants.part.glsl"
 #include "../Common/rng.part.glsl"
@@ -27,46 +28,39 @@ layout(descriptor_heap, descriptor_stride = 64) uniform View {
 }
 heapViews[];
 
-layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
-    int maxBounces;
-    int sampleCount;
-    int frameIdx;
-    int sampleOffset;
-    uint seed;
-    int reconstructionFilter;
-    int lightCount;
-    int shapeCount;
-    int samplingMode;
-    int environmentEnabled;
-    int environmentWidth;
-    int environmentHeight;
-    float environmentScale;
-}
-heapIntegrators[];
-
 #define image heapStorageImages[kImageSlot]
 #define view heapViews[kViewSlot].params
-#define integrator heapIntegrators[kIntegratorSlot]
 #define environmentMap heapTexture2Ds[kEnvironmentSlot]
 #define environmentSampler heapSamplers[kEnvironmentSamplerSlot]
 // bsdf-eval.part.glsl evaluates kBsdfOpenPbr inline for next-event estimation, and that reaches the GGX
 // directional-albedo table even when no compensation mode is active.
 #define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
+#define CRISP_MATERIAL_TEXTURE(heapIndex) sampler2D(heapTexture2Ds[heapIndex], heapSamplers[kMaterialSamplerSlot])
 
 #include "Core/scene-addresses.part.glsl"
 #include "Core/intersection.part.glsl"
 #include "Textures/material-texture.part.glsl"
+#include "Textures/pbr-material-texture.part.glsl"
 #include "BSDFs/bsdf-eval.part.glsl"
 
-BsdfEval evaluateBsdfWorldSpace(vec3 normal, vec3 wi, vec3 wo, uint materialId, vec2 texCoord) {
+BsdfEval evaluateBsdfWorldSpace(
+    vec3 normal, vec3 wi, vec3 wo, uint materialId, uint materialTextureOffset, vec2 texCoord) {
+    PbrMaterialParameters material = scene.materials.data[materialId];
+    applyMaterialTextures(material, materialTextureOffset, texCoord);
+
     const mat3 coordinateFrame = createCoordinateFrame(normal);
     const mat3 worldToLocal = transpose(coordinateFrame);
-    return evaluateBsdf(scene.materials.data[materialId], texCoord, worldToLocal * wi, worldToLocal * wo);
+    return evaluateBsdf(material, texCoord, worldToLocal * wi, worldToLocal * wo);
 }
 
 #include "Core/tracing.part.glsl"
 #include "Cameras/perspective.part.glsl"
 #include "Lights/light-sampling.part.glsl"
+
+float balanceHeuristic(const float pdfA, const float pdfB) {
+    const float total = pdfA + pdfB;
+    return total > 0.0f ? pdfA / total : 0.0f;
+}
 
 vec2 samplePixelPosition(inout Sampler rng) {
     setDimension(rng, kDimPixelFilter);
@@ -101,6 +95,7 @@ vec3 computeRadianceDirectLighting(inout Sampler rng) {
     const vec3 n = hitInfo.normal;
     const vec3 wi = -rayDirection.xyz;
     const uint materialId = hitInfo.materialId;
+    const uint materialTextureOffset = hitInfo.materialTextureOffset;
     const vec2 texCoord = hitInfo.texCoord;
 
     vec3 shadowRayDir;
@@ -111,19 +106,12 @@ vec3 computeRadianceDirectLighting(inout Sampler rng) {
     const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf, lightIsDelta);
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-            const BsdfEval lightDirectionBsdf = evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
+            const BsdfEval lightDirectionBsdf = evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, materialTextureOffset, texCoord);
             L += radiance * lightDirectionBsdf.f;
         }
     }
 
     return L;
-}
-
-float powerHeuristic(const float fPdf, const float gPdf) {
-    const float fPdfSq = fPdf * fPdf;
-    const float gPdfSq = gPdf * gPdf;
-    const float denominator = fPdfSq + gPdfSq;
-    return denominator > 0.0f ? fPdfSq / denominator : 0.0f;
 }
 
 vec3 computeRadianceMis(inout Sampler rng) {
@@ -152,6 +140,7 @@ vec3 computeRadianceMis(inout Sampler rng) {
     const vec3 sampleWeight = hitInfo.sampleWeight;
     const vec3 wi = -rayDirection.xyz;
     const uint materialId = hitInfo.materialId;
+    const uint materialTextureOffset = hitInfo.materialTextureOffset;
     const vec2 texCoord = hitInfo.texCoord;
     const bool deltaSample = hitInfo.sampleLobeType == kLobeTypeDelta;
 
@@ -163,11 +152,11 @@ vec3 computeRadianceMis(inout Sampler rng) {
 
         if (hitInfo.lightId != -1) {
             const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
-            const float misWeight = deltaSample ? 1.0f : powerHeuristic(samplePdf, lightPdf);
+            const float misWeight = deltaSample ? 1.0f : balanceHeuristic(samplePdf, lightPdf);
             L += sampleWeight * hitInfo.Le * misWeight;
         } else if (hitInfo.tHit < tMin && integrator.environmentEnabled != 0) {
             const float lightPdf = getEnvironmentLightPdf(sampleDirection);
-            const float misWeight = deltaSample ? 1.0f : powerHeuristic(samplePdf, lightPdf);
+            const float misWeight = deltaSample ? 1.0f : balanceHeuristic(samplePdf, lightPdf);
             L += sampleWeight * evaluateEnvironment(sampleDirection) * misWeight;
         }
     }
@@ -182,8 +171,8 @@ vec3 computeRadianceMis(inout Sampler rng) {
     if (lightPdf > 0.0f) {
         if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
             const BsdfEval lightDirectionBsdf =
-                evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
-            const float misWeight = lightIsDelta ? 1.0f : powerHeuristic(lightPdf, lightDirectionBsdf.pdf);
+                evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, materialTextureOffset, texCoord);
+            const float misWeight = lightIsDelta ? 1.0f : balanceHeuristic(lightPdf, lightDirectionBsdf.pdf);
             L += radiance * lightDirectionBsdf.f * misWeight;
         }
     }
@@ -217,7 +206,7 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
             if (integrator.environmentEnabled != 0) {
                 float misWeight = 1.0f;
                 if (bounceCount > 0 && !prevWasDelta) {
-                    misWeight = powerHeuristic(prevSamplePdf, getEnvironmentLightPdf(rayDirection.xyz));
+                    misWeight = balanceHeuristic(prevSamplePdf, getEnvironmentLightPdf(rayDirection.xyz));
                 }
                 L += throughput * evaluateEnvironment(rayDirection.xyz) * misWeight;
             }
@@ -228,7 +217,7 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
             float misWeight = 1.0f;
             if (bounceCount > 0 && !prevWasDelta) {
                 const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - prevPosition, hitInfo.normal);
-                misWeight = powerHeuristic(prevSamplePdf, lightPdf);
+                misWeight = balanceHeuristic(prevSamplePdf, lightPdf);
             }
             L += throughput * hitInfo.Le * misWeight;
         }
@@ -244,6 +233,7 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
         const vec3 rayDir = hitInfo.sampleDirection;
         const vec3 wi = -rayDirection.xyz;
         const uint materialId = hitInfo.materialId;
+        const uint materialTextureOffset = hitInfo.materialTextureOffset;
         const vec2 texCoord = hitInfo.texCoord;
         const bool isDelta = hitInfo.sampleLobeType == kLobeTypeDelta;
 
@@ -259,9 +249,9 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
             if (lightPdf > 0.0f) {
                 if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
                     const BsdfEval lightDirectionBsdf =
-                        evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, texCoord);
+                        evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, materialTextureOffset, texCoord);
                     const float misWeight =
-                        lightIsDelta ? 1.0f : powerHeuristic(lightPdf, lightDirectionBsdf.pdf);
+                        lightIsDelta ? 1.0f : balanceHeuristic(lightPdf, lightDirectionBsdf.pdf);
                     L += throughput * radiance * lightDirectionBsdf.f * misWeight;
                 }
             }

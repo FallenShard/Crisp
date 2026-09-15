@@ -15,7 +15,7 @@ namespace {
 constexpr std::array<const char*, 3> kEnergyCompensationNames{"None", "Kulla-Conty", "Turquin"};
 
 constexpr std::array<PathTracerShaderStage, 3> kShaderStages{{
-    {"PathTracer/pbr-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
+    {"PathTracer/trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     {"PathTracer/trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     {"PathTracer/trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
 }};
@@ -54,7 +54,7 @@ PathTracedView::PathTracedView(
             .shaderStages = kShaderStages,
             .resourceHeapSlotCount = kPathTracerMaterialTextureFirstSlot + materialTextureSlotCount,
             .samplerHeapSlotCount = kPathTracerSamplerHeapSlotCount,
-            .integratorParamsSize = sizeof(IntegratorParameters),
+            .integratorParamsSize = sizeof(PathTracedIntegratorParams),
         },
         tracerInstances);
 
@@ -155,6 +155,8 @@ void PathTracedView::setEnvironmentDistribution(
     m_sceneAddresses.environmentCdf = m_environmentCdfBuffer->getDeviceAddress();
     m_integratorParams.environmentWidth = static_cast<int32_t>(width);
     m_integratorParams.environmentHeight = static_cast<int32_t>(height);
+    m_integratorParams.environmentEnabled = 1;
+    m_integratorParams.lightCount = 1;
     resetAccumulation();
 }
 
@@ -215,6 +217,7 @@ int32_t PathTracedView::getAccumulatedSampleCount() const {
 
 void PathTracedView::uploadFrameData(const FrameContext& frameContext) {
     m_integratorParams.frameIdx = m_pathTracer->getFrameIndex();
+    m_integratorParams.sampleOffset = m_pathTracer->getAccumulatedSampleCount();
     m_pathTracer->uploadFrameData(frameContext, structAsBytes(m_integratorParams));
 }
 
