@@ -4,8 +4,10 @@
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_ray_query : require
+#extension GL_EXT_scalar_block_layout : require
 
 #include "../Common/math-constants.part.glsl"
+#include "../Common/diffuse-irradiance-sh.part.glsl"
 #include "../BSDFs/Microfacet/ggx.part.glsl"
 #include "../Common/bindless.part.glsl"
 #include "../Common/view.part.glsl"
@@ -39,7 +41,9 @@ layout(set = 1, binding = 0) uniform View {
 layout(set = 1, binding = 1) uniform CascadedLight {
     LightDescriptor cascadedLight[4];
 };
-layout(set = 1, binding = 2) uniform samplerCube diffuseIrradianceMap;
+layout(scalar, set = 1, binding = 2) uniform DiffuseIrradiance {
+    float coefficients[27];
+} diffuseIrradiance;
 layout(set = 1, binding = 3) uniform samplerCube specularReflectanceMap;
 layout(set = 1, binding = 4) uniform sampler2D cascadedShadowMaps[4];
 layout(set = 1, binding = 5) uniform sampler2D brdfLut;
@@ -180,7 +184,7 @@ vec3 getCascadeDebugColor(const float viewDepth) {
 
 vec3 computeEnvRadiance(vec3 eyeN, vec3 eyeV, vec3 kD, vec3 albedo, vec3 F0, float roughness, float ao) {
     const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).rgb;
-    const vec3 irradiance = texture(diffuseIrradianceMap, worldN).rgb;
+    const vec3 irradiance = evaluateDiffuseIrradianceSh(diffuseIrradiance.coefficients, worldN);
     const vec3 diffuse = irradiance * albedo;
 
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);

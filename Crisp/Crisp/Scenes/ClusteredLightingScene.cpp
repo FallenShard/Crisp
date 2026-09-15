@@ -277,7 +277,7 @@ void ClusteredLightingScene::createCommonTextures() {
     m_material->writeDescriptor(1, 1, *m_lightSystem->getLightIndexBuffer());
 
     const auto& envLight = *m_lightSystem->getEnvironmentLight();
-    m_material->writeDescriptor(2, 0, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
+    m_material->writeDescriptor(2, 0, envLight.getDiffuseIrradianceShBuffer());
     m_material->writeDescriptor(2, 1, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
     m_material->writeDescriptor(2, 2, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
 

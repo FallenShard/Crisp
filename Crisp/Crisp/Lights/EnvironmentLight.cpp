@@ -52,10 +52,8 @@ void beginColorRendering(
 EnvironmentLight::EnvironmentLight(Renderer& renderer, const ImageBasedLightingData& iblData) {
     m_cubeMap = convertEquirectToCubeMap(
         &renderer, *createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT));
-    m_diffuseEnvironmentMap = createVulkanCubeMap(
-        renderer,
-        std::span<const std::vector<Image>>(&iblData.diffuseIrradianceCubeMap, 1),
-        VK_FORMAT_R32G32B32A32_SFLOAT);
+    m_diffuseIrradianceShBuffer = createUniformRingBuffer(
+        &renderer.getDevice(), sizeof(iblData.diffuseIrradianceSh), iblData.diffuseIrradianceSh.data());
     m_specularEnvironmentMap =
         createVulkanCubeMap(renderer, iblData.specularReflectanceMapMipLevels, VK_FORMAT_R32G32B32A32_SFLOAT);
 }
@@ -64,7 +62,11 @@ void EnvironmentLight::update(Renderer& renderer, const ImageBasedLightingData& 
     m_cubeMap = convertEquirectToCubeMap(
         &renderer, *createVulkanImage(renderer, iblData.equirectangularEnvironmentMap, VK_FORMAT_R32G32B32A32_SFLOAT));
 
-    updateCubeMap(*m_diffuseEnvironmentMap, renderer, iblData.diffuseIrradianceCubeMap);
+    m_diffuseIrradianceShBuffer->updateStagingBuffer(
+        iblData.diffuseIrradianceSh.data(), sizeof(iblData.diffuseIrradianceSh), 0);
+    submitAndWait(renderer.getDevice().getGeneralQueue(), [this](const VulkanCommandEncoder& encoder) {
+        m_diffuseIrradianceShBuffer->updateDeviceBuffer(encoder);
+    });
     for (uint32_t i = 0; i < iblData.specularReflectanceMapMipLevels.size(); ++i) {
         updateCubeMap(*m_specularEnvironmentMap, renderer, iblData.specularReflectanceMapMipLevels[i], i);
     }
@@ -73,7 +75,6 @@ void EnvironmentLight::update(Renderer& renderer, const ImageBasedLightingData& 
 namespace {
 constexpr uint32_t kWhiteFurnaceEquirectWidth{64};
 constexpr uint32_t kWhiteFurnaceEquirectHeight{32};
-constexpr uint32_t kWhiteFurnaceIrradianceFaceSize{128};
 constexpr uint32_t kWhiteFurnaceReflectionMipLevelCount{9};
 
 Image createConstantRadianceImage(const uint32_t width, const uint32_t height) {
@@ -92,11 +93,9 @@ ImageBasedLightingData createWhiteFurnaceIblData() {
     ImageBasedLightingData data{};
     data.equirectangularEnvironmentMap = createWhiteFurnaceEquirect();
 
-    data.diffuseIrradianceCubeMap.reserve(kCubeMapFaceCount);
-    for (uint32_t face = 0; face < kCubeMapFaceCount; ++face) {
-        data.diffuseIrradianceCubeMap.push_back(
-            createConstantRadianceImage(kWhiteFurnaceIrradianceFaceSize, kWhiteFurnaceIrradianceFaceSize));
-    }
+    data.diffuseIrradianceSh[0] = 1.0f;
+    data.diffuseIrradianceSh[1] = 1.0f;
+    data.diffuseIrradianceSh[2] = 1.0f;
 
     data.specularReflectanceMapMipLevels.reserve(kWhiteFurnaceReflectionMipLevelCount);
     for (uint32_t level = 0; level < kWhiteFurnaceReflectionMipLevelCount; ++level) {

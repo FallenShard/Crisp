@@ -2,8 +2,9 @@
 """Bake Crisp environment maps with Filament's cmgen.
 
 The output is directly consumable by loadImageBasedLightingData(): an
-equirectangular HDR image, a diffuse-irradiance horizontal cross, and nine
-GGX-prefiltered horizontal crosses with 512-to-2 pixel cube faces.
+equirectangular HDR image, nine shader-ready diffuse-irradiance spherical
+harmonic coefficients, and nine GGX-prefiltered horizontal crosses with
+512-to-2 pixel cube faces.
 """
 
 from __future__ import annotations
@@ -18,7 +19,6 @@ from pathlib import Path
 
 
 CUBE_SIZE = 512
-IRRADIANCE_SIZE = 128
 MIP_COUNT = 9
 FACE_NAMES = ("px", "nx", "py", "ny", "pz", "nz")
 SOURCE_EXTENSIONS = (".hdr", ".exr", ".png", ".psd")
@@ -137,10 +137,6 @@ def prepare_cmgen_source(magick: Path, source: Path, destination: Path) -> None:
     run([str(magick), str(source), "-flop", "-roll", f"+{half_width}+0", str(destination)])
 
 
-def resize_face(magick: Path, source: Path, destination: Path, size: int) -> None:
-    run([str(magick), str(source), "-filter", "Lanczos", "-resize", f"{size}x{size}!", str(destination)])
-
-
 def create_horizontal_cross(magick: Path, faces: dict[str, Path], size: int, destination: Path) -> None:
     # Layout expected by loadCubeMapFacesFromHCrossImage():
     #           +Y
@@ -210,6 +206,7 @@ def bake_environment(
         cmgen_root = staging_dir / "cmgen-output"
         cmgen_root.mkdir()
         cmgen_source = staging_dir / f"{source.stem}-cmgen-input{source.suffix}"
+        sh_output = staging_dir / "sh.txt"
         prepare_cmgen_source(magick, source, cmgen_source)
         command = [
             str(cmgen),
@@ -219,8 +216,9 @@ def bake_environment(
             "--ibl-min-lod-size=2",
             "--no-mirror",
             "--format=hdr",
+            "--sh-shader",
+            f"--sh-output={sh_output}",
             f"--ibl-ld={cmgen_root}",
-            f"--ibl-irradiance={cmgen_root}",
             str(cmgen_source),
         ]
         run(command)
@@ -236,23 +234,6 @@ def bake_environment(
                 raise RuntimeError(f"cmgen did not produce expected mip {mip} faces: {missing}")
             destination = staging_dir / f"{output_name}_rad_{mip}_{4 * face_size}x{3 * face_size}.hdr"
             create_horizontal_cross(magick, faces, face_size, destination)
-
-        resized_irradiance_dir = cmgen_root / "irradiance-128"
-        resized_irradiance_dir.mkdir()
-        irradiance_faces: dict[str, Path] = {}
-        for face in FACE_NAMES:
-            source_face = face_dir / f"i_{face}.hdr"
-            if not source_face.is_file():
-                raise RuntimeError(f"cmgen did not produce expected irradiance face: {source_face}")
-            destination_face = resized_irradiance_dir / f"i_{face}.hdr"
-            resize_face(magick, source_face, destination_face, IRRADIANCE_SIZE)
-            irradiance_faces[face] = destination_face
-        create_horizontal_cross(
-            magick,
-            irradiance_faces,
-            IRRADIANCE_SIZE,
-            staging_dir / f"{output_name}_irr.hdr",
-        )
 
         convert_source_to_hdr(magick, source, staging_dir / f"{output_name}.hdr")
 

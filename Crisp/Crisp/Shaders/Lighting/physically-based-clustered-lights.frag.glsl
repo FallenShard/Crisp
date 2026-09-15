@@ -1,8 +1,10 @@
 #version 460 core
 
 #extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_scalar_block_layout : require
 
 #include "../Common/math-constants.part.glsl"
+#include "../Common/diffuse-irradiance-sh.part.glsl"
 #include "../BSDFs/Microfacet/ggx.part.glsl"
 #include "../Common/view.part.glsl"
 
@@ -59,7 +61,9 @@ layout(set = 1, binding = 1) readonly buffer LightIndexList {
     uint lightIndexList[];
 };
 
-layout(set = 2, binding = 0) uniform samplerCube irrMap;
+layout(scalar, set = 2, binding = 0) uniform DiffuseIrradiance {
+    float coefficients[27];
+} diffuseIrradiance;
 layout(set = 2, binding = 1) uniform samplerCube refMap;
 layout(set = 2, binding = 2) uniform sampler2D brdfLut;
 
@@ -71,7 +75,7 @@ layout(set = 3, binding = 0) readonly buffer LightGrid {
 vec3 computeEnvRadiance(
     const vec3 eyeN, const vec3 eyeV, const vec3 kD, const vec3 albedo, const vec3 F0, const float roughness) {
     const vec3 worldN = (view.invV * vec4(eyeN, 0.0f)).xyz;
-    const vec3 diffuse = texture(irrMap, worldN).rgb * albedo;
+    const vec3 diffuse = evaluateDiffuseIrradianceSh(diffuseIrradiance.coefficients, worldN) * albedo;
 
     const float NdotV = max(dot(eyeN, eyeV), 0.0f);
     const vec3 worldR = (view.invV * vec4(reflect(-eyeV, eyeN), 0.0f)).xyz;

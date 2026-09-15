@@ -177,7 +177,7 @@ void configureForwardLightingPassMaterial(
     const auto& envLight = *lightSystem.getEnvironmentLight();
     material.writeDescriptor(1, 0, *resourceContext.getRingBuffer("camera"));
     material.writeDescriptor(1, 1, *lightSystem.getCascadedDirectionalLightBuffer());
-    material.writeDescriptor(1, 2, envLight.getDiffuseMapView(), imageCache.getSampler("linearClamp"));
+    material.writeDescriptor(1, 2, envLight.getDiffuseIrradianceShBuffer());
     material.writeDescriptor(1, 3, envLight.getSpecularMapView(), imageCache.getSampler("linearMipmap"));
     material.writeDescriptor(1, 5, imageCache.getImageView("brdfLut"), imageCache.getSampler("linearClamp"));
     for (uint32_t i = 0; i < kDefaultCascadeCount; ++i) {
