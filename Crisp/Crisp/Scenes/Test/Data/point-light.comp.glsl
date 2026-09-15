@@ -28,15 +28,11 @@ layout(push_constant, scalar) uniform PushConstants {
 pc;
 
 void main() {
-    vec3 direction;
-    float distance;
-    float pdf;
-    const vec3 radiance = samplePointLight(pc.position, pc.power, pc.reference, direction, distance, pdf);
-    results.data[0].directionAndDistance = vec4(direction, distance);
-    results.data[0].radianceAndPdf = vec4(radiance, pdf);
+    const LightSample ls = samplePointLight(pc.position, pc.power, pc.reference);
+    results.data[0].directionAndDistance = vec4(ls.direction, ls.distance);
+    results.data[0].radianceAndPdf = vec4(ls.weight, ls.pdf);
 
-    const vec3 singularRadiance =
-        samplePointLight(pc.position, pc.power, pc.position, direction, distance, pdf);
-    results.data[1].directionAndDistance = vec4(direction, distance);
-    results.data[1].radianceAndPdf = vec4(singularRadiance, pdf);
+    const LightSample singular = samplePointLight(pc.position, pc.power, pc.position);
+    results.data[1].directionAndDistance = vec4(singular.direction, singular.distance);
+    results.data[1].radianceAndPdf = vec4(singular.weight, singular.pdf);
 }

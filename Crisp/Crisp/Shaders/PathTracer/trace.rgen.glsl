@@ -142,7 +142,7 @@ vec3 computeRadianceDirectLighting(inout Sampler rng) {
     traceRay(rng, kDimBounceBase, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
 
     if (hitInfo.tHit == -1.0) {
-        return evaluateEnvironment(rayDirection.xyz);
+        return evaluateEnvironmentLight(rayDirection.xyz);
     }
 
     L += hitInfo.Le;
@@ -154,16 +154,12 @@ vec3 computeRadianceDirectLighting(inout Sampler rng) {
     const uint materialTextureOffset = hitInfo.materialTextureOffset;
     const vec2 texCoord = hitInfo.texCoord;
 
-    vec3 shadowRayDir;
-    float shadowRayLen;
-    float lightPdf;
-    bool lightIsDelta;
     setDimension(rng, kDimBounceBase + kDimLight);
-    const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf, lightIsDelta);
-    if (lightPdf > 0.0f) {
-        if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
-            const BsdfEval lightDirectionBsdf = evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, materialTextureOffset, texCoord);
-            L += radiance * lightDirectionBsdf.f;
+    const LightSample lightSample = sampleUniformLight(rng, p);
+    if (lightSample.pdf > 0.0f) {
+        if (!traceShadowRay(p, 1e-5, lightSample.direction, lightSample.distance - 1e-5)) {
+            const BsdfEval lightDirectionBsdf = evaluateBsdfWorldSpace(n, wi, lightSample.direction, materialId, materialTextureOffset, texCoord);
+            L += lightSample.weight * lightDirectionBsdf.f;
         }
     }
 
@@ -186,7 +182,7 @@ vec3 computeRadianceMis(inout Sampler rng) {
     traceRay(rng, kDimBounceBase, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
 
     if (hitInfo.tHit == -1.0) {
-        return evaluateEnvironment(rayDirection.xyz);
+        return evaluateEnvironmentLight(rayDirection.xyz);
     }
 
     L += hitInfo.Le;
@@ -207,29 +203,29 @@ vec3 computeRadianceMis(inout Sampler rng) {
         traceRay(rng, kDimBounceBase + kDimsPerBounce, p, tMin, sampleDirection, tMax);
 
         if (hitInfo.lightId != -1) {
-            const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - p, hitInfo.normal);
+            const float lightPdf = computeLightPdf(
+                uint(hitInfo.lightId),
+                normalize(hitInfo.position - p),
+                hitInfo.position - p,
+                hitInfo.normal);
             const float misWeight = deltaSample ? 1.0f : balanceHeuristic(samplePdf, lightPdf);
             L += sampleWeight * hitInfo.Le * misWeight;
         } else if (hitInfo.tHit < tMin && integrator.environmentEnabled != 0) {
-            const float lightPdf = getEnvironmentLightPdf(sampleDirection);
+            const float lightPdf = computeLightPdf(environmentLightIndex(), sampleDirection, vec3(0.0f), vec3(0.0f));
             const float misWeight = deltaSample ? 1.0f : balanceHeuristic(samplePdf, lightPdf);
-            L += sampleWeight * evaluateEnvironment(sampleDirection) * misWeight;
+            L += sampleWeight * evaluateEnvironmentLight(sampleDirection) * misWeight;
         }
     }
 
     // Light sampling.
-    vec3 shadowRayDir;
-    float shadowRayLen;
-    float lightPdf;
-    bool lightIsDelta;
     setDimension(rng, kDimBounceBase + kDimLight);
-    const vec3 radiance = sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf, lightIsDelta);
-    if (lightPdf > 0.0f) {
-        if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
+    const LightSample lightSample = sampleUniformLight(rng, p);
+    if (lightSample.pdf > 0.0f) {
+        if (!traceShadowRay(p, 1e-5, lightSample.direction, lightSample.distance - 1e-5)) {
             const BsdfEval lightDirectionBsdf =
-                evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, materialTextureOffset, texCoord);
-            const float misWeight = lightIsDelta ? 1.0f : balanceHeuristic(lightPdf, lightDirectionBsdf.pdf);
-            L += radiance * lightDirectionBsdf.f * misWeight;
+                evaluateBsdfWorldSpace(n, wi, lightSample.direction, materialId, materialTextureOffset, texCoord);
+            const float misWeight = lightSample.isDelta ? 1.0f : balanceHeuristic(lightSample.pdf, lightDirectionBsdf.pdf);
+            L += lightSample.weight * lightDirectionBsdf.f * misWeight;
         }
     }
 
@@ -262,9 +258,9 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
             if (integrator.environmentEnabled != 0) {
                 float misWeight = 1.0f;
                 if (bounceCount > 0 && !prevWasDelta) {
-                    misWeight = balanceHeuristic(prevSamplePdf, getEnvironmentLightPdf(rayDirection.xyz));
+                    misWeight = balanceHeuristic(prevSamplePdf, computeLightPdf(environmentLightIndex(), rayDirection.xyz, vec3(0.0f), vec3(0.0f)));
                 }
-                L += throughput * evaluateEnvironment(rayDirection.xyz) * misWeight;
+                L += throughput * evaluateEnvironmentLight(rayDirection.xyz) * misWeight;
             }
             break;
         }
@@ -272,10 +268,16 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
         if (hitInfo.lightId != -1) {
             float misWeight = 1.0f;
             if (bounceCount > 0 && !prevWasDelta) {
-                const float lightPdf = getLightPdf(hitInfo.lightId, hitInfo.position - prevPosition, hitInfo.normal);
+                const float lightPdf = computeLightPdf(
+                    uint(hitInfo.lightId),
+                    normalize(hitInfo.position - prevPosition),
+                    hitInfo.position - prevPosition,
+                    hitInfo.normal);
                 misWeight = balanceHeuristic(prevSamplePdf, lightPdf);
             }
             L += throughput * hitInfo.Le * misWeight;
+        } else {
+            L += throughput * hitInfo.Le;
         }
 
         if (bounceCount >= integrator.maxBounces) {
@@ -295,20 +297,15 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
 
         // If the bounce wasn't a delta bounce (glass/mirror), do light sampling.
         if (!isDelta) {
-            vec3 shadowRayDir;
-            float shadowRayLen;
-            float lightPdf;
-            bool lightIsDelta;
             setDimension(rng, bounceDim + kDimLight);
-            const vec3 radiance =
-                sampleUniformLight(rng, p, shadowRayDir, shadowRayLen, lightPdf, lightIsDelta);
-            if (lightPdf > 0.0f) {
-                if (!traceShadowRay(p, 1e-5, shadowRayDir, shadowRayLen - 1e-5)) {
+            const LightSample lightSample = sampleUniformLight(rng, p);
+            if (lightSample.pdf > 0.0f) {
+                if (!traceShadowRay(p, 1e-5, lightSample.direction, lightSample.distance - 1e-5)) {
                     const BsdfEval lightDirectionBsdf =
-                        evaluateBsdfWorldSpace(n, wi, shadowRayDir, materialId, materialTextureOffset, texCoord);
+                        evaluateBsdfWorldSpace(n, wi, lightSample.direction, materialId, materialTextureOffset, texCoord);
                     const float misWeight =
-                        lightIsDelta ? 1.0f : balanceHeuristic(lightPdf, lightDirectionBsdf.pdf);
-                    L += throughput * radiance * lightDirectionBsdf.f * misWeight;
+                        lightSample.isDelta ? 1.0f : balanceHeuristic(lightSample.pdf, lightDirectionBsdf.pdf);
+                    L += throughput * lightSample.weight * lightDirectionBsdf.f * misWeight;
                 }
             }
         }
@@ -380,7 +377,7 @@ vec3 computeRadiance(inout Sampler rng) {
             rayOrigin.xyz = hitInfo.position;
             rayDirection.xyz = hitInfo.sampleDirection;
         } else { // The ray missed, evaluate environment lighting and exit the loop.
-            L += throughput * evaluateEnvironment(rayDirection.xyz);
+            L += throughput * evaluateEnvironmentLight(rayDirection.xyz);
             break;
         }
 

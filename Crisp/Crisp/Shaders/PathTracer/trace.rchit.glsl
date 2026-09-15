@@ -23,14 +23,8 @@ hitAttributeEXT vec2 barycentric;
 #include "Core/scene-addresses.part.glsl"
 #include "Core/intersection.part.glsl"
 #include "BSDFs/bsdf-sample.part.glsl"
+#include "Lights/area-light.part.glsl"
 #include "Textures/pbr-material-texture.part.glsl"
-
-vec3 evalAreaLight(vec3 p, vec3 n, vec3 radiance) {
-    const vec3 ref = gl_WorldRayOriginEXT;
-    const vec3 wi = p - ref;
-    const float cosTheta = dot(n, normalize(-wi));
-    return cosTheta <= 0.0f ? vec3(0.0f) : radiance;
-}
 
 void main() {
     PathTracedInstance instance = scene.instances.data[gl_InstanceCustomIndexEXT];
@@ -102,7 +96,7 @@ void main() {
 
     hitInfo.lightId = -1;
     if (instance.lightId != -1) {
-        hitInfo.Le = evalAreaLight(position, normal, scene.lights.data[instance.lightId].emission);
+        hitInfo.Le = evaluateAreaLight(scene.lights.data[instance.lightId].emission, normal, gl_WorldRayOriginEXT - position);
         hitInfo.lightId = instance.lightId;
     }
 }

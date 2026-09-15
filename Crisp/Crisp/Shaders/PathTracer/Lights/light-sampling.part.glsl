@@ -1,155 +1,83 @@
 #ifndef CRISP_PATH_TRACER_LIGHT_SAMPLING_GLSL
 #define CRISP_PATH_TRACER_LIGHT_SAMPLING_GLSL
 
-#include "environment-distribution.part.glsl"
+#include "area-light.part.glsl"
 #include "directional-light.part.glsl"
+#include "environment-light.part.glsl"
 #include "point-light.part.glsl"
 
-vec3 evaluateEnvironment(const vec3 direction) {
-    if (integrator.environmentEnabled == 0) {
-        return vec3(0.0f);
-    }
-    const vec2 uv = environmentDirectionToUv(direction);
-    return integrator.environmentIntensity *
-        textureLod(sampler2D(environmentMap, environmentSampler), uv, 0.0f).rgb;
+// Dispatch over the scene's light table, the counterpart to sampleBsdf and evaluateBsdf in BSDFs/. Each light
+// type answers sample, evaluate and pdf for itself; this layer only chooses which one to ask and folds in the
+// probability of having picked it.
+//
+// The environment occupies the slot just past the finite lights, so one index space covers every light and the
+// sampler needs no special case for it.
+uint environmentLightIndex() {
+    return uint(integrator.lightCount - integrator.environmentEnabled);
 }
 
-float getEnvironmentLightPdf(const vec3 direction) {
-    if (integrator.environmentEnabled == 0 || integrator.lightCount <= 0) {
-        return 0.0f;
-    }
-    return environmentDirectionPdf(
-               scene.environmentCdf,
-               uint(integrator.environmentWidth),
-               uint(integrator.environmentHeight),
-               direction) /
-        float(integrator.lightCount);
+float lightSelectionPdf() {
+    return 1.0f / float(integrator.lightCount);
 }
 
-vec3 sampleEnvironmentLight(
-    inout Sampler rng, out vec3 shadowRayDir, out float shadowRayLen, out float lightPdf) {
-    vec2 uv;
-    shadowRayDir = sampleEnvironmentDirection(
-        scene.environmentCdf,
-        uint(integrator.environmentWidth),
-        uint(integrator.environmentHeight),
-        next2D(rng),
-        uv,
-        lightPdf);
-    shadowRayLen = 1e30f;
-    return lightPdf > 0.0f ? evaluateEnvironment(shadowRayDir) / lightPdf : vec3(0.0f);
-}
-
-float sampleSurfaceCoord(inout Sampler rng, in uint meshId, out vec3 position, out vec3 normal) {
-    PathTracedInstance instance = scene.instances.data[meshId];
-    const uint triCount = instance.aliasTable.data[0].j; // Header entry, written by createAliasTable.
-
-    const uint elemIdx = 1 + nextRange(rng, triCount); // Add 1 to skip the header entry.
-    const float rndVal = next1D(rng);
-
-    uint sampledTriIdx = elemIdx - 1;
-    if (rndVal > instance.aliasTable.data[elemIdx].tau) {
-        sampledTriIdx = instance.aliasTable.data[elemIdx].j;
+LightSample sampleLight(inout Sampler rng, const uint lightId, const vec3 refPoint) {
+    if (lightId >= environmentLightIndex()) {
+        return sampleEnvironmentLight(rng);
     }
 
-    const vec3 bary = squareToUniformTriangle(next2D(rng));
-
-    const uvec3 sampledTriangle = instance.triangles.data[sampledTriIdx];
-
-    position = interpolatePosition(instance.positions, sampledTriangle, bary);
-    normal = interpolateNormal(instance.attributes, sampledTriangle, bary);
-
-    return instance.aliasTable.data[0].tau;
+    const LightParameters light = scene.lights.data[lightId];
+    if (light.type == kLightPoint) {
+        return samplePointLight(light.positionOrDirection, light.emission, refPoint);
+    }
+    if (light.type == kLightDirectional) {
+        return sampleDirectionalLight(light.positionOrDirection, light.emission);
+    }
+    return sampleAreaLight(rng, uint(light.meshId), light.emission, refPoint);
 }
 
-vec3 sampleAreaLight(
-    inout Sampler rng,
-    in uint meshId,
-    in vec3 radiance,
-    in vec3 refPoint,
-    out vec3 shadowRayDir,
-    out float shadowRayLen,
-    out float lightPdf) {
-    lightPdf = 0.0f;
+// `direction` is the unit direction from the shading point toward the light; `toLight` and `lightNormal`
+// describe the point a ray landed on and are ignored by a light with no geometry.
+LightEval evaluateLight(
+    const uint lightId, const vec3 direction, const vec3 toLight, const vec3 lightNormal) {
+    LightEval le;
+    const float selectionPdf = lightSelectionPdf();
 
-    vec3 samplePos;
-    vec3 sampleNormal;
-    const float shapePdf = sampleSurfaceCoord(rng, meshId, samplePos, sampleNormal);
-
-    shadowRayDir = samplePos - refPoint;
-
-    const float squaredDist = dot(shadowRayDir, shadowRayDir);
-    shadowRayLen = sqrt(squaredDist);
-    if (shadowRayLen <= 0.0f) {
-        shadowRayDir = vec3(0.0f);
-        return vec3(0.0f);
-    }
-    shadowRayDir /= shadowRayLen;
-
-    const float cosThetaO = dot(sampleNormal, -shadowRayDir);
-    if (cosThetaO <= 0.0f) {
-        return vec3(0.0f);
+    if (lightId >= environmentLightIndex()) {
+        le.radiance = evaluateEnvironmentLight(direction);
+        le.pdf = selectionPdf * computeEnvironmentLightPdf(direction);
+        return le;
     }
 
-    lightPdf = shapePdf * squaredDist / cosThetaO;
-    return radiance / lightPdf;
+    const LightParameters light = scene.lights.data[lightId];
+    if (light.type == kLightPoint) {
+        le.radiance = evaluatePointLight();
+        le.pdf = selectionPdf * computePointLightPdf();
+        return le;
+    }
+    if (light.type == kLightDirectional) {
+        le.radiance = evaluateDirectionalLight();
+        le.pdf = selectionPdf * computeDirectionalLightPdf();
+        return le;
+    }
+    le.radiance = evaluateAreaLight(light.emission, lightNormal, -toLight);
+    le.pdf = selectionPdf * computeAreaLightPdf(uint(light.meshId), toLight, lightNormal);
+    return le;
 }
 
-vec3 sampleUniformLight(
-    inout Sampler rng,
-    in vec3 refPoint,
-    out vec3 shadowRayDir,
-    out float shadowRayLen,
-    out float lightPdf,
-    out bool lightIsDelta) {
+float computeLightPdf(const uint lightId, const vec3 direction, const vec3 toLight, const vec3 lightNormal) {
+    return evaluateLight(lightId, direction, toLight, lightNormal).pdf;
+}
+
+// Picks one light uniformly. The choice costs a dimension whether or not the scene has more than one light, so
+// that a path's cursor lands in the same place either way.
+LightSample sampleUniformLight(inout Sampler rng, const vec3 refPoint) {
     const uint lightId = nextRange(rng, integrator.lightCount);
-    const float uniformPdf = 1.0f / float(integrator.lightCount);
+    const float selectionPdf = lightSelectionPdf();
 
-    const uint finiteLightCount = uint(integrator.lightCount - integrator.environmentEnabled);
-    vec3 radiance;
-    lightIsDelta = false;
-    if (lightId < finiteLightCount) {
-        const LightParameters light = scene.lights.data[lightId];
-        if (light.type == kLightPoint) {
-            lightIsDelta = true;
-            radiance = samplePointLight(
-                light.positionOrDirection, light.emission, refPoint, shadowRayDir, shadowRayLen, lightPdf);
-        } else if (light.type == kLightDirectional) {
-            lightIsDelta = true;
-            radiance = sampleDirectionalLight(
-                light.positionOrDirection, light.emission, shadowRayDir, shadowRayLen, lightPdf);
-        } else {
-            radiance = sampleAreaLight(
-                rng,
-                light.meshId,
-                light.emission,
-                refPoint,
-                shadowRayDir,
-                shadowRayLen,
-                lightPdf);
-        }
-    } else {
-        radiance = sampleEnvironmentLight(rng, shadowRayDir, shadowRayLen, lightPdf);
-    }
-    lightPdf *= uniformPdf;
-    return radiance / uniformPdf;
-}
-
-float getLightPdf(in int lightId, in vec3 hitVector, in vec3 hitNormal) {
-    if (scene.lights.data[lightId].type != kLightArea) {
-        return 0.0f;
-    }
-    const int meshId = scene.lights.data[lightId].meshId;
-    const float shapePdf = scene.instances.data[meshId].aliasTable.data[0].tau;
-
-    const float squaredDist = dot(hitVector, hitVector);
-    const float cosTheta = dot(hitNormal, -normalize(hitVector));
-    if (cosTheta <= 0.0f) {
-        return 0.0f;
-    }
-
-    const float uniformPdf = 1.0f / float(integrator.lightCount);
-    return uniformPdf * shapePdf * squaredDist / cosTheta;
+    LightSample ls = sampleLight(rng, lightId, refPoint);
+    ls.pdf *= selectionPdf;
+    ls.weight /= selectionPdf;
+    return ls;
 }
 
 #endif // CRISP_PATH_TRACER_LIGHT_SAMPLING_GLSL

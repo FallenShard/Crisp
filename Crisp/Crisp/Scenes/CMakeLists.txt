@@ -291,6 +291,10 @@ target_add_test_file(
     "PathTracer/Lights/point-light.part.glsl")
 target_add_test_file(
     CrispEnvironmentSamplingTest
+    "../Shaders/PathTracer/Lights/light-types.part.glsl"
+    "PathTracer/Lights/light-types.part.glsl")
+target_add_test_file(
+    CrispEnvironmentSamplingTest
     "../Shaders/PathTracer/Lights/directional-light.part.glsl"
     "PathTracer/Lights/directional-light.part.glsl")
 

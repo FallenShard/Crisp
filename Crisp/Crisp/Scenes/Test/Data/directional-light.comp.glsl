@@ -25,11 +25,7 @@ layout(push_constant, scalar) uniform PushConstants {
 pc;
 
 void main() {
-    vec3 shadowRayDir;
-    float shadowRayLen;
-    float pdf;
-    const vec3 irradiance =
-        sampleDirectionalLight(pc.direction, pc.irradiance, shadowRayDir, shadowRayLen, pdf);
-    results.data[0].directionAndDistance = vec4(shadowRayDir, shadowRayLen);
-    results.data[0].irradianceAndPdf = vec4(irradiance, pdf);
+    const LightSample ls = sampleDirectionalLight(pc.direction, pc.irradiance);
+    results.data[0].directionAndDistance = vec4(ls.direction, ls.distance);
+    results.data[0].irradianceAndPdf = vec4(ls.weight, ls.pdf);
 }
