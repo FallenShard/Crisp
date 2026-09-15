@@ -1,10 +1,7 @@
 #ifndef CRISP_PATH_TRACER_ENVIRONMENT_DISTRIBUTION_GLSL
 #define CRISP_PATH_TRACER_ENVIRONMENT_DISTRIBUTION_GLSL
 
-#ifndef CRISP_PATH_TRACER_ENVIRONMENT_CDF_TYPE_GLSL
-#define CRISP_PATH_TRACER_ENVIRONMENT_CDF_TYPE_GLSL
-layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer EnvironmentCdf { float data[]; };
-#endif
+#include "../Core/environment-cdf.part.glsl"
 
 uint environmentColumnCdfOffset(const uint width, const uint height, const uint row) {
     return height + 1u + row * (width + 1u);

@@ -67,9 +67,7 @@ BsdfEval evaluateRoughDielectric(PbrMaterialParameters material, vec3 wi, vec3 w
 }
 
 BsdfEval evaluateOpenPbr(PbrMaterialParameters material, vec3 wi, vec3 wo) {
-    // Compensation is a per-view setting the callable does not see, so next-event estimation and sampling agree
-    // on None until it is plumbed through the material record. See docs/openpbr-path-tracer.md.
-    const OpenPbrSurface surface = createOpenPbrSurface(material.surface, kEnergyCompensationNone);
+    const OpenPbrSurface surface = createOpenPbrSurface(material.surface, scene.energyCompensation);
     return BsdfEval(evaluateOpenPbrSurface(surface, wi, wo), computeOpenPbrSurfacePdf(surface, wi, wo));
 }
 

@@ -43,6 +43,28 @@ inline constexpr uint32_t kPathTracerSamplerHeapSlotCount = 3;
 
 inline constexpr uint32_t kInvalidMaterialTextureOffset = 0xFFFFFFFFu;
 
+// Mirrors PathTracedSceneAddresses in Shaders/PathTracer/Core/scene-addresses.part.glsl.
+struct PathTracedSceneAddresses {
+    VkDeviceAddress instances{0};
+    VkDeviceAddress materials{0};
+    VkDeviceAddress lights{0}; // Null when the view has no analytic lights.
+    VkDeviceAddress environmentCdf{0};
+    uint32_t energyCompensation{0};
+    uint32_t pad0{0};
+};
+
+static_assert(sizeof(PathTracedSceneAddresses) == 40);
+static_assert(std::is_standard_layout_v<PathTracedSceneAddresses>);
+static_assert(offsetof(PathTracedSceneAddresses, instances) == 0);
+static_assert(offsetof(PathTracedSceneAddresses, materials) == 8);
+static_assert(offsetof(PathTracedSceneAddresses, lights) == 16);
+static_assert(offsetof(PathTracedSceneAddresses, environmentCdf) == 24);
+static_assert(offsetof(PathTracedSceneAddresses, energyCompensation) == 32);
+
+// PathTracedInstance::flags. Must match the kInstance* constants in
+// Shaders/PathTracer/Core/instance.part.glsl.
+inline constexpr uint32_t kPathTracedInstanceTwoSidedShading = 1u << 0;
+
 // One record per TLAS instance. Must match PathTracedInstance in Shaders/PathTracer/Core/instance.part.glsl.
 struct PathTracedInstance {
     VkDeviceAddress positions{0};
@@ -52,7 +74,7 @@ struct PathTracedInstance {
     int32_t materialIndex{-1};
     int32_t lightId{-1};
     uint32_t materialTextureOffset{kInvalidMaterialTextureOffset};
-    uint32_t pad0{0};
+    uint32_t flags{0};
 };
 
 static_assert(sizeof(PathTracedInstance) == 48);
@@ -64,6 +86,7 @@ static_assert(offsetof(PathTracedInstance, aliasTable) == 24);
 static_assert(offsetof(PathTracedInstance, materialIndex) == 32);
 static_assert(offsetof(PathTracedInstance, lightId) == 36);
 static_assert(offsetof(PathTracedInstance, materialTextureOffset) == 40);
+static_assert(offsetof(PathTracedInstance, flags) == 44);
 
 struct PathTracerInstance {
     const Geometry* geometry{nullptr};

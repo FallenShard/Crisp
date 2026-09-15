@@ -17,7 +17,7 @@ constexpr std::array<const char*, 3> kEnergyCompensationNames{"None", "Kulla-Con
 constexpr std::array<PathTracerShaderStage, 3> kShaderStages{{
     {"PathTracer/pbr-trace.rgen", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
     {"PathTracer/trace.rmiss", VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR},
-    {"PathTracer/pbr-trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
+    {"PathTracer/trace.rchit", VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR},
 }};
 
 struct PathTracedPassData {
@@ -91,6 +91,7 @@ PathTracedView::PathTracedView(
             .triangles = geometry.getIndexBuffer()->getDeviceAddress(),
             .materialIndex = static_cast<int32_t>(instance.materialIndex),
             .materialTextureOffset = materialTextureOffset,
+            .flags = kPathTracedInstanceTwoSidedShading,
         });
     }
 
@@ -174,7 +175,7 @@ void PathTracedView::setVisibilityMask(const uint8_t mask) {
 }
 
 void PathTracedView::setEnergyCompensation(const EnergyCompensation mode) {
-    m_integratorParams.energyCompensation = static_cast<uint32_t>(mode);
+    m_sceneAddresses.energyCompensation = static_cast<uint32_t>(mode);
     resetAccumulation();
 }
 
@@ -238,7 +239,7 @@ void PathTracedView::drawGui(const bool allowEnvironmentIntensity) {
         ImGui::LabelText("Environment Intensity", "1.00 (unit radiance)");
     }
 
-    int compensation = static_cast<int>(m_integratorParams.energyCompensation);
+    int compensation = static_cast<int>(m_sceneAddresses.energyCompensation);
     if (ImGui::Combo(
             "Multiscatter Compensation",
             &compensation,

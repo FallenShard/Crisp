@@ -108,17 +108,16 @@ void sampleRoughDielectricBsdf(const PbrMaterialParameters material, inout BsdfS
 // next-event estimation against exactly this pdf. Compensation is a per-view setting the material record does
 // not carry, so evaluateOpenPbr in bsdf-eval.part.glsl must agree with the mode chosen here.
 void sampleOpenPbrBsdf(const PbrMaterialParameters material, inout BsdfSample bsdf) {
-    const OpenPbrSurface surface = createOpenPbrSurface(material.surface, kEnergyCompensationNone);
+    const OpenPbrSurface surface = createOpenPbrSurface(material.surface, scene.energyCompensation);
 
     bool sampledSpecular = false;
-    const vec3 weight =
+    bsdf.weight =
         sampleOpenPbrSurface(surface, bsdf.unitSample, bsdf.lobeSample, bsdf.wi, bsdf.wo, bsdf.pdf, sampledSpecular);
-    bsdf.f = weight * bsdf.pdf; // Recover f (BSDF * abs(cosThetaO)) from the sampled f / pdf weight.
+    bsdf.f = bsdf.weight * bsdf.pdf; // Recover f (BSDF * abs(cosThetaO)) for callers that want the value itself.
     bsdf.lobeType = sampledSpecular ? kLobeTypeGlossy : kLobeTypeDiffuse;
 }
 
-void sampleBsdf(inout BsdfSample bsdf) {
-    const PbrMaterialParameters material = scene.materials.data[bsdf.materialId];
+void sampleBsdf(const PbrMaterialParameters material, inout BsdfSample bsdf) {
     switch (material.type) {
     case kBsdfLambertian:
         sampleLambertianBsdf(material, bsdf);
@@ -146,7 +145,7 @@ void sampleBsdf(inout BsdfSample bsdf) {
         break;
     case kBsdfOpenPbr:
         sampleOpenPbrBsdf(material, bsdf);
-        break;
+        return;
     default: // An unknown tag absorbs the path rather than indexing past the table.
         bsdf.wo = vec3(0.0f);
         bsdf.f = vec3(0.0f);
@@ -154,6 +153,8 @@ void sampleBsdf(inout BsdfSample bsdf) {
         bsdf.lobeType = kLobeTypeDiffuse;
         break;
     }
+
+    bsdf.weight = bsdf.pdf > 0.0f ? bsdf.f / bsdf.pdf : vec3(0.0f);
 }
 
 #endif // CRISP_BSDF_SAMPLE_GLSL

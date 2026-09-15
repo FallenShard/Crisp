@@ -28,7 +28,6 @@ layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
     int sampleCount;
     int frameIdx;
     float environmentIntensity;
-    uint energyCompensation;
     uint visibilityMask;
     int environmentWidth;
     int environmentHeight;
@@ -45,7 +44,7 @@ layout(descriptor_heap, descriptor_stride = 64) uniform sampler heapSamplers[];
 #define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
 #define CRISP_MATERIAL_TEXTURE(heapIndex) sampler2D(heapTexture2Ds[heapIndex], heapSamplers[kMaterialSamplerSlot])
 
-#include "Core/pbr-scene.part.glsl"
+#include "Core/scene-addresses.part.glsl"
 #include "BSDFs/pbr-surface.part.glsl"
 #include "Textures/pbr-material-texture.part.glsl"
 #include "Lights/pbr-environment.part.glsl"
@@ -124,7 +123,7 @@ vec3 estimateEnvironmentDirect(const vec3 wiWorld, const vec2 lightSample) {
 
     PbrMaterialParameters material = scene.materials.data[hitInfo.materialId];
     applyMaterialTextures(material, hitInfo.materialTextureOffset, hitInfo.texCoord);
-    const PbrSurface surface = createPbrSurface(material, integrator.energyCompensation);
+    const PbrSurface surface = createPbrSurface(material, scene.energyCompensation);
 
     const vec3 wi = transpose(frame) * wiWorld;
     const vec3 f = evaluatePbrSurface(surface, wi, wo); // Already carries the cosine.

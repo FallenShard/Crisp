@@ -2,6 +2,7 @@
 #define CRISP_PATH_TRACER_TYPES_GLSL
 
 #include "../../Common/pbr-material.part.glsl"
+#include "../Lights/light-types.part.glsl"
 #include "hit-info.part.glsl"
 
 const float kVacuumIor = 1.0f;
@@ -14,13 +15,8 @@ const int kBsdfOrenNayar = 4;
 const int kBsdfSmoothConductor = 5;
 const int kBsdfRoughConductor = 6;
 const int kBsdfRoughDielectric = 7;
-// One complex, layered type rather than one lobe. Must match kBsdfOpenPbr in Scenes/RayTracingSceneData.hpp,
-// whose ordering also fixes the callable shader binding table.
+// One complex, layered type rather than one lobe. Must match kBsdfOpenPbr in Materials/PbrMaterial.hpp.
 const int kBsdfOpenPbr = 8;
-
-const int kLightArea = 0;
-const int kLightPoint = 1;
-const int kLightDirectional = 2;
 
 // Fixed layout of the sample vector. Every bounce restarts the sampler cursor at
 // kDimBounceBase + bounce * kDimsPerBounce, so a path that skips light sampling on a delta bounce
@@ -33,37 +29,24 @@ const uint kDimBsdf = 0u;            // 3 dimensions, relative to the bounce bas
 const uint kDimLight = 3u;           // 5 dimensions.
 const uint kDimRussianRoulette = 8u; // 1 dimension.
 
-// Callable payload shared by the closest-hit shader and every BSDF callable.
+// Scratch record the closest-hit stage hands to the switches in BSDFs/. It stopped being a callable payload
+// when callable dispatch was retired, so its layout is no longer an ABI.
 struct BsdfSample {
     vec2 unitSample;  // In, samples a direction or microfacet normal.
     float lobeSample; // In, independently selects a BSDF lobe.
-    uint materialId;  // In.
-
-    vec3 wi; // In, local space.
-
-    vec3 f;    // Out, BSDF(wi, wo) * abs(dot(n, wo)).
-    float pdf; // Out.
+    vec2 texCoord;    // In.
+    vec3 wi;          // In, local space.
 
     vec3 wo;       // Out, sampled direction in local space.
+    vec3 f;        // Out, BSDF(wi, wo) * abs(dot(n, wo)).
+    float pdf;     // Out.
+    vec3 weight;   // Out, f / pdf.
     uint lobeType; // Out, diffuse, glossy, or delta.
-
-    vec2 texCoord; // In.
 };
 
 struct BsdfEval {
     vec3 f; // BSDF(wi, wo) * abs(dot(n, wo)).
     float pdf;
-};
-
-struct LightParameters {
-    int type;
-    int meshId;
-    int pad0;
-    int pad1;
-    vec3 emission; // Area radiance, point power, or directional irradiance.
-    float pad2;
-    vec3 positionOrDirection;
-    float pad3;
 };
 
 #endif // CRISP_PATH_TRACER_TYPES_GLSL

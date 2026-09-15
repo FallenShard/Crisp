@@ -53,7 +53,7 @@ heapIntegrators[];
 // directional-albedo table even when no compensation mode is active.
 #define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
 
-#include "Core/scene.part.glsl"
+#include "Core/scene-addresses.part.glsl"
 #include "Core/intersection.part.glsl"
 #include "Textures/material-texture.part.glsl"
 #include "BSDFs/bsdf-eval.part.glsl"

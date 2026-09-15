@@ -18,15 +18,6 @@
 
 namespace crisp {
 
-// Mirrors PathTracedViewAddresses in Shaders/PathTracer/Core/pbr-scene.part.glsl.
-struct PathTracedViewAddresses {
-    VkDeviceAddress instances{0};
-    VkDeviceAddress materials{0};
-    VkDeviceAddress environmentCdf{0};
-};
-
-static_assert(sizeof(PathTracedViewAddresses) == 3 * sizeof(VkDeviceAddress));
-
 struct PathTracedGeometry {
     const Geometry* geometry{nullptr};
     glm::mat4 transform{1.0f};
@@ -89,7 +80,7 @@ public:
     }
 
     EnergyCompensation getEnergyCompensation() const {
-        return static_cast<EnergyCompensation>(m_integratorParams.energyCompensation);
+        return static_cast<EnergyCompensation>(m_sceneAddresses.energyCompensation);
     }
 
     void setMaterialTextures(
@@ -106,7 +97,7 @@ private:
 
     std::unique_ptr<VulkanImage> m_ggxAlbedoLut;
 
-    PathTracedViewAddresses m_sceneAddresses;
+    PathTracedSceneAddresses m_sceneAddresses;
 
     struct MaterialTextureBinding {
         uint32_t materialIndex;
@@ -115,23 +106,21 @@ private:
 
     std::vector<MaterialTextureBinding> m_materialTextureBindings;
 
-    // Must match the IntegratorParams block in Shaders/pbr-path-trace.rgen.glsl and .rchit.glsl.
+    // Must match the IntegratorParams block in Shaders/PathTracer/pbr-trace.rgen.glsl.
     struct IntegratorParameters {
         int32_t maxBounces{8};
         int32_t sampleCount{1};
         int32_t frameIdx{0};
         float environmentIntensity{1.0f};
-        uint32_t energyCompensation{static_cast<uint32_t>(EnergyCompensation::None)};
         uint32_t visibilityMask{0xFF};
         int32_t environmentWidth{0};
         int32_t environmentHeight{0};
     };
 
-    static_assert(sizeof(IntegratorParameters) == 32);
-    static_assert(offsetof(IntegratorParameters, energyCompensation) == 16);
-    static_assert(offsetof(IntegratorParameters, visibilityMask) == 20);
-    static_assert(offsetof(IntegratorParameters, environmentWidth) == 24);
-    static_assert(offsetof(IntegratorParameters, environmentHeight) == 28);
+    static_assert(sizeof(IntegratorParameters) == 28);
+    static_assert(offsetof(IntegratorParameters, visibilityMask) == 16);
+    static_assert(offsetof(IntegratorParameters, environmentWidth) == 20);
+    static_assert(offsetof(IntegratorParameters, environmentHeight) == 24);
 
     IntegratorParameters m_integratorParams;
 };

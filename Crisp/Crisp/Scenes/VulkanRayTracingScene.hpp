@@ -9,7 +9,6 @@
 #include <Crisp/Renderer/RenderNode.hpp>
 #include <Crisp/Renderer/Renderer.hpp>
 #include <Crisp/Scenes/PathTracer.hpp>
-#include <Crisp/Scenes/RayTracingSceneData.hpp>
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 #include <Crisp/Scenes/Scene.hpp>
 #include <Crisp/Vulkan/RayTracingPipelineBuilder.hpp>
@@ -73,7 +72,7 @@ private:
     static_assert(sizeof(IntegratorParameters) == 52);
 
     SceneDescription m_sceneDesc;
-    RayTracingSceneAddresses m_sceneAddresses;
+    PathTracedSceneAddresses m_sceneAddresses;
 
     IntegratorParameters m_integratorParams;
 

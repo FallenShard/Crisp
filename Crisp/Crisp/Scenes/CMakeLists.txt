@@ -217,7 +217,6 @@ add_cpp_static_library(CrispVulkanRayTracingScene
     "VulkanRayTracingScene.hpp"
     "RayTracingSceneParser.cpp"
     "RayTracingSceneParser.hpp"
-    "RayTracingSceneData.hpp"
 )
 target_link_libraries(CrispVulkanRayTracingScene
     PUBLIC Crisp::PathTracer
@@ -282,6 +281,10 @@ target_add_test_file(
     CrispEnvironmentSamplingTest
     "../Shaders/PathTracer/Lights/environment-distribution.part.glsl"
     "PathTracer/Lights/environment-distribution.part.glsl")
+target_add_test_file(
+    CrispEnvironmentSamplingTest
+    "../Shaders/PathTracer/Core/environment-cdf.part.glsl"
+    "PathTracer/Core/environment-cdf.part.glsl")
 target_add_test_file(
     CrispEnvironmentSamplingTest
     "../Shaders/PathTracer/Lights/point-light.part.glsl"

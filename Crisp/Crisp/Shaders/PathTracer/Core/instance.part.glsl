@@ -29,6 +29,9 @@ layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer Pat
     AliasTableElement data[];
 };
 
+// Must match the kPathTracedInstance* constants in Scenes/PathTracer.hpp.
+const uint kInstanceTwoSidedShading = 1u;
+
 // Must match PathTracedInstance in Scenes/PathTracer.hpp. One record per TLAS instance; geometry lives in
 // per-node buffers rather than one merged scene buffer, so the addresses travel with the instance.
 struct PathTracedInstance {
@@ -39,7 +42,7 @@ struct PathTracedInstance {
     int materialIndex;
     int lightId;                // -1 unless the shape is an area light.
     uint materialTextureOffset; // kInvalidMaterialTextureOffset when the material is untextured.
-    uint pad0;
+    uint flags;
 };
 
 layout(buffer_reference, scalar, buffer_reference_align = 8) readonly buffer PathTracedInstances {

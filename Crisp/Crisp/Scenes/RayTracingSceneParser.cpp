@@ -1,7 +1,5 @@
 #include <Crisp/Scenes/RayTracingSceneParser.hpp>
 
-#include <Crisp/Scenes/RayTracingSceneData.hpp>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
