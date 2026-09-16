@@ -31,6 +31,8 @@ enum class Model : uint32_t { // NOLINT
     MicrofacetNormal,
     RoughConductor,
     RoughDielectric,
+    HenyeyGreenstein,
+    Isotropic,
 };
 
 enum class Operation : uint32_t { Evaluate, Sample, Limit, CriticalAngle }; // NOLINT
@@ -524,6 +526,44 @@ TEST_F(BsdfValidationTest, RoughDielectricHandlesCriticalAngleAndTotalInternalRe
             EXPECT_FLOAT_EQ(results[i].reverseValue.w, 1.0f);
         }
     }
+}
+
+TEST_F(BsdfValidationTest, HenyeyGreensteinPhaseSamplesExpectedAnisotropy) {
+    const auto results = runValidationShader(*device_, Model::HenyeyGreenstein, Operation::Sample);
+    double meanCosine = 0.0;
+    for (size_t i = 0; i < results.size(); ++i) {
+        SCOPED_TRACE(i);
+        const glm::vec3 incomingDirection = results[i].wiAndAux;
+        const glm::vec3 outgoingDirection = results[i].woAndPdf;
+        const float phasePdf = results[i].woAndPdf.w;
+        const float phase = results[i].value.x;
+
+        EXPECT_TRUE(isFinite(outgoingDirection));
+        EXPECT_NEAR(glm::dot(outgoingDirection, outgoingDirection), 1.0f, 3e-5f);
+        EXPECT_TRUE(std::isfinite(phasePdf));
+        EXPECT_GT(phasePdf, 0.0f);
+        EXPECT_NEAR(phasePdf, phase, 2e-6f);
+
+        meanCosine += glm::dot(incomingDirection, outgoingDirection);
+    }
+
+    meanCosine /= static_cast<double>(results.size());
+    EXPECT_NEAR(meanCosine, 0.65, 1.5e-2);
+}
+
+TEST_F(BsdfValidationTest, IsotropicPhaseSamplesUniformSphere) {
+    const auto results = runValidationShader(*device_, Model::Isotropic, Operation::Sample);
+    double meanCosine = 0.0;
+    for (size_t i = 0; i < results.size(); ++i) {
+        SCOPED_TRACE(i);
+        const glm::vec3 direction = results[i].woAndPdf;
+        EXPECT_TRUE(isFinite(direction));
+        EXPECT_NEAR(glm::dot(direction, direction), 1.0f, 3e-5f);
+        EXPECT_NEAR(results[i].woAndPdf.w, 1.0f / (4.0f * std::numbers::pi_v<float>), 1e-7f);
+        EXPECT_FLOAT_EQ(results[i].value.x, results[i].woAndPdf.w);
+        meanCosine += direction.z;
+    }
+    EXPECT_NEAR(meanCosine / static_cast<double>(results.size()), 0.0, 1.5e-2);
 }
 
 } // namespace

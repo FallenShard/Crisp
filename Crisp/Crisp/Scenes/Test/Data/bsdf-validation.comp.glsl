@@ -10,6 +10,7 @@
 #include "BSDFs/smooth-conductor.part.glsl"
 #include "BSDFs/rough-conductor.part.glsl"
 #include "BSDFs/rough-dielectric.part.glsl"
+#include "PathTracer/PhaseFunctions/henyey-greenstein.part.glsl"
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
@@ -22,6 +23,8 @@ const uint kModelSmoothConductor = 5u;
 const uint kModelMicrofacetNormal = 6u;
 const uint kModelRoughConductor = 7u;
 const uint kModelRoughDielectric = 8u;
+const uint kModelHenyeyGreenstein = 9u;
+const uint kModelIsotropic = 10u;
 
 const uint kOperationEvaluate = 0u;
 const uint kOperationSample = 1u;
@@ -78,6 +81,25 @@ void main() {
     results[index].woAndPdf = vec4(0.0f);
     results[index].value = vec4(0.0f);
     results[index].reverseValue = vec4(0.0f);
+
+    if (model == kModelHenyeyGreenstein) {
+        const float anisotropy = 0.65f;
+        const vec3 incomingDirection = vec3(0.0f, 0.0f, 1.0f);
+        const vec3 wo = sampleHenyeyGreensteinPhase(bsdfSample, incomingDirection, anisotropy);
+        const float phasePdf = computeHenyeyGreensteinPhasePdf(incomingDirection, wo, anisotropy);
+        const float phase = evaluateHenyeyGreensteinPhase(incomingDirection, wo, anisotropy);
+        results[index].wiAndAux = vec4(incomingDirection, 0.0f);
+        results[index].woAndPdf = vec4(wo, phasePdf);
+        results[index].value = vec4(phase, 0.0f, 0.0f, 0.0f);
+        return;
+    }
+
+    if (model == kModelIsotropic) {
+        const vec3 wo = sampleIsotropicPhase(bsdfSample);
+        results[index].woAndPdf = vec4(wo, computeIsotropicPhasePdf());
+        results[index].value = vec4(evaluateIsotropicPhase(), 0.0f, 0.0f, 0.0f);
+        return;
+    }
 
     if (model == kModelLambertian || model == kModelOrenNayar || model == kModelMicrofacet ||
         model == kModelRoughConductor) {

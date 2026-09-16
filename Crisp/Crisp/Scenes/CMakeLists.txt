@@ -266,6 +266,14 @@ target_add_test_file(
     CrispBsdfValidationTest "../Shaders/BSDFs/rough-conductor.part.glsl" "BSDFs/rough-conductor.part.glsl")
 target_add_test_file(
     CrispBsdfValidationTest "../Shaders/BSDFs/rough-dielectric.part.glsl" "BSDFs/rough-dielectric.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest
+    "../Shaders/PathTracer/PhaseFunctions/isotropic.part.glsl"
+    "PathTracer/PhaseFunctions/isotropic.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest
+    "../Shaders/PathTracer/PhaseFunctions/henyey-greenstein.part.glsl"
+    "PathTracer/PhaseFunctions/henyey-greenstein.part.glsl")
 
 add_cpp_test(CrispEnvironmentSamplingTest
     "Test/EnvironmentSamplingTest.cpp")

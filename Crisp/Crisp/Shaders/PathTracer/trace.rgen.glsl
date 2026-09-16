@@ -60,6 +60,7 @@ heapViews[];
 #include "Textures/material-texture.part.glsl"
 #include "Textures/pbr-material-texture.part.glsl"
 #include "BSDFs/bsdf-eval.part.glsl"
+#include "PhaseFunctions/henyey-greenstein.part.glsl"
 
 BsdfEval evaluateBsdfWorldSpace(
     vec3 normal, vec3 wi, vec3 wo, uint materialId, uint materialTextureOffset, vec2 texCoord) {
