@@ -51,6 +51,46 @@ TEST(RayTracingSceneParserTest, ParsesDeterministicRenderSettings) {
     EXPECT_FLOAT_EQ(result->zFar, 250.0f);
 }
 
+TEST(RayTracingSceneParserTest, ParsesHomogeneousMedium) {
+    auto scene = createRenderSettings();
+    scene["integrator"]["type"] = "volume-mis-path-tracer";
+    scene["integrator"]["medium"] = {
+        {"type", "homogeneous"},
+        {"absorption", {0.03f, 0.05f, 0.07f}},
+        {"scattering", {0.12f, 0.15f, 0.18f}},
+        {"anisotropy", 0.6f},
+    };
+
+    const auto result = parseRayTracingRenderSettings(scene);
+    ASSERT_TRUE(result.hasValue());
+    EXPECT_EQ(result->samplingMode, 4);
+    EXPECT_EQ(result->mediumAbsorption, glm::vec3(0.03f, 0.05f, 0.07f));
+    EXPECT_EQ(result->mediumScattering, glm::vec3(0.12f, 0.15f, 0.18f));
+    EXPECT_FLOAT_EQ(result->mediumAnisotropy, 0.6f);
+}
+
+TEST(RayTracingSceneParserTest, ParsesHeterogeneousMedium) {
+    auto scene = createRenderSettings();
+    scene["integrator"]["type"] = "volume-mis-path-tracer";
+    scene["integrator"]["medium"] = {
+        {"type", "heterogeneous"},
+        {"absorption", {0.03f, 0.05f, 0.07f}},
+        {"scattering", {0.12f, 0.15f, 0.18f}},
+        {"anisotropy", 0.6f},
+        {"noiseScale", 2.5f},
+        {"bounds", {{"min", {-2.0f, 0.0f, -1.0f}}, {"max", {2.0f, 3.0f, 1.0f}}}},
+    };
+
+    const auto result = parseRayTracingRenderSettings(scene);
+    ASSERT_TRUE(result.hasValue());
+    EXPECT_EQ(result->mediumType, 1);
+    EXPECT_FLOAT_EQ(result->mediumNoiseScale, 2.5f);
+    EXPECT_EQ(result->mediumAbsorption, glm::vec3(0.03f, 0.05f, 0.07f));
+    EXPECT_EQ(result->mediumScattering, glm::vec3(0.12f, 0.15f, 0.18f));
+    EXPECT_EQ(result->mediumBoundsMin, glm::vec3(-2.0f, 0.0f, -1.0f));
+    EXPECT_EQ(result->mediumBoundsMax, glm::vec3(2.0f, 3.0f, 1.0f));
+}
+
 TEST(RayTracingSceneParserTest, RejectsInvalidDeterministicRenderSettings) {
     auto scene = createRenderSettings();
     scene["integrator"]["type"] = "normals";
@@ -75,6 +115,53 @@ TEST(RayTracingSceneParserTest, RejectsInvalidDeterministicRenderSettings) {
     scene = createRenderSettings();
     scene["camera"]["reconstructionFilter"]["type"] = "gaussian";
     EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("reconstruction filter"));
+
+    scene = createRenderSettings();
+    scene["integrator"]["medium"] = {{"type", "homogeneous"}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("only supported.*volume-mis"));
+
+    scene = createRenderSettings();
+    scene["integrator"]["type"] = "volume-mis-path-tracer";
+    scene["integrator"]["medium"] = {{"type", "grid"}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("medium.*homogeneous or heterogeneous"));
+
+    scene = createRenderSettings();
+    scene["integrator"]["type"] = "volume-mis-path-tracer";
+    scene["integrator"]["medium"] = {{"type", "heterogeneous"}, {"noiseScale", 0.0f}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("noiseScale.*positive"));
+
+    scene = createRenderSettings();
+    scene["integrator"]["type"] = "volume-mis-path-tracer";
+    scene["integrator"]["medium"] = {{"type", "homogeneous"}, {"noiseScale", 1.0f}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("noiseScale.*heterogeneous"));
+
+    scene = createRenderSettings();
+    scene["integrator"]["type"] = "volume-mis-path-tracer";
+    scene["integrator"]["medium"] = {
+        {"type", "heterogeneous"},
+        {"bounds", {{"min", {-1.0f, 0.0f, 0.0f}}, {"max", {-1.0f, 1.0f, 1.0f}}}},
+    };
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("bounds min.*less than max"));
+
+    scene = createRenderSettings();
+    scene["integrator"]["type"] = "volume-mis-path-tracer";
+    scene["integrator"]["medium"] = {{"type", "homogeneous"}, {"absorption", {-0.1f, 0.0f, 0.0f}}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("absorption"));
+
+    scene = createRenderSettings();
+    scene["integrator"]["type"] = "volume-mis-path-tracer";
+    scene["integrator"]["medium"] = {{"type", "homogeneous"}, {"scattering", {0.0f, -0.1f, 0.0f}}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("scattering"));
+
+    scene = createRenderSettings();
+    scene["integrator"]["type"] = "volume-mis-path-tracer";
+    scene["integrator"]["medium"] = {{"type", "homogeneous"}, {"extinction", 0.35f}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("RGB absorption and scattering"));
+
+    scene = createRenderSettings();
+    scene["integrator"]["type"] = "volume-mis-path-tracer";
+    scene["integrator"]["medium"] = {{"type", "homogeneous"}, {"anisotropy", -1.0f}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("anisotropy"));
 }
 
 TEST(RayTracingSceneParserTest, AssignsLogicalIndicesToBitmapReflectanceTextures) {

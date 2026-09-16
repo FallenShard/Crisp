@@ -3,6 +3,7 @@
 
 #include "Common/math-constants.part.glsl"
 #include "Common/warp.part.glsl"
+#include "Common/rng.part.glsl"
 #include "BSDFs/lambertian.part.glsl"
 #include "BSDFs/oren-nayar.part.glsl"
 #include "BSDFs/microfacet.part.glsl"
@@ -10,6 +11,9 @@
 #include "BSDFs/smooth-conductor.part.glsl"
 #include "BSDFs/rough-conductor.part.glsl"
 #include "BSDFs/rough-dielectric.part.glsl"
+#include "PathTracer/Media/homogeneous.part.glsl"
+#include "PathTracer/Media/heterogeneous.part.glsl"
+#include "PathTracer/Media/volume-bounds.part.glsl"
 #include "PathTracer/PhaseFunctions/henyey-greenstein.part.glsl"
 
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
@@ -25,6 +29,9 @@ const uint kModelRoughConductor = 7u;
 const uint kModelRoughDielectric = 8u;
 const uint kModelHenyeyGreenstein = 9u;
 const uint kModelIsotropic = 10u;
+const uint kModelHomogeneousRgb = 11u;
+const uint kModelHeterogeneousRgb = 12u;
+const uint kModelMediumBounds = 13u;
 
 const uint kOperationEvaluate = 0u;
 const uint kOperationSample = 1u;
@@ -98,6 +105,83 @@ void main() {
         const vec3 wo = sampleIsotropicPhase(bsdfSample);
         results[index].woAndPdf = vec4(wo, computeIsotropicPhasePdf());
         results[index].value = vec4(evaluateIsotropicPhase(), 0.0f, 0.0f, 0.0f);
+        return;
+    }
+
+    if (model == kModelHomogeneousRgb) {
+        const vec3 absorption = vec3(0.1f, 0.2f, 0.3f);
+        const vec3 scattering = vec3(0.3f, 0.1f, 0.0f);
+        const vec3 extinction = absorption + scattering;
+        const float segmentDistance = 2.0f;
+        const float distance = sampleHomogeneousMediumDistance(bsdfSample, extinction);
+        const bool mediumEvent = distance < segmentDistance;
+        const vec3 transmittance = homogeneousMediumTransmittance(
+            extinction, mediumEvent ? distance : segmentDistance);
+        const float distancePdf = homogeneousMediumDistancePdf(extinction, transmittance, mediumEvent);
+        const vec3 weight = mediumEvent
+            ? transmittance * scattering / distancePdf
+            : transmittance / distancePdf;
+        results[index].value = vec4(weight, mediumEvent ? 1.0f : 0.0f);
+        results[index].woAndPdf = vec4(distance, distancePdf, 0.0f, 0.0f);
+        return;
+    }
+
+    if (model == kModelHeterogeneousRgb) {
+        const vec3 scattering = vec3(0.3f, 0.1f, 0.0f);
+        const vec3 extinction = vec3(0.4f, 0.3f, 0.3f);
+        const vec3 boundsMin = vec3(-1.0f, -1.0f, -2.0f);
+        const vec3 boundsMax = vec3(1.0f, 1.0f, 2.0f);
+        const vec3 origin = vec3(0.0f, 0.0f, -1.0f);
+        const vec3 direction = vec3(0.0f, 0.0f, 1.0f);
+        const float segmentDistance = 2.0f;
+        const float noiseScale = 3.0f;
+        if (operation == kOperationEvaluate) {
+            const float distance = segmentDistance * (float(index) + 0.5f) / float(sampleCount);
+            results[index].value = vec4(
+                heterogeneousMediumDensity(origin + distance * direction, noiseScale, boundsMin, boundsMax),
+                heterogeneousMediumDensity(vec3(1.0f, 0.0f, 0.0f), noiseScale, boundsMin, boundsMax),
+                heterogeneousMediumDensity(vec3(0.0f, 1.0f, 0.0f), noiseScale, boundsMin, boundsMax),
+                0.0f);
+            return;
+        }
+        Sampler distanceSampler = createSampler(uvec2(index, 0u), 0u);
+        vec3 weight = vec3(1.0f);
+        const float distance = sampleHeterogeneousMediumDistance(
+            distanceSampler, origin, direction, segmentDistance, extinction, scattering,
+            noiseScale, boundsMin, boundsMax, weight);
+        Sampler shadowSampler = createMediumTrackingSampler(distanceSampler, 0u, 0x5ad039e5u);
+        const vec3 transmittance = heterogeneousMediumTransmittance(
+            shadowSampler, origin, direction, segmentDistance, extinction, noiseScale, boundsMin, boundsMax);
+        results[index].woAndPdf.x = distance;
+        results[index].value = vec4(weight, distance < segmentDistance ? 1.0f : 0.0f);
+        results[index].reverseValue = vec4(transmittance, 0.0f);
+        return;
+    }
+
+    if (model == kModelMediumBounds) {
+        const vec3 boundsMin = vec3(-1.0f);
+        const vec3 boundsMax = vec3(1.0f);
+        vec3 origin;
+        vec3 direction;
+        if (index % 4u == 0u) {
+            origin = vec3(-3.0f, 0.0f, 0.0f);
+            direction = vec3(1.0f, 0.0f, 0.0f);
+        } else if (index % 4u == 1u) {
+            origin = vec3(0.0f);
+            direction = vec3(0.0f, 0.0f, 1.0f);
+        } else if (index % 4u == 2u) {
+            origin = vec3(2.0f, 0.0f, 0.0f);
+            direction = vec3(0.0f, 1.0f, 0.0f);
+        } else {
+            origin = vec3(-3.0f, 0.0f, 0.0f);
+            direction = vec3(1.0f, 0.0f, 0.0f);
+        }
+        float entry;
+        float exitDistance;
+        const float maxDistance = index % 4u == 3u ? 2.5f : 10.0f;
+        const bool hit = intersectMediumBounds(
+            origin, direction, maxDistance, boundsMin, boundsMax, entry, exitDistance);
+        results[index].value = vec4(entry, exitDistance, hit ? 1.0f : 0.0f, 0.0f);
         return;
     }
 

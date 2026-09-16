@@ -101,24 +101,31 @@ void PathTracer::createAccelerationStructures(
 void PathTracer::createPipeline(const PathTracerCreateInfo& createInfo) {
     CRISP_CHECK(!createInfo.shaderStages.empty(), "A path tracer needs at least a ray generation shader.");
 
-    RayTracingPipelineBuilder pipelineBuilder(m_renderer->getDevice());
-    for (auto&& [idx, stage] : std::views::enumerate(createInfo.shaderStages)) {
-        pipelineBuilder.addShaderStage(m_renderer->getAssetPaths().getShaderSpvPath(std::string{stage.name}));
-        pipelineBuilder.addShaderGroup(static_cast<uint32_t>(idx), stage.groupType);
+    for (uint32_t variant = 0; variant < m_pipelines.size(); ++variant) {
+        RayTracingPipelineBuilder pipelineBuilder(m_renderer->getDevice());
+        for (auto&& [idx, stage] : std::views::enumerate(createInfo.shaderStages)) {
+            pipelineBuilder.addShaderStage(m_renderer->getAssetPaths().getShaderSpvPath(std::string{stage.name}));
+            pipelineBuilder.addShaderGroup(static_cast<uint32_t>(idx), stage.groupType);
+        }
+        // The raygen's sampler reserves three extra dimensions only in the volume variant.
+        pipelineBuilder.setSpecializationConstant(0, 0, variant);
+
+        const VkDescriptorSetAndBindingMappingEXT bvhMapping{
+            m_resourceHeap->makeMapping(kPathTracerBvhSlot, 1, 0, VK_SPIRV_RESOURCE_TYPE_ACCELERATION_STRUCTURE_BIT_EXT)};
+        pipelineBuilder.setDescriptorHeapMappings(0, {&bvhMapping, 1});
+
+        const VkPipeline pipeline{pipelineBuilder.createDescriptorHeapHandle()};
+        m_shaderBindingTables[variant] = pipelineBuilder.createShaderBindingTable(pipeline);
+        const char* variantName = variant == 0 ? "Surface" : "Volume";
+        m_renderer->getDevice().setObjectName(
+            *m_shaderBindingTables[variant].buffer,
+            fmt::format("{} {} Shader Binding Table", createInfo.debugName, variantName));
+
+        m_pipelines[variant] = std::make_unique<VulkanPipeline>(
+            m_renderer->getDevice(), pipeline, nullptr, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
+        m_pipelines[variant]->setDebugName(
+            m_renderer->getDevice(), fmt::format("{} {}", createInfo.debugName, variantName));
     }
-
-    const VkDescriptorSetAndBindingMappingEXT bvhMapping{
-        m_resourceHeap->makeMapping(kPathTracerBvhSlot, 1, 0, VK_SPIRV_RESOURCE_TYPE_ACCELERATION_STRUCTURE_BIT_EXT)};
-    pipelineBuilder.setDescriptorHeapMappings(0, {&bvhMapping, 1});
-
-    const VkPipeline pipeline{pipelineBuilder.createDescriptorHeapHandle()};
-    m_shaderBindingTable = pipelineBuilder.createShaderBindingTable(pipeline);
-    m_renderer->getDevice().setObjectName(
-        *m_shaderBindingTable.buffer, fmt::format("{} Shader Binding Table", createInfo.debugName));
-
-    m_pipeline = std::make_unique<VulkanPipeline>(
-        m_renderer->getDevice(), pipeline, nullptr, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
-    m_pipeline->setDebugName(m_renderer->getDevice(), createInfo.debugName);
 }
 
 void PathTracer::setStorageImage(const VulkanImageView& imageView) {
@@ -130,6 +137,13 @@ void PathTracer::setSceneIndex(const uint32_t sceneIndex) {
     m_sceneIndex = sceneIndex;
     m_resourceHeap->writeAccelerationStructure(kPathTracerBvhSlot, *m_topLevelAccelStructures[m_sceneIndex]);
     resetAccumulation();
+}
+
+void PathTracer::setHasParticipatingMedia(const bool hasParticipatingMedia) {
+    if (m_hasParticipatingMedia != hasParticipatingMedia) {
+        m_hasParticipatingMedia = hasParticipatingMedia;
+        resetAccumulation();
+    }
 }
 
 void PathTracer::updateCamera(const CameraParameters& cameraParams) {
@@ -172,11 +186,12 @@ void PathTracer::trace(
     uploadIfPending(*m_resourceHeap, encoder, *frameContext.stagingBelt, kRayTracingResourceHeapRead);
     uploadIfPending(*m_samplerHeap, encoder, *frameContext.stagingBelt, kRayTracingSamplerHeapRead);
 
-    encoder.bindPipeline(*m_pipeline);
+    const uint32_t variant = m_hasParticipatingMedia ? 1u : 0u;
+    encoder.bindPipeline(*m_pipelines[variant]);
     encoder.bindResourceHeap(*m_resourceHeap);
     encoder.bindSamplerHeap(*m_samplerHeap);
     encoder.pushData(pushData);
-    encoder.traceRays(m_shaderBindingTable.bindings, extent);
+    encoder.traceRays(m_shaderBindingTables[variant].bindings, extent);
 }
 
 std::unique_ptr<VulkanImage> bindGgxAlbedoLut(Renderer& renderer, PathTracer& pathTracer) {

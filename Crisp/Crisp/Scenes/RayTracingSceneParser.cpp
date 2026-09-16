@@ -319,6 +319,8 @@ Result<RayTracingRenderSettings> parseRayTracingRenderSettings(const nlohmann::j
             settings.samplingMode = 2;
         } else if (integratorType == "mis-direct-lighting") {
             settings.samplingMode = 3;
+        } else if (integratorType == "volume-mis-path-tracer") {
+            settings.samplingMode = 4;
         } else {
             return resultError("Unsupported GPU integrator type: {}", integratorType);
         }
@@ -337,6 +339,69 @@ Result<RayTracingRenderSettings> parseRayTracingRenderSettings(const nlohmann::j
         settings.maxDepth = integrator.value("maxDepth", settings.maxDepth);
         if (settings.maxDepth <= 0) {
             return resultError("Integrator maxDepth must be greater than zero");
+        }
+
+        if (integrator.contains("medium")) {
+            if (settings.samplingMode != 4) {
+                return resultError("Integrator medium is only supported by volume-mis-path-tracer");
+            }
+            const auto& medium = integrator["medium"];
+            if (!medium.is_object()) {
+                return resultError("Integrator medium must be an object");
+            }
+            const std::string mediumType = medium.value("type", std::string{});
+            if (mediumType != "homogeneous" && mediumType != "heterogeneous") {
+                return resultError("Integrator medium must have type homogeneous or heterogeneous");
+            }
+            settings.mediumType = mediumType == "heterogeneous" ? 1 : 0;
+            if (medium.contains("extinction") || medium.contains("scatteringAlbedo")) {
+                return resultError("Medium uses RGB absorption and scattering coefficients");
+            }
+
+            const auto parseMediumFloat = [&medium](const char* name, const float fallback) -> Result<float> {
+                if (medium.contains(name) && !medium[name].is_number()) {
+                    return resultError("Medium {} must be numeric", name);
+                }
+                const float value = medium.value(name, fallback);
+                if (!std::isfinite(value)) {
+                    return resultError("Medium {} must be finite", name);
+                }
+                return value;
+            };
+
+            if (medium.contains("absorption")) {
+                CRISP_TRY(settings.mediumAbsorption, parseVec3(medium["absorption"]));
+            }
+            if (medium.contains("scattering")) {
+                CRISP_TRY(settings.mediumScattering, parseVec3(medium["scattering"]));
+            }
+            CRISP_TRY(settings.mediumAnisotropy, parseMediumFloat("anisotropy", settings.mediumAnisotropy));
+            if (medium.contains("noiseScale") && settings.mediumType == 0) {
+                return resultError("Medium noiseScale is only supported for heterogeneous media");
+            }
+            CRISP_TRY(settings.mediumNoiseScale, parseMediumFloat("noiseScale", settings.mediumNoiseScale));
+            if (settings.mediumNoiseScale <= 0.0f) {
+                return resultError("Medium noiseScale must be positive");
+            }
+            if (medium.contains("bounds")) {
+                const auto& bounds = medium["bounds"];
+                if (!bounds.is_object() || !bounds.contains("min") || !bounds.contains("max")) {
+                    return resultError("Medium bounds requires min and max vectors");
+                }
+                CRISP_TRY(settings.mediumBoundsMin, parseVec3(bounds["min"]));
+                CRISP_TRY(settings.mediumBoundsMax, parseVec3(bounds["max"]));
+            }
+            if (glm::any(glm::greaterThanEqual(settings.mediumBoundsMin, settings.mediumBoundsMax))) {
+                return resultError("Medium bounds min must be less than max on every axis");
+            }
+
+            if (glm::any(glm::lessThan(settings.mediumAbsorption, glm::vec3{0.0f})) ||
+                glm::any(glm::lessThan(settings.mediumScattering, glm::vec3{0.0f}))) {
+                return resultError("Medium absorption and scattering must be nonnegative");
+            }
+            if (settings.mediumAnisotropy <= -1.0f || settings.mediumAnisotropy >= 1.0f) {
+                return resultError("Medium anisotropy must be strictly between -1 and 1");
+            }
         }
 
         if (!sampler.contains("samplesPerPixel") || !sampler["samplesPerPixel"].is_number_integer()) {

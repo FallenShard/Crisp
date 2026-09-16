@@ -33,10 +33,13 @@ enum class Model : uint32_t { // NOLINT
     RoughDielectric,
     HenyeyGreenstein,
     Isotropic,
+    HomogeneousRgb,
+    HeterogeneousRgb,
+    MediumBounds,
 };
 
 enum class Operation : uint32_t { Evaluate, Sample, Limit, CriticalAngle }; // NOLINT
-enum class MicrofacetType : int32_t { Ggx, Beckmann };       // NOLINT
+enum class MicrofacetType : int32_t { Ggx, Beckmann };                      // NOLINT
 
 struct PushConstants {
     uint32_t sampleCount;
@@ -564,6 +567,85 @@ TEST_F(BsdfValidationTest, IsotropicPhaseSamplesUniformSphere) {
         meanCosine += direction.z;
     }
     EXPECT_NEAR(meanCosine / static_cast<double>(results.size()), 0.0, 1.5e-2);
+}
+
+TEST_F(BsdfValidationTest, HomogeneousRgbDistanceSamplingPreservesChannelWeights) {
+    const auto results = runValidationShader(*device_, Model::HomogeneousRgb, Operation::Sample);
+    glm::dvec3 meanWeight{0.0};
+    for (size_t i = 0; i < results.size(); ++i) {
+        SCOPED_TRACE(i);
+        const glm::vec3 weight = results[i].value;
+        EXPECT_TRUE(isFinite(weight));
+        EXPECT_GE(weight.x, 0.0f);
+        EXPECT_GE(weight.y, 0.0f);
+        EXPECT_GE(weight.z, 0.0f);
+        EXPECT_GT(results[i].woAndPdf.y, 0.0f);
+        meanWeight += glm::dvec3{weight};
+    }
+    meanWeight /= static_cast<double>(results.size());
+
+    const glm::dvec3 extinction{0.4, 0.3, 0.3};
+    const glm::dvec3 scattering{0.3, 0.1, 0.0};
+    for (int channel = 0; channel < 3; ++channel) {
+        const double transmittance = std::exp(-2.0 * extinction[channel]);
+        const double expected = transmittance + scattering[channel] / extinction[channel] * (1.0 - transmittance);
+        EXPECT_NEAR(meanWeight[channel], expected, 1.5e-2);
+    }
+}
+
+TEST_F(BsdfValidationTest, HeterogeneousWoodcockSamplingPreservesRgbWeights) {
+    const auto densitySamples = runValidationShader(*device_, Model::HeterogeneousRgb, Operation::Evaluate);
+    const auto results = runValidationShader(*device_, Model::HeterogeneousRgb, Operation::Sample);
+    double meanDensity = 0.0;
+    for (const auto& result : densitySamples) {
+        EXPECT_GE(result.value.x, 0.0f);
+        EXPECT_LE(result.value.x, 1.0f);
+        meanDensity += result.value.x;
+    }
+    meanDensity /= static_cast<double>(densitySamples.size());
+    EXPECT_GT(meanDensity, 0.05);
+    EXPECT_FLOAT_EQ(densitySamples.front().value.y, 0.0f);
+    EXPECT_FLOAT_EQ(densitySamples.front().value.z, 0.0f);
+
+    glm::dvec3 meanWeight{0.0};
+    glm::dvec3 meanTransmittance{0.0};
+    for (const auto& result : results) {
+        const glm::vec3 weight = result.value;
+        const glm::vec3 transmittance = result.reverseValue;
+        EXPECT_TRUE(isFinite(weight));
+        EXPECT_TRUE(isFinite(transmittance));
+        EXPECT_GE(weight.x, 0.0f);
+        EXPECT_GE(weight.y, 0.0f);
+        EXPECT_GE(weight.z, 0.0f);
+        meanWeight += glm::dvec3{weight};
+        meanTransmittance += glm::dvec3{transmittance};
+    }
+    meanWeight /= static_cast<double>(results.size());
+    meanTransmittance /= static_cast<double>(results.size());
+
+    const glm::dvec3 extinction{0.4, 0.3, 0.3};
+    const glm::dvec3 scattering{0.3, 0.1, 0.0};
+    for (int channel = 0; channel < 3; ++channel) {
+        const double transmittance = std::exp(-2.0 * meanDensity * extinction[channel]);
+        const double expected = transmittance + scattering[channel] / extinction[channel] * (1.0 - transmittance);
+        EXPECT_NEAR(meanWeight[channel], expected, 2e-2);
+        EXPECT_NEAR(meanTransmittance[channel], transmittance, 2e-2);
+    }
+}
+
+TEST_F(BsdfValidationTest, MediumBoundsClipsRaySegmentsAndHandlesParallelRays) {
+    const auto results = runValidationShader(*device_, Model::MediumBounds, Operation::Sample);
+    ASSERT_GE(results.size(), 4u);
+    EXPECT_FLOAT_EQ(results[0].value.z, 1.0f);
+    EXPECT_FLOAT_EQ(results[0].value.x, 2.0f);
+    EXPECT_FLOAT_EQ(results[0].value.y, 4.0f);
+    EXPECT_FLOAT_EQ(results[1].value.z, 1.0f);
+    EXPECT_FLOAT_EQ(results[1].value.x, 0.0f);
+    EXPECT_FLOAT_EQ(results[1].value.y, 1.0f);
+    EXPECT_FLOAT_EQ(results[2].value.z, 0.0f);
+    EXPECT_FLOAT_EQ(results[3].value.z, 1.0f);
+    EXPECT_FLOAT_EQ(results[3].value.x, 2.0f);
+    EXPECT_FLOAT_EQ(results[3].value.y, 2.5f);
 }
 
 } // namespace

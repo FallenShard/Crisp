@@ -13,7 +13,7 @@
 #include "../Common/warp.part.glsl"
 #include "../Common/view.part.glsl"
 
-layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
+layout(descriptor_heap, descriptor_stride = 64, scalar) uniform IntegratorParams {
     int maxBounces;
     int sampleCount;
     int sampleOffset;
@@ -28,6 +28,14 @@ layout(descriptor_heap, descriptor_stride = 64) uniform IntegratorParams {
     int environmentHeight;
     float environmentIntensity;
     uint visibilityMask;
+
+    vec3 mediumAbsorption;
+    vec3 mediumScattering;
+    float mediumAnisotropy;
+    int mediumType;
+    float mediumNoiseScale;
+    vec3 mediumBoundsMin;
+    vec3 mediumBoundsMax;
 } heapIntegrators[];
 
 #define integrator heapIntegrators[kIntegratorSlot]
@@ -60,7 +68,30 @@ heapViews[];
 #include "Textures/material-texture.part.glsl"
 #include "Textures/pbr-material-texture.part.glsl"
 #include "BSDFs/bsdf-eval.part.glsl"
+#include "Media/homogeneous.part.glsl"
+#include "Media/heterogeneous.part.glsl"
+#include "Media/volume-bounds.part.glsl"
 #include "PhaseFunctions/henyey-greenstein.part.glsl"
+
+vec3 computeMediumShadowTransmittance(
+    const Sampler pathSampler, const uint bounceDim, const vec3 origin, const vec3 direction,
+    const float distance, const vec3 extinction) {
+    float entry;
+    float exitDistance;
+    if (!intersectMediumBounds(
+            origin, direction, distance, integrator.mediumBoundsMin, integrator.mediumBoundsMax,
+            entry, exitDistance)) {
+        return vec3(1.0f);
+    }
+    const float mediumDistance = exitDistance - entry;
+    if (integrator.mediumType == 0) {
+        return homogeneousMediumTransmittance(extinction, mediumDistance);
+    }
+    Sampler trackingSampler = createMediumTrackingSampler(pathSampler, bounceDim, 0x5ad039e5u);
+    return heterogeneousMediumTransmittance(
+        trackingSampler, origin + entry * direction, direction, mediumDistance, extinction,
+        integrator.mediumNoiseScale, integrator.mediumBoundsMin, integrator.mediumBoundsMax);
+}
 
 BsdfEval evaluateBsdfWorldSpace(
     vec3 normal, vec3 wi, vec3 wo, uint materialId, uint materialTextureOffset, vec2 texCoord) {
@@ -336,6 +367,189 @@ vec3 computeRadianceMisPt(inout Sampler rng) {
     return L;
 }
 
+vec3 computeRadianceVolumeMisPt(inout Sampler rng) {
+    // Sample a point on the screen and transform it into a ray.
+    const vec2 pixelSample = samplePixelPosition(rng);
+
+    vec4 rayOrigin;
+    vec4 rayDirection;
+    sampleRay(rayOrigin, rayDirection, pixelSample);
+    const float tMin = 1e-4;
+    const float tMax = view.nearFar[1];
+
+    // Accumulated radiance L for this path.
+    vec3 L = vec3(0.0f);
+    vec3 throughput = vec3(1.0f);
+
+    vec3 prevPosition = vec3(0.0f);
+    float prevSamplePdf = 0.0f;
+    bool prevWasDelta = false;
+
+    int bounceCount = 0;
+    while (true) {
+        const uint bounceDim = kDimBounceBase + uint(bounceCount) * kDimsPerBounce;
+        traceRay(rng, bounceDim, rayOrigin.xyz, tMin, rayDirection.xyz, tMax);
+
+        const bool surfaceHit = hitInfo.tHit >= tMin;
+        const float segmentDistance = surfaceHit ? hitInfo.tHit : tMax;
+        const vec3 extinction = integrator.mediumAbsorption + integrator.mediumScattering;
+        float mediumDistance = segmentDistance;
+        bool mediumEvent = false;
+        vec3 mediumWeight = vec3(1.0f);
+        float mediumEntry;
+        float mediumExit;
+        if (intersectMediumBounds(
+                rayOrigin.xyz, rayDirection.xyz, segmentDistance,
+                integrator.mediumBoundsMin, integrator.mediumBoundsMax, mediumEntry, mediumExit)) {
+            const float boundedDistance = mediumExit - mediumEntry;
+            if (integrator.mediumType == 0) {
+                setDimension(rng, bounceDim + kDimMediumDistance);
+                const float localDistance = sampleHomogeneousMediumDistance(next2D(rng), extinction);
+                mediumEvent = localDistance < boundedDistance;
+                const vec3 transmittance = homogeneousMediumTransmittance(
+                    extinction, mediumEvent ? localDistance : boundedDistance);
+                const float distancePdf = homogeneousMediumDistancePdf(extinction, transmittance, mediumEvent);
+                mediumWeight = mediumEvent
+                    ? transmittance * integrator.mediumScattering / max(distancePdf, 1e-30f)
+                    : transmittance / max(distancePdf, 1e-30f);
+                if (mediumEvent) {
+                    mediumDistance = mediumEntry + localDistance;
+                }
+            } else {
+                Sampler trackingSampler = createMediumTrackingSampler(rng, bounceDim + kDimMediumDistance, 0x9e3779b9u);
+                const float localDistance = sampleHeterogeneousMediumDistance(
+                    trackingSampler, rayOrigin.xyz + mediumEntry * rayDirection.xyz, rayDirection.xyz,
+                    boundedDistance, extinction, integrator.mediumScattering, integrator.mediumNoiseScale,
+                    integrator.mediumBoundsMin, integrator.mediumBoundsMax, mediumWeight);
+                mediumEvent = localDistance < boundedDistance;
+                if (mediumEvent) {
+                    mediumDistance = mediumEntry + localDistance;
+                }
+            }
+        }
+        throughput *= mediumWeight;
+
+        if (!mediumEvent && !surfaceHit) {
+            if (integrator.environmentEnabled != 0) {
+                float misWeight = 1.0f;
+                if (bounceCount > 0 && !prevWasDelta) {
+                    misWeight = balanceHeuristic(
+                        prevSamplePdf,
+                        computeLightPdf(environmentLightIndex(), rayDirection.xyz, vec3(0.0f), vec3(0.0f)));
+                }
+                L += throughput * evaluateEnvironmentLight(rayDirection.xyz) * misWeight;
+            }
+            break;
+        }
+
+        if (!mediumEvent && hitInfo.lightId != -1) {
+            float misWeight = 1.0f;
+            if (bounceCount > 0 && !prevWasDelta) {
+                const float lightPdf = computeLightPdf(
+                    uint(hitInfo.lightId),
+                    normalize(hitInfo.position - prevPosition),
+                    hitInfo.position - prevPosition,
+                    hitInfo.normal);
+                misWeight = balanceHeuristic(prevSamplePdf, lightPdf);
+            }
+            L += throughput * hitInfo.Le * misWeight;
+        } else if (!mediumEvent) {
+            L += throughput * hitInfo.Le;
+        }
+
+        if (bounceCount >= integrator.maxBounces) {
+            break;
+        }
+
+        vec3 p;
+        vec3 sampleWeight;
+        float samplePdf;
+        vec3 rayDir;
+        bool isDelta;
+
+        if (mediumEvent) {
+            p = rayOrigin.xyz + mediumDistance * rayDirection.xyz;
+            sampleWeight = vec3(1.0f);
+            isDelta = false;
+
+            setDimension(rng, bounceDim + kDimPhase);
+            rayDir = sampleHenyeyGreensteinPhase(next2D(rng), rayDirection.xyz, integrator.mediumAnisotropy);
+            samplePdf = computeHenyeyGreensteinPhasePdf(rayDirection.xyz, rayDir, integrator.mediumAnisotropy);
+
+            // The RGB scattering / distance-PDF weight is already in throughput. Attenuate the shadow segment.
+            setDimension(rng, bounceDim + kDimLight);
+            const LightSample lightSample = sampleUniformLight(rng, p);
+            if (lightSample.pdf > 0.0f) {
+                if (!traceShadowRay(p, 1e-5, lightSample.direction, lightSample.distance - 1e-5)) {
+                    const float phase = evaluateHenyeyGreensteinPhase(
+                        rayDirection.xyz, lightSample.direction, integrator.mediumAnisotropy);
+                    const float misWeight = lightSample.isDelta ? 1.0f : balanceHeuristic(lightSample.pdf, phase);
+                    const vec3 shadowTransmittance = computeMediumShadowTransmittance(
+                        rng, bounceDim, p, lightSample.direction, min(lightSample.distance, tMax), extinction);
+                    L += throughput * lightSample.weight * phase * shadowTransmittance * misWeight;
+                }
+            }
+        } else {
+            p = hitInfo.position;
+            sampleWeight = hitInfo.sampleWeight;
+            samplePdf = hitInfo.samplePdf;
+            rayDir = hitInfo.sampleDirection;
+            isDelta = hitInfo.sampleLobeType == kLobeTypeDelta;
+
+            // If the bounce wasn't a delta bounce (glass/mirror), do light sampling.
+            if (!isDelta) {
+                const vec3 n = hitInfo.normal;
+                const vec3 wi = -rayDirection.xyz;
+                const uint materialId = hitInfo.materialId;
+                const uint materialTextureOffset = hitInfo.materialTextureOffset;
+                const vec2 texCoord = hitInfo.texCoord;
+
+                setDimension(rng, bounceDim + kDimLight);
+                const LightSample lightSample = sampleUniformLight(rng, p);
+                if (lightSample.pdf > 0.0f) {
+                    if (!traceShadowRay(p, 1e-5, lightSample.direction, lightSample.distance - 1e-5)) {
+                        const BsdfEval lightDirectionBsdf = evaluateBsdfWorldSpace(
+                            n, wi, lightSample.direction, materialId, materialTextureOffset, texCoord);
+                        const float misWeight =
+                            lightSample.isDelta ? 1.0f : balanceHeuristic(lightSample.pdf, lightDirectionBsdf.pdf);
+                        const vec3 shadowTransmittance = computeMediumShadowTransmittance(
+                            rng, bounceDim, p, lightSample.direction, min(lightSample.distance, tMax), extinction);
+                        L += throughput * lightSample.weight * lightDirectionBsdf.f * shadowTransmittance * misWeight;
+                    }
+                }
+            }
+        }
+
+        if (dot(sampleWeight, sampleWeight) == 0.0f || dot(rayDir, rayDir) < 1e-12f) {
+            break;
+        }
+
+        // Adjust throughput for the sampled surface or medium event.
+        throughput *= sampleWeight;
+
+        prevPosition = p;
+        prevSamplePdf = samplePdf;
+        prevWasDelta = isDelta;
+
+        // Setup the next ray.
+        rayOrigin.xyz = p;
+        rayDirection.xyz = rayDir;
+
+        if (++bounceCount > kRussianRouletteCutoff) { // Cut the path tracing with Russian roulette.
+            const float maxCoeff = max(throughput.x, max(throughput.y, throughput.z));
+            const float q = 1.0f - min(maxCoeff, 0.99f);
+            setDimension(rng, bounceDim + kDimRussianRoulette);
+            if (next1D(rng) > q) {
+                throughput /= 1.0f - q;
+            } else {
+                break;
+            }
+        }
+    }
+
+    return L;
+}
+
 vec3 computeRadiance(inout Sampler rng) {
     // Sample a point on the screen and transform it into a ray.
     const vec2 pixelSample = samplePixelPosition(rng);
@@ -413,6 +627,8 @@ void main() {
             L += computeRadianceDirectLighting(rng);
         } else if (integrator.samplingMode == 3) {
             L += computeRadianceMis(rng);
+        } else if (integrator.samplingMode == 4) {
+            L += computeRadianceVolumeMisPt(rng);
         } else {
             L += computeRadianceMisPt(rng);
         }

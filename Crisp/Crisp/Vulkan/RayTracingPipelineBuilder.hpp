@@ -34,6 +34,7 @@ public:
 
     void addShaderStage(const std::filesystem::path& spvPath);
     void addShaderGroup(uint32_t shaderStageIdx, VkRayTracingShaderGroupTypeKHR type);
+    void setSpecializationConstant(uint32_t shaderStageIdx, uint32_t constantId, uint32_t value);
 
     // Resolves legacy (set, binding) decorations in one stage against the bound resource heap.
     void setDescriptorHeapMappings(
@@ -60,6 +61,13 @@ private:
     };
 
     std::vector<std::unique_ptr<StageMappings>> m_stageMappings;
+
+    struct StageSpecialization {
+        VkSpecializationMapEntry entry{};
+        uint32_t value{0};
+        VkSpecializationInfo info{};
+    };
+    std::vector<std::unique_ptr<StageSpecialization>> m_stageSpecializations;
 };
 
 } // namespace crisp

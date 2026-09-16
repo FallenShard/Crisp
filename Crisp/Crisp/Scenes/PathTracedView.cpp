@@ -215,6 +215,7 @@ int32_t PathTracedView::getAccumulatedSampleCount() const {
 }
 
 void PathTracedView::uploadFrameData(const FrameContext& frameContext) {
+    m_pathTracer->setHasParticipatingMedia(m_integratorParams.samplingMode == 4);
     m_integratorParams.sampleOffset = m_pathTracer->getAccumulatedSampleCount();
     m_pathTracer->uploadFrameData(frameContext, structAsBytes(m_integratorParams));
 }
@@ -231,6 +232,50 @@ void PathTracedView::drawGui(const bool allowEnvironmentIntensity) {
     }
     if (ImGui::SliderInt("Samples per Frame", &m_integratorParams.sampleCount, 1, 16)) {
         resetAccumulation();
+    }
+
+    static constexpr const char* kIntegratorNames[] = {
+        "MIS Path Tracing",
+        "Pure Path Tracing",
+        "Light-Sampled Direct",
+        "Direct MIS",
+        "Volume MIS Path Tracing",
+    };
+    if (ImGui::Combo(
+            "Integrator",
+            &m_integratorParams.samplingMode,
+            kIntegratorNames,
+            static_cast<int>(std::size(kIntegratorNames)))) {
+        resetAccumulation();
+    }
+    if (m_integratorParams.samplingMode == 4) {
+        static constexpr const char* kMediumTypes[] = {"Homogeneous", "Heterogeneous Smoke"};
+        if (ImGui::Combo("Medium", &m_integratorParams.mediumType, kMediumTypes, 2)) {
+            resetAccumulation();
+        }
+        if (m_integratorParams.mediumType == 1 &&
+            ImGui::SliderFloat("Noise Scale", &m_integratorParams.mediumNoiseScale, 0.1f, 8.0f, "%.2f")) {
+            resetAccumulation();
+        }
+        if (ImGui::DragFloat3("Volume Min", &m_integratorParams.mediumBoundsMin.x, 0.01f)) {
+            m_integratorParams.mediumBoundsMin =
+                glm::min(m_integratorParams.mediumBoundsMin, m_integratorParams.mediumBoundsMax - glm::vec3(0.001f));
+            resetAccumulation();
+        }
+        if (ImGui::DragFloat3("Volume Max", &m_integratorParams.mediumBoundsMax.x, 0.01f)) {
+            m_integratorParams.mediumBoundsMax =
+                glm::max(m_integratorParams.mediumBoundsMax, m_integratorParams.mediumBoundsMin + glm::vec3(0.001f));
+            resetAccumulation();
+        }
+        if (ImGui::SliderFloat3("Absorption RGB", &m_integratorParams.mediumAbsorption.x, 0.0f, 2.0f, "%.3f")) {
+            resetAccumulation();
+        }
+        if (ImGui::SliderFloat3("Scattering RGB", &m_integratorParams.mediumScattering.x, 0.0f, 2.0f, "%.3f")) {
+            resetAccumulation();
+        }
+        if (ImGui::SliderFloat("HG Anisotropy", &m_integratorParams.mediumAnisotropy, -0.95f, 0.95f, "%.2f")) {
+            resetAccumulation();
+        }
     }
     if (allowEnvironmentIntensity) {
         if (ImGui::SliderFloat("Environment Intensity", &m_integratorParams.environmentIntensity, 0.0f, 4.0f, "%.2f")) {

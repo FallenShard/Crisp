@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <memory>
 #include <span>
@@ -59,13 +60,28 @@ struct PathTracedIntegratorParams {
     int32_t environmentHeight{0};
     float environmentIntensity{1.0f};
     uint32_t visibilityMask{0xFFu};
+
+    glm::vec3 mediumAbsorption{0.01f};
+    glm::vec3 mediumScattering{0.09f};
+    float mediumAnisotropy{0.0f};
+    int32_t mediumType{0}; // 0: homogeneous, 1: procedural heterogeneous.
+    float mediumNoiseScale{3.0f};
+    glm::vec3 mediumBoundsMin{-1.0f, 0.0f, -1.0f};
+    glm::vec3 mediumBoundsMax{1.0f, 2.0f, 1.0f};
 };
 
-static_assert(sizeof(PathTracedIntegratorParams) == 48);
+static_assert(sizeof(PathTracedIntegratorParams) == 108);
 static_assert(std::is_standard_layout_v<PathTracedIntegratorParams>);
 static_assert(offsetof(PathTracedIntegratorParams, reconstructionFilter) == 16);
 static_assert(offsetof(PathTracedIntegratorParams, environmentWidth) == 32);
 static_assert(offsetof(PathTracedIntegratorParams, visibilityMask) == 44);
+static_assert(offsetof(PathTracedIntegratorParams, mediumAbsorption) == 48);
+static_assert(offsetof(PathTracedIntegratorParams, mediumScattering) == 60);
+static_assert(offsetof(PathTracedIntegratorParams, mediumAnisotropy) == 72);
+static_assert(offsetof(PathTracedIntegratorParams, mediumType) == 76);
+static_assert(offsetof(PathTracedIntegratorParams, mediumNoiseScale) == 80);
+static_assert(offsetof(PathTracedIntegratorParams, mediumBoundsMin) == 84);
+static_assert(offsetof(PathTracedIntegratorParams, mediumBoundsMax) == 96);
 
 // Mirrors PathTracedSceneAddresses in Shaders/PathTracer/Core/scene-addresses.part.glsl.
 struct PathTracedSceneAddresses {
@@ -157,6 +173,8 @@ public:
 
     void setSceneIndex(uint32_t sceneIndex);
 
+    void setHasParticipatingMedia(bool hasParticipatingMedia);
+
     uint32_t getSceneCount() const {
         return static_cast<uint32_t>(m_topLevelAccelStructures.size());
     }
@@ -188,8 +206,9 @@ private:
 
     std::unique_ptr<VulkanResourceHeap> m_resourceHeap;
     std::unique_ptr<VulkanSamplerHeap> m_samplerHeap;
-    std::unique_ptr<VulkanPipeline> m_pipeline;
-    ShaderBindingTable m_shaderBindingTable;
+    std::array<std::unique_ptr<VulkanPipeline>, 2> m_pipelines;
+    std::array<ShaderBindingTable, 2> m_shaderBindingTables;
+    bool m_hasParticipatingMedia{false};
 
     std::unique_ptr<VulkanBuffer> m_cameraBuffer;
     std::unique_ptr<VulkanBuffer> m_integratorBuffer;

@@ -68,6 +68,21 @@ void RayTracingPipelineBuilder::addShaderGroup(
     }
 }
 
+void RayTracingPipelineBuilder::setSpecializationConstant(
+    const uint32_t shaderStageIdx, const uint32_t constantId, const uint32_t value) {
+    auto specialization = std::make_unique<StageSpecialization>();
+    specialization->entry = {.constantID = constantId, .offset = 0, .size = sizeof(uint32_t)};
+    specialization->value = value;
+    specialization->info = {
+        .mapEntryCount = 1,
+        .pMapEntries = &specialization->entry,
+        .dataSize = sizeof(uint32_t),
+        .pData = &specialization->value,
+    };
+    m_stages.at(shaderStageIdx).pSpecializationInfo = &specialization->info;
+    m_stageSpecializations.push_back(std::move(specialization));
+}
+
 void RayTracingPipelineBuilder::setDescriptorHeapMappings(
     const uint32_t shaderStageIdx, const std::span<const VkDescriptorSetAndBindingMappingEXT> mappings) {
     auto stage = std::make_unique<StageMappings>();

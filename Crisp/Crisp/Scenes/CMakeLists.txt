@@ -268,6 +268,20 @@ target_add_test_file(
     CrispBsdfValidationTest "../Shaders/BSDFs/rough-dielectric.part.glsl" "BSDFs/rough-dielectric.part.glsl")
 target_add_test_file(
     CrispBsdfValidationTest
+    "../Shaders/PathTracer/Media/homogeneous.part.glsl"
+    "PathTracer/Media/homogeneous.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest
+    "../Shaders/PathTracer/Media/heterogeneous.part.glsl"
+    "PathTracer/Media/heterogeneous.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest
+    "../Shaders/PathTracer/Media/volume-bounds.part.glsl"
+    "PathTracer/Media/volume-bounds.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest "../Shaders/Common/rng.part.glsl" "Common/rng.part.glsl")
+target_add_test_file(
+    CrispBsdfValidationTest
     "../Shaders/PathTracer/PhaseFunctions/isotropic.part.glsl"
     "PathTracer/PhaseFunctions/isotropic.part.glsl")
 target_add_test_file(

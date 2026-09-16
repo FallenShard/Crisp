@@ -127,6 +127,13 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     m_integratorParams.seed = renderSettings.seed;
     m_integratorParams.samplingMode = renderSettings.samplingMode;
     m_integratorParams.reconstructionFilter = static_cast<int32_t>(renderSettings.reconstructionFilter);
+    m_integratorParams.mediumAbsorption = renderSettings.mediumAbsorption;
+    m_integratorParams.mediumScattering = renderSettings.mediumScattering;
+    m_integratorParams.mediumAnisotropy = renderSettings.mediumAnisotropy;
+    m_integratorParams.mediumType = renderSettings.mediumType;
+    m_integratorParams.mediumNoiseScale = renderSettings.mediumNoiseScale;
+    m_integratorParams.mediumBoundsMin = renderSettings.mediumBoundsMin;
+    m_integratorParams.mediumBoundsMax = renderSettings.mediumBoundsMax;
     m_captureAfterSamples = m_closeAfterScreenshot ? renderSettings.samplesPerPixel : 0;
     m_sceneDesc = parseSceneDescription(json["shapes"], json.value("lights", nlohmann::json::array())).unwrap();
 
@@ -295,6 +302,7 @@ void VulkanRayTracingScene::update(const UpdateParams& updateParams) {
 void VulkanRayTracingScene::render(const FrameContext& frameContext) {
     CRISP_TRACE_VK_SCOPE("VulkanRayTracingScene::render", frameContext.commandEncoder);
 
+    m_pathTracer->setHasParticipatingMedia(m_integratorParams.samplingMode == 4);
     const int32_t accumulatedSamples = m_pathTracer->getAccumulatedSampleCount();
     m_integratorParams.sampleOffset = accumulatedSamples;
     m_integratorParams.sampleCount = m_samplesPerFrame;
@@ -413,6 +421,39 @@ void VulkanRayTracingScene::drawGui() {
     if (ImGui::RadioButton("Direct MIS", m_integratorParams.samplingMode == 3)) {
         m_integratorParams.samplingMode = 3;
         m_pathTracer->resetAccumulation();
+    }
+    if (ImGui::RadioButton("Volume MIS Path Tracing", m_integratorParams.samplingMode == 4)) {
+        m_integratorParams.samplingMode = 4;
+        m_pathTracer->resetAccumulation();
+    }
+    if (m_integratorParams.samplingMode == 4) {
+        static constexpr const char* kMediumTypes[] = {"Homogeneous", "Heterogeneous Smoke"};
+        if (ImGui::Combo("Medium", &m_integratorParams.mediumType, kMediumTypes, 2)) {
+            m_pathTracer->resetAccumulation();
+        }
+        if (m_integratorParams.mediumType == 1 &&
+            ImGui::SliderFloat("Noise Scale", &m_integratorParams.mediumNoiseScale, 0.1f, 8.0f, "%.2f")) {
+            m_pathTracer->resetAccumulation();
+        }
+        if (ImGui::DragFloat3("Volume Min", &m_integratorParams.mediumBoundsMin.x, 0.01f)) {
+            m_integratorParams.mediumBoundsMin =
+                glm::min(m_integratorParams.mediumBoundsMin, m_integratorParams.mediumBoundsMax - glm::vec3(0.001f));
+            m_pathTracer->resetAccumulation();
+        }
+        if (ImGui::DragFloat3("Volume Max", &m_integratorParams.mediumBoundsMax.x, 0.01f)) {
+            m_integratorParams.mediumBoundsMax =
+                glm::max(m_integratorParams.mediumBoundsMax, m_integratorParams.mediumBoundsMin + glm::vec3(0.001f));
+            m_pathTracer->resetAccumulation();
+        }
+        if (ImGui::SliderFloat3("Absorption RGB", &m_integratorParams.mediumAbsorption.x, 0.0f, 2.0f, "%.3f")) {
+            m_pathTracer->resetAccumulation();
+        }
+        if (ImGui::SliderFloat3("Scattering RGB", &m_integratorParams.mediumScattering.x, 0.0f, 2.0f, "%.3f")) {
+            m_pathTracer->resetAccumulation();
+        }
+        if (ImGui::SliderFloat("HG Anisotropy", &m_integratorParams.mediumAnisotropy, -0.95f, 0.95f, "%.2f")) {
+            m_pathTracer->resetAccumulation();
+        }
     }
     if (ImGui::Button("Take Screenshot")) {
         m_screenshotRequested = true;

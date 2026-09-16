@@ -7,10 +7,13 @@
 
 const uint kDimPixelFilter = 0u; // 2 dimensions.
 const uint kDimBounceBase = 2u;
-const uint kDimsPerBounce = 9u;
+layout(constant_id = 0) const bool kHasParticipatingMedia = false;
+const uint kDimsPerBounce = kHasParticipatingMedia ? 13u : 9u;
 const uint kDimBsdf = 0u;            // 3 dimensions, relative to the bounce base.
 const uint kDimLight = 3u;           // 5 dimensions.
 const uint kDimRussianRoulette = 8u; // 1 dimension.
+const uint kDimMediumDistance = kHasParticipatingMedia ? 9u : 0u;  // 2 dimensions: RGB channel and distance.
+const uint kDimPhase = kHasParticipatingMedia ? 11u : 0u;         // 2 dimensions.
 
 const float kVacuumIor = 1.0f;
 

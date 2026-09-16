@@ -27,6 +27,14 @@ struct RayTracingRenderSettings {
     int32_t samplingMode{0};
     ReconstructionFilterType reconstructionFilter{ReconstructionFilterType::Box};
 
+    glm::vec3 mediumAbsorption{0.01f};
+    glm::vec3 mediumScattering{0.09f};
+    float mediumAnisotropy{0.0f};
+    int32_t mediumType{0};
+    float mediumNoiseScale{3.0f};
+    glm::vec3 mediumBoundsMin{-1.0f, 0.0f, -1.0f};
+    glm::vec3 mediumBoundsMax{1.0f, 2.0f, 1.0f};
+
     glm::vec3 cameraPosition{0.0f, 1.0f, 10.0f};
     glm::vec3 cameraTarget{0.0f, 1.0f, 9.0f};
     glm::vec3 cameraUp{0.0f, 1.0f, 0.0f};
