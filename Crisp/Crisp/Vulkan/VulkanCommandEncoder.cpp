@@ -15,6 +15,88 @@ void VulkanCommandEncoder::setScissor(const VkRect2D& scissorRect) const {
     vkCmdSetScissor(m_cmdBuffer, 0, 1, &scissorRect);
 }
 
+void VulkanCommandEncoder::setLineWidth(const float lineWidth) const {
+    vkCmdSetLineWidth(m_cmdBuffer, lineWidth);
+}
+
+void VulkanCommandEncoder::setDepthBias(const float constantFactor, const float slopeFactor, const float clamp) const {
+    vkCmdSetDepthBias(m_cmdBuffer, constantFactor, clamp, slopeFactor);
+}
+
+void VulkanCommandEncoder::setBlendConstants(const std::array<float, 4>& blendConstants) const {
+    vkCmdSetBlendConstants(m_cmdBuffer, blendConstants.data());
+}
+
+void VulkanCommandEncoder::setDepthBounds(const float minDepthBounds, const float maxDepthBounds) const {
+    vkCmdSetDepthBounds(m_cmdBuffer, minDepthBounds, maxDepthBounds);
+}
+
+void VulkanCommandEncoder::setStencilCompareMask(
+    const VkStencilFaceFlags faceMask, const uint32_t compareMask) const {
+    vkCmdSetStencilCompareMask(m_cmdBuffer, faceMask, compareMask);
+}
+
+void VulkanCommandEncoder::setStencilWriteMask(const VkStencilFaceFlags faceMask, const uint32_t writeMask) const {
+    vkCmdSetStencilWriteMask(m_cmdBuffer, faceMask, writeMask);
+}
+
+void VulkanCommandEncoder::setStencilReference(const VkStencilFaceFlags faceMask, const uint32_t reference) const {
+    vkCmdSetStencilReference(m_cmdBuffer, faceMask, reference);
+}
+
+void VulkanCommandEncoder::setCullMode(const VkCullModeFlags cullMode) const {
+    vkCmdSetCullMode(m_cmdBuffer, cullMode);
+}
+
+void VulkanCommandEncoder::setFrontFace(const VkFrontFace frontFace) const {
+    vkCmdSetFrontFace(m_cmdBuffer, frontFace);
+}
+
+void VulkanCommandEncoder::setPrimitiveTopology(const VkPrimitiveTopology topology) const {
+    vkCmdSetPrimitiveTopology(m_cmdBuffer, topology);
+}
+
+void VulkanCommandEncoder::setDepthTestEnable(const bool enabled) const {
+    vkCmdSetDepthTestEnable(m_cmdBuffer, enabled ? VK_TRUE : VK_FALSE);
+}
+
+void VulkanCommandEncoder::setDepthWriteEnable(const bool enabled) const {
+    vkCmdSetDepthWriteEnable(m_cmdBuffer, enabled ? VK_TRUE : VK_FALSE);
+}
+
+void VulkanCommandEncoder::setDepthCompareOp(const VkCompareOp compareOp) const {
+    vkCmdSetDepthCompareOp(m_cmdBuffer, compareOp);
+}
+
+void VulkanCommandEncoder::setDepthBoundsTestEnable(const bool enabled) const {
+    vkCmdSetDepthBoundsTestEnable(m_cmdBuffer, enabled ? VK_TRUE : VK_FALSE);
+}
+
+void VulkanCommandEncoder::setStencilTestEnable(const bool enabled) const {
+    vkCmdSetStencilTestEnable(m_cmdBuffer, enabled ? VK_TRUE : VK_FALSE);
+}
+
+void VulkanCommandEncoder::setStencilOp(
+    const VkStencilFaceFlags faceMask,
+    const VkStencilOp failOp,
+    const VkStencilOp passOp,
+    const VkStencilOp depthFailOp,
+    const VkCompareOp compareOp) const {
+    vkCmdSetStencilOp(m_cmdBuffer, faceMask, failOp, passOp, depthFailOp, compareOp);
+}
+
+void VulkanCommandEncoder::setRasterizerDiscardEnable(const bool enabled) const {
+    vkCmdSetRasterizerDiscardEnable(m_cmdBuffer, enabled ? VK_TRUE : VK_FALSE);
+}
+
+void VulkanCommandEncoder::setDepthBiasEnable(const bool enabled) const {
+    vkCmdSetDepthBiasEnable(m_cmdBuffer, enabled ? VK_TRUE : VK_FALSE);
+}
+
+void VulkanCommandEncoder::setPrimitiveRestartEnable(const bool enabled) const {
+    vkCmdSetPrimitiveRestartEnable(m_cmdBuffer, enabled ? VK_TRUE : VK_FALSE);
+}
+
 void VulkanCommandEncoder::bindPipeline(const VulkanPipeline& pipeline) const {
     vkCmdBindPipeline(m_cmdBuffer, pipeline.getBindPoint(), pipeline.getHandle());
 }

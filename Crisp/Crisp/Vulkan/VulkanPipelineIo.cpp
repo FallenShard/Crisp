@@ -188,16 +188,34 @@ bool shaderStagesMatchTessellation(const FlatHashMap<VkShaderStageFlagBits, std:
         CRISP_CHECK(json["viewports"].is_array());
         for (const auto& viewport : json["viewports"]) {
             if (viewport == "pass") {
-                builder.setViewport({}).addDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
+                builder.setViewport({}).addDynamicState(PipelineDynamicState::Viewport);
             }
         }
         CRISP_CHECK(json["scissors"].is_array());
         for (const auto& scissor : json["scissors"]) {
             if (scissor == "pass") {
-                builder.setScissor({}).addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
+                builder.setScissor({}).addDynamicState(PipelineDynamicState::Scissor);
             }
         }
     }
+    return {};
+}
+
+[[nodiscard]] Result<> readDynamicState(const nlohmann::json& json, PipelineBuilder& builder) {
+    CRISP_CHECK(json.is_array());
+
+    for (const auto& entryJson : json) {
+        if (!entryJson.is_string()) {
+            return resultError("Pipeline field 'dynamicState' must contain only strings.");
+        }
+        const auto& name = entryJson.get_ref<const std::string&>();
+        const auto state = parsePipelineDynamicState(name);
+        if (state == PipelineDynamicState::None) {
+            return resultError("Pipeline declares unknown dynamic state '{}'.", name);
+        }
+        builder.addDynamicState(state);
+    }
+
     return {};
 }
 
@@ -478,8 +496,8 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     if (hasField<JsonType::Object>(pipelineJson, "viewport")) {
         readViewportState(pipelineJson["viewport"], builder).unwrap();
     } else {
-        builder.setViewport({}).addDynamicState(VK_DYNAMIC_STATE_VIEWPORT);
-        builder.setScissor({}).addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
+        builder.setViewport({}).addDynamicState(PipelineDynamicState::Viewport);
+        builder.setScissor({}).addDynamicState(PipelineDynamicState::Scissor);
     }
 
     // Optional state for overrides.
@@ -499,6 +517,13 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
         readDepthStencilState(pipelineJson["depthStencil"], builder).unwrap();
     }
 
+    if (pipelineJson.contains("dynamicState")) {
+        if (!pipelineJson["dynamicState"].is_array()) {
+            return resultError("Pipeline field 'dynamicState' must be an array.");
+        }
+        CRISP_TRY(readDynamicState(pipelineJson["dynamicState"], builder), "Invalid dynamic state");
+    }
+
     if (params.descriptorHeapParams) {
         return builder.createDescriptorHeap(device, params.rasterizationPassDescriptor);
     }
@@ -516,7 +541,9 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromJson(
     return builder.create(device, layoutBuilder.create(device), params.rasterizationPassDescriptor);
 }
 
-Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFileImpl(
+} // namespace
+
+Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
     const std::filesystem::path& path,
     const std::filesystem::path& spvShaderDir,
     const VulkanDevice& device,
@@ -529,17 +556,6 @@ Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFileImpl(
         "Failed to create pipeline from json");
     device.setObjectName(*pipeline, fmt::format("{} Pipeline", path.stem().string()));
     return pipeline;
-}
-
-} // namespace
-
-Result<std::unique_ptr<VulkanPipeline>> createPipelineFromFile(
-    const std::filesystem::path& path,
-    const std::filesystem::path& spvShaderDir,
-    const VulkanDevice& device,
-    const VkDescriptorSetLayout bindlessDescriptorSetLayout,
-    const VulkanPipelineParams& params) {
-    return createPipelineFromFileImpl(path, spvShaderDir, device, bindlessDescriptorSetLayout, params);
 }
 
 } // namespace crisp

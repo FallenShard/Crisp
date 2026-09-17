@@ -197,6 +197,15 @@ target_link_libraries(
 )
 
 add_cpp_test(
+    CrispPipelineBuilderTest
+    "Test/PipelineBuilderTest.cpp"
+)
+target_link_libraries(
+    CrispPipelineBuilderTest
+    PRIVATE Crisp::PipelineBuilder
+)
+
+add_cpp_test(
     CrispPipelineLayoutBuilderTest
     "Test/PipelineLayoutBuilderTest.cpp"
 )

@@ -1,5 +1,8 @@
 #include <Crisp/Vulkan/PipelineBuilder.hpp>
 
+#include <array>
+#include <ranges>
+
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanChecks.hpp>
@@ -29,19 +32,46 @@ std::vector<VkVertexInputAttributeDescription> generateVertexInputAttributes(
     return vertexAttribs;
 }
 
-PipelineDynamicState getPipelineDynamicState(VkDynamicState dynamicState) {
-    switch (dynamicState) {
-    case VK_DYNAMIC_STATE_VIEWPORT:
-        return PipelineDynamicState::Viewport;
-    case VK_DYNAMIC_STATE_SCISSOR:
-        return PipelineDynamicState::Scissor;
-    default: {
-        spdlog::critical("Invalid vulkan dynamic state received!");
-    }
-    }
+struct DynamicStateMapping {
+    PipelineDynamicState state;
+    VkDynamicState vkState;
+    std::string_view name; // Spelling accepted by the "dynamicState" array in pipeline JSON.
+};
 
-    return static_cast<PipelineDynamicState>(0);
-}
+// The one place the three spellings of a dynamic state are tied together, so they cannot drift apart.
+constexpr std::array kDynamicStateMappings{
+    DynamicStateMapping{PipelineDynamicState::Viewport, VK_DYNAMIC_STATE_VIEWPORT, "viewport"},
+    DynamicStateMapping{PipelineDynamicState::Scissor, VK_DYNAMIC_STATE_SCISSOR, "scissor"},
+    DynamicStateMapping{PipelineDynamicState::LineWidth, VK_DYNAMIC_STATE_LINE_WIDTH, "lineWidth"},
+    DynamicStateMapping{PipelineDynamicState::DepthBias, VK_DYNAMIC_STATE_DEPTH_BIAS, "depthBias"},
+    DynamicStateMapping{PipelineDynamicState::BlendConstants, VK_DYNAMIC_STATE_BLEND_CONSTANTS, "blendConstants"},
+    DynamicStateMapping{PipelineDynamicState::DepthBounds, VK_DYNAMIC_STATE_DEPTH_BOUNDS, "depthBounds"},
+    DynamicStateMapping{
+        PipelineDynamicState::StencilCompareMask, VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK, "stencilCompareMask"},
+    DynamicStateMapping{PipelineDynamicState::StencilWriteMask, VK_DYNAMIC_STATE_STENCIL_WRITE_MASK, "stencilWriteMask"},
+    DynamicStateMapping{PipelineDynamicState::StencilReference, VK_DYNAMIC_STATE_STENCIL_REFERENCE, "stencilReference"},
+    DynamicStateMapping{PipelineDynamicState::CullMode, VK_DYNAMIC_STATE_CULL_MODE, "cullMode"},
+    DynamicStateMapping{PipelineDynamicState::FrontFace, VK_DYNAMIC_STATE_FRONT_FACE, "frontFace"},
+    DynamicStateMapping{
+        PipelineDynamicState::PrimitiveTopology, VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY, "primitiveTopology"},
+    DynamicStateMapping{PipelineDynamicState::DepthTestEnable, VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE, "depthTestEnable"},
+    DynamicStateMapping{PipelineDynamicState::DepthWriteEnable, VK_DYNAMIC_STATE_DEPTH_WRITE_ENABLE, "depthWriteEnable"},
+    DynamicStateMapping{PipelineDynamicState::DepthCompareOp, VK_DYNAMIC_STATE_DEPTH_COMPARE_OP, "depthCompareOp"},
+    DynamicStateMapping{
+        PipelineDynamicState::DepthBoundsTestEnable, VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE, "depthBoundsTestEnable"},
+    DynamicStateMapping{
+        PipelineDynamicState::StencilTestEnable, VK_DYNAMIC_STATE_STENCIL_TEST_ENABLE, "stencilTestEnable"},
+    DynamicStateMapping{PipelineDynamicState::StencilOp, VK_DYNAMIC_STATE_STENCIL_OP, "stencilOp"},
+    DynamicStateMapping{
+        PipelineDynamicState::RasterizerDiscardEnable,
+        VK_DYNAMIC_STATE_RASTERIZER_DISCARD_ENABLE,
+        "rasterizerDiscardEnable"},
+    DynamicStateMapping{PipelineDynamicState::DepthBiasEnable, VK_DYNAMIC_STATE_DEPTH_BIAS_ENABLE, "depthBiasEnable"},
+    DynamicStateMapping{
+        PipelineDynamicState::PrimitiveRestartEnable,
+        VK_DYNAMIC_STATE_PRIMITIVE_RESTART_ENABLE,
+        "primitiveRestartEnable"},
+};
 
 VkPipelineRasterizationStateCreateInfo createDefaultRasterizationState() {
     VkPipelineRasterizationStateCreateInfo rasterizationState{
@@ -121,8 +151,7 @@ PipelineBuilder::PipelineBuilder()
     , m_multisampleState(createDefaultMultisampleState())
     , m_colorBlendAttachmentStates({createDefaultColorBlendAttachmentState()})
     , m_colorBlendState(createDefaultColorBlendState())
-    , m_depthStencilState(createDefaultDepthStencilState())
-    , m_dynamicState({VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO}) {
+    , m_depthStencilState(createDefaultDepthStencilState()) {
     m_colorBlendState.attachmentCount = static_cast<uint32_t>(m_colorBlendAttachmentStates.size());
     m_colorBlendState.pAttachments = m_colorBlendAttachmentStates.data();
 
@@ -216,8 +245,7 @@ PipelineBuilder& PipelineBuilder::setLineWidth(float lineWidth) {
     return *this;
 }
 
-PipelineBuilder& PipelineBuilder::setDepthBias(
-    const float constantFactor, const float slopeFactor, const float clamp) {
+PipelineBuilder& PipelineBuilder::setDepthBias(const float constantFactor, const float slopeFactor, const float clamp) {
     m_rasterizationState.depthBiasEnable = VK_TRUE;
     m_rasterizationState.depthBiasConstantFactor = constantFactor;
     m_rasterizationState.depthBiasSlopeFactor = slopeFactor;
@@ -287,10 +315,13 @@ PipelineBuilder& PipelineBuilder::setDepthWrite(VkBool32 enabled) {
     return *this;
 }
 
-PipelineBuilder& PipelineBuilder::addDynamicState(VkDynamicState dynamicState) {
-    m_dynamicStates.push_back(dynamicState);
-    m_dynamicState.dynamicStateCount = static_cast<uint32_t>(m_dynamicStates.size());
-    m_dynamicState.pDynamicStates = m_dynamicStates.data();
+PipelineBuilder& PipelineBuilder::addDynamicState(const PipelineDynamicState dynamicState) {
+    m_dynamicStateFlags |= dynamicState;
+    return *this;
+}
+
+PipelineBuilder& PipelineBuilder::addDynamicStates(const PipelineDynamicStateFlags dynamicStates) {
+    m_dynamicStateFlags |= dynamicStates;
     return *this;
 }
 
@@ -352,6 +383,14 @@ std::unique_ptr<VulkanPipeline> PipelineBuilder::createImpl(
     colorBlendState.pAttachments = colorBlendAttachmentStates.empty() ? nullptr : colorBlendAttachmentStates.data();
     pipelineInfo.pColorBlendState = &colorBlendState;
 
+    const auto dynamicStates = toVkDynamicStates(m_dynamicStateFlags);
+    const VkPipelineDynamicStateCreateInfo dynamicState{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
+        .pDynamicStates = dynamicStates.empty() ? nullptr : dynamicStates.data(),
+    };
+    pipelineInfo.pDynamicState = &dynamicState;
+
     VkPipeline pipeline{VK_NULL_HANDLE};
     VK_FATAL(vkCreateGraphicsPipelines(
         device.getHandle(), device.getPipelineCacheHandle(), 1, &pipelineInfo, nullptr, &pipeline));
@@ -361,16 +400,7 @@ std::unique_ptr<VulkanPipeline> PipelineBuilder::createImpl(
         std::move(pipelineLayout),
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         VulkanVertexLayout(m_vertexLayout),
-        createDynamicStateFlags());
-}
-
-PipelineDynamicStateFlags PipelineBuilder::createDynamicStateFlags() const {
-    PipelineDynamicStateFlags dynamicStateFlags;
-    for (const auto dynamicState : m_dynamicStates) {
-        dynamicStateFlags |= getPipelineDynamicState(dynamicState);
-    }
-
-    return dynamicStateFlags;
+        m_dynamicStateFlags);
 }
 
 void PipelineBuilder::populatePipelineCreateInfo(
@@ -385,12 +415,35 @@ void PipelineBuilder::populatePipelineCreateInfo(
     pipelineInfo.pMultisampleState = &m_multisampleState;
     pipelineInfo.pColorBlendState = &m_colorBlendState;
     pipelineInfo.pDepthStencilState = &m_depthStencilState;
-    pipelineInfo.pDynamicState = &m_dynamicState;
     pipelineInfo.layout = pipelineLayout;
     pipelineInfo.renderPass = VK_NULL_HANDLE;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineInfo.basePipelineIndex = -1;
+}
+
+std::vector<VkDynamicState> toVkDynamicStates(const PipelineDynamicStateFlags flags) {
+    std::vector<VkDynamicState> dynamicStates;
+    for (const auto& mapping : kDynamicStateMappings) {
+        if (flags.contains(mapping.state)) {
+            dynamicStates.push_back(mapping.vkState);
+        }
+    }
+    return dynamicStates;
+}
+
+PipelineDynamicState parsePipelineDynamicState(const std::string_view name) {
+    const auto mapping = std::ranges::find(kDynamicStateMappings, name, [](const DynamicStateMapping& m) {
+        return m.name;
+    });
+    return mapping == kDynamicStateMappings.end() ? PipelineDynamicState::None : mapping->state;
+}
+
+std::string_view toString(const PipelineDynamicState dynamicState) {
+    const auto mapping = std::ranges::find(kDynamicStateMappings, dynamicState, [](const DynamicStateMapping& m) {
+        return m.state;
+    });
+    return mapping == kDynamicStateMappings.end() ? "none" : mapping->name;
 }
 
 VkPipelineShaderStageCreateInfo createShaderStageInfo(

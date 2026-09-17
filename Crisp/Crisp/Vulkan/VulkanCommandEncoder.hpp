@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <span>
 
@@ -21,6 +22,31 @@ public:
 
     void setViewport(const VkViewport& viewport) const;
     void setScissor(const VkRect2D& scissorRect) const;
+
+    void setLineWidth(float lineWidth) const;
+    void setDepthBias(float constantFactor, float slopeFactor, float clamp = 0.0f) const;
+    void setBlendConstants(const std::array<float, 4>& blendConstants) const;
+    void setDepthBounds(float minDepthBounds, float maxDepthBounds) const;
+    void setStencilCompareMask(VkStencilFaceFlags faceMask, uint32_t compareMask) const;
+    void setStencilWriteMask(VkStencilFaceFlags faceMask, uint32_t writeMask) const;
+    void setStencilReference(VkStencilFaceFlags faceMask, uint32_t reference) const;
+    void setCullMode(VkCullModeFlags cullMode) const;
+    void setFrontFace(VkFrontFace frontFace) const;
+    void setPrimitiveTopology(VkPrimitiveTopology topology) const;
+    void setDepthTestEnable(bool enabled) const;
+    void setDepthWriteEnable(bool enabled) const;
+    void setDepthCompareOp(VkCompareOp compareOp) const;
+    void setDepthBoundsTestEnable(bool enabled) const;
+    void setStencilTestEnable(bool enabled) const;
+    void setStencilOp(
+        VkStencilFaceFlags faceMask,
+        VkStencilOp failOp,
+        VkStencilOp passOp,
+        VkStencilOp depthFailOp,
+        VkCompareOp compareOp) const;
+    void setRasterizerDiscardEnable(bool enabled) const;
+    void setDepthBiasEnable(bool enabled) const;
+    void setPrimitiveRestartEnable(bool enabled) const;
     void bindPipeline(const VulkanPipeline& pipeline) const;
     void bindDescriptorSets(const VulkanDescriptorSetBinding& binding) const;
     void bindDescriptorSets(

@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <vector>
 
 #include <Crisp/Vulkan/Rhi/VulkanDevice.hpp>
@@ -64,7 +65,8 @@ public:
     PipelineBuilder& setDepthTestOperation(VkCompareOp testOperation);
     PipelineBuilder& setDepthWrite(VkBool32 enabled);
 
-    PipelineBuilder& addDynamicState(VkDynamicState dynamicState);
+    PipelineBuilder& addDynamicState(PipelineDynamicState dynamicState);
+    PipelineBuilder& addDynamicStates(PipelineDynamicStateFlags dynamicStates);
     PipelineBuilder& setDescriptorHeapMappings(
         uint32_t shaderStageIdx, std::span<const VkDescriptorSetAndBindingMappingEXT> mappings);
 
@@ -78,7 +80,10 @@ public:
         const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
     std::unique_ptr<VulkanPipeline> createDescriptorHeap(
         const VulkanDevice& device, const VulkanRasterizationPassDescriptor& rasterizationPassDescriptor);
-    PipelineDynamicStateFlags createDynamicStateFlags() const;
+
+    PipelineDynamicStateFlags getDynamicStateFlags() const {
+        return m_dynamicStateFlags;
+    }
 
 private:
     std::unique_ptr<VulkanPipeline> createImpl(
@@ -118,9 +123,14 @@ private:
 
     VkPipelineDepthStencilStateCreateInfo m_depthStencilState;
 
-    std::vector<VkDynamicState> m_dynamicStates;
-    VkPipelineDynamicStateCreateInfo m_dynamicState;
+    PipelineDynamicStateFlags m_dynamicStateFlags;
 };
+
+std::vector<VkDynamicState> toVkDynamicStates(PipelineDynamicStateFlags flags);
+
+PipelineDynamicState parsePipelineDynamicState(std::string_view name);
+
+std::string_view toString(PipelineDynamicState dynamicState);
 
 VkPipelineShaderStageCreateInfo createShaderStageInfo(
     VkShaderStageFlagBits shaderStage, VkShaderModule shaderModule, const char* entryPoint = "main");
