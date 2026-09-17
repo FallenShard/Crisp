@@ -70,6 +70,10 @@ VulkanBuffer& VulkanBuffer::operator=(VulkanBuffer&& other) noexcept {
         return *this;
     }
 
+    if (m_allocation && m_deallocator) {
+        m_deallocator->deferMemoryDeallocation(m_allocation);
+    }
+
     VulkanResource::operator=(std::move(other));
     m_allocator = other.m_allocator;
     m_allocation = std::exchange(other.m_allocation, nullptr);

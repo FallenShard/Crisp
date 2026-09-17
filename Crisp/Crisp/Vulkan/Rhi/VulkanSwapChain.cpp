@@ -36,12 +36,41 @@ VulkanSwapChain::VulkanSwapChain(
 }
 
 VulkanSwapChain::~VulkanSwapChain() {
+    deferChildDestruction();
+}
+
+VulkanSwapChain& VulkanSwapChain::operator=(VulkanSwapChain&& other) noexcept {
+    if (this == &other) {
+        return *this;
+    }
+
+    deferChildDestruction();
+
+    VulkanResource::operator=(std::move(other));
+    m_images = std::move(other.m_images);
+    m_imageLayouts = std::move(other.m_imageLayouts);
+    m_imageViews = std::move(other.m_imageViews);
+    m_renderFinishedSemaphores = std::move(other.m_renderFinishedSemaphores);
+    m_imageFormat = other.m_imageFormat;
+    m_extent = other.m_extent;
+    m_presentationMode = other.m_presentationMode;
+    return *this;
+}
+
+void VulkanSwapChain::deferChildDestruction() {
+    if (m_deallocator == nullptr) {
+        return;
+    }
+
     for (auto* imageView : m_imageViews) {
         m_deallocator->deferDestruction(imageView);
     }
+    m_imageViews.clear();
+
     for (auto* semaphore : m_renderFinishedSemaphores) {
         m_deallocator->deferDestruction(semaphore);
     }
+    m_renderFinishedSemaphores.clear();
 }
 
 VkFormat VulkanSwapChain::getImageFormat() const {

@@ -40,8 +40,8 @@ public:
     VulkanImage(const VulkanImage&) = delete;
     VulkanImage& operator=(const VulkanImage&) = delete;
 
-    VulkanImage(VulkanImage&&) noexcept = default;
-    VulkanImage& operator=(VulkanImage&&) noexcept = default;
+    VulkanImage(VulkanImage&&) noexcept = delete;
+    VulkanImage& operator=(VulkanImage&&) noexcept = delete;
 
     uint32_t getMipLevels() const;
     const VkExtent3D& getExtent() const;

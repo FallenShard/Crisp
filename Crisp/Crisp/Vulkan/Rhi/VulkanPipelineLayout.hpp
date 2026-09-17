@@ -38,7 +38,7 @@ public:
     VulkanPipelineLayout& operator=(const VulkanPipelineLayout&) = delete;
 
     VulkanPipelineLayout(VulkanPipelineLayout&&) noexcept = default;
-    VulkanPipelineLayout& operator=(VulkanPipelineLayout&&) noexcept = default;
+    VulkanPipelineLayout& operator=(VulkanPipelineLayout&&) noexcept;
 
     VkDescriptorType getDescriptorType(uint32_t setIndex, uint32_t binding) const {
         return m_descriptorSetLayouts.at(setIndex).bindings.at(binding).descriptorType;
@@ -100,6 +100,8 @@ public:
         VulkanDevice& device, uint32_t numCopies = 1, VkDescriptorPoolCreateFlags flags = 0);
 
 private:
+    void deferSetLayoutDestruction();
+
     std::vector<DescriptorSetLayout> m_descriptorSetLayouts;
     std::vector<VkPushConstantRange> m_pushConstants;
 

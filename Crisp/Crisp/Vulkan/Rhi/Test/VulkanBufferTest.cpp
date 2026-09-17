@@ -8,6 +8,34 @@ using VulkanBufferTest = VulkanTest;
 
 using ::testing::Not;
 
+TEST_F(VulkanBufferTest, MoveAssignmentReleasesWhatItAlreadyOwned) {
+    auto& deallocator = device_->getResourceDeallocator();
+
+    VulkanBuffer target(*device_, 128, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+    VulkanBuffer source(*device_, 256, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+
+    const auto destructorsBefore = deallocator.getDeferredDestructorCount();
+    const auto deallocationsBefore = deallocator.getDeferredMemoryDeallocationCount();
+
+    target = std::move(source);
+
+    EXPECT_EQ(deallocator.getDeferredDestructorCount(), destructorsBefore + 1);
+    EXPECT_EQ(deallocator.getDeferredMemoryDeallocationCount(), deallocationsBefore + 1);
+    EXPECT_THAT(target, HandleIsValid());
+    EXPECT_EQ(target.getSize(), 256);
+}
+
+TEST_F(VulkanBufferTest, SelfMoveAssignmentKeepsTheBufferIntact) {
+    VulkanBuffer buffer(*device_, 128, VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT, BufferMemoryType::HostUpload);
+    const auto handle = buffer.getHandle();
+
+    auto& alias = buffer;
+    buffer = std::move(alias);
+
+    EXPECT_EQ(buffer.getHandle(), handle);
+    EXPECT_EQ(buffer.getSize(), 128);
+}
+
 TEST_F(VulkanBufferTest, HostUploadBuffer) {
     constexpr uint32_t kElementCount{100};
     std::array<float, kElementCount> data{};
@@ -72,8 +100,7 @@ TEST_F(VulkanBufferTest, VulkanBuffer) {
         cmdEncoder.insertBufferMemoryBarrier(deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
         cmdEncoder.copyBuffer(deviceBuffer, downloadBuffer);
-        cmdEncoder.insertBufferMemoryBarrier(
-            downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
+        cmdEncoder.insertBufferMemoryBarrier(downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
     }
 
     const auto* ptr = downloadBuffer.getHostVisibleData<float>();
@@ -116,8 +143,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
 
     // Copy and sync
     cmdEncoder.copyBuffer(stagingBuffer, deviceBuffer);
-    cmdEncoder.insertBufferMemoryBarrier(
-        deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
+    cmdEncoder.insertBufferMemoryBarrier(deviceBuffer.createDescriptorInfo(), kTransferWrite >> kTransferRead);
 
     // Unassigned queue family for now, until first command
     VulkanBuffer downloadBuffer(
@@ -139,8 +165,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     transferCmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     transferCmdEncoder.copyBuffer(deviceBuffer, downloadBuffer);
-    transferCmdEncoder.insertBufferMemoryBarrier(
-        downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
+    transferCmdEncoder.insertBufferMemoryBarrier(downloadBuffer.createDescriptorInfo(), kTransferWrite >> kHostRead);
     transferCmdEncoder.transferBufferOwnership(
         deviceBuffer.getHandle(),
         transferQueue.getFamilyIndex(),
@@ -151,8 +176,7 @@ TEST_F(VulkanBufferTest, VulkanBufferInterQueueTransfer) {
     VulkanBuffer downloadBuffer2(
         *device, deviceBuffer.getSize(), VK_BUFFER_USAGE_2_TRANSFER_DST_BIT, BufferMemoryType::HostReadback);
     cmdEncoder.copyBuffer(deviceBuffer, downloadBuffer2);
-    cmdEncoder.insertBufferMemoryBarrier(
-        downloadBuffer2.createDescriptorInfo(), kTransferWrite >> kHostRead);
+    cmdEncoder.insertBufferMemoryBarrier(downloadBuffer2.createDescriptorInfo(), kTransferWrite >> kHostRead);
 
     cmdBuffer.end();
 

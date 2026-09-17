@@ -53,6 +53,29 @@ VulkanPipelineLayout::VulkanPipelineLayout(
 }
 
 VulkanPipelineLayout::~VulkanPipelineLayout() {
+    deferSetLayoutDestruction();
+}
+
+VulkanPipelineLayout& VulkanPipelineLayout::operator=(VulkanPipelineLayout&& other) noexcept {
+    if (this == &other) {
+        return *this;
+    }
+
+    deferSetLayoutDestruction();
+
+    VulkanResource::operator=(std::move(other));
+    m_descriptorSetLayouts = std::move(other.m_descriptorSetLayouts);
+    m_pushConstants = std::move(other.m_pushConstants);
+    m_dynamicBufferCount = other.m_dynamicBufferCount;
+    m_setAllocator = std::move(other.m_setAllocator);
+    return *this;
+}
+
+void VulkanPipelineLayout::deferSetLayoutDestruction() {
+    if (m_deallocator == nullptr) {
+        return;
+    }
+
     for (const auto& setLayout : m_descriptorSetLayouts) {
         if (setLayout.isExternal) {
             continue;
@@ -63,6 +86,7 @@ VulkanPipelineLayout::~VulkanPipelineLayout() {
                 deallocator->getDeviceHandle(), static_cast<VkDescriptorSetLayout>(handle), nullptr);
         });
     }
+    m_descriptorSetLayouts.clear();
 }
 
 VkDescriptorSet VulkanPipelineLayout::allocateSet(uint32_t setIndex) const {

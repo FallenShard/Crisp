@@ -208,18 +208,13 @@ VulkanImage::VulkanImage(
 }
 
 VulkanImage::~VulkanImage() {
-    m_deallocator->deferMemoryDeallocation(m_allocation);
+    if (m_allocation) {
+        m_deallocator->deferMemoryDeallocation(m_allocation);
+    }
 }
 
 void VulkanImage::setImageLayout(VkImageLayout newLayout, VkImageSubresourceRange range) {
     adaptSubresouceRange(m_imageType, range);
-    // CRISP_LOGI(
-    //     "Transitioned {}: {} - {} from {} to {}",
-    //     m_deallocator->getTag(m_handle),
-    //     static_cast<void*>(m_handle),
-    //     range,
-    //     toString(m_layouts[range.baseArrayLayer][range.baseMipLevel]),
-    //     toString(newLayout));
     CRISP_CHECK_LE(range.baseArrayLayer + range.layerCount, m_layerCount);
     CRISP_CHECK_LE(range.baseMipLevel + range.levelCount, m_mipLevelCount);
     for (uint32_t i = range.baseArrayLayer; i < range.baseArrayLayer + range.layerCount; ++i) {

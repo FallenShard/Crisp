@@ -13,12 +13,15 @@ public:
     VulkanResource& operator=(const VulkanResource& other) = delete;
 
     VulkanResource(VulkanResource&& other) noexcept
-        : m_deallocator(std::exchange(other.m_deallocator, nullptr))
-        , m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE)) {}
+        : m_handle(std::exchange(other.m_handle, VK_NULL_HANDLE))
+        , m_deallocator(std::exchange(other.m_deallocator, nullptr)) {}
 
     VulkanResource& operator=(VulkanResource&& other) noexcept {
-        m_deallocator = std::exchange(other.m_deallocator, nullptr);
-        m_handle = std::exchange(other.m_handle, VK_NULL_HANDLE);
+        if (this != &other) {
+            deferHandleDestruction();
+            m_handle = std::exchange(other.m_handle, VK_NULL_HANDLE);
+            m_deallocator = std::exchange(other.m_deallocator, nullptr);
+        }
         return *this;
     }
 
@@ -41,17 +44,7 @@ protected:
         , m_deallocator(&deallocator) {}
 
     ~VulkanResource() {
-        if (getDestroyFunc<T>() != nullptr) {
-            if (!m_handle || !m_deallocator) {
-                return;
-            }
-
-            m_deallocator->deferDestruction(m_handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
-                destroyVulkanHandle(handle, deallocator, getDestroyFunc<T>());
-            });
-        } else {
-            CRISP_FATAL("Didn't destroy object of type: {}", typeid(T).name());
-        }
+        deferHandleDestruction();
     }
 
     template <typename DestroyFunc>
@@ -62,5 +55,21 @@ protected:
 
     T m_handle;
     VulkanResourceDeallocator* m_deallocator;
+
+private:
+    void deferHandleDestruction() noexcept {
+        if (getDestroyFunc<T>() == nullptr) {
+            CRISP_FATAL("Didn't destroy object of type: {}", typeid(T).name());
+        }
+
+        if (!m_handle || !m_deallocator) {
+            return;
+        }
+
+        m_deallocator->deferDestruction(m_handle, [](void* handle, VulkanResourceDeallocator* deallocator) {
+            destroyVulkanHandle(handle, deallocator, getDestroyFunc<T>());
+        });
+        m_handle = VK_NULL_HANDLE;
+    }
 };
 } // namespace crisp

@@ -23,7 +23,7 @@ public:
     VulkanSwapChain& operator=(const VulkanSwapChain& other) = delete;
 
     VulkanSwapChain(VulkanSwapChain&& other) noexcept = default;
-    VulkanSwapChain& operator=(VulkanSwapChain&& other) noexcept = default;
+    VulkanSwapChain& operator=(VulkanSwapChain&& other) noexcept;
 
     VkFormat getImageFormat() const;
     VkExtent2D getExtent() const;
@@ -40,6 +40,8 @@ public:
     void recreate(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
 
 private:
+    void deferChildDestruction();
+
     void createSwapChain(const VulkanDevice& device, const VulkanPhysicalDevice& physicalDevice, VkSurfaceKHR surface);
     void createImageViews(const VulkanDevice& device);
     void createRenderFinishedSemaphores(const VulkanDevice& device);

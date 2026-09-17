@@ -6,6 +6,11 @@ namespace crisp {
 namespace {
 using VulkanImageTest = VulkanTest;
 
+static_assert(!std::is_move_constructible_v<VulkanImage>);
+static_assert(!std::is_move_assignable_v<VulkanImage>);
+static_assert(!std::is_copy_constructible_v<VulkanImage>);
+static_assert(!std::is_copy_assignable_v<VulkanImage>);
+
 using ::testing::ElementsAreArray;
 
 TEST_F(VulkanImageTest, ChangingLayouts) {
@@ -107,12 +112,13 @@ TEST_F(VulkanImageTest, FillImageRoundtrip) {
         EXPECT_EQ(image.getLayout(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         const VkBufferImageCopy region{
-            .imageSubresource = {
-                .aspectMask = image.getAspectMask(),
-                .mipLevel = 0,
-                .baseArrayLayer = 0,
-                .layerCount = 1,
-            },
+            .imageSubresource =
+                {
+                    .aspectMask = image.getAspectMask(),
+                    .mipLevel = 0,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+                },
             .imageExtent = {image.getWidth(), image.getHeight(), 1},
         };
         encoder.copyBufferToImage(stagingBuffer, image, region);
