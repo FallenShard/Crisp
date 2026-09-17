@@ -1,0 +1,39 @@
+{
+    "integrator": {
+        "type": "volume-mis-path-tracer",
+        "maxDepth": 32,
+        "medium": {
+            "type": "homogeneous",
+            "bounds": {"min": [-1.0, -1.0, 0.2], "max": [1.0, 1.0, 1.2]},
+            "absorption": [0.12, 0.20, 0.32],
+            "scattering": [0.18, 0.20, 0.16],
+            "anisotropy": 0.3
+        }
+    },
+    "sampler": {"type": "independent", "samplesPerPixel": 1024, "seed": 0},
+    "camera": {
+        "type": "perspective",
+        "imageSize": [256, 256],
+        "fovY": 40.0,
+        "zNear": 0.1,
+        "zFar": 1000.0,
+        "position": [0.0, 0.0, 5.0],
+        "target": [0.0, 0.0, 0.0],
+        "up": [0.0, 1.0, 0.0],
+        "reconstructionFilter": {"type": "box"}
+    },
+    "lights": [
+        {"type": "point", "position": [0.0, 0.0, 2.0], "power": [100.0, 100.0, 100.0]}
+    ],
+    "shapes": [
+        {
+            "type": "mesh",
+            "filename": "plane.obj",
+            "toWorld": [
+                {"scale": [10.0, 1.0, 10.0]},
+                {"rotation": {"axis": [1.0, 0.0, 0.0], "angleDegrees": 90.0}}
+            ],
+            "bsdf": {"type": "lambertian", "reflectance": [1.0, 1.0, 1.0]}
+        }
+    ]
+}

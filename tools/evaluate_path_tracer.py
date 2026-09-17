@@ -184,17 +184,11 @@ def capture_candidate(
 
     config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
 
+    mode = "@mode/opt" if preset == "x64-release" else "@mode/dev"
+
+    cmuck_command = ["cmuck", mode, "run", "CrispMain", "--preset", preset]
     run(
-        [
-            "cmuck",
-            "run",
-            "CrispMain",
-            "--preset",
-            preset,
-            "--",
-            "--config_path",
-            str(config_path),
-        ],
+        [*cmuck_command, "--", "--config_path", str(config_path)],
         f"[{case['name']}] Crisp capture at {settings['spp']} spp",
     )
     if not candidate.is_file():
