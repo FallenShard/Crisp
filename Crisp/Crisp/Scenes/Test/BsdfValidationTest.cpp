@@ -34,8 +34,7 @@ enum class Model : uint32_t { // NOLINT
     HenyeyGreenstein,
     Isotropic,
     HomogeneousRgb,
-    HeterogeneousRgb,
-    MediumBounds,
+    MediumBounds = 13,
 };
 
 enum class Operation : uint32_t { Evaluate, Sample, Limit, CriticalAngle }; // NOLINT
@@ -590,46 +589,6 @@ TEST_F(BsdfValidationTest, HomogeneousRgbDistanceSamplingPreservesChannelWeights
         const double transmittance = std::exp(-2.0 * extinction[channel]);
         const double expected = transmittance + scattering[channel] / extinction[channel] * (1.0 - transmittance);
         EXPECT_NEAR(meanWeight[channel], expected, 1.5e-2);
-    }
-}
-
-TEST_F(BsdfValidationTest, HeterogeneousWoodcockSamplingPreservesRgbWeights) {
-    const auto densitySamples = runValidationShader(*device_, Model::HeterogeneousRgb, Operation::Evaluate);
-    const auto results = runValidationShader(*device_, Model::HeterogeneousRgb, Operation::Sample);
-    double meanDensity = 0.0;
-    for (const auto& result : densitySamples) {
-        EXPECT_GE(result.value.x, 0.0f);
-        EXPECT_LE(result.value.x, 1.0f);
-        meanDensity += result.value.x;
-    }
-    meanDensity /= static_cast<double>(densitySamples.size());
-    EXPECT_GT(meanDensity, 0.05);
-    EXPECT_FLOAT_EQ(densitySamples.front().value.y, 0.0f);
-    EXPECT_FLOAT_EQ(densitySamples.front().value.z, 0.0f);
-
-    glm::dvec3 meanWeight{0.0};
-    glm::dvec3 meanTransmittance{0.0};
-    for (const auto& result : results) {
-        const glm::vec3 weight = result.value;
-        const glm::vec3 transmittance = result.reverseValue;
-        EXPECT_TRUE(isFinite(weight));
-        EXPECT_TRUE(isFinite(transmittance));
-        EXPECT_GE(weight.x, 0.0f);
-        EXPECT_GE(weight.y, 0.0f);
-        EXPECT_GE(weight.z, 0.0f);
-        meanWeight += glm::dvec3{weight};
-        meanTransmittance += glm::dvec3{transmittance};
-    }
-    meanWeight /= static_cast<double>(results.size());
-    meanTransmittance /= static_cast<double>(results.size());
-
-    const glm::dvec3 extinction{0.4, 0.3, 0.3};
-    const glm::dvec3 scattering{0.3, 0.1, 0.0};
-    for (int channel = 0; channel < 3; ++channel) {
-        const double transmittance = std::exp(-2.0 * meanDensity * extinction[channel]);
-        const double expected = transmittance + scattering[channel] / extinction[channel] * (1.0 - transmittance);
-        EXPECT_NEAR(meanWeight[channel], expected, 2e-2);
-        EXPECT_NEAR(meanTransmittance[channel], transmittance, 2e-2);
     }
 }
 

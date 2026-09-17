@@ -33,9 +33,9 @@ layout(descriptor_heap, descriptor_stride = 64, scalar) uniform IntegratorParams
     vec3 mediumScattering;
     float mediumAnisotropy;
     int mediumType;
-    float mediumNoiseScale;
     vec3 mediumBoundsMin;
     vec3 mediumBoundsMax;
+    float mediumMaximumDensity;
 } heapIntegrators[];
 
 #define integrator heapIntegrators[kIntegratorSlot]
@@ -58,6 +58,8 @@ heapViews[];
 #define view heapViews[kViewSlot].params
 #define environmentMap heapTexture2Ds[kEnvironmentSlot]
 #define environmentSampler heapSamplers[kEnvironmentSamplerSlot]
+layout(descriptor_heap, descriptor_stride = 64) uniform texture3D heapTexture3Ds[];
+#define mediumVolume sampler3D(heapTexture3Ds[kMediumVolumeSlot], heapSamplers[kMediumSamplerSlot])
 // bsdf-eval.part.glsl evaluates kBsdfOpenPbr inline for next-event estimation, and that reaches the GGX
 // directional-albedo table even when no compensation mode is active.
 #define CRISP_GGX_ALBEDO_LUT sampler2D(heapTexture2Ds[kGgxAlbedoLutSlot], heapSamplers[kGgxAlbedoLutSamplerSlot])
@@ -90,7 +92,7 @@ vec3 computeMediumShadowTransmittance(
     Sampler trackingSampler = createMediumTrackingSampler(pathSampler, bounceDim, 0x5ad039e5u);
     return heterogeneousMediumTransmittance(
         trackingSampler, origin + entry * direction, direction, mediumDistance, extinction,
-        integrator.mediumNoiseScale, integrator.mediumBoundsMin, integrator.mediumBoundsMax);
+        integrator.mediumMaximumDensity, integrator.mediumBoundsMin, integrator.mediumBoundsMax);
 }
 
 BsdfEval evaluateBsdfWorldSpace(
@@ -419,7 +421,7 @@ vec3 computeRadianceVolumeMisPt(inout Sampler rng) {
                 Sampler trackingSampler = createMediumTrackingSampler(rng, bounceDim + kDimMediumDistance, 0x9e3779b9u);
                 const float localDistance = sampleHeterogeneousMediumDistance(
                     trackingSampler, rayOrigin.xyz + mediumEntry * rayDirection.xyz, rayDirection.xyz,
-                    boundedDistance, extinction, integrator.mediumScattering, integrator.mediumNoiseScale,
+                    boundedDistance, extinction, integrator.mediumScattering, integrator.mediumMaximumDensity,
                     integrator.mediumBoundsMin, integrator.mediumBoundsMax, mediumWeight);
                 mediumEvent = localDistance < boundedDistance;
                 if (mediumEvent) {

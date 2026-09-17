@@ -2,6 +2,8 @@
 #include <Crisp/Scenes/VulkanRayTracingScene.hpp>
 
 #include <array>
+#include <bit>
+#include <cmath>
 #include <cstring>
 
 #include <Crisp/Core/Checks.hpp>
@@ -11,6 +13,7 @@
 #include <Crisp/Image/Io/Exr.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
+#include <Crisp/Io/FileUtils.hpp>
 #include <Crisp/Math/AliasTable.hpp>
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 #include <Crisp/Renderer/RenderGraph/RenderGraphGui.hpp>
@@ -27,6 +30,63 @@ namespace {
 struct PathTracingPassData {
     RenderGraphResourceHandle image;
 };
+
+struct ScalarVolumeGrid {
+    VkExtent3D extent{};
+    glm::vec3 boundsMin{};
+    glm::vec3 boundsMax{};
+    std::vector<float> density;
+    float maximumDensity{};
+};
+
+// Mitsuba VOL v3: little-endian float32, X varying fastest, followed by Y and Z.
+Result<ScalarVolumeGrid> loadScalarVolumeGrid(const std::filesystem::path& path) {
+    CRISP_TRY(const auto bytes, readBinaryFile(path));
+    if (bytes.size() < 48 || bytes[0] != 'V' || bytes[1] != 'O' || bytes[2] != 'L' || bytes[3] != 3) {
+        return resultError("Invalid Mitsuba VOL v3 header: {}", path.string());
+    }
+    const auto readU32 = [&bytes](const size_t offset) {
+        uint32_t value = 0;
+        for (uint32_t i = 0; i < 4; ++i) {
+            value |= static_cast<uint32_t>(static_cast<uint8_t>(bytes[offset + i])) << (8 * i);
+        }
+        return value;
+    };
+    const auto readF32 = [&readU32](const size_t offset) { return std::bit_cast<float>(readU32(offset)); };
+    if (readU32(4) != 1 || readU32(20) != 1) {
+        return resultError("Grid medium requires a float32 single-channel VOL file: {}", path.string());
+    }
+
+    ScalarVolumeGrid grid{};
+    grid.extent = {readU32(8), readU32(12), readU32(16)};
+    const uint64_t maxCount = (bytes.size() - 48) / sizeof(float);
+    if (grid.extent.width == 0 || grid.extent.height == 0 || grid.extent.depth == 0 ||
+        grid.extent.width > maxCount / grid.extent.height ||
+        static_cast<uint64_t>(grid.extent.width) * grid.extent.height > maxCount / grid.extent.depth) {
+        return resultError("Invalid Mitsuba VOL dimensions or payload size: {}", path.string());
+    }
+    const uint64_t count = static_cast<uint64_t>(grid.extent.width) * grid.extent.height * grid.extent.depth;
+    if (bytes.size() != 48 + count * sizeof(float)) {
+        return resultError("Invalid Mitsuba VOL payload size: {}", path.string());
+    }
+    grid.boundsMin = {readF32(24), readF32(28), readF32(32)};
+    grid.boundsMax = {readF32(36), readF32(40), readF32(44)};
+    if (!std::isfinite(grid.boundsMin.x) || !std::isfinite(grid.boundsMin.y) || !std::isfinite(grid.boundsMin.z) ||
+        !std::isfinite(grid.boundsMax.x) || !std::isfinite(grid.boundsMax.y) || !std::isfinite(grid.boundsMax.z) ||
+        glm::any(glm::greaterThanEqual(grid.boundsMin, grid.boundsMax))) {
+        return resultError("Invalid Mitsuba VOL bounds: {}", path.string());
+    }
+    grid.density.resize(static_cast<size_t>(count));
+    for (size_t i = 0; i < grid.density.size(); ++i) {
+        const float value = readF32(48 + i * sizeof(float));
+        if (!std::isfinite(value) || value < 0.0f) {
+            return resultError("Mitsuba VOL density must be finite and nonnegative: {}", path.string());
+        }
+        grid.density[i] = value;
+        grid.maximumDensity = std::max(grid.maximumDensity, value);
+    }
+    return grid;
+}
 
 // The header entry at index 0 carries the inverse total area and the triangle count, so the sampler needs
 // nothing but the table's own address.
@@ -131,9 +191,19 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     m_integratorParams.mediumScattering = renderSettings.mediumScattering;
     m_integratorParams.mediumAnisotropy = renderSettings.mediumAnisotropy;
     m_integratorParams.mediumType = renderSettings.mediumType;
-    m_integratorParams.mediumNoiseScale = renderSettings.mediumNoiseScale;
     m_integratorParams.mediumBoundsMin = renderSettings.mediumBoundsMin;
     m_integratorParams.mediumBoundsMax = renderSettings.mediumBoundsMax;
+    if (renderSettings.mediumType == 1) {
+        const auto volume = loadScalarVolumeGrid(renderer->getResourcesPath() / renderSettings.mediumFilename).unwrap();
+        m_integratorParams.mediumBoundsMin = volume.boundsMin;
+        m_integratorParams.mediumBoundsMax = volume.boundsMax;
+        m_integratorParams.mediumMaximumDensity = volume.maximumDensity;
+        m_mediumVolumeImage = std::make_unique<VulkanImage>(
+            renderer->getDevice(), volume.extent, 1, 1, VK_FORMAT_R32_SFLOAT,
+            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
+        fillImageLayers(
+            *m_mediumVolumeImage, *renderer, volume.density.data(), volume.density.size() * sizeof(float), 0, 1);
+    }
     m_captureAfterSamples = m_closeAfterScreenshot ? renderSettings.samplesPerPixel : 0;
     m_sceneDesc = parseSceneDescription(json["shapes"], json.value("lights", nlohmann::json::array())).unwrap();
 
@@ -252,6 +322,9 @@ VulkanRayTracingScene::VulkanRayTracingScene(
     auto& samplerHeap = m_pathTracer->getSamplerHeap();
     samplerHeap.write(kPathTracerEnvironmentSamplerSlot, createLatLongEnvironmentSamplerCreateInfo());
     samplerHeap.write(kPathTracerMaterialSamplerSlot, createLinearRepeatSamplerCreateInfo());
+    if (m_mediumVolumeImage) {
+        samplerHeap.write(kPathTracerMediumSamplerSlot, createLinearClampSamplerCreateInfo());
+    }
 
     // The kBsdfOpenPbr branch reads this unconditionally: directional-albedo.part.glsl refuses to compile
     // without the sampler, rather than silently degrading every compensation mode to a no-op.
@@ -427,20 +500,19 @@ void VulkanRayTracingScene::drawGui() {
         m_pathTracer->resetAccumulation();
     }
     if (m_integratorParams.samplingMode == 4) {
-        static constexpr const char* kMediumTypes[] = {"Homogeneous", "Heterogeneous Smoke"};
-        if (ImGui::Combo("Medium", &m_integratorParams.mediumType, kMediumTypes, 2)) {
+        static constexpr const char* kMediumTypes[] = {"Homogeneous", "Heterogeneous Volume"};
+        if (ImGui::Combo("Medium", &m_integratorParams.mediumType, kMediumTypes, m_mediumVolumeImage ? 2 : 1)) {
             m_pathTracer->resetAccumulation();
         }
-        if (m_integratorParams.mediumType == 1 &&
-            ImGui::SliderFloat("Noise Scale", &m_integratorParams.mediumNoiseScale, 0.1f, 8.0f, "%.2f")) {
-            m_pathTracer->resetAccumulation();
-        }
-        if (ImGui::DragFloat3("Volume Min", &m_integratorParams.mediumBoundsMin.x, 0.01f)) {
+        if (m_integratorParams.mediumType == 1) {
+            ImGui::LabelText("Volume Source", "%s", "Mitsuba VOL file");
+        } else if (ImGui::DragFloat3("Volume Min", &m_integratorParams.mediumBoundsMin.x, 0.01f)) {
             m_integratorParams.mediumBoundsMin =
                 glm::min(m_integratorParams.mediumBoundsMin, m_integratorParams.mediumBoundsMax - glm::vec3(0.001f));
             m_pathTracer->resetAccumulation();
         }
-        if (ImGui::DragFloat3("Volume Max", &m_integratorParams.mediumBoundsMax.x, 0.01f)) {
+        if (m_integratorParams.mediumType == 0 &&
+            ImGui::DragFloat3("Volume Max", &m_integratorParams.mediumBoundsMax.x, 0.01f)) {
             m_integratorParams.mediumBoundsMax =
                 glm::max(m_integratorParams.mediumBoundsMax, m_integratorParams.mediumBoundsMin + glm::vec3(0.001f));
             m_pathTracer->resetAccumulation();
@@ -477,6 +549,10 @@ void VulkanRayTracingScene::updateDescriptorHeap() {
     if (m_environmentImage) {
         resourceHeap.writeSampledImage(
             kPathTracerEnvironmentSlot, m_environmentImage->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+    if (m_mediumVolumeImage) {
+        resourceHeap.writeSampledImage(
+            kPathTracerMediumVolumeSlot, m_mediumVolumeImage->getView(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
     for (uint32_t i = 0; i < m_materialImages.size(); ++i) {
         resourceHeap.writeSampledImage(

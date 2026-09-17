@@ -77,18 +77,15 @@ TEST(RayTracingSceneParserTest, ParsesHeterogeneousMedium) {
         {"absorption", {0.03f, 0.05f, 0.07f}},
         {"scattering", {0.12f, 0.15f, 0.18f}},
         {"anisotropy", 0.6f},
-        {"noiseScale", 2.5f},
-        {"bounds", {{"min", {-2.0f, 0.0f, -1.0f}}, {"max", {2.0f, 3.0f, 1.0f}}}},
+        {"filename", "Volumes/smoke.vol"},
     };
 
     const auto result = parseRayTracingRenderSettings(scene);
     ASSERT_TRUE(result.hasValue());
     EXPECT_EQ(result->mediumType, 1);
-    EXPECT_FLOAT_EQ(result->mediumNoiseScale, 2.5f);
+    EXPECT_EQ(result->mediumFilename, "Volumes/smoke.vol");
     EXPECT_EQ(result->mediumAbsorption, glm::vec3(0.03f, 0.05f, 0.07f));
     EXPECT_EQ(result->mediumScattering, glm::vec3(0.12f, 0.15f, 0.18f));
-    EXPECT_EQ(result->mediumBoundsMin, glm::vec3(-2.0f, 0.0f, -1.0f));
-    EXPECT_EQ(result->mediumBoundsMax, glm::vec3(2.0f, 3.0f, 1.0f));
 }
 
 TEST(RayTracingSceneParserTest, RejectsInvalidDeterministicRenderSettings) {
@@ -122,23 +119,37 @@ TEST(RayTracingSceneParserTest, RejectsInvalidDeterministicRenderSettings) {
 
     scene = createRenderSettings();
     scene["integrator"]["type"] = "volume-mis-path-tracer";
-    scene["integrator"]["medium"] = {{"type", "grid"}};
-    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("medium.*homogeneous or heterogeneous"));
+    scene["integrator"]["medium"] = {{"type", "unsupported"}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("medium.*homogeneous.*heterogeneous"));
+
+    scene["integrator"]["medium"] = {{"type", "grid"}, {"filename", "smoke.vol"}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("medium.*homogeneous.*heterogeneous"));
+
+    scene["integrator"]["medium"] = {{"type", "heterogeneous"}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("Heterogeneous medium.*filename"));
+
+    scene["integrator"]["medium"] = {
+        {"type", "heterogeneous"}, {"filename", "smoke.vol"},
+        {"bounds", {{"min", {0, 0, 0}}, {"max", {1, 1, 1}}}}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("bounds come from"));
 
     scene = createRenderSettings();
     scene["integrator"]["type"] = "volume-mis-path-tracer";
-    scene["integrator"]["medium"] = {{"type", "heterogeneous"}, {"noiseScale", 0.0f}};
-    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("noiseScale.*positive"));
+    scene["integrator"]["medium"] = {{"type", "heterogeneous"}, {"filename", "smoke.vol"}, {"noiseScale", 1.0f}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("noiseScale.*unsupported"));
 
     scene = createRenderSettings();
     scene["integrator"]["type"] = "volume-mis-path-tracer";
     scene["integrator"]["medium"] = {{"type", "homogeneous"}, {"noiseScale", 1.0f}};
-    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("noiseScale.*heterogeneous"));
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("noiseScale.*unsupported"));
+
+    scene["integrator"]["medium"] = {{"type", "homogeneous"}, {"filename", "smoke.vol"}};
+    EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("filename.*heterogeneous"));
 
     scene = createRenderSettings();
     scene["integrator"]["type"] = "volume-mis-path-tracer";
     scene["integrator"]["medium"] = {
-        {"type", "heterogeneous"},
+        {"type", "homogeneous"},
         {"bounds", {{"min", {-1.0f, 0.0f, 0.0f}}, {"max", {-1.0f, 1.0f, 1.0f}}}},
     };
     EXPECT_THAT(parseRayTracingRenderSettings(scene), HasErrorWithMessageRegex("bounds min.*less than max"));

@@ -82,7 +82,19 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def reference_is_current(reference: Path, source: Path, spp: int, seed: int, variant: str) -> bool:
+def asset_fingerprints(case: dict) -> dict[str, str]:
+    result = {}
+    for relative_path in case.get("assetFiles", []):
+        asset_path = REPO_ROOT / relative_path
+        if not asset_path.is_file():
+            raise SystemExit(f"[{case['name']}] asset not found: {asset_path}")
+        result[relative_path] = file_sha256(asset_path)
+    return result
+
+
+def reference_is_current(
+    reference: Path, source: Path, spp: int, seed: int, variant: str, assets: dict[str, str]
+) -> bool:
     """render_mitsuba.py leaves a sidecar recording the settings the EXR was made with."""
     metadata_path = reference.with_suffix(".json")
     if not reference.is_file() or not metadata_path.is_file():
@@ -96,7 +108,8 @@ def reference_is_current(reference: Path, source: Path, spp: int, seed: int, var
         metadata.get("seed"),
         metadata.get("variant"),
         metadata.get("sourceSha256"),
-    ) == (spp, seed, variant, file_sha256(source))
+        metadata.get("assetSha256", {}),
+    ) == (spp, seed, variant, file_sha256(source), assets)
 
 
 def render_reference(case: dict, settings: dict, references_dir: Path, force: bool) -> Path:
@@ -104,9 +117,10 @@ def render_reference(case: dict, settings: dict, references_dir: Path, force: bo
     if not scene_path.is_file():
         raise SystemExit(f"[{case['name']}] Mitsuba scene not found: {scene_path}")
     reference = references_dir / f"{scene_path.stem}.exr"
+    assets = asset_fingerprints(case)
 
     if not force and reference_is_current(
-        reference, scene_path, settings["spp"], settings["seed"], settings["mitsubaVariant"]
+        reference, scene_path, settings["spp"], settings["seed"], settings["mitsubaVariant"], assets
     ):
         print(f"[{case['name']}] Reference is current: {reference}")
         return reference
@@ -132,6 +146,10 @@ def render_reference(case: dict, settings: dict, references_dir: Path, force: bo
     )
     if not reference.is_file():
         raise SystemExit(f"[{case['name']}] Mitsuba produced no image at {reference}")
+    metadata_path = reference.with_suffix(".json")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["assetSha256"] = assets
+    metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     return reference
 
 
@@ -152,6 +170,7 @@ def capture_candidate(
         "resourcesPath": str(REPO_ROOT / "Resources"),
         "shaderSourcesPath": str(REPO_ROOT / "Crisp" / "Crisp" / "Shaders"),
         "outputDir": str(candidates_dir),
+        "assetSha256": asset_fingerprints(case),
         "imguiFontPath": str(REPO_ROOT / "Resources" / "Fonts" / "Barlow-SemiBold.ttf"),
         "logLevel": "info",
         "vulkan": {
@@ -184,9 +203,9 @@ def capture_candidate(
 
     config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
 
-    mode = "@mode/opt" if preset == "x64-release" else "@mode/dev"
-
-    cmuck_command = ["cmuck", mode, "run", "CrispMain", "--preset", preset]
+    cmuck_command = ["cmuck", "@mode/opt", "run", "CrispMain"] if preset == "x64-release" else [
+        "cmuck", "run", "CrispMain", "--preset", preset
+    ]
     run(
         [*cmuck_command, "--", "--config_path", str(config_path)],
         f"[{case['name']}] Crisp capture at {settings['spp']} spp",

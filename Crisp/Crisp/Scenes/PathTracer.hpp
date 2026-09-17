@@ -34,13 +34,15 @@ inline constexpr uint32_t kPathTracerFirstFreeSlot = 4;
 // the MIS weights combine two different functions.
 inline constexpr uint32_t kPathTracerEnvironmentSlot = 4;
 inline constexpr uint32_t kPathTracerGgxAlbedoLutSlot = 5;
+inline constexpr uint32_t kPathTracerMediumVolumeSlot = 6;
 // Material textures run from here to the end of the heap.
-inline constexpr uint32_t kPathTracerMaterialTextureFirstSlot = 6;
+inline constexpr uint32_t kPathTracerMaterialTextureFirstSlot = 7;
 
 inline constexpr uint32_t kPathTracerEnvironmentSamplerSlot = 0;
 inline constexpr uint32_t kPathTracerMaterialSamplerSlot = 1;
 inline constexpr uint32_t kPathTracerGgxAlbedoLutSamplerSlot = 2;
-inline constexpr uint32_t kPathTracerSamplerHeapSlotCount = 3;
+inline constexpr uint32_t kPathTracerMediumSamplerSlot = 3;
+inline constexpr uint32_t kPathTracerSamplerHeapSlotCount = 4;
 
 inline constexpr uint32_t kInvalidMaterialTextureOffset = 0xFFFFFFFFu;
 
@@ -64,10 +66,10 @@ struct PathTracedIntegratorParams {
     glm::vec3 mediumAbsorption{0.01f};
     glm::vec3 mediumScattering{0.09f};
     float mediumAnisotropy{0.0f};
-    int32_t mediumType{0}; // 0: homogeneous, 1: procedural heterogeneous.
-    float mediumNoiseScale{3.0f};
+    int32_t mediumType{0}; // 0: homogeneous, 1: texture-backed heterogeneous.
     glm::vec3 mediumBoundsMin{-1.0f, 0.0f, -1.0f};
     glm::vec3 mediumBoundsMax{1.0f, 2.0f, 1.0f};
+    float mediumMaximumDensity{1.0f};
 };
 
 static_assert(sizeof(PathTracedIntegratorParams) == 108);
@@ -79,9 +81,9 @@ static_assert(offsetof(PathTracedIntegratorParams, mediumAbsorption) == 48);
 static_assert(offsetof(PathTracedIntegratorParams, mediumScattering) == 60);
 static_assert(offsetof(PathTracedIntegratorParams, mediumAnisotropy) == 72);
 static_assert(offsetof(PathTracedIntegratorParams, mediumType) == 76);
-static_assert(offsetof(PathTracedIntegratorParams, mediumNoiseScale) == 80);
-static_assert(offsetof(PathTracedIntegratorParams, mediumBoundsMin) == 84);
-static_assert(offsetof(PathTracedIntegratorParams, mediumBoundsMax) == 96);
+static_assert(offsetof(PathTracedIntegratorParams, mediumBoundsMin) == 80);
+static_assert(offsetof(PathTracedIntegratorParams, mediumBoundsMax) == 92);
+static_assert(offsetof(PathTracedIntegratorParams, mediumMaximumDensity) == 104);
 
 // Mirrors PathTracedSceneAddresses in Shaders/PathTracer/Core/scene-addresses.part.glsl.
 struct PathTracedSceneAddresses {

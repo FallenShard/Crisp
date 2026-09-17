@@ -5,6 +5,35 @@
   },
   "cases": [
     {
+      "name": "grid_medium",
+      "mitsubaScene": "mitsuba/grid_medium.xml",
+      "crispScene": "tools/path_tracer_evaluation/crisp/grid_medium.json",
+      "assetFiles": ["Resources/Volumes/reference_density.vol"],
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.035,
+          "relativeMeanLuminanceError": 0.002
+        },
+        "minimum": {
+          "psnrDb": 32.0
+        }
+      }
+    },
+    {
+      "name": "homogeneous_medium",
+      "mitsubaScene": "mitsuba/homogeneous_medium.xml",
+      "crispScene": "tools/path_tracer_evaluation/crisp/homogeneous_medium.json",
+      "thresholds": {
+        "maximum": {
+          "relativeL2": 0.04,
+          "relativeMeanLuminanceError": 0.002
+        },
+        "minimum": {
+          "psnrDb": 33.0
+        }
+      }
+    },
+    {
       "name": "cornell_box",
       "mitsubaScene": "mitsuba/cornell_box.xml",
       "crispScene": "tools/path_tracer_evaluation/crisp/cornell_box.json",

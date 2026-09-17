@@ -30,9 +30,9 @@ report.html  Self-contained, all images inlined
 ```
 
 Both sides are cached, so re-running usually just redoes the comparison. A reference is re-rendered if its EXR
-is gone, or if the .json beside it disagrees with the scene's spp or seed, the Mitsuba variant, or the hash of
-the XML. A capture is redone if the config generated for it changed. That config is the cache key, so editing
-an input cannot leave an old capture sitting next to a fresh reference.
+is gone, or if the .json beside it disagrees with the scene's spp or seed, the Mitsuba variant, the hash of
+the XML, or hashes of assets listed in `assetFiles`. A capture is redone if the config generated for it changed.
+That config is the cache key, so editing an input cannot leave an old capture sitting next to a fresh reference.
 
 ## Environment
 
@@ -62,6 +62,18 @@ scene file. The capture is named after the Mitsuba scene's stem, and that is how
 Adding a case means writing a Mitsuba XML that matches the Crisp scene's geometry, materials, emitter, camera
 and path depth. Nothing checks that they match. When they do not, you get a metric regression with no bug
 behind it.
+
+The `homogeneous_medium` case isolates a bounded RGB medium between a point light and a diffuse plane. Mitsuba
+uses `volpath` and a null cube for the boundary; its `sigma_t` is Crisp's absorption plus scattering, and its
+albedo is scattering divided by `sigma_t` per channel. Both sides use the same Henyey-Greenstein anisotropy.
+Run it with `uv run python tools/evaluate_path_tracer.py --case homogeneous_medium`.
+
+The `grid_medium` case reads one scalar density file on both sides. Regenerate the checked-in
+`Resources/Volumes/reference_density.vol` with
+`uv run python tools/path_tracer_evaluation/generate_grid_volume.py`. Crisp samples it as a clamped, linearly
+filtered 3D texture and takes its world bounds from the VOL header. Mitsuba uses `gridvolume` with the same bounds,
+trilinear filter, constant albedo, and HG phase. The scene multiplies density by its extinction coefficients;
+the reference applies the same scalar factor through the medium's `scale` parameter.
 
 Two conventions the XML has to get right:
 

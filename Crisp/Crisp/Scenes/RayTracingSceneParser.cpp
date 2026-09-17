@@ -354,6 +354,21 @@ Result<RayTracingRenderSettings> parseRayTracingRenderSettings(const nlohmann::j
                 return resultError("Integrator medium must have type homogeneous or heterogeneous");
             }
             settings.mediumType = mediumType == "heterogeneous" ? 1 : 0;
+            if (settings.mediumType == 1) {
+                if (!medium.contains("filename") || !medium["filename"].is_string() ||
+                    medium["filename"].get<std::string>().empty()) {
+                    return resultError("Heterogeneous medium requires a nonempty filename");
+                }
+                settings.mediumFilename = medium["filename"].get<std::string>();
+                if (medium.contains("bounds")) {
+                    return resultError("Heterogeneous medium bounds come from the volume file");
+                }
+            } else if (medium.contains("filename")) {
+                return resultError("Medium filename is only supported for heterogeneous media");
+            }
+            if (medium.contains("noiseScale")) {
+                return resultError("Medium noiseScale is unsupported; heterogeneous density comes from a volume file");
+            }
             if (medium.contains("extinction") || medium.contains("scatteringAlbedo")) {
                 return resultError("Medium uses RGB absorption and scattering coefficients");
             }
@@ -376,13 +391,6 @@ Result<RayTracingRenderSettings> parseRayTracingRenderSettings(const nlohmann::j
                 CRISP_TRY(settings.mediumScattering, parseVec3(medium["scattering"]));
             }
             CRISP_TRY(settings.mediumAnisotropy, parseMediumFloat("anisotropy", settings.mediumAnisotropy));
-            if (medium.contains("noiseScale") && settings.mediumType == 0) {
-                return resultError("Medium noiseScale is only supported for heterogeneous media");
-            }
-            CRISP_TRY(settings.mediumNoiseScale, parseMediumFloat("noiseScale", settings.mediumNoiseScale));
-            if (settings.mediumNoiseScale <= 0.0f) {
-                return resultError("Medium noiseScale must be positive");
-            }
             if (medium.contains("bounds")) {
                 const auto& bounds = medium["bounds"];
                 if (!bounds.is_object() || !bounds.contains("min") || !bounds.contains("max")) {

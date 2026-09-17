@@ -31,7 +31,7 @@ struct RayTracingRenderSettings {
     glm::vec3 mediumScattering{0.09f};
     float mediumAnisotropy{0.0f};
     int32_t mediumType{0};
-    float mediumNoiseScale{3.0f};
+    std::string mediumFilename;
     glm::vec3 mediumBoundsMin{-1.0f, 0.0f, -1.0f};
     glm::vec3 mediumBoundsMax{1.0f, 2.0f, 1.0f};
 

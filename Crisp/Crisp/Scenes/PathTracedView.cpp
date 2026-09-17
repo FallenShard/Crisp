@@ -249,14 +249,6 @@ void PathTracedView::drawGui(const bool allowEnvironmentIntensity) {
         resetAccumulation();
     }
     if (m_integratorParams.samplingMode == 4) {
-        static constexpr const char* kMediumTypes[] = {"Homogeneous", "Heterogeneous Smoke"};
-        if (ImGui::Combo("Medium", &m_integratorParams.mediumType, kMediumTypes, 2)) {
-            resetAccumulation();
-        }
-        if (m_integratorParams.mediumType == 1 &&
-            ImGui::SliderFloat("Noise Scale", &m_integratorParams.mediumNoiseScale, 0.1f, 8.0f, "%.2f")) {
-            resetAccumulation();
-        }
         if (ImGui::DragFloat3("Volume Min", &m_integratorParams.mediumBoundsMin.x, 0.01f)) {
             m_integratorParams.mediumBoundsMin =
                 glm::min(m_integratorParams.mediumBoundsMin, m_integratorParams.mediumBoundsMax - glm::vec3(0.001f));

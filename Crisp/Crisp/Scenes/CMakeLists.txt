@@ -272,10 +272,6 @@ target_add_test_file(
     "PathTracer/Media/homogeneous.part.glsl")
 target_add_test_file(
     CrispBsdfValidationTest
-    "../Shaders/PathTracer/Media/heterogeneous.part.glsl"
-    "PathTracer/Media/heterogeneous.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest
     "../Shaders/PathTracer/Media/volume-bounds.part.glsl"
     "PathTracer/Media/volume-bounds.part.glsl")
 target_add_test_file(
