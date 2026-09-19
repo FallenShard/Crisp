@@ -8,6 +8,7 @@
 #include <Crisp/Vulkan/VulkanCommandEncoder.hpp>
 #include <Crisp/Vulkan/VulkanRingBuffer.hpp>
 
+#include <array>
 #include <cstddef>
 #include <span>
 #include <variant>
@@ -76,11 +77,14 @@ constexpr DrawFunc getDrawFunc() {
 } // namespace detail
 
 struct DrawCommand {
+    static constexpr uint32_t kMaxDynamicBufferOffsets = 4;
+
     VkViewport viewport = {};
     VkRect2D scissor = {};
     VulkanPipeline* pipeline;
     Material* material;
-    std::vector<uint32_t> dynamicBufferOffsets;
+    std::array<uint32_t, kMaxDynamicBufferOffsets> dynamicBufferOffsets{};
+    uint32_t dynamicBufferOffsetCount{0};
 
     PushConstantView pushConstantView;
 
@@ -89,6 +93,10 @@ struct DrawCommand {
     detail::DrawFunc drawFunc;
     uint32_t firstBuffer;
     uint32_t bufferCount;
+
+    std::span<const uint32_t> getDynamicBufferOffsets() const {
+        return std::span{dynamicBufferOffsets}.first(dynamicBufferOffsetCount);
+    }
 
     template <typename GeometryView, typename... Args>
     void setGeometryView(Args&&... args) {

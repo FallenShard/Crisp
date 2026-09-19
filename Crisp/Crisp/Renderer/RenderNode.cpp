@@ -22,8 +22,9 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(const RenderNode& render
     drawCommand.pipeline = pipeline ? pipeline : material->getPipeline();
     drawCommand.material = material;
 
-    drawCommand.dynamicBufferOffsets.resize(drawCommand.material->getDynamicDescriptorCount());
-    CRISP_CHECK_GE_LT(transformBufferDynamicIndex, 0, drawCommand.dynamicBufferOffsets.size());
+    drawCommand.dynamicBufferOffsetCount = drawCommand.material->getDynamicDescriptorCount();
+    CRISP_CHECK_LE(drawCommand.dynamicBufferOffsetCount, DrawCommand::kMaxDynamicBufferOffsets);
+    CRISP_CHECK_GE_LT(transformBufferDynamicIndex, 0, drawCommand.dynamicBufferOffsetCount);
     drawCommand.dynamicBufferOffsets[transformBufferDynamicIndex] =
         renderNode.transformHandle.index * sizeof(TransformPack);
 

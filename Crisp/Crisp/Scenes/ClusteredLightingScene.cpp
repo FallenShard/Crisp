@@ -48,7 +48,7 @@ void executeDrawCommand(
 
     encoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
     if (command.material) {
-        encoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.dynamicBufferOffsets));
+        encoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.getDynamicBufferOffsets()));
     }
     command.geometry->bindVertexBuffers(encoder, command.firstBuffer, command.bufferCount);
     command.drawFunc(encoder, command.geometryView);

@@ -81,7 +81,8 @@ void executeDrawCommands(const std::span<const DrawCommand> commands, const Vulk
         }
         commandEncoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
         if (command.material) {
-            commandEncoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.dynamicBufferOffsets));
+            commandEncoder.bindDescriptorSets(
+                command.material->getDescriptorSetBinding(command.getDynamicBufferOffsets()));
         }
         command.geometry->bindVertexBuffers(commandEncoder, command.firstBuffer, command.bufferCount);
         command.drawFunc(commandEncoder, command.geometryView);
