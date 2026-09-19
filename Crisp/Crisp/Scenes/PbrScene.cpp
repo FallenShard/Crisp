@@ -132,6 +132,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
                 BindlessImageRegistry::kGlobalSetIndex);
 
             DrawCommandRecordingState recordingState{};
+            const glm::mat4 cascadeViewProjection{m_lightSystem->getCascadeViewProjection(cascadeIndex)};
             for (const auto& cached : drawCommands) {
                 if (cached.nodeIndex >= nodeCount) {
                     continue;
@@ -139,7 +140,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
                 if (!cached.renderNode->isVisible) {
                     continue;
                 }
-                if (!m_lightSystem->isCascadeCasterVisible(cascadeIndex, cached.worldBounds)) {
+                if (!intersectsClipVolume(cascadeViewProjection, cached.worldBounds)) {
                     continue;
                 }
                 executeDrawCommand(cached.command, ctx.commandEncoder, recordingState);

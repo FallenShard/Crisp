@@ -35,6 +35,11 @@ struct CascadedShadowMapping {
 
     std::array<glm::vec3, Camera::kFrustumPointCount> getFrustumPoints(uint32_t cascadeIndex) const;
     bool isCasterVisible(uint32_t cascadeIndex, const BoundingBox3& worldBounds) const;
+
+    // Hoist this out of per-draw culling loops; it costs a matrix multiply.
+    glm::mat4 getCascadeViewProjection(uint32_t cascadeIndex) const;
 };
+
+bool intersectsClipVolume(const glm::mat4& viewProjection, const BoundingBox3& bounds);
 
 } // namespace crisp

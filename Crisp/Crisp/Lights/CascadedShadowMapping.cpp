@@ -5,7 +5,6 @@
 #include <Crisp/Core/Checks.hpp>
 
 namespace crisp {
-namespace {
 bool intersectsClipVolume(const glm::mat4& viewProjection, const BoundingBox3& bounds) {
     if (!bounds.isValid()) {
         return true;
@@ -26,7 +25,6 @@ bool intersectsClipVolume(const glm::mat4& viewProjection, const BoundingBox3& b
     }
     return commonOutsidePlanes == 0;
 }
-} // namespace
 
 void CascadedShadowMapping::configure(
     const gsl::not_null<VulkanDevice*> device, const DirectionalLight& light, const uint32_t cascadeCount) {
@@ -100,8 +98,13 @@ void CascadedShadowMapping::updateTransforms(
     }
 }
 
+glm::mat4 CascadedShadowMapping::getCascadeViewProjection(const uint32_t cascadeIndex) const {
+    const auto& light = cascades.at(cascadeIndex).light;
+    return light.getProjectionMatrix() * light.getViewMatrix();
+}
+
 bool CascadedShadowMapping::isCasterVisible(const uint32_t cascadeIndex, const BoundingBox3& worldBounds) const {
-    return intersectsClipVolume(cascades.at(cascadeIndex).light.createDescriptor().VP, worldBounds);
+    return intersectsClipVolume(getCascadeViewProjection(cascadeIndex), worldBounds);
 }
 
 std::array<glm::vec3, Camera::kFrustumPointCount> CascadedShadowMapping::getFrustumPoints(uint32_t cascadeIndex) const {

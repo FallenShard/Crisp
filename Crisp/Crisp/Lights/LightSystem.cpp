@@ -91,6 +91,10 @@ bool LightSystem::isCascadeCasterVisible(const uint32_t cascadeIndex, const Boun
     return m_cascadedShadowMapping.isCasterVisible(cascadeIndex, worldBounds);
 }
 
+glm::mat4 LightSystem::getCascadeViewProjection(const uint32_t cascadeIndex) const {
+    return m_cascadedShadowMapping.getCascadeViewProjection(cascadeIndex);
+}
+
 void LightSystem::createPointLightBuffer(std::vector<PointLight>&& pointLights) {
     m_pointLights = std::move(pointLights);
 

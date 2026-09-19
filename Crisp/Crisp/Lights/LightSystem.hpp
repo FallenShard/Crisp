@@ -37,6 +37,7 @@ public:
     float getCascadeSplitLo(uint32_t cascadeIndex) const;
     float getCascadeSplitHi(uint32_t cascadeIndex) const;
     bool isCascadeCasterVisible(uint32_t cascadeIndex, const BoundingBox3& worldBounds) const;
+    glm::mat4 getCascadeViewProjection(uint32_t cascadeIndex) const;
 
     VulkanRingBuffer* getDirectionalLightBuffer() const;
     VulkanRingBuffer* getCascadedDirectionalLightBuffer() const;
