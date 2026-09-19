@@ -13,7 +13,7 @@ FetchContent_MakeAvailable(glm)
 
 FetchContent_Declare(glfw
     GIT_REPOSITORY "https://github.com/glfw/glfw.git"
-    GIT_TAG "3.4"
+    GIT_TAG "3.5.1"
     GIT_SHALLOW TRUE
 )
 
@@ -62,7 +62,7 @@ FetchContent_MakeAvailable(spdlog)
 if(CRISP_BUILD_TESTS)
     FetchContent_Declare(googletest
         GIT_REPOSITORY "https://github.com/google/googletest.git"
-        GIT_TAG "v1.17.0"
+        GIT_TAG "v1.18.0"
         GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(googletest)
@@ -70,7 +70,7 @@ endif()
 
 FetchContent_Declare(glslang
     GIT_REPOSITORY "https://github.com/KhronosGroup/glslang.git"
-    GIT_TAG "16.4.0"
+    GIT_TAG "16.6.0"
     GIT_SHALLOW TRUE
     EXCLUDE_FROM_ALL
 )
@@ -291,7 +291,7 @@ set_target_properties(Wuffs PROPERTIES FOLDER "ThirdParty")
 
 FetchContent_Declare(OpenEXR
     GIT_REPOSITORY "https://github.com/AcademySoftwareFoundation/openexr.git"
-    GIT_TAG "v3.4.12"
+    GIT_TAG "v3.4.15"
     GIT_SHALLOW TRUE
     SYSTEM
     EXCLUDE_FROM_ALL
