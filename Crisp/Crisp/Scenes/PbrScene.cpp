@@ -105,7 +105,16 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     setupInput();
 
     m_cameraController = std::make_unique<TargetCameraController>(*m_window);
-    m_cameraController->setOrbitDistance(1.0f);
+    if (const auto cameraIt = args.find("camera"); cameraIt != args.end()) {
+        const auto target = cameraIt->value("target", std::array{0.0f, 0.0f, 0.0f});
+        const auto orientationDegrees = cameraIt->value("orientationDegrees", std::array{30.0f, -15.0f});
+        m_cameraController->setTarget(glm::vec3{target[0], target[1], target[2]});
+        m_cameraController->setDistance(cameraIt->value("distance", 10.0f));
+        m_cameraController->setOrientation(
+            glm::radians(orientationDegrees[0]), glm::radians(orientationDegrees[1]));
+    } else {
+        m_cameraController->setOrbitDistance(1.0f);
+    }
     m_resourceContext->createUniformRingBuffer("camera", sizeof(CameraParameters));
 
     m_renderGraph = std::make_unique<rg::RenderGraph>();
