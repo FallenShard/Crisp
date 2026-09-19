@@ -35,14 +35,14 @@ FetchContent_MakeAvailable(json)
 
 FetchContent_Declare(unordered_dense
     GIT_REPOSITORY "https://github.com/martinus/unordered_dense.git"
-    GIT_TAG "v4.8.1"
+    GIT_TAG "v5.0.1"
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(unordered_dense)
 
 FetchContent_Declare(fmt
     GIT_REPOSITORY "https://github.com/fmtlib/fmt.git"
-    GIT_TAG "12.1.0"
+    GIT_TAG "12.2.0"
     GIT_SHALLOW TRUE
 )
 set(FMT_OS OFF CACHE BOOL "" FORCE)
@@ -211,7 +211,7 @@ FetchContent_MakeAvailable(SPIRV-Reflect)
 
 FetchContent_Declare(GSL
     GIT_REPOSITORY "https://github.com/microsoft/GSL"
-    GIT_TAG "v4.2.2"
+    GIT_TAG "v5.0.0"
     GIT_SHALLOW TRUE
 )
 set(GSL_TEST OFF CACHE BOOL "" FORCE)
