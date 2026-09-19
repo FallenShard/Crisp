@@ -50,9 +50,9 @@ add_cpp_test(
     CrispWavefrontObjLoaderTest
     "Test/WavefrontObjLoaderTest.cpp"
     DEPS
-        Crisp::WavefrontObjLoader
+    Crisp::WavefrontObjLoader
     ASSET_DIR
-        "Test/Data"
+    "Test/Data"
 )
 
 set(externalAssetConfig "${CMAKE_CURRENT_BINARY_DIR}/Generated/Crisp/Mesh/Io/ExternalAssetConfig.hpp")
@@ -63,16 +63,21 @@ target_link_libraries(CrispWavefrontObjLoaderExternalAssetTest PRIVATE Crisp::Wa
 target_include_directories(
     CrispWavefrontObjLoaderExternalAssetTest PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/Generated")
 
-add_cpp_benchmark(CrispWavefrontObjLoaderBenchmark "Benchmark/WavefrontObjLoaderBenchmark.cpp")
-target_link_libraries(CrispWavefrontObjLoaderBenchmark PRIVATE Crisp::WavefrontObjLoader)
-target_include_directories(CrispWavefrontObjLoaderBenchmark PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/Generated")
+add_cpp_benchmark(
+    CrispWavefrontObjLoaderBenchmark
+    "Benchmark/WavefrontObjLoaderBenchmark.cpp"
+    DEPS
+    Crisp::WavefrontObjLoader
+    INCLUDE_DIRS
+    "${CMAKE_CURRENT_BINARY_DIR}/Generated"
+)
 
 add_cpp_test(
     CrispGltfLoaderTest
     "Test/GltfLoaderTest.cpp"
     DEPS
-        Crisp::GltfLoader
+    Crisp::GltfLoader
     ASSET_DIR
-        "Test/Data"
+    "Test/Data"
 )
 target_include_directories(CrispGltfLoaderTest PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/Generated")

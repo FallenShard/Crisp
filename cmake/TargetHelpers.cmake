@@ -150,16 +150,38 @@ function(target_add_test_shader targetName sourceFile)
         PRIVATE Crisp::FileUtils Crisp::ShaderCompiler Crisp::UniqueTemporaryFile)
 endfunction()
 
-# Creates a C++ binary benchmark target. No-op when CRISP_BUILD_BENCHMARKS is OFF.
+# Creates a C++ binary benchmark target. Sources are positional, DEPS are linked privately,
+# INCLUDE_DIRS are private, and ASSET_DIR exposes a source directory as
+# CRISP_BENCHMARK_ASSET_DIR. No-op when benchmarks are off.
 function(add_cpp_benchmark targetName)
     if(NOT CRISP_BUILD_BENCHMARKS)
         return()
     endif()
 
-    add_executable(${targetName} ${ARGN})
+    cmake_parse_arguments(PARSE_ARGV 1 benchmark "" "ASSET_DIR" "DEPS;INCLUDE_DIRS")
+
+    if(benchmark_KEYWORDS_MISSING_VALUES)
+        message(FATAL_ERROR
+            "add_cpp_benchmark(${targetName}): missing values for ${benchmark_KEYWORDS_MISSING_VALUES}")
+    endif()
+
+    add_executable(${targetName} ${benchmark_UNPARSED_ARGUMENTS})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
-    target_link_libraries(${targetName} PRIVATE benchmark::benchmark)
+    target_link_libraries(${targetName}
+        PRIVATE
+        benchmark::benchmark
+        ${benchmark_DEPS})
+    if(benchmark_INCLUDE_DIRS)
+        target_include_directories(${targetName} PRIVATE ${benchmark_INCLUDE_DIRS})
+    endif()
     set_target_properties(${targetName} PROPERTIES FOLDER "Crisp/Benchmarks")
+
+    if(benchmark_ASSET_DIR)
+        get_filename_component(
+            benchmarkAssetDir "${benchmark_ASSET_DIR}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+        target_compile_definitions(
+            ${targetName} PRIVATE CRISP_BENCHMARK_ASSET_DIR="${benchmarkAssetDir}")
+    endif()
 endfunction()
 
 # Copies a list of shared libraries into the designated target's directory. To be used with DLL dependencies.

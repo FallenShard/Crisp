@@ -212,10 +212,8 @@ target_link_libraries(
 add_cpp_benchmark(
     CrispThreadPoolBenchmark
     "Benchmark/ThreadPoolBenchmark.cpp"
-)
-target_link_libraries(
-    CrispThreadPoolBenchmark
-    PRIVATE Crisp::ThreadPool
+    DEPS
+        Crisp::ThreadPool
 )
 
 add_cpp_header_library(
