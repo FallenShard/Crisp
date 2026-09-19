@@ -33,11 +33,11 @@ struct DrawCommandRecordingState {
 
 void executeDrawCommand(
     const DrawCommand& command, const VulkanCommandEncoder& encoder, DrawCommandRecordingState& state) {
-    if (state.pipeline != command.pipeline) {
-        encoder.bindPipeline(*command.pipeline);
-        state.pipeline = command.pipeline;
+    if (state.pipeline != command.getPipeline()) {
+        encoder.bindPipeline(*command.getPipeline());
+        state.pipeline = command.getPipeline();
     }
-    encoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
+    encoder.setPushConstants(*command.getPipeline()->getPipelineLayout(), command.pushConstantView.asSpan());
     if (command.material) {
         encoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.getDynamicBufferOffsets()));
     }
@@ -50,13 +50,12 @@ void drawNode(
     const std::string_view renderPass,
     const VulkanCommandEncoder& encoder,
     DrawCommandRecordingState& state) {
-    for (const auto& [key, materialMap] : node.materials) {
-        if (key.renderPassName != renderPass) {
+    const auto passId = internRenderPassId(renderPass);
+    for (const auto& entry : node.materials) {
+        if (entry.passId != passId) {
             continue;
         }
-        for (const auto& [part, material] : materialMap) {
-            executeDrawCommand(material.createDrawCommand(node), encoder, state);
-        }
+        executeDrawCommand(entry.createDrawCommand(node), encoder, state);
     }
 }
 } // namespace

@@ -1,9 +1,56 @@
 #include <Crisp/Renderer/RenderNode.hpp>
 
+#include <algorithm>
+#include <mutex>
+#include <string>
+#include <vector>
+
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Vulkan/Rhi/VulkanPipeline.hpp>
 
 namespace crisp {
+namespace {
+struct RenderPassRegistry {
+    std::mutex mutex;
+    FlatStringHashMap<RenderPassId> idsByName;
+    std::vector<std::string> namesById;
+};
+
+RenderPassRegistry& getRenderPassRegistry() {
+    static RenderPassRegistry registry;
+    return registry;
+}
+} // namespace
+
+RenderPassId internRenderPassId(const std::string_view renderPassName) {
+    auto& registry = getRenderPassRegistry();
+    const std::scoped_lock lock(registry.mutex);
+    if (const auto it = registry.idsByName.find(renderPassName); it != registry.idsByName.end()) {
+        return it->second;
+    }
+
+    CRISP_CHECK_LT(registry.namesById.size(), kInvalidRenderPassId, "Ran out of render pass ids.");
+    const auto passId = static_cast<RenderPassId>(registry.namesById.size());
+    registry.namesById.emplace_back(renderPassName);
+    registry.idsByName.emplace(std::string(renderPassName), passId);
+    return passId;
+}
+
+std::string_view getRenderPassName(const RenderPassId passId) {
+    auto& registry = getRenderPassRegistry();
+    const std::scoped_lock lock(registry.mutex);
+    return passId < registry.namesById.size() ? std::string_view{registry.namesById[passId]} : std::string_view{};
+}
+
+RenderNode::MaterialData& RenderNode::findOrAddMaterial(const RenderPassId passId) {
+    const auto it = std::ranges::find_if(materials, [=](const MaterialData& entry) { return entry.passId == passId; });
+    if (it != materials.end()) {
+        return *it;
+    }
+
+    materials.push_back({.passId = passId});
+    return materials.back();
+}
 
 RenderNode::RenderNode(VulkanRingBuffer* transformBuffer, TransformPack* transformPack, TransformHandle transformHandle)
     : transformBuffer(transformBuffer)
@@ -19,36 +66,30 @@ RenderNode::RenderNode(TransformBuffer& transformBuffer, TransformHandle transfo
 
 DrawCommand RenderNode::MaterialData::createDrawCommand(const RenderNode& renderNode) const {
     DrawCommand drawCommand;
-    drawCommand.pipeline = pipeline ? pipeline : material->getPipeline();
     drawCommand.material = material;
 
-    drawCommand.dynamicBufferOffsetCount = drawCommand.material->getDynamicDescriptorCount();
+    drawCommand.dynamicBufferOffsetCount =
+        static_cast<uint8_t>(drawCommand.material->getDynamicDescriptorCount());
     CRISP_CHECK_LE(drawCommand.dynamicBufferOffsetCount, DrawCommand::kMaxDynamicBufferOffsets);
     CRISP_CHECK_GE_LT(transformBufferDynamicIndex, 0, drawCommand.dynamicBufferOffsetCount);
     drawCommand.dynamicBufferOffsets[transformBufferDynamicIndex] =
         renderNode.transformHandle.index * sizeof(TransformPack);
 
-    if (pushConstantSize > 0) {
-        PushConstantView ownedPushConstantView;
-        ownedPushConstantView.data = pushConstantBuffer.data();
-        ownedPushConstantView.size = pushConstantSize;
-        drawCommand.setPushConstantView(ownedPushConstantView);
-    } else {
-        drawCommand.setPushConstantView(pushConstantView);
-    }
+    PushConstantView ownedPushConstantView;
+    ownedPushConstantView.data = pushConstantBuffer.data();
+    ownedPushConstantView.size = pushConstantSize;
+    drawCommand.setPushConstantView(ownedPushConstantView);
 
     drawCommand.geometry = geometry ? geometry : renderNode.geometry;
-    if (!drawCommand.geometry->getIndexBuffer()) {
-        drawCommand.geometryView = drawCommand.geometry->createListGeometryView();
-    } else if (part != -1) {
-        drawCommand.geometryView = drawCommand.geometry->createIndexedGeometryView(part);
-    } else {
-        drawCommand.geometryView = drawCommand.geometry->createIndexedGeometryView();
-    }
-    drawCommand.firstBuffer = firstBuffer == -1 ? 0 : firstBuffer;
-    drawCommand.bufferCount = bufferCount == -1 ? drawCommand.geometry->getVertexBufferCount() : bufferCount;
+    drawCommand.geometryView = drawCommand.geometry->getIndexBuffer()
+                                   ? drawCommand.geometry->createIndexedGeometryView()
+                                   : drawCommand.geometry->createListGeometryView();
+    drawCommand.firstBuffer = firstBuffer == -1 ? 0 : static_cast<uint8_t>(firstBuffer);
+    drawCommand.bufferCount = bufferCount == -1
+                                  ? static_cast<uint8_t>(drawCommand.geometry->getVertexBufferCount())
+                                  : static_cast<uint8_t>(bufferCount);
 
-    CRISP_CHECK(drawCommand.pipeline->getVertexLayout().bindings.size() == drawCommand.bufferCount);
+    CRISP_CHECK(drawCommand.getPipeline()->getVertexLayout().bindings.size() == drawCommand.bufferCount);
 
     return drawCommand;
 }

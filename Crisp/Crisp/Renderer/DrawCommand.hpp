@@ -50,17 +50,18 @@ struct PushConstantView {
 struct DrawCommand {
     static constexpr uint32_t kMaxDynamicBufferOffsets = 4;
 
-    VulkanPipeline* pipeline;
-    Material* material;
-    std::array<uint32_t, kMaxDynamicBufferOffsets> dynamicBufferOffsets{};
-    uint32_t dynamicBufferOffsetCount{0};
-
-    PushConstantView pushConstantView;
-
-    Geometry* geometry;
+    Material* material{};
+    Geometry* geometry{};
     GeometryView geometryView;
-    uint32_t firstBuffer;
-    uint32_t bufferCount;
+    PushConstantView pushConstantView;
+    std::array<uint32_t, kMaxDynamicBufferOffsets> dynamicBufferOffsets{};
+    uint8_t dynamicBufferOffsetCount{0};
+    uint8_t firstBuffer{0};
+    uint8_t bufferCount{0};
+
+    VulkanPipeline* getPipeline() const {
+        return material->getPipeline();
+    }
 
     std::span<const uint32_t> getDynamicBufferOffsets() const {
         return std::span{dynamicBufferOffsets}.first(dynamicBufferOffsetCount);
@@ -93,4 +94,5 @@ struct DrawCommand {
         pushConstantView = view;
     }
 };
+
 } // namespace crisp

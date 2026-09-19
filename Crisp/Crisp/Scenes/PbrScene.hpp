@@ -75,5 +75,16 @@ private:
     };
 
     std::array<std::vector<CachedDrawCommand>, kDefaultCascadeCount + 1> m_drawCommandCache{};
+
+    struct DrawStats {
+        std::array<uint32_t, kDefaultCascadeCount> cascadeConsidered{};
+        std::array<uint32_t, kDefaultCascadeCount> cascadeRecorded{};
+        uint32_t forwardRecorded{0};
+        uint32_t frameCounter{0};
+
+        void report();
+    };
+
+    DrawStats m_drawStats{};
 };
 } // namespace crisp

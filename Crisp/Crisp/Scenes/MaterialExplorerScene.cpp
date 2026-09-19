@@ -62,24 +62,23 @@ std::string createShadowMaterialKey(const uint32_t cascadeIndex, const std::stri
 
 void appendDrawCommands(
     std::vector<DrawCommand>& commands, const RenderNode& renderNode, const std::string_view renderPass) {
-    for (const auto& [key, materialMap] : renderNode.materials) {
-        if (key.renderPassName != renderPass) {
+    const auto passId = internRenderPassId(renderPass);
+    for (const auto& entry : renderNode.materials) {
+        if (entry.passId != passId) {
             continue;
         }
-        for (const auto& [part, material] : materialMap) {
-            commands.push_back(material.createDrawCommand(renderNode));
-        }
+        commands.push_back(entry.createDrawCommand(renderNode));
     }
 }
 
 void executeDrawCommands(const std::span<const DrawCommand> commands, const VulkanCommandEncoder& commandEncoder) {
     const VulkanPipeline* boundPipeline{nullptr};
     for (const auto& command : commands) {
-        if (boundPipeline != command.pipeline) {
-            commandEncoder.bindPipeline(*command.pipeline);
-            boundPipeline = command.pipeline;
+        if (boundPipeline != command.getPipeline()) {
+            commandEncoder.bindPipeline(*command.getPipeline());
+            boundPipeline = command.getPipeline();
         }
-        commandEncoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
+        commandEncoder.setPushConstants(*command.getPipeline()->getPipelineLayout(), command.pushConstantView.asSpan());
         if (command.material) {
             commandEncoder.bindDescriptorSets(
                 command.material->getDescriptorSetBinding(command.getDynamicBufferOffsets()));
@@ -130,7 +129,7 @@ MaterialExplorerScene::MaterialExplorerScene(Renderer* renderer, Window* window,
             if (m_useRayTracedShadows || commands.empty() || !m_shaderBallNodes.front()->isVisible) {
                 return;
             }
-            const auto& layout = *commands.front().pipeline->getPipelineLayout();
+            const auto& layout = *commands.front().getPipeline()->getPipelineLayout();
             m_renderer->getBindlessImageRegistry().bind(
                 frameContext.commandEncoder,
                 layout.getHandle(),

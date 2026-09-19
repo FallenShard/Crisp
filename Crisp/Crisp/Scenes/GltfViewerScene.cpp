@@ -49,13 +49,12 @@ BoundingBox3 transformBoundingBox(const BoundingBox3& localBounds, const glm::ma
 
 void createDrawCommand(
     std::vector<DrawCommand>& drawCommands, const RenderNode& renderNode, const std::string_view renderPass) {
-    for (const auto& [key, materialMap] : renderNode.materials) {
-        if (key.renderPassName != renderPass) {
+    const auto passId = internRenderPassId(renderPass);
+    for (const auto& entry : renderNode.materials) {
+        if (entry.passId != passId) {
             continue;
         }
-        for (const auto& [part, material] : materialMap) {
-            drawCommands.push_back(material.createDrawCommand(renderNode));
-        }
+        drawCommands.push_back(entry.createDrawCommand(renderNode));
     }
 }
 
@@ -65,11 +64,11 @@ struct DrawCommandRecordingState {
 
 void executeDrawCommand(
     const DrawCommand& command, const VulkanCommandEncoder& commandEncoder, DrawCommandRecordingState& state) {
-    if (state.pipeline != command.pipeline) {
-        commandEncoder.bindPipeline(*command.pipeline);
-        state.pipeline = command.pipeline;
+    if (state.pipeline != command.getPipeline()) {
+        commandEncoder.bindPipeline(*command.getPipeline());
+        state.pipeline = command.getPipeline();
     }
-    commandEncoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
+    commandEncoder.setPushConstants(*command.getPipeline()->getPipelineLayout(), command.pushConstantView.asSpan());
 
     if (command.material) {
         commandEncoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.getDynamicBufferOffsets()));
@@ -497,7 +496,7 @@ void GltfViewerScene::rebuildDrawCommandCache() {
 
     for (size_t passIndex = 0; passIndex < kCsmPasses.size(); ++passIndex) {
         std::ranges::stable_sort(m_drawCommandCache[passIndex], {}, [](const CachedDrawCommand& cached) {
-            return cached.command.pipeline;
+            return cached.command.getPipeline();
         });
     }
 }
