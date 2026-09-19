@@ -161,6 +161,7 @@ FetchContent_Declare(SPIRV-Headers
     GIT_TAG "vulkan-sdk-1.4.357.0"
     GIT_SHALLOW TRUE
     OVERRIDE_FIND_PACKAGE
+    EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(SPIRV-Headers)
 set(SPIRV-Headers_SOURCE_DIR "${spirv-headers_SOURCE_DIR}")
@@ -170,6 +171,7 @@ FetchContent_Declare(SPIRV-Tools-opt
     GIT_TAG "vulkan-sdk-1.4.357.0"
     GIT_SHALLOW TRUE
     OVERRIDE_FIND_PACKAGE
+    EXCLUDE_FROM_ALL
 )
 set(SPIRV_SKIP_TESTS ON CACHE BOOL "" FORCE)
 set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "" FORCE)
@@ -181,16 +183,19 @@ FetchContent_Declare(VulkanUtilityLibraries
     GIT_TAG "vulkan-sdk-1.4.357.0"
     GIT_SHALLOW TRUE
     OVERRIDE_FIND_PACKAGE
+    EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(VulkanUtilityLibraries)
+
+set(BUILD_WERROR OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(Vulkan-ValidationLayers
     GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-ValidationLayers.git"
     GIT_TAG "vulkan-sdk-1.4.357.0"
     GIT_SHALLOW TRUE
+    EXCLUDE_FROM_ALL
 )
-set(BUILD_WERROR OFF CACHE BOOL "" FORCE)
-set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(VVL_ENABLE_ASAN OFF CACHE BOOL "" FORCE)
 set(VVL_ENABLE_UBSAN OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(Vulkan-ValidationLayers)
@@ -200,9 +205,8 @@ FetchContent_Declare(Vulkan-ExtensionLayer
     GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-ExtensionLayer.git"
     GIT_TAG "vulkan-sdk-1.4.357.0"
     GIT_SHALLOW TRUE
+    EXCLUDE_FROM_ALL
 )
-set(BUILD_WERROR OFF CACHE BOOL "" FORCE)
-set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(Vulkan-ExtensionLayer)
 set_target_properties(VkLayer_khronos_synchronization2 PROPERTIES DEBUG_POSTFIX "")
 

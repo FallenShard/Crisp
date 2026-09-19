@@ -31,6 +31,14 @@ target_link_libraries(
     CrispVulkanInstance
     PUBLIC Crisp::VulkanHeader
 )
+if(TARGET vvl AND TARGET VkLayer_khronos_synchronization2)
+    target_compile_definitions(
+        CrispVulkanInstance
+        PRIVATE CRISP_VVL_LAYER_DIR="$<TARGET_FILE_DIR:vvl>"
+        PRIVATE CRISP_SYNC2_LAYER_DIR="$<TARGET_FILE_DIR:VkLayer_khronos_synchronization2>"
+    )
+    add_dependencies(CrispVulkanInstance vvl VkLayer_khronos_synchronization2)
+endif()
 
 add_cpp_test(
     CrispVulkanInstanceTest

@@ -1,7 +1,9 @@
 #include <Crisp/Vulkan/Rhi/VulkanInstance.hpp>
 
+#include <cstdlib>
 #include <ranges>
 #include <span>
+#include <string>
 #include <unordered_set>
 
 #include <Crisp/Core/Logger.hpp>
@@ -112,7 +114,22 @@ Result<> assertRequiredLayerSupport(const std::span<const char* const> requiredL
     return {};
 }
 
+void useBundledValidationLayers() {
+#if defined(CRISP_VVL_LAYER_DIR) && defined(CRISP_SYNC2_LAYER_DIR)
+    const std::string layerPath = std::string(CRISP_VVL_LAYER_DIR) + ";" + CRISP_SYNC2_LAYER_DIR;
+#ifdef _WIN32
+    _putenv_s("VK_LAYER_PATH", layerPath.c_str());
+#else
+    setenv("VK_LAYER_PATH", layerPath.c_str(), 1);
+#endif
+#endif
+}
+
 VkInstance createInstance(std::vector<std::string> requiredExtensions, const bool enableValidationLayers) { // NOLINT
+    if (enableValidationLayers) {
+        useBundledValidationLayers();
+    }
+
     loadVulkanLoaderFunctions();
     VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
     appInfo.pApplicationName = "Crisp";
