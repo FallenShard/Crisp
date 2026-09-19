@@ -17,6 +17,7 @@ target_link_libraries(CrispGltfLoader
     PRIVATE Crisp::Logger
     PRIVATE Crisp::ThreadPool
     PRIVATE Crisp::ImageIo
+    PRIVATE Crisp::FileUtils
     PRIVATE tinygltf
 )
 
