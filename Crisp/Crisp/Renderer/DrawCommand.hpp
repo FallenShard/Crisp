@@ -50,8 +50,6 @@ struct PushConstantView {
 struct DrawCommand {
     static constexpr uint32_t kMaxDynamicBufferOffsets = 4;
 
-    VkViewport viewport = {};
-    VkRect2D scissor = {};
     VulkanPipeline* pipeline;
     Material* material;
     std::array<uint32_t, kMaxDynamicBufferOffsets> dynamicBufferOffsets{};

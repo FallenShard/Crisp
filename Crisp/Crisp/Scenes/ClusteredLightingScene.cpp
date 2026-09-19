@@ -37,15 +37,6 @@ void executeDrawCommand(
         encoder.bindPipeline(*command.pipeline);
         state.pipeline = command.pipeline;
     }
-    if (command.pipeline->getDynamicStateFlags().contains(PipelineDynamicState::Viewport) &&
-        command.viewport.width != 0.0f) {
-        encoder.setViewport(command.viewport);
-    }
-    if (command.pipeline->getDynamicStateFlags().contains(PipelineDynamicState::Scissor) &&
-        command.scissor.extent.width != 0) {
-        encoder.setScissor(command.scissor);
-    }
-
     encoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
     if (command.material) {
         encoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.getDynamicBufferOffsets()));

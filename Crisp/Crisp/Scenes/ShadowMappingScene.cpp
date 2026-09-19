@@ -49,14 +49,6 @@ void executeDrawCommands(const std::span<const DrawCommand> commands, const Vulk
             commandEncoder.bindPipeline(*command.pipeline);
             boundPipeline = command.pipeline;
         }
-        if (command.pipeline->getDynamicStateFlags().contains(PipelineDynamicState::Viewport) &&
-            command.viewport.width != 0.0f) {
-            commandEncoder.setViewport(command.viewport);
-        }
-        if (command.pipeline->getDynamicStateFlags().contains(PipelineDynamicState::Scissor) &&
-            command.scissor.extent.width != 0) {
-            commandEncoder.setScissor(command.scissor);
-        }
         commandEncoder.setPushConstants(*command.pipeline->getPipelineLayout(), command.pushConstantView.asSpan());
         if (command.material != nullptr) {
             commandEncoder.bindDescriptorSets(
