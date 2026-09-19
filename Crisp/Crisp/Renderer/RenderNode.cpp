@@ -28,7 +28,14 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(const RenderNode& render
     drawCommand.dynamicBufferOffsets[transformBufferDynamicIndex] =
         renderNode.transformHandle.index * sizeof(TransformPack);
 
-    drawCommand.setPushConstantView(pushConstantView);
+    if (pushConstantSize > 0) {
+        PushConstantView ownedPushConstantView;
+        ownedPushConstantView.data = pushConstantBuffer.data();
+        ownedPushConstantView.size = pushConstantSize;
+        drawCommand.setPushConstantView(ownedPushConstantView);
+    } else {
+        drawCommand.setPushConstantView(pushConstantView);
+    }
 
     drawCommand.geometry = geometry ? geometry : renderNode.geometry;
     if (!drawCommand.geometry->getIndexBuffer()) {

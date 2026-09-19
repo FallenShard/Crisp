@@ -7,6 +7,11 @@
 
 #include <Crisp/Core/HashMap.hpp>
 
+#include <array>
+#include <cstddef>
+#include <cstring>
+#include <type_traits>
+
 namespace crisp {
 struct RenderNode {
     void setModelMatrix(const glm::mat4& mat) const {
@@ -29,6 +34,9 @@ struct RenderNode {
     };
 
     struct MaterialData {
+        // Vulkan guarantees at least 128 bytes of push-constant storage on every device.
+        static constexpr size_t kMaxPushConstantBytes{128};
+
         int part = -1;
 
         Geometry* geometry = nullptr;
@@ -38,7 +46,8 @@ struct RenderNode {
         VulkanPipeline* pipeline = nullptr;
         uint32_t transformBufferDynamicIndex = 0;
 
-        std::vector<unsigned char> pushConstantBuffer;
+        std::array<std::byte, kMaxPushConstantBytes> pushConstantBuffer{};
+        uint32_t pushConstantSize{0};
         PushConstantView pushConstantView;
 
         void setGeometry(Geometry* newGeometry, int firstVertexBuffer, int vertexBufferCount) {
@@ -49,17 +58,20 @@ struct RenderNode {
 
         template <typename T>
         void setPushConstantView(const T& data) {
+            pushConstantSize = 0;
             pushConstantView.set(data);
         }
 
         template <typename T>
         void setPushConstants(const T& data) {
-            pushConstantBuffer.resize(sizeof(T));
+            static_assert(std::is_trivially_copyable_v<T>);
+            static_assert(sizeof(T) <= kMaxPushConstantBytes, "Push constants exceed inline storage capacity.");
             std::memcpy(pushConstantBuffer.data(), &data, sizeof(T));
-            pushConstantView.set(pushConstantBuffer);
+            pushConstantSize = sizeof(T);
         }
 
         void setPushConstantView(PushConstantView view) {
+            pushConstantSize = 0;
             pushConstantView = view;
         }
 
