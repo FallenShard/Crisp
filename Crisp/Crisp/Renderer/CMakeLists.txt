@@ -80,7 +80,6 @@ target_link_libraries(CrispRenderer
     PUBLIC Crisp::ThreadPool
     PUBLIC Crisp::RendererConfig
     PUBLIC Crisp::FrameContext
-    PUBLIC tbb
     PUBLIC Crisp::SpvReflection
     PRIVATE Crisp::ApplicationEnvironment
     PRIVATE Crisp::ShaderCompiler

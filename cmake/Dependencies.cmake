@@ -120,25 +120,6 @@ FetchContent_Declare(MPMCQueue
 )
 FetchContent_MakeAvailable(MPMCQueue)
 
-FetchContent_Declare(onetbb
-    GIT_REPOSITORY "https://github.com/oneapi-src/oneTBB.git"
-    GIT_TAG "v2023.1.0"
-    GIT_SHALLOW TRUE
-)
-block()
-set(BUILD_SHARED_LIBS ON)
-
-# oneTBB declares cmake_minimum_required 3.5, so its option() calls run with CMP0077 OLD
-# and would ignore plain variables -- these have to go through the cache.
-set(TBB_TEST OFF CACHE BOOL "" FORCE)
-set(TBB_STRICT OFF CACHE BOOL "" FORCE) # Defaults ON: a new MSVC warning in TBB fails our build.
-set(TBB_INSTALL OFF CACHE BOOL "" FORCE)
-set(TBBMALLOC_BUILD OFF CACHE BOOL "" FORCE)
-set(TBB_VERIFY_DEPENDENCY_SIGNATURE ON CACHE BOOL "" FORCE)
-set(TBB_DISABLE_HWLOC_AUTOMATIC_SEARCH ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(onetbb)
-endblock()
-
 FetchContent_Declare(VulkanHeaders
     GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-Headers.git"
     GIT_TAG "vulkan-sdk-1.4.357.0"

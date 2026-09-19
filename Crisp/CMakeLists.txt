@@ -41,10 +41,6 @@ target_link_libraries(
     CrispMain
     PRIVATE Crisp::Application
 )
-copy_shared_libs(
-    CrispMain
-    TBB::tbb
-)
 target_sources(
     CrispMain
     PRIVATE Crisp.natvis
