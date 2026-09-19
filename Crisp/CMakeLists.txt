@@ -23,6 +23,7 @@ add_cpp_binary(
     CrispMain
     "main.cpp"
 )
+
 if(MSVC)
     set_target_properties(CrispMain
         PROPERTIES
@@ -31,17 +32,14 @@ if(MSVC)
     )
     target_link_options(CrispMain
         PRIVATE
-            $<$<CONFIG:Debug>:/DEBUG>
-            $<$<CONFIG:Release>:/INCREMENTAL:NO>
-            $<$<CONFIG:Release>:/OPT:REF>
-            $<$<CONFIG:Release>:/OPT:ICF>
+        $<$<CONFIG:Debug>:/DEBUG>
+        $<$<CONFIG:Release>:/INCREMENTAL:NO>
+        $<$<CONFIG:Release>:/OPT:REF>
+        $<$<CONFIG:Release>:/OPT:ICF>
     )
 endif()
+
 target_link_libraries(
     CrispMain
     PRIVATE Crisp::Application
-)
-target_sources(
-    CrispMain
-    PRIVATE Crisp.natvis
 )
