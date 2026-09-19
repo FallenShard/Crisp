@@ -11,14 +11,32 @@ layout(location = 2) out vec3 eyePosition;
 layout(location = 3) out vec4 eyeTangent;
 layout(location = 4) out vec3 worldPos;
 
-layout(set = 2, binding = 0) uniform Transforms {
+struct TransformPack {
     mat4 MVP;
     mat4 MV;
     mat4 M;
     mat4 N;
 };
 
+layout(std430, set = 2, binding = 0) readonly buffer Transforms {
+    TransformPack transforms[];
+};
+
+layout(push_constant) uniform DrawParameters {
+    uvec2 materialTableAddress;
+    uint materialIndex;
+    uint flags;
+    uint transformIndex;
+    uint padding;
+}
+drawParameters;
+
 void main() {
+    const mat4 MVP = transforms[drawParameters.transformIndex].MVP;
+    const mat4 MV = transforms[drawParameters.transformIndex].MV;
+    const mat4 M = transforms[drawParameters.transformIndex].M;
+    const mat4 N = transforms[drawParameters.transformIndex].N;
+
     gl_Position = MVP * vec4(position, 1.0f);
     eyeNormal = normalize((N * vec4(normal, 0.0f)).xyz);
 

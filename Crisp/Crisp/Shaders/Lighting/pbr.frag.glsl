@@ -60,6 +60,8 @@ layout(push_constant) uniform DrawParameters {
     PbrMaterialTable materialTable;
     uint materialIndex;
     uint flags;
+    uint transformIndex;
+    uint padding;
 }
 drawParameters;
 

@@ -7,7 +7,7 @@
     "descriptorSets"     : [
         { "layout": "bindless"                                             },
         {                       "buffered": false                          },
-        {                       "buffered": false, "dynamicBuffers": [ 0 ] }
+        {                       "buffered": false }
     ],
     "depthStencil"       : { "reverseDepth": true },
     "multisample"        : { "sampleCount": 4 }

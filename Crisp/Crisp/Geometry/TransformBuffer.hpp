@@ -58,6 +58,10 @@ public:
         return m_transformBuffer->getDescriptorInfo(0, sizeof(TransformPack));
     }
 
+    VkDescriptorBufferInfo getStorageDescriptorInfo() const {
+        return m_transformBuffer->getDescriptorInfo(0, m_transforms.size() * sizeof(TransformPack));
+    }
+
     void update(const glm::mat4& V, const glm::mat4& P);
     void updateStagingBuffer(uint32_t regionIndex);
 

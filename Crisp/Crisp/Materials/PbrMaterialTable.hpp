@@ -31,13 +31,16 @@ struct PbrDrawParameters {
     VkDeviceAddress materialTableAddress{0};
     uint32_t materialIndex{0};
     uint32_t flags{0};
+    uint32_t transformIndex{0};
+    uint32_t padding{0};
 };
 
-static_assert(sizeof(PbrDrawParameters) == 16);
+static_assert(sizeof(PbrDrawParameters) == 24);
 static_assert(std::is_standard_layout_v<PbrDrawParameters>);
 static_assert(offsetof(PbrDrawParameters, materialTableAddress) == 0);
 static_assert(offsetof(PbrDrawParameters, materialIndex) == 8);
 static_assert(offsetof(PbrDrawParameters, flags) == 12);
+static_assert(offsetof(PbrDrawParameters, transformIndex) == 16);
 
 class PbrMaterialTable {
 public:

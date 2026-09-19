@@ -17,6 +17,8 @@ layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer Pb
 layout(push_constant) uniform DrawParameters {
     PbrMaterialTable materialTable;
     uint materialIndex;
+    uint flags;
+    uint transformIndex;
     uint padding;
 }
 drawParameters;

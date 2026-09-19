@@ -6,7 +6,10 @@ namespace crisp {
 TransformBuffer::TransformBuffer(Renderer* renderer, const std::size_t maxTransformCount)
     : m_activeTransforms(0)
     , m_transforms(maxTransformCount)
-    , m_transformBuffer(createUniformRingBuffer(&renderer->getDevice(), m_transforms.size() * sizeof(TransformPack))) {
+    , m_transformBuffer(std::make_unique<VulkanRingBuffer>(
+          &renderer->getDevice(),
+          VK_BUFFER_USAGE_2_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT,
+          m_transforms.size() * sizeof(TransformPack))) {
     renderer->getDevice().setObjectName(m_transformBuffer->getHandle(), "transformBuffer");
 }
 

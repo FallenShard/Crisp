@@ -171,7 +171,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
                 continue;
             }
             CRISP_CHECK_EQ(
-                cached.command.pipeline->getPipelineLayout(),
+                cached.command.getPipeline()->getPipelineLayout(),
                 &pbrPipelineLayout,
                 "Every draw in the bindless PBR batch must use its pipeline layout; draw special pipelines afterward.");
             executeDrawCommand(cached.command, ctx.commandEncoder, recordingState);
@@ -217,7 +217,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
             auto* csmPipeline = m_resourceContext->createPipeline(
                 key, variant.pipelineConfig, {m_renderGraph->getRasterizationPassDescriptor(kCsmPasses[i])});
             auto* csmMaterial = m_resourceContext->createMaterial(key, csmPipeline);
-            csmMaterial->writeDescriptor(1, 0, m_transformBuffer->getDescriptorInfo());
+            csmMaterial->writeDescriptor(1, 0, m_transformBuffer->getStorageDescriptorInfo());
             csmMaterial->writeDescriptor(1, 1, m_lightSystem->getCascadedDirectionalLightBufferInfo(i));
         }
     }
@@ -405,7 +405,7 @@ void PbrScene::createCommonTextures() {
     m_pbrMaterialTable = std::make_unique<PbrMaterialTable>(m_renderer->getDevice(), kMaximumObjectCount);
     m_pbrDrawMaterial =
         std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 2, 1);
-    m_pbrDrawMaterial->writeDescriptor(2, 0, m_transformBuffer->getDescriptorInfo());
+    m_pbrDrawMaterial->writeDescriptor(2, 0, m_transformBuffer->getStorageDescriptorInfo());
 }
 
 void PbrScene::setEnvironmentMap(const std::string& envMapName) {
@@ -471,7 +471,8 @@ void PbrScene::addSceneObject(
     forwardPass.transformBufferDynamicIndex = 0;
     const auto gpuMaterial = createGpuPbrParams(material, m_resourceContext->imageCache);
     const auto materialHandle = m_pbrMaterialTable->add(gpuMaterial);
-    const auto drawParameters = m_pbrMaterialTable->createDrawParameters(materialHandle);
+    auto drawParameters = m_pbrMaterialTable->createDrawParameters(materialHandle);
+    drawParameters.transformIndex = node.transformHandle.index;
     forwardPass.setPushConstants(drawParameters);
 
     const auto& shadowVariant = getShadowMaterialVariant(gpuMaterial.flags);
@@ -503,7 +504,9 @@ void PbrScene::createPlane() {
     forwardPass.material = m_pbrDrawMaterial.get();
     forwardPass.transformBufferDynamicIndex = 0;
     const auto materialHandle = m_pbrMaterialTable->add(createGpuPbrParams(material, m_resourceContext->imageCache));
-    forwardPass.setPushConstants(m_pbrMaterialTable->createDrawParameters(materialHandle));
+    auto floorDrawParameters = m_pbrMaterialTable->createDrawParameters(materialHandle);
+    floorDrawParameters.transformIndex = floor.transformHandle.index;
+    forwardPass.setPushConstants(floorDrawParameters);
 
     CRISP_CHECK(
         floor.pass(kForwardLightingPass)

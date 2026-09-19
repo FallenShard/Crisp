@@ -5,12 +5,25 @@ layout(location = 2) in vec2 texCoord;
 
 layout(location = 0) out vec2 outTexCoord;
 
-layout(set = 1, binding = 0) uniform Transforms {
+struct TransformPack {
     mat4 MVP;
     mat4 MV;
     mat4 M;
     mat4 N;
 };
+
+layout(std430, set = 1, binding = 0) readonly buffer Transforms {
+    TransformPack transforms[];
+};
+
+layout(push_constant) uniform DrawParameters {
+    uvec2 materialTableAddress;
+    uint materialIndex;
+    uint flags;
+    uint transformIndex;
+    uint padding;
+}
+drawParameters;
 
 layout(set = 1, binding = 1) uniform Light {
     mat4 V;
@@ -24,6 +37,6 @@ layout(set = 1, binding = 1) uniform Light {
 light;
 
 void main() {
-    gl_Position = light.VP * M * vec4(position, 1.0f);
+    gl_Position = light.VP * transforms[drawParameters.transformIndex].M * vec4(position, 1.0f);
     outTexCoord = texCoord;
 }

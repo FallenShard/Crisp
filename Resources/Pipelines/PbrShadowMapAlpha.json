@@ -6,7 +6,7 @@
     ],
     "descriptorSets": [
         { "layout": "bindless" },
-        { "buffered": false, "dynamicBuffers": [ 0 ] }
+        { "buffered": false }
     ],
     "rasterization": {
         "cullMode": "front",

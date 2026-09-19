@@ -3,6 +3,8 @@
 layout(push_constant) uniform DrawParameters {
     uvec2 materialTableAddress;
     uint materialIndex;
+    uint flags;
+    uint transformIndex;
     uint padding;
 }
 drawParameters;

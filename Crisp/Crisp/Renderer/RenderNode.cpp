@@ -71,9 +71,11 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(const RenderNode& render
     drawCommand.dynamicBufferOffsetCount =
         static_cast<uint8_t>(drawCommand.material->getDynamicDescriptorCount());
     CRISP_CHECK_LE(drawCommand.dynamicBufferOffsetCount, DrawCommand::kMaxDynamicBufferOffsets);
-    CRISP_CHECK_GE_LT(transformBufferDynamicIndex, 0, drawCommand.dynamicBufferOffsetCount);
-    drawCommand.dynamicBufferOffsets[transformBufferDynamicIndex] =
-        renderNode.transformHandle.index * sizeof(TransformPack);
+    if (drawCommand.dynamicBufferOffsetCount > 0) {
+        CRISP_CHECK_GE_LT(transformBufferDynamicIndex, 0, drawCommand.dynamicBufferOffsetCount);
+        drawCommand.dynamicBufferOffsets[transformBufferDynamicIndex] =
+            renderNode.transformHandle.index * sizeof(TransformPack);
+    }
 
     PushConstantView ownedPushConstantView;
     ownedPushConstantView.data = pushConstantBuffer.data();
