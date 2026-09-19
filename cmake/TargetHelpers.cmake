@@ -71,16 +71,28 @@ function(add_cpp_binary targetName)
     set_target_properties(${targetName} PROPERTIES FOLDER "Crisp/Applications")
 endfunction()
 
-# Creates a C++ binary test target. No-op when CRISP_BUILD_TESTS is OFF.
+# Creates a C++ binary test target. Sources are positional, DEPS are linked privately, ASSET_DIR
+# exposes a source directory as CRISP_TEST_ASSET_DIR, and FILES copies exceptional fixtures into
+# the target's build-local test-data directory. No-op when CRISP_BUILD_TESTS is OFF.
 function(add_cpp_test targetName)
     if(NOT CRISP_BUILD_TESTS)
         return()
     endif()
 
-    add_executable(${targetName} ${ARGN})
+    cmake_parse_arguments(PARSE_ARGV 1 test "" "ASSET_DIR" "DEPS;FILES")
+
+    if(test_KEYWORDS_MISSING_VALUES)
+        message(FATAL_ERROR
+            "add_cpp_test(${targetName}): missing values for ${test_KEYWORDS_MISSING_VALUES}")
+    endif()
+
+    add_executable(${targetName} ${test_UNPARSED_ARGUMENTS})
     enable_default_cpp_compile_options(${targetName} PUBLIC)
-    target_link_libraries(${targetName} PRIVATE GTest::gmock)
-    target_link_libraries(${targetName} PRIVATE GTest::gmock_main)
+    target_link_libraries(${targetName}
+        PRIVATE
+        GTest::gmock
+        GTest::gmock_main
+        ${test_DEPS})
     set_target_properties(${targetName} PROPERTIES FOLDER "Crisp/Tests")
 
     gtest_discover_tests(
@@ -91,6 +103,16 @@ function(add_cpp_test targetName)
     target_compile_definitions(${targetName}
         PRIVATE CRISP_RESOURCE_DIR="${CMAKE_SOURCE_DIR}/Resources"
         PRIVATE CRISP_SHADER_SOURCE_DIR="${CMAKE_SOURCE_DIR}/Crisp/Crisp/Shaders")
+
+    if(test_ASSET_DIR)
+        get_filename_component(
+            testAssetDir "${test_ASSET_DIR}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+        target_compile_definitions(${targetName} PRIVATE CRISP_TEST_ASSET_DIR="${testAssetDir}")
+    endif()
+
+    foreach(testFile IN LISTS test_FILES)
+        target_add_test_file(${targetName} "${testFile}")
+    endforeach()
 endfunction()
 
 # Copies a tracked fixture into a target-specific directory in the build tree. The optional third

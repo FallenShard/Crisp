@@ -19,12 +19,12 @@ using EnvironmentSamplingTest = VulkanTest;
 constexpr uint32_t kWidth = 8;
 constexpr uint32_t kHeight = 4;
 constexpr uint32_t kSampleCount = 1u << 16;
-const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispEnvironmentSamplingTest";
+const auto kShaderSourceDirectory = std::filesystem::path{CRISP_TEST_ASSET_DIR};
 const TestShaderMap kTestShaders{
-    kShaderSourceDirectory / "environment-sampling.comp.glsl",
-    kShaderSourceDirectory / "point-light.comp.glsl",
-    kShaderSourceDirectory / "directional-light.comp.glsl",
-};
+    {kShaderSourceDirectory / "environment-sampling.comp.glsl",
+     kShaderSourceDirectory / "point-light.comp.glsl",
+     kShaderSourceDirectory / "directional-light.comp.glsl"},
+    std::filesystem::path{CRISP_SHADER_SOURCE_DIR}};
 
 struct SamplingResult {
     glm::vec4 directionAndPdf;
@@ -88,8 +88,7 @@ std::vector<float> createTestPixels() {
     return pixels;
 }
 
-std::vector<SamplingResult> runSamplingShader(
-    VulkanDevice& device, const Distribution2D& distribution) {
+std::vector<SamplingResult> runSamplingShader(VulkanDevice& device, const Distribution2D& distribution) {
     const VkDeviceSize distributionByteSize = distribution.getCdf().size() * sizeof(float);
     VulkanBuffer distributionBuffer(
         device, distributionByteSize, VK_BUFFER_USAGE_2_STORAGE_BUFFER_BIT, BufferMemoryType::HostUpload);
@@ -136,8 +135,7 @@ std::vector<SamplingResult> runSamplingShader(
     return {data, data + kSampleCount}; // NOLINT
 }
 
-std::array<PointLightResult, 2> runPointLightShader(
-    VulkanDevice& device, const PointLightPushConstants& pushConstants) {
+std::array<PointLightResult, 2> runPointLightShader(VulkanDevice& device, const PointLightPushConstants& pushConstants) {
     constexpr VkDeviceSize kResultByteSize = 2 * sizeof(PointLightResult);
     VulkanBuffer resultBuffer(
         device,
@@ -220,8 +218,7 @@ TEST(EnvironmentSamplingDistributionTest, BuildsNormalizedLuminanceTimesSineDist
     const float equatorialProbability = distribution.getCellProbability(0, 1);
     const float luminanceRatio = 3.25f / 1.25f;
     const float sineRatio =
-        std::sin(1.5f * std::numbers::pi_v<float> / kHeight) /
-        std::sin(0.5f * std::numbers::pi_v<float> / kHeight);
+        std::sin(1.5f * std::numbers::pi_v<float> / kHeight) / std::sin(0.5f * std::numbers::pi_v<float> / kHeight);
     EXPECT_NEAR(equatorialProbability / northProbability, luminanceRatio * sineRatio, 2e-5f);
 }
 
@@ -254,7 +251,8 @@ TEST_F(EnvironmentSamplingTest, SamplesMatchCdfAndReportSolidAnglePdf) {
 
         const float probability = distribution.getCellProbability(result.texel.x, result.texel.y);
         const float sinTheta = std::sqrt(std::max(0.0f, 1.0f - direction.y * direction.y));
-        const float expectedPdf = probability * float(kWidth * kHeight) /
+        const float expectedPdf =
+            probability * float(kWidth * kHeight) /
             (2.0f * std::numbers::pi_v<float> * std::numbers::pi_v<float> * sinTheta);
         EXPECT_NEAR(result.directionAndPdf.w, expectedPdf, 2e-5f * expectedPdf + 1e-7f);
     }
@@ -262,8 +260,7 @@ TEST_F(EnvironmentSamplingTest, SamplesMatchCdfAndReportSolidAnglePdf) {
     double chiSquared = 0.0;
     for (uint32_t y = 0; y < kHeight; ++y) {
         for (uint32_t x = 0; x < kWidth; ++x) {
-            const double expected =
-                kSampleCount * static_cast<double>(distribution.getCellProbability(x, y));
+            const double expected = kSampleCount * static_cast<double>(distribution.getCellProbability(x, y));
             const double difference = observed[y * kWidth + x] - expected;
             chiSquared += difference * difference / expected;
         }
@@ -282,8 +279,7 @@ TEST_F(EnvironmentSamplingTest, PointLightUsesPowerAndInverseSquareFalloff) {
 
     const glm::vec3 lightVector = pushConstants.position - pushConstants.reference;
     const float squaredDistance = glm::dot(lightVector, lightVector);
-    const glm::vec3 expectedRadiance =
-        pushConstants.power / (4.0f * std::numbers::pi_v<float> * squaredDistance);
+    const glm::vec3 expectedRadiance = pushConstants.power / (4.0f * std::numbers::pi_v<float> * squaredDistance);
 
     EXPECT_NEAR(results[0].directionAndDistance.x, glm::normalize(lightVector).x, 1e-6f);
     EXPECT_NEAR(results[0].directionAndDistance.y, glm::normalize(lightVector).y, 1e-6f);

@@ -32,7 +32,7 @@ constexpr float kFixedDeltaTime = 1.0f / 60.0f;
 constexpr float kMaxRelativeRmse = 0.02f;
 
 std::filesystem::path goldenImagePath() {
-    return std::filesystem::path{"TestData"} / "CrispOceanSceneTest" / "ocean-reference.exr";
+    return std::filesystem::path{CRISP_TEST_ASSET_DIR} / "ocean-reference.exr";
 }
 
 class OceanSceneRenderTest : public ::testing::Test {

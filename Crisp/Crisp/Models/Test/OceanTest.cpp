@@ -16,11 +16,10 @@ namespace crisp {
 namespace {
 using OceanTest = VulkanTest;
 
-const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispOceanTest";
+const auto kShaderSourceDirectory = std::filesystem::path{CRISP_TEST_ASSET_DIR};
 const TestShaderMap kTestShaders{
-    kShaderSourceDirectory / "Ocean" / "spectrum.comp.glsl",
-    kShaderSourceDirectory / "Ocean" / "ifft.comp.glsl",
-};
+    {kShaderSourceDirectory / "Ocean" / "spectrum.comp.glsl", kShaderSourceDirectory / "Ocean" / "ifft.comp.glsl"},
+    kShaderSourceDirectory};
 
 TEST(OceanClipmapTest, RingsTileTheLevelBelow) {
     const OceanClipmap clipmap{};

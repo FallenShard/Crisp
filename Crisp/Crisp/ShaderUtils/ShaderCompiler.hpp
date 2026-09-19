@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -14,7 +15,9 @@ struct ShaderCompilationStats {
 };
 
 Result<std::vector<uint32_t>> compileGlslShader(
-    const std::filesystem::path& inputPath, std::string_view shaderType = {});
+    const std::filesystem::path& inputPath,
+    std::string_view shaderType = {},
+    std::span<const std::filesystem::path> includeDirectories = {});
 Result<> compileGlslShader(
     const std::filesystem::path& inputPath, const std::filesystem::path& outputPath, std::string_view shaderType = {});
 

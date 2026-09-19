@@ -47,15 +47,14 @@ target_link_libraries(CrispPbfTest
     PRIVATE Crisp::Application
 )
 
-add_cpp_test(CrispOceanTest
+add_cpp_test(
+    CrispOceanTest
     "Test/OceanTest.cpp"
+    DEPS
+    Crisp::VulkanTestUtils
+    Crisp::Models
+    Crisp::ShaderCompiler
+    Crisp::UniqueTemporaryFile
+    ASSET_DIR
+    "../Shaders"
 )
-target_link_libraries(CrispOceanTest
-    PRIVATE Crisp::VulkanTestUtils
-    PRIVATE Crisp::Models
-)
-target_add_test_shader(
-    CrispOceanTest "../Shaders/Ocean/spectrum.comp.glsl" "Ocean/spectrum.comp.glsl")
-target_add_test_shader(CrispOceanTest "../Shaders/Ocean/ifft.comp.glsl" "Ocean/ifft.comp.glsl")
-target_add_test_file(
-    CrispOceanTest "../Shaders/Common/math-constants.part.glsl" "Common/math-constants.part.glsl")

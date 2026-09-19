@@ -159,23 +159,29 @@ target_link_libraries(CrispOceanScene
     PRIVATE Crisp::MaterialUtils
     PRIVATE Crisp::ImGuiCameraUtils
 )
-add_cpp_test(CrispMaterialExplorerSceneTest
-    "Test/MaterialExplorerSceneRenderTest.cpp")
-target_link_libraries(CrispMaterialExplorerSceneTest
-    PRIVATE Crisp::MaterialExplorerScene
-    PRIVATE Crisp::Renderer
-    PRIVATE Crisp::Application
-    PRIVATE Crisp::ImageIo)
-target_add_test_file(CrispMaterialExplorerSceneTest "Test/Data/material-explorer-path-traced.exr")
+add_cpp_test(
+    CrispMaterialExplorerSceneTest
+    "Test/MaterialExplorerSceneRenderTest.cpp"
+    DEPS
+    Crisp::MaterialExplorerScene
+    Crisp::Renderer
+    Crisp::Application
+    Crisp::ImageIo
+    ASSET_DIR
+    "Test/Data"
+)
 
-add_cpp_test(CrispOceanSceneTest
-    "Test/OceanSceneRenderTest.cpp")
-target_link_libraries(CrispOceanSceneTest
-    PRIVATE Crisp::OceanScene
-    PRIVATE Crisp::Renderer
-    PRIVATE Crisp::Application
-    PRIVATE Crisp::ImageIo)
-target_add_test_file(CrispOceanSceneTest "Test/Data/ocean-reference.exr")
+add_cpp_test(
+    CrispOceanSceneTest
+    "Test/OceanSceneRenderTest.cpp"
+    DEPS
+    Crisp::OceanScene
+    Crisp::Renderer
+    Crisp::Application
+    Crisp::ImageIo
+    ASSET_DIR
+    "Test/Data"
+)
 
 target_link_libraries(CrispPbrScene
     PUBLIC Crisp::Scene
@@ -235,82 +241,29 @@ target_link_libraries(CrispVulkanRayTracingScene
     PUBLIC Crisp::RayTracingPipelineBuilder
 )
 
-add_cpp_test(CrispBsdfValidationTest
-    "Test/BsdfValidationTest.cpp")
-set_target_properties(CrispBsdfValidationTest PROPERTIES CXX_SCAN_FOR_MODULES OFF)
-target_link_libraries(CrispBsdfValidationTest
-    PRIVATE Crisp::Renderer
-    PRIVATE Crisp::VulkanTestUtils)
-target_add_test_shader(CrispBsdfValidationTest "Test/Data/bsdf-validation.comp.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Common/math-constants.part.glsl" "Common/math-constants.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Common/warp.part.glsl" "Common/warp.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/BSDFs/lambertian.part.glsl" "BSDFs/lambertian.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/BSDFs/oren-nayar.part.glsl" "BSDFs/oren-nayar.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/BSDFs/microfacet.part.glsl" "BSDFs/microfacet.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/BSDFs/Microfacet/common.part.glsl" "BSDFs/Microfacet/common.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/BSDFs/Microfacet/ggx.part.glsl" "BSDFs/Microfacet/ggx.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/BSDFs/Microfacet/beckmann.part.glsl" "BSDFs/Microfacet/beckmann.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/BSDFs/fresnel.part.glsl" "BSDFs/fresnel.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/BSDFs/smooth-conductor.part.glsl" "BSDFs/smooth-conductor.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/BSDFs/rough-conductor.part.glsl" "BSDFs/rough-conductor.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/BSDFs/rough-dielectric.part.glsl" "BSDFs/rough-dielectric.part.glsl")
-target_add_test_file(
+add_cpp_test(
     CrispBsdfValidationTest
-    "../Shaders/PathTracer/Media/homogeneous.part.glsl"
-    "PathTracer/Media/homogeneous.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest
-    "../Shaders/PathTracer/Media/volume-bounds.part.glsl"
-    "PathTracer/Media/volume-bounds.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest "../Shaders/Common/rng.part.glsl" "Common/rng.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest
-    "../Shaders/PathTracer/PhaseFunctions/isotropic.part.glsl"
-    "PathTracer/PhaseFunctions/isotropic.part.glsl")
-target_add_test_file(
-    CrispBsdfValidationTest
-    "../Shaders/PathTracer/PhaseFunctions/henyey-greenstein.part.glsl"
-    "PathTracer/PhaseFunctions/henyey-greenstein.part.glsl")
+    "Test/BsdfValidationTest.cpp"
+    DEPS
+    Crisp::Renderer
+    Crisp::VulkanTestUtils
+    Crisp::ShaderCompiler
+    Crisp::UniqueTemporaryFile
+    ASSET_DIR
+    "Test/Data"
+)
 
-add_cpp_test(CrispEnvironmentSamplingTest
-    "Test/EnvironmentSamplingTest.cpp")
-target_link_libraries(CrispEnvironmentSamplingTest
-    PRIVATE Crisp::VulkanRayTracingScene
-    PRIVATE Crisp::VulkanTestUtils)
-target_add_test_shader(CrispEnvironmentSamplingTest "Test/Data/environment-sampling.comp.glsl")
-target_add_test_shader(CrispEnvironmentSamplingTest "Test/Data/point-light.comp.glsl")
-target_add_test_shader(CrispEnvironmentSamplingTest "Test/Data/directional-light.comp.glsl")
-target_add_test_file(
-    CrispEnvironmentSamplingTest "../Shaders/Common/math-constants.part.glsl" "Common/math-constants.part.glsl")
-target_add_test_file(
+add_cpp_test(
     CrispEnvironmentSamplingTest
-    "../Shaders/PathTracer/Lights/environment-distribution.part.glsl"
-    "PathTracer/Lights/environment-distribution.part.glsl")
-target_add_test_file(
-    CrispEnvironmentSamplingTest
-    "../Shaders/PathTracer/Lights/point-light.part.glsl"
-    "PathTracer/Lights/point-light.part.glsl")
-target_add_test_file(
-    CrispEnvironmentSamplingTest
-    "../Shaders/PathTracer/Lights/light-types.part.glsl"
-    "PathTracer/Lights/light-types.part.glsl")
-target_add_test_file(
-    CrispEnvironmentSamplingTest
-    "../Shaders/PathTracer/Lights/directional-light.part.glsl"
-    "PathTracer/Lights/directional-light.part.glsl")
+    "Test/EnvironmentSamplingTest.cpp"
+    DEPS
+    Crisp::VulkanRayTracingScene
+    Crisp::VulkanTestUtils
+    Crisp::ShaderCompiler
+    Crisp::UniqueTemporaryFile
+    ASSET_DIR
+    "Test/Data"
+)
 
 add_cpp_test(CrispRayTracingSceneParserTest
     "Test/RayTracingSceneParserTest.cpp")

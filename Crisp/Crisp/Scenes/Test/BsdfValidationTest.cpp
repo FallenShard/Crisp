@@ -18,8 +18,9 @@ using BsdfValidationTest = VulkanTest;
 constexpr uint32_t kSampleCount = 1u << 14;
 constexpr float kTwoPi = 2.0f * std::numbers::pi_v<float>;
 constexpr float kMicrofacetAlpha = 0.3f;
-const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispBsdfValidationTest";
-const TestShaderMap kTestShaders{kShaderSourceDirectory / "bsdf-validation.comp.glsl"};
+const auto kShaderSourceDirectory = std::filesystem::path{CRISP_TEST_ASSET_DIR};
+const TestShaderMap kTestShaders{
+    {kShaderSourceDirectory / "bsdf-validation.comp.glsl"}, std::filesystem::path{CRISP_SHADER_SOURCE_DIR}};
 
 enum class Model : uint32_t { // NOLINT
     Lambertian,

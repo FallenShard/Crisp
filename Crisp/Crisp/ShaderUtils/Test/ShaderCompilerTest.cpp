@@ -6,7 +6,7 @@
 namespace crisp {
 namespace {
 
-const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispShaderCompilerTest";
+const auto kShaderSourceDirectory = std::filesystem::path{CRISP_TEST_ASSET_DIR};
 const TestShaderMap kTestShaders{
     kShaderSourceDirectory / "reflection.comp",
 };

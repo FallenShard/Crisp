@@ -110,7 +110,14 @@ add_cpp_header_library(CrispRendererConfig
     "RendererConfig.hpp"
 )
 
-add_cpp_test(CrispDescriptorUpdaterTest
-    "Test/DescriptorUpdaterTest.cpp")
-target_link_libraries(CrispDescriptorUpdaterTest PRIVATE Crisp::Renderer CrispVulkanTestUtils)
-target_add_test_shader(CrispDescriptorUpdaterTest "Test/Data/bindless.frag")
+add_cpp_test(
+    CrispDescriptorUpdaterTest
+    "Test/DescriptorUpdaterTest.cpp"
+    DEPS
+    Crisp::Renderer
+    CrispVulkanTestUtils
+    Crisp::ShaderCompiler
+    Crisp::UniqueTemporaryFile
+    ASSET_DIR
+    "Test/Data"
+)

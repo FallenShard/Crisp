@@ -48,10 +48,16 @@ target_link_libraries(CrispShaderCompiler
     PRIVATE glslang::glslang-default-resource-limits
 )
 
-add_cpp_test(CrispShaderCompilerTest
-    "Test/ShaderCompilerTest.cpp")
-target_link_libraries(CrispShaderCompilerTest PRIVATE Crisp::ShaderCompiler Crisp::ShaderType)
-target_add_test_shader(CrispShaderCompilerTest "Test/Data/reflection.comp")
+add_cpp_test(
+    CrispShaderCompilerTest
+    "Test/ShaderCompilerTest.cpp"
+    DEPS
+    Crisp::ShaderCompiler
+    Crisp::ShaderType
+    Crisp::UniqueTemporaryFile
+    ASSET_DIR
+    "Test/Data"
+)
 
 add_cpp_static_library(CrispSpvReflection
     "Reflection.cpp"
@@ -62,9 +68,13 @@ target_link_libraries(CrispSpvReflection
     PUBLIC spirv-reflect-static
 )
 
-add_cpp_test(CrispSpvReflectionTest
-    "Test/ReflectionTest.cpp")
-target_link_libraries(CrispSpvReflectionTest PRIVATE Crisp::SpvReflection)
-target_add_test_shader(CrispSpvReflectionTest "Test/Data/reflection.comp")
-target_add_test_shader(CrispSpvReflectionTest "Test/Data/reflection.vert")
-target_add_test_shader(CrispSpvReflectionTest "Test/Data/heap-untyped.comp")
+add_cpp_test(
+    CrispSpvReflectionTest
+    "Test/ReflectionTest.cpp"
+    DEPS
+    Crisp::SpvReflection
+    Crisp::ShaderCompiler
+    Crisp::UniqueTemporaryFile
+    ASSET_DIR
+    "Test/Data"
+)

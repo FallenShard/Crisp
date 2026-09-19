@@ -22,7 +22,8 @@ namespace crisp {
 
 class TestShaderMap {
 public:
-    explicit TestShaderMap(std::initializer_list<std::filesystem::path> shaderPaths) {
+    TestShaderMap(std::initializer_list<std::filesystem::path> shaderPaths, std::filesystem::path includeDirectory = {})
+        : m_includeDirectory(std::move(includeDirectory)) {
         for (const auto& shaderPath : shaderPaths) {
             const auto shaderName = shaderPath.filename().string();
             if (shaderName.empty()) {
@@ -74,9 +75,13 @@ private:
         return shaderIter->second;
     }
 
-    static std::span<const uint32_t> getOrCompileSpirv(const Shader& shader) {
+    std::span<const uint32_t> getOrCompileSpirv(const Shader& shader) const {
         if (!shader.spirv) {
-            auto result = compileGlslShader(shader.sourcePath);
+            const std::span includeDirectories =
+                m_includeDirectory.empty()
+                    ? std::span<const std::filesystem::path>{}
+                    : std::span<const std::filesystem::path>{&m_includeDirectory, 1};
+            auto result = compileGlslShader(shader.sourcePath, {}, includeDirectories);
             if (!result) {
                 throw std::runtime_error(std::move(result).getError());
             }
@@ -86,6 +91,7 @@ private:
     }
 
     std::map<std::string, Shader, std::less<>> m_shaders;
+    std::filesystem::path m_includeDirectory;
     mutable std::mutex m_mutex;
 };
 

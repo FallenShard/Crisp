@@ -30,7 +30,7 @@ constexpr float kFixedDeltaTime = 1.0f / 60.0f;
 constexpr float kMaxRelativeRmse = 0.02f;
 
 std::filesystem::path goldenImagePath() {
-    return std::filesystem::path{"TestData"} / "CrispMaterialExplorerSceneTest" / "material-explorer-path-traced.exr";
+    return std::filesystem::path{CRISP_TEST_ASSET_DIR} / "material-explorer-path-traced.exr";
 }
 
 class MaterialExplorerSceneRenderTest : public ::testing::Test {
@@ -118,8 +118,9 @@ std::vector<float> renderPathTracedView(bool& supported) {
     const VulkanImageView* sceneView = renderer.getSceneImageView();
     EXPECT_NE(sceneView, nullptr);
     VulkanImage& image = sceneView->getImage();
-    EXPECT_EQ(image.getFormat(), VK_FORMAT_R32G32B32A32_SFLOAT)
-        << "The presented image is not the path-traced accumulation buffer; the scene fell back to rasterization.";
+    EXPECT_EQ(image.getFormat(), VK_FORMAT_R32G32B32A32_SFLOAT) << "The presented image is not the path-traced "
+                                                                   "accumulation buffer; the scene fell back to "
+                                                                   "rasterization.";
 
     const VkDeviceSize pixelCount = static_cast<VkDeviceSize>(image.getWidth()) * image.getHeight();
     VulkanBuffer downloadBuffer(

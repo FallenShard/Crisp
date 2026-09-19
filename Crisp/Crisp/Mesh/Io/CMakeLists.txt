@@ -45,9 +45,14 @@ target_link_libraries(CrispMeshIo
     PRIVATE Crisp::Logger
 )
 
-add_cpp_test(CrispWavefrontObjLoaderTest "Test/WavefrontObjLoaderTest.cpp")
-target_link_libraries(CrispWavefrontObjLoaderTest PRIVATE Crisp::WavefrontObjLoader)
-target_add_test_file(CrispWavefrontObjLoaderTest "Test/Data/simple.obj")
+add_cpp_test(
+    CrispWavefrontObjLoaderTest
+    "Test/WavefrontObjLoaderTest.cpp"
+    DEPS
+        Crisp::WavefrontObjLoader
+    ASSET_DIR
+        "Test/Data"
+)
 
 set(externalAssetConfig "${CMAKE_CURRENT_BINARY_DIR}/Generated/Crisp/Mesh/Io/ExternalAssetConfig.hpp")
 configure_file("Test/ExternalAssetConfig.hpp.in" "${externalAssetConfig}" @ONLY)
@@ -61,14 +66,12 @@ add_cpp_benchmark(CrispWavefrontObjLoaderBenchmark "Benchmark/WavefrontObjLoader
 target_link_libraries(CrispWavefrontObjLoaderBenchmark PRIVATE Crisp::WavefrontObjLoader)
 target_include_directories(CrispWavefrontObjLoaderBenchmark PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/Generated")
 
-add_cpp_test(CrispGltfLoaderTest "Test/GltfLoaderTest.cpp")
-target_link_libraries(CrispGltfLoaderTest PRIVATE Crisp::GltfLoader)
+add_cpp_test(
+    CrispGltfLoaderTest
+    "Test/GltfLoaderTest.cpp"
+    DEPS
+        Crisp::GltfLoader
+    ASSET_DIR
+        "Test/Data"
+)
 target_include_directories(CrispGltfLoaderTest PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/Generated")
-target_add_test_file(CrispGltfLoaderTest "Test/Data/Triangle.gltf")
-target_add_test_file(CrispGltfLoaderTest "Test/Data/NonIndexedTriangle.gltf")
-target_add_test_file(CrispGltfLoaderTest "Test/Data/UnsignedByteIndicesTriangle.gltf")
-target_add_test_file(CrispGltfLoaderTest "Test/Data/ParentTransformTriangle.gltf")
-target_add_test_file(CrispGltfLoaderTest "Test/Data/MultiPrimitiveSkinnedTriangle.gltf")
-target_add_test_file(CrispGltfLoaderTest "Test/Data/MeshlessScene.gltf")
-target_add_test_file(CrispGltfLoaderTest "Test/Data/TexturedTriangle.gltf")
-target_add_test_file(CrispGltfLoaderTest "Test/Data/DuplicateTexturedTriangle.gltf")

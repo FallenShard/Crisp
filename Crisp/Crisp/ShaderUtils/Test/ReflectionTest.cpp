@@ -12,7 +12,7 @@ using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::SizeIs;
 
-const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispSpvReflectionTest";
+const auto kShaderSourceDirectory = std::filesystem::path{CRISP_TEST_ASSET_DIR};
 const TestShaderMap kTestShaders{
     kShaderSourceDirectory / "reflection.comp",
     kShaderSourceDirectory / "reflection.vert",

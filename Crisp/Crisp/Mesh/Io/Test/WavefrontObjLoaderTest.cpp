@@ -6,7 +6,7 @@ namespace crisp {
 namespace {
 
 TEST(WavefrontObjTest, LoadsTrackedTriangle) {
-    const auto mesh = loadWavefrontObj(std::filesystem::path{"TestData"} / "CrispWavefrontObjLoaderTest" / "simple.obj");
+    const auto mesh = loadWavefrontObj(std::filesystem::path{CRISP_TEST_ASSET_DIR} / "simple.obj");
 
     EXPECT_EQ(mesh.positions.size(), 3);
     EXPECT_EQ(mesh.normals.size(), 3);

@@ -94,6 +94,9 @@ private:
 
 class RelativeFileIncluder final : public glslang::TShader::Includer {
 public:
+    explicit RelativeFileIncluder(const std::span<const std::filesystem::path> includeDirectories)
+        : m_includeDirectories(includeDirectories) {}
+
     IncludeResult* includeLocal(
         const char* headerName, const char* includerName, std::size_t /*inclusionDepth*/) override {
         const std::filesystem::path relativePath(headerName);
@@ -101,8 +104,17 @@ public:
             return nullptr;
         }
 
-        const auto resolvedPath = (std::filesystem::path(includerName).parent_path() / relativePath).lexically_normal();
+        auto resolvedPath = (std::filesystem::path(includerName).parent_path() / relativePath).lexically_normal();
         auto sourceResult = readBinaryFile(resolvedPath);
+        if (!sourceResult) {
+            for (const auto& includeDirectory : m_includeDirectories) {
+                resolvedPath = (includeDirectory / relativePath).lexically_normal();
+                sourceResult = readBinaryFile(resolvedPath);
+                if (sourceResult) {
+                    break;
+                }
+            }
+        }
         if (!sourceResult) {
             return nullptr;
         }
@@ -135,6 +147,8 @@ private:
         std::string path;
         std::vector<char> source;
     };
+
+    std::span<const std::filesystem::path> m_includeDirectories;
 };
 
 struct ProcessOutput {
@@ -337,7 +351,9 @@ Result<> compileGlslShader(
 }
 
 Result<std::vector<uint32_t>> compileGlslShader(
-    const std::filesystem::path& inputPath, const std::string_view shaderType) {
+    const std::filesystem::path& inputPath,
+    const std::string_view shaderType,
+    const std::span<const std::filesystem::path> includeDirectories) {
     if (inputPath.extension() == ".slang") {
         return resultError("Cannot compile Slang source {} with glslang", inputPath.string());
     }
@@ -376,7 +392,7 @@ Result<std::vector<uint32_t>> compileGlslShader(
     shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_6);
 
     constexpr auto kMessages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
-    RelativeFileIncluder includer;
+    RelativeFileIncluder includer(includeDirectories);
     if (!shader.parse(GetDefaultResources(), 450, false, kMessages, includer)) {
         return resultError(
             "Failed to compile shader {}:\n{}{}", inputPath.string(), shader.getInfoLog(), shader.getInfoDebugLog());

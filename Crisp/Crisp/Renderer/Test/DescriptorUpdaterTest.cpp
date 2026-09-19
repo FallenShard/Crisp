@@ -1,8 +1,9 @@
 #include <Crisp/Vulkan/Rhi/Test/VulkanTest.hpp>
 
 #include <Crisp/Renderer/Material.hpp>
-#include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
 #include <Crisp/ShaderUtils/Test/TestShaderMap.hpp>
+#include <Crisp/Vulkan/PipelineLayoutBuilder.hpp>
+
 
 namespace crisp {
 namespace {
@@ -12,7 +13,7 @@ using ::testing::IsEmpty;
 
 using DescriptorUpdaterTest = VulkanTest;
 
-const auto kShaderSourceDirectory = std::filesystem::path{"TestData"} / "CrispDescriptorUpdaterTest";
+const auto kShaderSourceDirectory = std::filesystem::path{CRISP_TEST_ASSET_DIR};
 const TestShaderMap kTestShaders{
     kShaderSourceDirectory / "bindless.frag",
 };
@@ -61,8 +62,7 @@ auto BindingIs(const uint32_t binding, const uint32_t count, const VkDescriptorT
 }
 
 TEST_F(DescriptorUpdaterTest, BindlessDescriptor) {
-    PipelineLayoutMetadata metadata{
-        reflectPipelineLayoutFromSpirv(kTestShaders.getSpirvPath("bindless.frag")).unwrap()};
+    PipelineLayoutMetadata metadata{reflectPipelineLayoutFromSpirv(kTestShaders.getSpirvPath("bindless.frag")).unwrap()};
     EXPECT_THAT(
         metadata.descriptorSetLayoutBindings,
         ElementsAre(

@@ -16,7 +16,7 @@ MATCHER(HasValue, "") {
 }
 
 TEST(GltfLoaderTest, LoadsTrackedTriangle) {
-    auto asset = loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "Triangle.gltf");
+    auto asset = loadGltfAsset(std::filesystem::path{CRISP_TEST_ASSET_DIR} / "Triangle.gltf");
     ASSERT_THAT(asset, HasValue());
 
     const auto loaded = asset.unwrap();
@@ -29,7 +29,7 @@ TEST(GltfLoaderTest, LoadsTrackedTriangle) {
 }
 
 TEST(GltfLoaderTest, LoadsNonIndexedTriangle) {
-    auto asset = loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "NonIndexedTriangle.gltf");
+    auto asset = loadGltfAsset(std::filesystem::path{CRISP_TEST_ASSET_DIR} / "NonIndexedTriangle.gltf");
     ASSERT_THAT(asset, HasValue());
 
     const auto loaded = asset.unwrap();
@@ -42,7 +42,7 @@ TEST(GltfLoaderTest, LoadsNonIndexedTriangle) {
 
 TEST(GltfLoaderTest, LoadsUnsignedByteIndices) {
     auto asset =
-        loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "UnsignedByteIndicesTriangle.gltf");
+        loadGltfAsset(std::filesystem::path{CRISP_TEST_ASSET_DIR} / "UnsignedByteIndicesTriangle.gltf");
     ASSERT_THAT(asset, HasValue());
 
     const auto loaded = asset.unwrap();
@@ -53,7 +53,7 @@ TEST(GltfLoaderTest, LoadsUnsignedByteIndices) {
 
 TEST(GltfLoaderTest, AccumulatesParentNodeTransforms) {
     auto asset =
-        loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "ParentTransformTriangle.gltf");
+        loadGltfAsset(std::filesystem::path{CRISP_TEST_ASSET_DIR} / "ParentTransformTriangle.gltf");
     ASSERT_THAT(asset, HasValue());
 
     const auto loaded = asset.unwrap();
@@ -66,7 +66,7 @@ TEST(GltfLoaderTest, AccumulatesParentNodeTransforms) {
 
 TEST(GltfLoaderTest, PreservesSkinningAcrossMultiplePrimitives) {
     auto asset =
-        loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "MultiPrimitiveSkinnedTriangle.gltf");
+        loadGltfAsset(std::filesystem::path{CRISP_TEST_ASSET_DIR} / "MultiPrimitiveSkinnedTriangle.gltf");
     ASSERT_THAT(asset, HasValue());
 
     const auto loaded = asset.unwrap();
@@ -93,7 +93,7 @@ TEST(GltfLoaderTest, PreservesSkinningAcrossMultiplePrimitives) {
 }
 
 TEST(GltfLoaderTest, LoadsMeshlessScene) {
-    auto asset = loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "MeshlessScene.gltf");
+    auto asset = loadGltfAsset(std::filesystem::path{CRISP_TEST_ASSET_DIR} / "MeshlessScene.gltf");
     ASSERT_THAT(asset, HasValue());
 
     const auto loaded = asset.unwrap();
@@ -105,7 +105,7 @@ TEST(GltfLoaderTest, LoadsMeshlessScene) {
 }
 
 TEST(GltfLoaderTest, LoadsEmbeddedImagesInSourceOrder) {
-    auto asset = loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "TexturedTriangle.gltf");
+    auto asset = loadGltfAsset(std::filesystem::path{CRISP_TEST_ASSET_DIR} / "TexturedTriangle.gltf");
     ASSERT_THAT(asset, HasValue());
 
     const auto loaded = asset.unwrap();
@@ -132,7 +132,7 @@ TEST(GltfLoaderTest, LoadsEmbeddedImagesInSourceOrder) {
 
 TEST(GltfLoaderTest, DeduplicatesEmbeddedImagesByContent) {
     auto asset =
-        loadGltfAsset(std::filesystem::path{"TestData"} / "CrispGltfLoaderTest" / "DuplicateTexturedTriangle.gltf");
+        loadGltfAsset(std::filesystem::path{CRISP_TEST_ASSET_DIR} / "DuplicateTexturedTriangle.gltf");
     ASSERT_THAT(asset, HasValue());
 
     const auto loaded = asset.unwrap();
