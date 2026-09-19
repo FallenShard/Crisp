@@ -139,12 +139,13 @@ set(TBB_DISABLE_HWLOC_AUTOMATIC_SEARCH ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(onetbb)
 endblock()
 
-FetchContent_Declare(vulkan
+FetchContent_Declare(VulkanHeaders
     GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-Headers.git"
-    GIT_TAG "v1.4.357"
+    GIT_TAG "vulkan-sdk-1.4.357.0"
     GIT_SHALLOW TRUE
+    OVERRIDE_FIND_PACKAGE
 )
-FetchContent_MakeAvailable(vulkan)
+FetchContent_MakeAvailable(VulkanHeaders)
 
 FetchContent_Declare(volk
     GIT_REPOSITORY "https://github.com/zeux/volk.git"
@@ -154,6 +155,56 @@ FetchContent_Declare(volk
 set(VOLK_HEADERS_ONLY ON CACHE BOOL "" FORCE)
 set(VOLK_PULL_IN_VULKAN OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(volk)
+
+FetchContent_Declare(SPIRV-Headers
+    GIT_REPOSITORY "https://github.com/KhronosGroup/SPIRV-Headers.git"
+    GIT_TAG "vulkan-sdk-1.4.357.0"
+    GIT_SHALLOW TRUE
+    OVERRIDE_FIND_PACKAGE
+)
+FetchContent_MakeAvailable(SPIRV-Headers)
+set(SPIRV-Headers_SOURCE_DIR "${spirv-headers_SOURCE_DIR}")
+
+FetchContent_Declare(SPIRV-Tools-opt
+    GIT_REPOSITORY "https://github.com/KhronosGroup/SPIRV-Tools.git"
+    GIT_TAG "vulkan-sdk-1.4.357.0"
+    GIT_SHALLOW TRUE
+    OVERRIDE_FIND_PACKAGE
+)
+set(SPIRV_SKIP_TESTS ON CACHE BOOL "" FORCE)
+set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "" FORCE)
+set(SPIRV_WERROR OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(SPIRV-Tools-opt)
+
+FetchContent_Declare(VulkanUtilityLibraries
+    GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-Utility-Libraries.git"
+    GIT_TAG "vulkan-sdk-1.4.357.0"
+    GIT_SHALLOW TRUE
+    OVERRIDE_FIND_PACKAGE
+)
+FetchContent_MakeAvailable(VulkanUtilityLibraries)
+
+FetchContent_Declare(Vulkan-ValidationLayers
+    GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-ValidationLayers.git"
+    GIT_TAG "vulkan-sdk-1.4.357.0"
+    GIT_SHALLOW TRUE
+)
+set(BUILD_WERROR OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(VVL_ENABLE_ASAN OFF CACHE BOOL "" FORCE)
+set(VVL_ENABLE_UBSAN OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(Vulkan-ValidationLayers)
+set_target_properties(vvl PROPERTIES DEBUG_POSTFIX "")
+
+FetchContent_Declare(Vulkan-ExtensionLayer
+    GIT_REPOSITORY "https://github.com/KhronosGroup/Vulkan-ExtensionLayer.git"
+    GIT_TAG "vulkan-sdk-1.4.357.0"
+    GIT_SHALLOW TRUE
+)
+set(BUILD_WERROR OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(Vulkan-ExtensionLayer)
+set_target_properties(VkLayer_khronos_synchronization2 PROPERTIES DEBUG_POSTFIX "")
 
 FetchContent_Declare(VulkanMemoryAllocator
     GIT_REPOSITORY "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git"
