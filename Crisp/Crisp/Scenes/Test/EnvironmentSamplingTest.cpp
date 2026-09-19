@@ -20,11 +20,11 @@ constexpr uint32_t kWidth = 8;
 constexpr uint32_t kHeight = 4;
 constexpr uint32_t kSampleCount = 1u << 16;
 const auto kShaderSourceDirectory = std::filesystem::path{CRISP_TEST_ASSET_DIR};
-const TestShaderMap kTestShaders{
+const TestShaderMap kTestShaders(
     {kShaderSourceDirectory / "environment-sampling.comp.glsl",
      kShaderSourceDirectory / "point-light.comp.glsl",
      kShaderSourceDirectory / "directional-light.comp.glsl"},
-    std::filesystem::path{CRISP_SHADER_SOURCE_DIR}};
+    std::filesystem::path{CRISP_SHADER_SOURCE_DIR});
 
 struct SamplingResult {
     glm::vec4 directionAndPdf;
