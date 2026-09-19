@@ -68,6 +68,7 @@ void createDrawCommand(
 
 struct DrawCommandRecordingState {
     const VulkanPipeline* pipeline{nullptr};
+    const Material* material{nullptr};
 };
 
 void executeDrawCommand(
@@ -80,8 +81,10 @@ void executeDrawCommand(
     }
     commandEncoder.setPushConstants(*command.getPipeline()->getPipelineLayout(), command.pushConstantView.asSpan());
 
-    if (command.material) {
+    if (command.material != nullptr &&
+        (state.material != command.material || command.dynamicBufferOffsetCount > 0)) {
         commandEncoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.getDynamicBufferOffsets()));
+        state.material = command.material;
     }
 
     command.geometry->bindVertexBuffers(commandEncoder, command.firstBuffer, command.bufferCount);
