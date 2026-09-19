@@ -11,12 +11,9 @@
 #include <array>
 #include <cstddef>
 #include <span>
-#include <variant>
 #include <vector>
 
 namespace crisp {
-using GeometryViewVariant = std::variant<ListGeometryView, IndexedGeometryView>;
-
 struct PushConstantView {
     const void* data = nullptr;
     VkDeviceSize size = 0;
@@ -50,32 +47,6 @@ struct PushConstantView {
     }
 };
 
-namespace detail {
-using DrawFunc = void (*)(const VulkanCommandEncoder&, const GeometryViewVariant&);
-
-inline void draw(const VulkanCommandEncoder& encoder, const GeometryViewVariant& geomView) {
-    const auto& view = std::get<ListGeometryView>(geomView);
-    encoder.draw(view.vertexCount, view.instanceCount, view.firstVertex, view.firstInstance);
-}
-
-inline void drawIndexed(const VulkanCommandEncoder& encoder, const GeometryViewVariant& geomView) {
-    const auto& view = std::get<IndexedGeometryView>(geomView);
-    encoder.bindIndexBuffer(view.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-    encoder.drawIndexed(view.indexCount, view.instanceCount, view.firstIndex, view.vertexOffset, view.firstInstance);
-}
-
-template <typename GeometryView>
-constexpr DrawFunc getDrawFunc() {
-    if constexpr (std::is_same_v<GeometryView, IndexedGeometryView>) {
-        return drawIndexed;
-    } else if constexpr (std::is_same_v<GeometryView, ListGeometryView>) {
-        return draw;
-    } else {
-        return nullptr;
-    }
-}
-} // namespace detail
-
 struct DrawCommand {
     static constexpr uint32_t kMaxDynamicBufferOffsets = 4;
 
@@ -89,8 +60,7 @@ struct DrawCommand {
     PushConstantView pushConstantView;
 
     Geometry* geometry;
-    GeometryViewVariant geometryView;
-    detail::DrawFunc drawFunc;
+    GeometryView geometryView;
     uint32_t firstBuffer;
     uint32_t bufferCount;
 
@@ -98,16 +68,22 @@ struct DrawCommand {
         return std::span{dynamicBufferOffsets}.first(dynamicBufferOffsetCount);
     }
 
-    template <typename GeometryView, typename... Args>
-    void setGeometryView(Args&&... args) {
-        geometryView = GeometryView(std::forward<Args>(args)...);
-        drawFunc = detail::getDrawFunc<GeometryView>();
-    }
-
-    template <typename GeometryView>
-    void setGeometryView(GeometryView&& view) {
-        geometryView = std::forward<GeometryView>(view);
-        drawFunc = detail::getDrawFunc<GeometryView>();
+    void draw(const VulkanCommandEncoder& encoder) const {
+        if (geometryView.isIndexed()) {
+            encoder.bindIndexBuffer(geometryView.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+            encoder.drawIndexed(
+                geometryView.elementCount,
+                geometryView.instanceCount,
+                geometryView.firstElement,
+                geometryView.vertexOffset,
+                geometryView.firstInstance);
+        } else {
+            encoder.draw(
+                geometryView.elementCount,
+                geometryView.instanceCount,
+                geometryView.firstElement,
+                geometryView.firstInstance);
+        }
     }
 
     template <typename T>

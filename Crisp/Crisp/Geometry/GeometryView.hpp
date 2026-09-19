@@ -3,19 +3,16 @@
 #include <Crisp/Vulkan/Rhi/VulkanHeader.hpp>
 
 namespace crisp {
-struct ListGeometryView {
-    uint32_t vertexCount;
-    uint32_t instanceCount;
-    uint32_t firstVertex;
-    uint32_t firstInstance;
-};
+struct GeometryView {
+    VkBuffer indexBuffer{VK_NULL_HANDLE};
+    uint32_t elementCount{0};
+    uint32_t instanceCount{0};
+    uint32_t firstElement{0};
+    int32_t vertexOffset{0};
+    uint32_t firstInstance{0};
 
-struct IndexedGeometryView {
-    VkBuffer indexBuffer;
-    uint32_t indexCount;
-    uint32_t instanceCount;
-    uint32_t firstIndex;
-    int32_t vertexOffset;
-    uint32_t firstInstance;
+    bool isIndexed() const {
+        return indexBuffer != VK_NULL_HANDLE;
+    }
 };
 } // namespace crisp

@@ -96,9 +96,9 @@ public:
         return m_indexType;
     }
 
-    IndexedGeometryView createIndexedGeometryView() const;
-    IndexedGeometryView createIndexedGeometryView(uint32_t partIndex) const;
-    ListGeometryView createListGeometryView() const;
+    GeometryView createIndexedGeometryView() const;
+    GeometryView createIndexedGeometryView(uint32_t partIndex) const;
+    GeometryView createListGeometryView() const;
 
 private:
     VulkanVertexLayout m_vertexLayout;

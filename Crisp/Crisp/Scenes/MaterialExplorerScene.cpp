@@ -85,7 +85,7 @@ void executeDrawCommands(const std::span<const DrawCommand> commands, const Vulk
                 command.material->getDescriptorSetBinding(command.getDynamicBufferOffsets()));
         }
         command.geometry->bindVertexBuffers(commandEncoder, command.firstBuffer, command.bufferCount);
-        command.drawFunc(commandEncoder, command.geometryView);
+        command.draw(commandEncoder);
     }
 }
 

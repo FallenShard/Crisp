@@ -39,11 +39,11 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(const RenderNode& render
 
     drawCommand.geometry = geometry ? geometry : renderNode.geometry;
     if (!drawCommand.geometry->getIndexBuffer()) {
-        drawCommand.setGeometryView(drawCommand.geometry->createListGeometryView());
+        drawCommand.geometryView = drawCommand.geometry->createListGeometryView();
     } else if (part != -1) {
-        drawCommand.setGeometryView(drawCommand.geometry->createIndexedGeometryView(part));
+        drawCommand.geometryView = drawCommand.geometry->createIndexedGeometryView(part);
     } else {
-        drawCommand.setGeometryView(drawCommand.geometry->createIndexedGeometryView());
+        drawCommand.geometryView = drawCommand.geometry->createIndexedGeometryView();
     }
     drawCommand.firstBuffer = firstBuffer == -1 ? 0 : firstBuffer;
     drawCommand.bufferCount = bufferCount == -1 ? drawCommand.geometry->getVertexBufferCount() : bufferCount;

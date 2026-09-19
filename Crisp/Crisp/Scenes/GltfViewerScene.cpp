@@ -85,7 +85,7 @@ void executeDrawCommand(
     }
 
     command.geometry->bindVertexBuffers(commandEncoder, command.firstBuffer, command.bufferCount);
-    command.drawFunc(commandEncoder, command.geometryView);
+    command.draw(commandEncoder);
 }
 } // namespace
 

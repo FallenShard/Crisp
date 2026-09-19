@@ -94,33 +94,33 @@ void Geometry::bindAndDraw(const VulkanCommandEncoder& encoder) const {
     draw(encoder);
 }
 
-IndexedGeometryView Geometry::createIndexedGeometryView() const {
+GeometryView Geometry::createIndexedGeometryView() const {
     return {
         .indexBuffer = m_indexBuffer->getHandle(),
-        .indexCount = m_indexCount,
+        .elementCount = m_indexCount,
         .instanceCount = m_instanceCount,
-        .firstIndex = 0,
+        .firstElement = 0,
         .vertexOffset = 0,
         .firstInstance = 0,
     };
 }
 
-IndexedGeometryView Geometry::createIndexedGeometryView(const uint32_t partIndex) const {
+GeometryView Geometry::createIndexedGeometryView(const uint32_t partIndex) const {
     return {
         .indexBuffer = m_indexBuffer->getHandle(),
-        .indexCount = m_meshViews[partIndex].indexCount,
+        .elementCount = m_meshViews[partIndex].indexCount,
         .instanceCount = m_instanceCount,
-        .firstIndex = m_meshViews[partIndex].firstIndex,
+        .firstElement = m_meshViews[partIndex].firstIndex,
         .vertexOffset = 0,
         .firstInstance = 0,
     };
 }
 
-ListGeometryView Geometry::createListGeometryView() const {
+GeometryView Geometry::createListGeometryView() const {
     return {
-        .vertexCount = m_vertexCount,
+        .elementCount = m_vertexCount,
         .instanceCount = m_instanceCount,
-        .firstVertex = 0,
+        .firstElement = 0,
         .firstInstance = 0,
     };
 }

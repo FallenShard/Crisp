@@ -51,7 +51,7 @@ void executeDrawCommand(
         encoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.getDynamicBufferOffsets()));
     }
     command.geometry->bindVertexBuffers(encoder, command.firstBuffer, command.bufferCount);
-    command.drawFunc(encoder, command.geometryView);
+    command.draw(encoder);
 }
 
 void drawNode(
