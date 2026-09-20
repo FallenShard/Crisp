@@ -271,6 +271,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
 
     createPlane();
     m_mergeGeometry = args.value("mergeGeometry", m_mergeGeometry);
+    m_optimizeIndices = args.value("optimizeIndices", m_optimizeIndices);
     createSceneObjects(args.value("modelPath", std::string{}));
 
     if (args.value("meshletTest", false)) {
@@ -558,7 +559,7 @@ void PbrScene::createSceneObjects(const std::filesystem::path& path) {
 }
 
 void PbrScene::createGltfSceneObjects(const std::filesystem::path& path) {
-    auto [images, models] = loadGltfAsset(path).unwrap();
+    auto [images, models] = loadGltfAsset(path, {.optimizeIndices = m_optimizeIndices}).unwrap();
     CRISP_LOGI("Loaded {} models from {}.", models.size(), path.generic_string());
 
     // Every loaded image lands in the bindless table here; the per-model params below resolve their slots by key.

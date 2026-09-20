@@ -1,10 +1,13 @@
 #include <Crisp/Mesh/Io/MeshLoader.hpp>
 
+#include <span>
+
+#include <meshoptimizer.h>
+
 #include <Crisp/Core/Checks.hpp>
 #include <Crisp/Core/Logger.hpp>
 #include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
-
-#include <meshoptimizer.h>
+#include <Crisp/Mesh/MeshOptimizer.hpp>
 
 namespace crisp {
 namespace {
@@ -34,28 +37,26 @@ TriangleMesh convertToTriangleMesh(
 
     mesh.setMeshName(path.filename().stem().string());
     mesh.setViews(std::move(objMesh.views));
+
+    if (options.optimizeIndices) {
+        const auto stats = optimizeMeshIndices(mesh);
+        logger->info(
+            "Optimized {}: {} -> {} vertices, ATVR {:.3f} -> {:.3f}, overfetch {:.3f} -> {:.3f}.",
+            mesh.getMeshName(),
+            stats.vertexCountBefore,
+            stats.vertexCountAfter,
+            stats.atvrBefore,
+            stats.atvrAfter,
+            stats.overfetchBefore,
+            stats.overfetchAfter);
+    }
+
     return mesh;
 }
 
 TriangleMeshlets convertToTriangleMeshlets(
     const std::filesystem::path& path, WavefrontObjMesh&& objMesh, const TriangleMeshLoadOptions& options) { // NOLINT
     auto mesh = convertToTriangleMesh(path, std::move(objMesh), options);
-
-    // const float threshold = 0.2f;
-    // size_t targetIndexCount = static_cast<uint32_t>(static_cast<float>(mesh.getIndexCount()) * threshold);
-    // const float targetError = 1e-2f;
-
-    // std::vector<uint32_t> lod(mesh.getIndexCount());
-
-    // const auto count = meshopt_simplify(
-    //     lod.data(),
-    //     mesh.getIndices(),
-    //     mesh.getIndexCount(),
-    //     mesh.getPositionsPtr(),
-    //     mesh.getVertexCount(),
-    //     sizeof(glm::vec3),
-    //     targetIndexCount,
-    //     targetError);
 
     const size_t max_vertices = 64;
     const size_t max_triangles = 124;
@@ -67,12 +68,12 @@ TriangleMeshlets convertToTriangleMeshlets(
     meshletData.maxMeshletCount =
         static_cast<uint32_t>(meshopt_buildMeshletsBound(mesh.getIndexCount(), max_vertices, max_triangles));
 
-    meshletData.meshlets.resize(meshletData.maxMeshletCount);
+    std::vector<meshopt_Meshlet> builtMeshlets(meshletData.maxMeshletCount);
     meshletData.meshletVertices.resize(meshletData.maxMeshletCount * max_vertices);
     meshletData.meshletTriangles.resize(meshletData.maxMeshletCount * max_triangles * 3);
 
     const size_t meshletCount = meshopt_buildMeshlets(
-        meshletData.meshlets.data(),
+        builtMeshlets.data(),
         meshletData.meshletVertices.data(),
         meshletData.meshletTriangles.data(),
         mesh.getIndices(),
@@ -83,11 +84,21 @@ TriangleMeshlets convertToTriangleMeshlets(
         max_vertices,
         max_triangles,
         cone_weight);
-    const meshopt_Meshlet& last = meshletData.meshlets[meshletCount - 1];
+    const meshopt_Meshlet& last = builtMeshlets[meshletCount - 1];
 
     meshletData.meshletVertices.resize(last.vertex_offset + last.vertex_count);
     meshletData.meshletTriangles.resize(last.triangle_offset + ((last.triangle_count * 3 + 3) & ~3));
-    meshletData.meshlets.resize(meshletCount);
+
+    meshletData.meshlets.reserve(meshletCount);
+    for (const auto& built : std::span{builtMeshlets}.first(meshletCount)) {
+        meshletData.meshlets.push_back(
+            Meshlet{
+                .vertexOffset = built.vertex_offset,
+                .triangleOffset = built.triangle_offset,
+                .vertexCount = built.vertex_count,
+                .triangleCount = built.triangle_count,
+            });
+    }
 
     for (const auto& vertexIndex : meshletData.meshletVertices) {
         CRISP_CHECK_GE_LT(vertexIndex, 0, mesh.getVertexCount());
@@ -105,11 +116,12 @@ Result<TriangleMesh> loadTriangleMesh(const std::filesystem::path& path, const T
     return resultError("Failed to open an obj mesh at {}", path.string());
 }
 
-Result<MeshAndMaterial> loadTriangleMeshAndMaterial(const std::filesystem::path& path) { // NOLINT
+Result<MeshAndMaterial> loadTriangleMeshAndMaterial( // NOLINT
+    const std::filesystem::path& path, const TriangleMeshLoadOptions& options) {
     if (isWavefrontObjFile(path)) {
         auto objMesh = loadWavefrontObj(path);
         auto materials = std::move(objMesh.materials);
-        return MeshAndMaterial{convertToTriangleMesh(path, std::move(objMesh), {}), std::move(materials)};
+        return MeshAndMaterial{convertToTriangleMesh(path, std::move(objMesh), options), std::move(materials)};
     }
 
     return resultError("Failed to open an obj mesh at {}", path.string());

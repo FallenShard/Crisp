@@ -24,6 +24,7 @@
 #include <Crisp/Core/ThreadPool.hpp>
 #include <Crisp/Image/Io/Utils.hpp>
 #include <Crisp/Io/FileUtils.hpp>
+#include <Crisp/Mesh/MeshOptimizer.hpp>
 
 namespace crisp {
 namespace {
@@ -224,8 +225,7 @@ Result<std::vector<glm::uvec3>> loadIndexBuffer(const tg3_model& model, const tg
     CRISP_CHECK_EQ(accessorView.elementByteSize, componentByteSize);
 
     std::vector<glm::uvec3> indices(triangleCount);
-    if (accessor.component_type == TG3_COMPONENT_TYPE_UNSIGNED_INT &&
-        accessorView.byteStride == componentByteSize) {
+    if (accessor.component_type == TG3_COMPONENT_TYPE_UNSIGNED_INT && accessorView.byteStride == componentByteSize) {
         static_assert(sizeof(glm::uvec3) == 3 * sizeof(uint32_t));
         std::memcpy(indices.data(), accessorView.bytes.data(), accessor.count * componentByteSize); // NOLINT
     } else {
@@ -282,8 +282,7 @@ Result<std::vector<DstType>> createBuffer(const tg3_model& model, const tg3_acce
 }
 
 template <GltfAttrib DstType, GltfAttrib SrcType = DstType>
-Result<std::vector<DstType>> createBuffer(
-    const tg3_model& model, const tg3_primitive& primitive, const char* attrib) {
+Result<std::vector<DstType>> createBuffer(const tg3_model& model, const tg3_primitive& primitive, const char* attrib) {
     const int32_t accessorIdx = findAttributeAccessor(primitive, attrib);
     if (!isValidGltfIndex(accessorIdx)) {
         return std::vector<DstType>{};
@@ -445,7 +444,7 @@ Result<std::vector<uint8_t>> resolveImageBytes(
             return resultError("GLTF image buffer view exceeds its buffer.");
         }
 
-        const auto* begin = buffer.data.data + bufferView.byte_offset; // NOLINT
+        const auto* begin = buffer.data.data + bufferView.byte_offset;      // NOLINT
         return std::vector<uint8_t>(begin, begin + bufferView.byte_length); // NOLINT
     }
 
@@ -468,7 +467,7 @@ Result<std::vector<uint8_t>> resolveImageBytes(
     const auto imagePath = baseDir / decodePercentEncoding(uri);
     CRISP_TRY(auto fileBytes, readBinaryFile(imagePath));
     return std::vector<uint8_t>(
-        reinterpret_cast<const uint8_t*>(fileBytes.data()), // NOLINT
+        reinterpret_cast<const uint8_t*>(fileBytes.data()),                     // NOLINT
         reinterpret_cast<const uint8_t*>(fileBytes.data()) + fileBytes.size()); // NOLINT
 }
 
@@ -607,10 +606,7 @@ glm::mat4 getNodeTransform(const tg3_node& node) {
 } // namespace
 
 PbrMaterial createPbrMaterialFromGltfMaterial(
-    const tg3_model& model,
-    const tg3_material& material,
-    GltfImageLoader& loader,
-    MaterialWarningCounts& warningCounts) {
+    const tg3_model& model, const tg3_material& material, GltfImageLoader& loader, MaterialWarningCounts& warningCounts) {
     PbrMaterial pbrMaterial{.name = std::string{toStringView(material.name)}};
     if (equalsCStr(material.alpha_mode, "MASK")) {
         pbrMaterial.params.flags |= PbrMaterialAlphaMask;
@@ -951,7 +947,7 @@ PbrImageGroup createPbrImageData(
     return imageData;
 }
 
-Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
+Result<SceneData> loadGltfAsset(const std::filesystem::path& path, const TriangleMeshLoadOptions& loadOptions) {
     if (!std::filesystem::exists(path)) {
         return resultError("GLTF path '{}' doesn't exist!", path.string());
     }
@@ -1053,6 +1049,17 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
             }
         }
     }
+
+    MeshOptimizationStats optimizationStats{};
+    std::chrono::steady_clock::duration optimizationDuration{};
+    if (loadOptions.optimizeIndices) {
+        const auto optimizationStart = std::chrono::steady_clock::now();
+        for (auto& sceneModel : sceneData.models) {
+            optimizationStats.accumulate(optimizeMeshIndices(sceneModel.mesh));
+        }
+        optimizationDuration = std::chrono::steady_clock::now() - optimizationStart;
+    }
+
     const auto modelWorkDuration = std::chrono::steady_clock::now() - modelWorkStart;
 
     const auto imageOrganizationStart = std::chrono::steady_clock::now();
@@ -1069,6 +1076,23 @@ Result<SceneData> loadGltfAsset(const std::filesystem::path& path) {
         totalDuration.count(),
         imageDuration.count(),
         modelDuration.count());
+    if (loadOptions.optimizeIndices) {
+        const std::chrono::duration<double, std::milli> optimizationMs{optimizationDuration};
+        CRISP_LOGI(
+            "Mesh optimization for '{}' in {:.1f} ms: {} -> {} vertices, ACMR {:.3f} -> {:.3f}, ATVR {:.3f} -> "
+            "{:.3f}, overfetch {:.3f} -> {:.3f}.",
+            path.filename().string(),
+            optimizationMs.count(),
+            optimizationStats.vertexCountBefore,
+            optimizationStats.vertexCountAfter,
+            optimizationStats.acmrBefore,
+            optimizationStats.acmrAfter,
+            optimizationStats.atvrBefore,
+            optimizationStats.atvrAfter,
+            optimizationStats.overfetchBefore,
+            optimizationStats.overfetchAfter);
+    }
+
     if (materialWarningCounts.blendMaterialCount != 0 || materialWarningCounts.unsupportedTexCoordMaterialCount != 0 ||
         materialWarningCounts.customSamplerMaterialCount != 0) {
         CRISP_LOGW(

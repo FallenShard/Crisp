@@ -105,6 +105,10 @@ const VertexAttributeBuffer& TriangleMesh::getCustomAttribute(const std::string_
     return m_customAttributes.at(attributeName);
 }
 
+const FlatStringHashMap<VertexAttributeBuffer>& TriangleMesh::getCustomAttributes() const {
+    return m_customAttributes;
+}
+
 const float* TriangleMesh::getPositionsPtr() const {
     return m_positions.empty() ? nullptr : glm::value_ptr(m_positions[0]);
 }
@@ -139,7 +143,9 @@ void TriangleMesh::setTriangles(std::vector<glm::uvec3>&& triangles) {
 }
 
 void TriangleMesh::setCustomAttribute(const std::string_view attributeName, VertexAttributeBuffer&& attributeBuffer) {
-    m_customAttributes.emplace(attributeName, std::move(attributeBuffer));
+    // Assigns rather than emplaces: emplace leaves an existing attribute untouched, which makes a second set on the
+    // same name silently do nothing -- as it did when the mesh optimizer wrote back remapped attribute buffers.
+    m_customAttributes.insert_or_assign(std::string{attributeName}, std::move(attributeBuffer));
 }
 
 void TriangleMesh::append(TriangleMesh&& mesh) { // NOLINT

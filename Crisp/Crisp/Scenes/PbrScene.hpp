@@ -57,6 +57,7 @@ private:
     bool shouldRecordPipelineStats(uint32_t queryIndex) const;
 
     bool m_mergeGeometry{true};
+    bool m_optimizeIndices{true};
     int32_t m_nodesToDraw = 0;
     std::unique_ptr<rg::RenderGraph> m_renderGraph;
 

@@ -27,6 +27,7 @@ public:
     const std::vector<glm::vec4>& getTangents() const;
     const std::vector<glm::uvec3>& getTriangles() const;
     const VertexAttributeBuffer& getCustomAttribute(std::string_view attributeName) const;
+    const FlatStringHashMap<VertexAttributeBuffer>& getCustomAttributes() const;
 
     const float* getPositionsPtr() const;
     const uint32_t* getIndices() const;
