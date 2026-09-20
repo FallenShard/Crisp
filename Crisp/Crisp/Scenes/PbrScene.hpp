@@ -82,8 +82,9 @@ private:
 
     bool m_showFloor{true};
 
+    bool m_cullMeshlets{true};
     bool m_drawMeshlets{false};
-    MeshletData m_meshletData;
+    MeshletGeometry m_meshletData;
 
     struct CachedDrawCommand {
         const RenderNode* renderNode{nullptr};

@@ -71,6 +71,13 @@ void createDrawCommand(
     }
 }
 
+constexpr uint32_t kMeshletTaskWorkGroupSize = 32;
+
+struct MeshletCullParameters {
+    uint32_t meshletCount;
+    uint32_t cullingEnabled;
+};
+
 struct DrawCommandRecordingState {
     const VulkanPipeline* pipeline{nullptr};
     const Material* material{nullptr};
@@ -235,7 +242,17 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
             ctx.commandEncoder.bindPipeline(*meshPipeline);
             auto* meshMaterial = m_resourceContext->getMaterial("mesh");
             ctx.commandEncoder.bindDescriptorSets(meshMaterial->getDescriptorSetBinding());
-            ctx.commandEncoder.drawMeshTasks(static_cast<uint32_t>(m_meshletData.meshlets.size()));
+
+            const auto meshletCount = static_cast<uint32_t>(m_meshletData.meshlets.size());
+            const MeshletCullParameters cullParameters{
+                .meshletCount = meshletCount,
+                .cullingEnabled = m_cullMeshlets ? 1u : 0u,
+            };
+            ctx.commandEncoder.setPushConstants(
+                *meshPipeline->getPipelineLayout(), VK_SHADER_STAGE_TASK_BIT_EXT, cullParameters);
+
+            const uint32_t taskGroupCount = (meshletCount + kMeshletTaskWorkGroupSize - 1) / kMeshletTaskWorkGroupSize;
+            ctx.commandEncoder.drawMeshTasks(taskGroupCount);
         }
     });
 
@@ -397,6 +414,21 @@ void PbrScene::drawGui() {
         }
         if (!m_meshletData.meshlets.empty()) {
             ImGui::Checkbox("Draw Meshlets", &m_drawMeshlets);
+            ImGui::Checkbox("Cone Cull Meshlets", &m_cullMeshlets);
+
+            const glm::vec3 cameraPosition{m_cameraController->getCamera().getPosition()};
+            uint32_t visibleMeshlets{0};
+            for (const auto& bounds : m_meshletData.bounds) {
+                visibleMeshlets += isMeshletConeVisible(bounds, cameraPosition) ? 1u : 0u;
+            }
+            const auto meshletCount = static_cast<uint32_t>(m_meshletData.meshlets.size());
+            ImGui::Text(
+                "Cone culled: %u of %u (%.1f%%)",
+                meshletCount - visibleMeshlets,
+                meshletCount,
+                meshletCount == 0
+                    ? 0.0f
+                    : 100.0f * static_cast<float>(meshletCount - visibleMeshlets) / static_cast<float>(meshletCount));
         }
     }
     if (ImGui::CollapsingHeader("Pipeline Stats")) {
@@ -679,8 +711,9 @@ void PbrScene::createMeshletTestNode() {
         kNodeName, createGeometry(*m_renderer, mesh, kPbrVertexFormat, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
 
     auto* meshletBuffer = m_resourceContext->createStorageBuffer("meshletBuffer", m_meshletData.meshlets);
-    auto* meshletVertices = m_resourceContext->createStorageBuffer("meshletVertices", m_meshletData.meshletVertices);
-    auto* meshletTriangles = m_resourceContext->createStorageBuffer("meshletTriangles", m_meshletData.meshletTriangles);
+    auto* meshletVertices = m_resourceContext->createStorageBuffer("meshletVertices", m_meshletData.vertices);
+    auto* meshletTriangles = m_resourceContext->createStorageBuffer("meshletTriangles", m_meshletData.triangles);
+    auto* meshletBounds = m_resourceContext->createStorageBuffer("meshletBounds", m_meshletData.bounds);
 
     auto* meshPipeline = m_resourceContext->createPipeline(
         "mesh", "MeshShading.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
@@ -691,6 +724,7 @@ void PbrScene::createMeshletTestNode() {
     meshMaterial->writeDescriptor(0, 3, geometry.getVertexBuffer(0)->createDescriptorInfo());
     meshMaterial->writeDescriptor(0, 4, m_resourceContext->getRingBuffer("camera")->getDescriptorInfo());
     meshMaterial->writeDescriptor(0, 5, geometry.getVertexBuffer(1)->createDescriptorInfo());
+    meshMaterial->writeDescriptor(0, 6, meshletBounds->createDescriptorInfo());
 }
 
 void PbrScene::setupInput() {

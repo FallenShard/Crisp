@@ -6,20 +6,10 @@
 #include <Crisp/Mesh/Io/GltfLoader.hpp>
 #include <Crisp/Mesh/Io/MeshLoadOptions.hpp>
 #include <Crisp/Mesh/Io/WavefrontObjLoader.hpp>
-#include <Crisp/Mesh/Meshlet.hpp>
+#include <Crisp/Mesh/MeshletBuilder.hpp>
 #include <Crisp/Mesh/TriangleMesh.hpp>
 
 namespace crisp {
-
-struct MeshletData {
-    uint32_t maxMeshletCount{0};
-    uint32_t maxVertices{0};
-    uint32_t maxTriangles{0};
-
-    std::vector<Meshlet> meshlets;
-    std::vector<unsigned int> meshletVertices;
-    std::vector<unsigned char> meshletTriangles;
-};
 
 struct MeshAndMaterial {
     TriangleMesh mesh;
@@ -30,7 +20,7 @@ struct MeshAndMaterialMeshlets {
     TriangleMesh mesh;
     FlatHashMap<std::string, WavefrontObjMaterial> materials;
 
-    MeshletData meshlets;
+    MeshletGeometry meshlets;
 };
 
 Result<TriangleMesh> loadTriangleMesh(const std::filesystem::path& path, const TriangleMeshLoadOptions& options = {});
