@@ -227,3 +227,45 @@ target_link_libraries(
     PRIVATE Crisp::SpvReflection
     PRIVATE Crisp::VulkanCommandEncoder
 )
+
+add_cpp_static_library(
+    CrispVulkanBenchmark
+    "Benchmark/VulkanBenchmark.cpp"
+    "Benchmark/VulkanBenchmark.hpp"
+)
+target_link_libraries(
+    CrispVulkanBenchmark
+    PUBLIC Crisp::Vulkan
+    PUBLIC Crisp::VulkanCommandEncoder
+    PUBLIC benchmark::benchmark
+    PRIVATE Crisp::ShaderCompiler
+)
+target_compile_definitions(
+    CrispVulkanBenchmark
+    PUBLIC CRISP_BENCHMARK_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Benchmark/Shaders"
+)
+
+add_cpp_benchmark(
+    CrispBandwidthBenchmark
+    "Benchmark/BandwidthBenchmark.cpp"
+    DEPS
+    Crisp::VulkanBenchmark
+    Crisp::Renderer
+)
+
+add_cpp_benchmark(
+    CrispFlopsBenchmark
+    "Benchmark/FlopsBenchmark.cpp"
+    DEPS
+    Crisp::VulkanBenchmark
+    Crisp::Renderer
+)
+
+add_cpp_benchmark(
+    CrispTrisBenchmark
+    "Benchmark/TrisBenchmark.cpp"
+    DEPS
+    Crisp::VulkanBenchmark
+    Crisp::PipelineBuilder
+    Crisp::SpvReflection
+)
