@@ -67,6 +67,23 @@ struct DrawCommand {
         return std::span{dynamicBufferOffsets}.first(dynamicBufferOffsetCount);
     }
 
+    void drawWithBoundIndexBuffer(const VulkanCommandEncoder& encoder) const {
+        if (geometryView.isIndexed()) {
+            encoder.drawIndexed(
+                geometryView.elementCount,
+                geometryView.instanceCount,
+                geometryView.firstElement,
+                geometryView.vertexOffset,
+                geometryView.firstInstance);
+        } else {
+            encoder.draw(
+                geometryView.elementCount,
+                geometryView.instanceCount,
+                geometryView.firstElement,
+                geometryView.firstInstance);
+        }
+    }
+
     void draw(const VulkanCommandEncoder& encoder) const {
         if (geometryView.isIndexed()) {
             encoder.bindIndexBuffer(geometryView.indexBuffer, 0, VK_INDEX_TYPE_UINT32);

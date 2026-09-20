@@ -83,9 +83,14 @@ DrawCommand RenderNode::MaterialData::createDrawCommand(const RenderNode& render
     drawCommand.setPushConstantView(ownedPushConstantView);
 
     drawCommand.geometry = geometry ? geometry : renderNode.geometry;
-    drawCommand.geometryView = drawCommand.geometry->getIndexBuffer()
-                                   ? drawCommand.geometry->createIndexedGeometryView()
-                                   : drawCommand.geometry->createListGeometryView();
+    if (!drawCommand.geometry->getIndexBuffer()) {
+        drawCommand.geometryView = drawCommand.geometry->createListGeometryView();
+    } else if (renderNode.geometryPartIndex >= 0) {
+        drawCommand.geometryView =
+            drawCommand.geometry->createIndexedGeometryView(static_cast<uint32_t>(renderNode.geometryPartIndex));
+    } else {
+        drawCommand.geometryView = drawCommand.geometry->createIndexedGeometryView();
+    }
     drawCommand.firstBuffer = firstBuffer == -1 ? 0 : static_cast<uint8_t>(firstBuffer);
     drawCommand.bufferCount = bufferCount == -1
                                   ? static_cast<uint8_t>(drawCommand.geometry->getVertexBufferCount())

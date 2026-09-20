@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <span>
 #include <vector>
 
 #include <Crisp/Geometry/GeometryView.hpp>
@@ -126,6 +127,12 @@ private:
 Geometry createGeometry(
     Renderer& renderer,
     const TriangleMesh& mesh,
+    const VertexLayoutDescription& vertexLayoutDescription,
+    VkBufferUsageFlags2 usageFlags = 0);
+
+Geometry createMergedGeometry(
+    Renderer& renderer,
+    std::span<const TriangleMesh* const> meshes,
     const VertexLayoutDescription& vertexLayoutDescription,
     VkBufferUsageFlags2 usageFlags = 0);
 

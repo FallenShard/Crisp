@@ -33,7 +33,12 @@ private:
     void createGltfSceneObjects(const std::filesystem::path& path);
     void createObjSceneObject(const std::filesystem::path& path);
     void addSceneObject(
-        std::string_view nodeId, const TriangleMesh& mesh, const PbrMaterial& material, const glm::mat4& modelMatrix);
+        std::string_view nodeId,
+        const TriangleMesh& mesh,
+        const PbrMaterial& material,
+        const glm::mat4& modelMatrix,
+        Geometry* sharedGeometry = nullptr,
+        int32_t geometryPartIndex = -1);
     void createPlane();
     void createMeshletTestNode();
     void rebuildDrawCommandCache();

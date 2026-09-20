@@ -139,6 +139,48 @@ Geometry createGeometry(
         usageFlags};
 }
 
+Geometry createMergedGeometry(
+    Renderer& renderer,
+    const std::span<const TriangleMesh* const> meshes,
+    const VertexLayoutDescription& vertexLayoutDescription,
+    const VkBufferUsageFlags2 usageFlags) {
+    CRISP_CHECK(!meshes.empty());
+
+    std::vector<InterleavedVertexBuffer> mergedVertexBuffers(vertexLayoutDescription.size());
+    std::vector<glm::uvec3> mergedFaces;
+    std::vector<TriangleMeshView> meshViews;
+    meshViews.reserve(meshes.size());
+
+    uint32_t vertexBase{0};
+    for (const auto* mesh : meshes) {
+        auto vertexBuffers = interleaveVertexBuffers(*mesh, vertexLayoutDescription, /*padToVec4=*/false);
+        CRISP_CHECK_EQ(vertexBuffers.size(), mergedVertexBuffers.size());
+        for (uint32_t i = 0; i < vertexBuffers.size(); ++i) {
+            auto& merged = mergedVertexBuffers[i];
+            const auto& part = vertexBuffers[i];
+            CRISP_CHECK(merged.vertexSize == 0 || merged.vertexSize == part.vertexSize);
+            merged.vertexSize = part.vertexSize;
+            merged.buffer.insert(merged.buffer.end(), part.buffer.begin(), part.buffer.end());
+        }
+
+        const auto& faces = mesh->getTriangles();
+        meshViews.push_back(
+            {std::string{}, static_cast<uint32_t>(mergedFaces.size() * 3), static_cast<uint32_t>(faces.size() * 3)});
+        for (const auto& face : faces) {
+            mergedFaces.push_back(face + glm::uvec3(vertexBase));
+        }
+        vertexBase += mesh->getVertexCount();
+    }
+
+    return {
+        renderer,
+        createVertexLayout(vertexLayoutDescription),
+        mergedVertexBuffers,
+        mergedFaces,
+        meshViews,
+        usageFlags};
+}
+
 VkAccelerationStructureGeometryKHR createAccelerationStructureGeometry(
     const Geometry& geometry, const uint64_t indexByteOffset) {
     VkAccelerationStructureGeometryKHR geo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};

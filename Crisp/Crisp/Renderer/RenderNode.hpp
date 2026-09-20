@@ -72,6 +72,7 @@ struct RenderNode {
     VulkanRingBuffer* transformBuffer = nullptr;
     TransformPack* transformPack = nullptr;
     TransformHandle transformHandle{TransformHandle::createInvalidHandle()};
+    int32_t geometryPartIndex = -1;
     bool isVisible = true;
     std::vector<MaterialData> materials;
 };

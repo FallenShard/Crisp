@@ -69,6 +69,10 @@ void createDrawCommand(
 struct DrawCommandRecordingState {
     const VulkanPipeline* pipeline{nullptr};
     const Material* material{nullptr};
+    const Geometry* geometry{nullptr};
+    uint8_t firstBuffer{0};
+    uint8_t bufferCount{0};
+    VkBuffer indexBuffer{VK_NULL_HANDLE};
 };
 
 void executeDrawCommand(
@@ -87,8 +91,24 @@ void executeDrawCommand(
         state.material = command.material;
     }
 
-    command.geometry->bindVertexBuffers(commandEncoder, command.firstBuffer, command.bufferCount);
-    command.draw(commandEncoder);
+    if (state.geometry != command.geometry || state.firstBuffer != command.firstBuffer ||
+        state.bufferCount != command.bufferCount) {
+        command.geometry->bindVertexBuffers(commandEncoder, command.firstBuffer, command.bufferCount);
+        state.geometry = command.geometry;
+        state.firstBuffer = command.firstBuffer;
+        state.bufferCount = command.bufferCount;
+    }
+
+    if (!command.geometryView.isIndexed()) {
+        command.drawWithBoundIndexBuffer(commandEncoder);
+        return;
+    }
+
+    if (state.indexBuffer != command.geometryView.indexBuffer) {
+        commandEncoder.bindIndexBuffer(command.geometryView.indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+        state.indexBuffer = command.geometryView.indexBuffer;
+    }
+    command.drawWithBoundIndexBuffer(commandEncoder);
 }
 
 } // namespace
@@ -444,8 +464,23 @@ void PbrScene::createGltfSceneObjects(const std::filesystem::path& path) {
     addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
 
     const auto modelName = path.stem().string();
+
+    std::vector<const TriangleMesh*> meshes;
+    meshes.reserve(models.size());
+    for (const auto& model : models) {
+        meshes.push_back(&model.mesh);
+    }
+    auto& mergedGeometry = m_resourceContext->addGeometry(
+        fmt::format("{}_merged", modelName), createMergedGeometry(*m_renderer, meshes, kPbrVertexFormat));
+
     for (auto&& [idx, model] : std::views::enumerate(models)) {
-        addSceneObject(fmt::format("{}_{}", modelName, idx), model.mesh, model.material, model.transform);
+        addSceneObject(
+            fmt::format("{}_{}", modelName, idx),
+            model.mesh,
+            model.material,
+            model.transform,
+            &mergedGeometry,
+            static_cast<int32_t>(idx));
     }
 }
 
@@ -461,11 +496,19 @@ void PbrScene::createObjSceneObject(const std::filesystem::path& path) {
 }
 
 void PbrScene::addSceneObject(
-    const std::string_view nodeId, const TriangleMesh& mesh, const PbrMaterial& material, const glm::mat4& modelMatrix) {
-    auto& geometry = m_resourceContext->addGeometry(nodeId, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
+    const std::string_view nodeId,
+    const TriangleMesh& mesh,
+    const PbrMaterial& material,
+    const glm::mat4& modelMatrix,
+    Geometry* sharedGeometry,
+    const int32_t geometryPartIndex) {
+    auto& geometry = sharedGeometry != nullptr
+                         ? *sharedGeometry
+                         : m_resourceContext->addGeometry(nodeId, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
 
     auto& node = createRenderNode(nodeId);
     node.geometry = &geometry;
+    node.geometryPartIndex = sharedGeometry != nullptr ? geometryPartIndex : -1;
     node.transformPack->M = modelMatrix;
     m_renderNodeWorldBounds.emplace(&node, transformBoundingBox(mesh.getBoundingBox(), modelMatrix));
 
