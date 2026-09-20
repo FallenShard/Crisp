@@ -12,6 +12,7 @@ public:
         struct VulkanParams {
             bool forceValidationLayers{true};
             bool enableRayTracing{false};
+            bool vsync{true};
         };
 
         std::string logLevel{"info"};

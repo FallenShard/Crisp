@@ -163,6 +163,7 @@ Result<ApplicationEnvironment::ConfigParams> parseConfig(const std::filesystem::
             CRISP_CHECK(vulkan.is_object(), "vulkan must be a JSON object");
             CRISP_PARSE_OPT(params.vulkan.forceValidationLayers, vulkan, "forceValidationLayers");
             CRISP_PARSE_OPT(params.vulkan.enableRayTracing, vulkan, "enableRayTracing");
+            CRISP_PARSE_OPT(params.vulkan.vsync, vulkan, "vsync");
         }
         CRISP_PARSE_OPT_TYPED(params.activeScene, config, "activeScene", std::string);
         CRISP_PARSE_OPT(params.scenes, config, "scenes");

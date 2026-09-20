@@ -270,6 +270,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     }
 
     createPlane();
+    m_mergeGeometry = args.value("mergeGeometry", m_mergeGeometry);
     createSceneObjects(args.value("modelPath", std::string{}));
 
     if (args.value("meshletTest", false)) {
@@ -565,13 +566,16 @@ void PbrScene::createGltfSceneObjects(const std::filesystem::path& path) {
 
     const auto modelName = path.stem().string();
 
-    std::vector<const TriangleMesh*> meshes;
-    meshes.reserve(models.size());
-    for (const auto& model : models) {
-        meshes.push_back(&model.mesh);
+    Geometry* mergedGeometry{nullptr};
+    if (m_mergeGeometry) {
+        std::vector<const TriangleMesh*> meshes;
+        meshes.reserve(models.size());
+        for (const auto& model : models) {
+            meshes.push_back(&model.mesh);
+        }
+        mergedGeometry = &m_resourceContext->addGeometry(
+            fmt::format("{}_merged", modelName), createMergedGeometry(*m_renderer, meshes, kPbrVertexFormat));
     }
-    auto& mergedGeometry = m_resourceContext->addGeometry(
-        fmt::format("{}_merged", modelName), createMergedGeometry(*m_renderer, meshes, kPbrVertexFormat));
 
     for (auto&& [idx, model] : std::views::enumerate(models)) {
         addSceneObject(
@@ -579,7 +583,7 @@ void PbrScene::createGltfSceneObjects(const std::filesystem::path& path) {
             model.mesh,
             model.material,
             model.transform,
-            &mergedGeometry,
+            mergedGeometry,
             static_cast<int32_t>(idx));
     }
 }

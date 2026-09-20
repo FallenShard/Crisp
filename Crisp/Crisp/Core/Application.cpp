@@ -43,7 +43,8 @@ Application::Application(const ApplicationEnvironment& environment)
     VulkanCoreParams vulkanCoreParams{
         .requiredInstanceExtensions = ApplicationEnvironment::getRequiredVulkanInstanceExtensions(),
         .deviceFeatureRequests = createDefaultFeatureRequests(),
-        .presentationMode = PresentationMode::DoubleBuffered,
+        .presentationMode =
+            environment.getConfigParams().vulkan.vsync ? PresentationMode::DoubleBuffered : PresentationMode::Immediate,
         .includeValidation = environment.getConfigParams().vulkan.forceValidationLayers,
     };
     addPageableMemoryFeatures(vulkanCoreParams.deviceFeatureRequests);

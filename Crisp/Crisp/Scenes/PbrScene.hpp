@@ -56,6 +56,7 @@ private:
     void beginPipelineStatsFrame(uint32_t virtualFrameIndex);
     bool shouldRecordPipelineStats(uint32_t queryIndex) const;
 
+    bool m_mergeGeometry{true};
     int32_t m_nodesToDraw = 0;
     std::unique_ptr<rg::RenderGraph> m_renderGraph;
 
@@ -63,7 +64,7 @@ private:
     std::unique_ptr<LightSystem> m_lightSystem;
     float m_cascadeBlendFraction{0.1f};
     float m_casterDepthExtrusion{50.0f};
-    bool m_visualizeCascades{true};
+    bool m_visualizeCascades{false};
 
     std::unique_ptr<TransformBuffer> m_transformBuffer;
 
@@ -105,6 +106,6 @@ private:
 
     std::unique_ptr<VulkanPipelineStatsQueryPool> m_pipelineStatsQueryPool;
     std::array<PipelineStats, kStatsPassCount> m_pipelineStats{};
-    bool m_collectPipelineStats{true};
+    bool m_collectPipelineStats{false};
 };
 } // namespace crisp
