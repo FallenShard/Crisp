@@ -65,6 +65,7 @@ add_cpp_static_library(CrispSpvReflection
 target_link_libraries(CrispSpvReflection
     PUBLIC Crisp::Result
     PUBLIC Crisp::VulkanHeader
+    PRIVATE Crisp::Checks
     PUBLIC spirv-reflect-static
 )
 

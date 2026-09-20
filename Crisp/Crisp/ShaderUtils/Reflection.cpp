@@ -6,6 +6,8 @@
 
 #include <spirv_reflect.h>
 
+#include <Crisp/Core/Checks.hpp>
+
 namespace crisp {
 namespace {
 #define SPV_TO_VK_CASE_RETURN(enumEntry)                                                                               \
@@ -224,8 +226,10 @@ Result<PipelineLayoutMetadata> reflectPipelineLayoutFromSpirv(const std::span<co
 
     metadata.pushConstants.resize(module.push_constant_block_count);
     for (uint32_t i = 0; i < module.push_constant_block_count; ++i) {
-        metadata.pushConstants[i].offset = module.push_constant_blocks[i].offset; // NOLINT
-        metadata.pushConstants[i].size = module.push_constant_blocks[i].size;     // NOLINT
+        const auto& block = module.push_constant_blocks[i]; // NOLINT
+        CRISP_CHECK_GE(block.size, block.offset, "Push constant block size must include its offset.");
+        metadata.pushConstants[i].offset = block.offset;
+        metadata.pushConstants[i].size = block.size - block.offset;
         metadata.pushConstants[i].stageFlags = stageFlags;
     }
 
