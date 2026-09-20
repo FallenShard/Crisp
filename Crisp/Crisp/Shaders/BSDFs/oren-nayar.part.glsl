@@ -45,7 +45,7 @@ vec3 evaluateOrenNayarBsdf(
     // Single scatter. The t term keeps 1 where s <= 0 rather than clamping the azimuthal factor to zero, which
     // is what lets the directional albedo above integrate in closed form.
     const float s = cosBetween - cosThetaI * cosThetaO;
-    const float sOverT = s > 0.0f ? s / max(cosThetaI, cosThetaO) : s;
+    const float sOverT = s > 0.0f ? s / max(max(cosThetaI, cosThetaO), 1e-7f) : s;
     const vec3 singleScatter = reflectance * InvPI * orenNayarA(roughness) * (1.0f + roughness * sOverT);
 
     const float averageAlbedo = orenNayarAverageAlbedo(roughness);
