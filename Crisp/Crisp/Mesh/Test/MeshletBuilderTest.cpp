@@ -110,6 +110,35 @@ TEST(MeshletBuilderTest, TreatsAnUnboundedConeAsVisible) {
     EXPECT_TRUE(isMeshletConeVisible(bounds, glm::vec3(0.0f, 0.0f, -10.0f)));
 }
 
+TEST(MeshletBuilderTest, TransformsBoundsIntoWorldSpace) {
+    MeshletBounds bounds{};
+    bounds.centerRadius = glm::vec4(1.0f, 0.0f, 0.0f, 2.0f);
+    bounds.coneApex = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+    bounds.coneAxisCutoff = glm::vec4(1.0f, 0.0f, 0.0f, 0.5f);
+
+    const glm::mat4 modelMatrix{
+        glm::translate(glm::vec3(0.0f, 5.0f, 0.0f)) * glm::rotate(glm::half_pi<float>(), glm::vec3(0.0f, 0.0f, 1.0f)) *
+        glm::scale(glm::vec3(3.0f))};
+
+    const auto world = bounds.transformedBy(modelMatrix);
+
+    EXPECT_THAT(glm::distance(glm::vec3(world.centerRadius), glm::vec3(0.0f, 8.0f, 0.0f)), Le(1e-4f));
+    EXPECT_THAT(std::abs(world.centerRadius.w - 6.0f), Le(1e-4f));
+    EXPECT_THAT(glm::distance(glm::vec3(world.coneAxisCutoff), glm::vec3(0.0f, 1.0f, 0.0f)), Le(1e-4f));
+    EXPECT_THAT(world.coneAxisCutoff.w, Eq(0.5f)) << "a uniform scale must preserve the cone angle";
+}
+
+TEST(MeshletBuilderTest, RefusesToCullUnderNonUniformScale) {
+    MeshletBounds bounds{};
+    bounds.centerRadius = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    bounds.coneAxisCutoff = glm::vec4(1.0f, 0.0f, 0.0f, 0.5f);
+
+    const auto world = bounds.transformedBy(glm::scale(glm::vec3(1.0f, 2.0f, 4.0f)));
+
+    EXPECT_THAT(world.coneAxisCutoff.w, Eq(1.0f));
+    EXPECT_TRUE(isMeshletConeVisible(world, glm::vec3(10.0f, 0.0f, 0.0f)));
+}
+
 TEST(MeshletBuilderTest, LeavesAnEmptyMeshAlone) {
     const TriangleMesh mesh{};
 

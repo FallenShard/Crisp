@@ -1,0 +1,15 @@
+{
+    "shaders"       : {
+        "task": "Lighting/pbr-meshlet.task",
+        "mesh": "Lighting/pbr-meshlet.mesh",
+        "frag": "Lighting/pbr.frag"
+    },
+    "descriptorSets": [
+        { "layout": "bindless"                    },
+        {                       "buffered": false },
+        {                       "buffered": false },
+        {                       "buffered": false }
+    ],
+    "depthStencil"  : { "reverseDepth": true },
+    "multisample"   : { "sampleCount": 4 }
+}

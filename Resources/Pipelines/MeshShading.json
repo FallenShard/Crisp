@@ -1,4 +1,4 @@
 {
-    "shaders": { "mesh": "Geometry/basic.mesh", "frag": "Geometry/basic.frag" },
+    "shaders": { "task": "Geometry/basic.task", "mesh": "Geometry/basic.mesh", "frag": "Geometry/basic.frag" },
     "depthStencil": { "reverseDepth": true }
 }

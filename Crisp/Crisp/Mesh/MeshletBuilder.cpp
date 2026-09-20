@@ -12,6 +12,28 @@ constexpr uint32_t kMaxMeshletTriangles = 512;
 
 } // namespace
 
+MeshletBounds MeshletBounds::transformedBy(const glm::mat4& modelMatrix) const {
+    const float scaleX = glm::length(glm::vec3(modelMatrix[0]));
+    const float scaleY = glm::length(glm::vec3(modelMatrix[1]));
+    const float scaleZ = glm::length(glm::vec3(modelMatrix[2]));
+    const float maxScale = std::max({scaleX, scaleY, scaleZ});
+    const float minScale = std::min({scaleX, scaleY, scaleZ});
+
+    MeshletBounds result{};
+    result.centerRadius =
+        glm::vec4(glm::vec3(modelMatrix * glm::vec4(glm::vec3(centerRadius), 1.0f)), centerRadius.w * maxScale);
+    result.coneApex = glm::vec4(glm::vec3(modelMatrix * glm::vec4(glm::vec3(coneApex), 1.0f)), 0.0f);
+
+    const glm::mat3 normalMatrix{glm::transpose(glm::inverse(glm::mat3(modelMatrix)))};
+    const glm::vec3 axis{normalMatrix * glm::vec3(coneAxisCutoff)};
+    const float axisLength = glm::length(axis);
+
+    const bool uniformScale = maxScale <= minScale * 1.001f;
+    const float cutoff = uniformScale && axisLength > 0.0f ? coneAxisCutoff.w : 1.0f;
+    result.coneAxisCutoff = glm::vec4(axisLength > 0.0f ? axis / axisLength : glm::vec3(0.0f, 0.0f, 1.0f), cutoff);
+    return result;
+}
+
 MeshletGeometry buildMeshlets(const TriangleMesh& mesh, const MeshletBuildOptions& options) {
     CRISP_CHECK_GE_LT(options.maxVertices, 1u, kMaxMeshletVertices + 1);
     CRISP_CHECK_GE_LT(options.maxTriangles, 1u, kMaxMeshletTriangles + 1);

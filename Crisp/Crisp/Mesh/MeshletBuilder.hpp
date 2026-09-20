@@ -13,6 +13,8 @@ struct MeshletBounds {
     glm::vec4 centerRadius{0.0f};   // xyz: bounding sphere center, w: its radius.
     glm::vec4 coneApex{0.0f};       // xyz: normal cone apex, w: unused padding.
     glm::vec4 coneAxisCutoff{0.0f}; // xyz: normal cone axis, w: cos(angle / 2).
+
+    [[nodiscard]] MeshletBounds transformedBy(const glm::mat4& modelMatrix) const;
 };
 
 struct MeshletBuildOptions {

@@ -73,6 +73,18 @@ void createDrawCommand(
 
 constexpr uint32_t kMeshletTaskWorkGroupSize = 32;
 
+// Mirrors the block in Lighting/pbr-meshlet-draw.part.glsl: the classic path's parameters, then the range this
+// dispatch owns.
+struct MeshletDrawParameters {
+    PbrDrawParameters base{};
+    uint32_t firstMeshlet{0};
+    uint32_t meshletCount{0};
+    uint32_t cullingEnabled{0};
+};
+
+static_assert(offsetof(MeshletDrawParameters, firstMeshlet) == sizeof(PbrDrawParameters));
+static_assert(sizeof(MeshletDrawParameters) >= 36);
+
 struct MeshletCullParameters {
     uint32_t meshletCount;
     uint32_t cullingEnabled;
@@ -211,8 +223,16 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
             ctx.commandEncoder.beginQuery(*m_pipelineStatsQueryPool, statsQueryIndex);
         }
 
+        const bool meshletPathActive = m_useMeshletPath && !m_sceneMeshlets.groups.empty();
+        if (meshletPathActive) {
+            drawSceneMeshlets(ctx);
+        }
+
         DrawCommandRecordingState recordingState{};
         for (const auto& cached : drawCommands) {
+            if (meshletPathActive) {
+                break;
+            }
             if (cached.nodeIndex >= nodeCount) {
                 break;
             }
@@ -289,6 +309,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     createPlane();
     m_mergeGeometry = args.value("mergeGeometry", m_mergeGeometry);
     m_optimizeIndices = args.value("optimizeIndices", m_optimizeIndices);
+    m_useMeshletPath = args.value("useMeshletPath", m_useMeshletPath);
     createSceneObjects(args.value("modelPath", std::string{}));
 
     if (args.value("meshletTest", false)) {
@@ -411,6 +432,22 @@ void PbrScene::drawGui() {
     if (ImGui::CollapsingHeader("Objects")) {
         if (ImGui::Checkbox("Show Floor", &m_showFloor)) {
             m_renderNodes["floor"]->isVisible = m_showFloor;
+        }
+        if (!m_sceneMeshlets.groups.empty()) {
+            ImGui::Checkbox("Meshlet Path", &m_useMeshletPath);
+            ImGui::Checkbox("Cull Scene Meshlets", &m_cullSceneMeshlets);
+
+            const glm::vec3 cameraPosition{m_cameraController->getCamera().getPosition()};
+            uint32_t visible{0};
+            for (const auto& bounds : m_sceneMeshlets.bounds) {
+                visible += isMeshletConeVisible(bounds, cameraPosition) ? 1u : 0u;
+            }
+            const auto total = static_cast<uint32_t>(m_sceneMeshlets.bounds.size());
+            ImGui::Text(
+                "Scene clusters cone culled: %u of %u (%.1f%%)",
+                total - visible,
+                total,
+                total == 0 ? 0.0f : 100.0f * static_cast<float>(total - visible) / static_cast<float>(total));
         }
         if (!m_meshletData.meshlets.empty()) {
             ImGui::Checkbox("Draw Meshlets", &m_drawMeshlets);
@@ -594,7 +631,6 @@ void PbrScene::createGltfSceneObjects(const std::filesystem::path& path) {
     auto [images, models] = loadGltfAsset(path, {.optimizeIndices = m_optimizeIndices}).unwrap();
     CRISP_LOGI("Loaded {} models from {}.", models.size(), path.generic_string());
 
-    // Every loaded image lands in the bindless table here; the per-model params below resolve their slots by key.
     addPbrImageGroupToImageCache(images, m_resourceContext->imageCache);
 
     const auto modelName = path.stem().string();
@@ -607,17 +643,37 @@ void PbrScene::createGltfSceneObjects(const std::filesystem::path& path) {
             meshes.push_back(&model.mesh);
         }
         mergedGeometry = &m_resourceContext->addGeometry(
-            fmt::format("{}_merged", modelName), createMergedGeometry(*m_renderer, meshes, kPbrVertexFormat));
+            fmt::format("{}_merged", modelName),
+            createMergedGeometry(*m_renderer, meshes, kPbrVertexFormat, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
     }
 
+    std::vector<SceneMeshletSource> meshletSources;
+    meshletSources.reserve(models.size());
+    uint32_t vertexBase{0};
     for (auto&& [idx, model] : std::views::enumerate(models)) {
-        addSceneObject(
+        const auto& node = addSceneObject(
             fmt::format("{}_{}", modelName, idx),
             model.mesh,
             model.material,
             model.transform,
             mergedGeometry,
             static_cast<int32_t>(idx));
+
+        meshletSources.push_back(
+            SceneMeshletSource{
+                .mesh = &model.mesh,
+                .modelMatrix = model.transform,
+                .vertexBase = vertexBase,
+                .transformIndex = node.transformHandle.index,
+                .materialIndex =
+                    addOrReuseMaterial(createGpuPbrParams(model.material, m_resourceContext->imageCache)).index,
+            });
+        vertexBase += model.mesh.getVertexCount();
+    }
+
+    if (mergedGeometry != nullptr) {
+        buildSceneMeshlets(meshletSources);
+        createMeshletResources(*mergedGeometry);
     }
 }
 
@@ -632,7 +688,18 @@ void PbrScene::createObjSceneObject(const std::filesystem::path& path) {
         material.name, mesh, material, glm::translate(glm::vec3(0.0f, kFloorHeight - mesh.getBoundingBox().min.y, 0.0f)));
 }
 
-void PbrScene::addSceneObject(
+PbrMaterialHandle PbrScene::addOrReuseMaterial(const PbrMaterialParams& params) {
+    const std::string key{reinterpret_cast<const char*>(&params), sizeof(PbrMaterialParams)}; // NOLINT
+    if (const auto it = m_materialHandles.find(key); it != m_materialHandles.end()) {
+        return it->second;
+    }
+
+    const auto handle = m_pbrMaterialTable->add(params);
+    m_materialHandles.emplace(key, handle);
+    return handle;
+}
+
+RenderNode& PbrScene::addSceneObject(
     const std::string_view nodeId,
     const TriangleMesh& mesh,
     const PbrMaterial& material,
@@ -654,7 +721,7 @@ void PbrScene::addSceneObject(
     forwardPass.material = m_pbrDrawMaterial.get();
     forwardPass.transformBufferDynamicIndex = 0;
     const auto gpuMaterial = createGpuPbrParams(material, m_resourceContext->imageCache);
-    const auto materialHandle = m_pbrMaterialTable->add(gpuMaterial);
+    const auto materialHandle = addOrReuseMaterial(gpuMaterial);
     auto drawParameters = m_pbrMaterialTable->createDrawParameters(materialHandle);
     drawParameters.transformIndex = node.transformHandle.index;
     forwardPass.setPushConstants(drawParameters);
@@ -669,6 +736,139 @@ void PbrScene::addSceneObject(
         subpass.setPushConstants(drawParameters);
         CRISP_CHECK(subpass.material->getPipeline()->getVertexLayout().isSubsetOf(subpass.geometry->getVertexLayout()));
     }
+
+    return node;
+}
+
+void PbrScene::buildSceneMeshlets(const std::span<const SceneMeshletSource> sources) {
+    struct PendingMeshlet {
+        Meshlet meshlet;
+        MeshletBounds bounds;
+        uint32_t transformIndex;
+        uint32_t materialIndex;
+    };
+
+    std::vector<PendingMeshlet> pending;
+    m_sceneMeshlets = {};
+
+    for (const auto& source : sources) {
+        CRISP_CHECK(source.mesh != nullptr);
+        const auto meshMeshlets = buildMeshlets(*source.mesh);
+        if (meshMeshlets.meshlets.empty()) {
+            continue;
+        }
+
+        const auto vertexArrayBase = static_cast<uint32_t>(m_sceneMeshlets.vertices.size());
+
+        m_sceneMeshlets.triangles.resize((m_sceneMeshlets.triangles.size() + 3) & ~size_t{3});
+        const auto triangleArrayBase = static_cast<uint32_t>(m_sceneMeshlets.triangles.size());
+
+        for (const auto vertexIndex : meshMeshlets.vertices) {
+            m_sceneMeshlets.vertices.push_back(vertexIndex + source.vertexBase);
+        }
+        m_sceneMeshlets.triangles.insert(
+            m_sceneMeshlets.triangles.end(), meshMeshlets.triangles.begin(), meshMeshlets.triangles.end());
+
+        for (size_t i = 0; i < meshMeshlets.meshlets.size(); ++i) {
+            Meshlet meshlet{meshMeshlets.meshlets[i]};
+            meshlet.vertexOffset += vertexArrayBase;
+            meshlet.triangleOffset += triangleArrayBase;
+            pending.push_back(
+                PendingMeshlet{
+                    .meshlet = meshlet,
+                    .bounds = meshMeshlets.bounds[i].transformedBy(source.modelMatrix),
+                    .transformIndex = source.transformIndex,
+                    .materialIndex = source.materialIndex,
+                });
+        }
+    }
+
+    std::ranges::stable_sort(pending, {}, &PendingMeshlet::materialIndex);
+
+    m_sceneMeshlets.meshlets.reserve(pending.size());
+    m_sceneMeshlets.bounds.reserve(pending.size());
+    m_sceneMeshlets.transformIndices.reserve(pending.size());
+    for (const auto& entry : pending) {
+        if (m_sceneMeshlets.groups.empty() ||
+            m_sceneMeshlets.groups.back().drawParameters.materialIndex != entry.materialIndex) {
+            auto drawParameters = m_pbrMaterialTable->createDrawParameters(PbrMaterialHandle{entry.materialIndex});
+            m_sceneMeshlets.groups.push_back(
+                SceneMeshlets::MaterialGroup{
+                    .firstMeshlet = static_cast<uint32_t>(m_sceneMeshlets.meshlets.size()),
+                    .meshletCount = 0,
+                    .drawParameters = drawParameters,
+                });
+        }
+
+        ++m_sceneMeshlets.groups.back().meshletCount;
+        m_sceneMeshlets.meshlets.push_back(entry.meshlet);
+        m_sceneMeshlets.bounds.push_back(entry.bounds);
+        m_sceneMeshlets.transformIndices.push_back(entry.transformIndex);
+    }
+
+    CRISP_LOGI(
+        "Scene meshlets: {} clusters over {} objects in {} material groups ({:.1f} KB of cluster data).",
+        m_sceneMeshlets.meshlets.size(),
+        sources.size(),
+        m_sceneMeshlets.groups.size(),
+        static_cast<double>(
+            m_sceneMeshlets.meshlets.size() * sizeof(Meshlet) + m_sceneMeshlets.bounds.size() * sizeof(MeshletBounds) +
+            m_sceneMeshlets.vertices.size() * sizeof(uint32_t) + m_sceneMeshlets.triangles.size()) /
+            1024.0);
+}
+
+void PbrScene::drawSceneMeshlets(const FrameContext& ctx) {
+    auto* pipeline = m_resourceContext->pipelineCache.getPipeline("pbrMeshlet");
+    ctx.commandEncoder.bindPipeline(*pipeline);
+
+    auto& bindlessRegistry = m_renderer->getBindlessImageRegistry();
+    bindlessRegistry.bind(
+        ctx.commandEncoder,
+        pipeline->getPipelineLayout()->getHandle(),
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        BindlessImageRegistry::kGlobalSetIndex);
+    ctx.commandEncoder.bindDescriptorSets(m_meshletMaterial->getDescriptorSetBinding());
+
+    for (const auto& group : m_sceneMeshlets.groups) {
+        MeshletDrawParameters drawParameters{};
+        drawParameters.base = group.drawParameters;
+        drawParameters.firstMeshlet = group.firstMeshlet;
+        drawParameters.meshletCount = group.meshletCount;
+        drawParameters.cullingEnabled = m_cullSceneMeshlets ? 1u : 0u;
+        ctx.commandEncoder.setPushConstants(
+            *pipeline->getPipelineLayout(),
+            std::span{reinterpret_cast<const std::byte*>(&drawParameters), sizeof(drawParameters)}); // NOLINT
+
+        const uint32_t taskGroupCount = (group.meshletCount + kMeshletTaskWorkGroupSize - 1) / kMeshletTaskWorkGroupSize;
+        ctx.commandEncoder.drawMeshTasks(taskGroupCount);
+    }
+}
+
+void PbrScene::createMeshletResources(const Geometry& mergedGeometry) {
+    if (m_sceneMeshlets.meshlets.empty()) {
+        return;
+    }
+
+    auto* meshletBuffer = m_resourceContext->createStorageBuffer("sceneMeshlets", m_sceneMeshlets.meshlets);
+    auto* vertexBuffer = m_resourceContext->createStorageBuffer("sceneMeshletVertices", m_sceneMeshlets.vertices);
+    auto* triangleBuffer = m_resourceContext->createStorageBuffer("sceneMeshletTriangles", m_sceneMeshlets.triangles);
+    auto* boundsBuffer = m_resourceContext->createStorageBuffer("sceneMeshletBounds", m_sceneMeshlets.bounds);
+    auto* transformIndexBuffer =
+        m_resourceContext->createStorageBuffer("sceneMeshletTransforms", m_sceneMeshlets.transformIndices);
+
+    auto* pipeline = m_resourceContext->createPipeline(
+        "pbrMeshlet", "PbrMeshlet.json", {m_renderGraph->getRasterizationPassDescriptor(kForwardLightingPass)});
+    m_meshletMaterial =
+        std::make_unique<Material>(pipeline, pipeline->getPipelineLayout()->getVulkanDescriptorSetAllocator(), 1, 3);
+    configureForwardLightingPassMaterial(*m_meshletMaterial, *m_resourceContext, *m_lightSystem, *m_renderGraph);
+    m_meshletMaterial->writeDescriptor(2, 0, m_transformBuffer->getStorageDescriptorInfo());
+    m_meshletMaterial->writeDescriptor(3, 0, meshletBuffer->createDescriptorInfo());
+    m_meshletMaterial->writeDescriptor(3, 1, vertexBuffer->createDescriptorInfo());
+    m_meshletMaterial->writeDescriptor(3, 2, triangleBuffer->createDescriptorInfo());
+    m_meshletMaterial->writeDescriptor(3, 3, boundsBuffer->createDescriptorInfo());
+    m_meshletMaterial->writeDescriptor(3, 4, transformIndexBuffer->createDescriptorInfo());
+    m_meshletMaterial->writeDescriptor(3, 5, mergedGeometry.getVertexBuffer(0)->createDescriptorInfo());
+    m_meshletMaterial->writeDescriptor(3, 6, mergedGeometry.getVertexBuffer(1)->createDescriptorInfo());
 }
 
 void PbrScene::createPlane() {

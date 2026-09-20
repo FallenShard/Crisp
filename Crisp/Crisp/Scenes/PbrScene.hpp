@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include <Crisp/Camera/TargetCameraController.hpp>
 #include <Crisp/Core/HashMap.hpp>
 #include <Crisp/Io/JsonUtils.hpp>
@@ -33,13 +35,42 @@ private:
     void createSceneObjects(const std::filesystem::path& path);
     void createGltfSceneObjects(const std::filesystem::path& path);
     void createObjSceneObject(const std::filesystem::path& path);
-    void addSceneObject(
+    RenderNode& addSceneObject(
         std::string_view nodeId,
         const TriangleMesh& mesh,
         const PbrMaterial& material,
         const glm::mat4& modelMatrix,
         Geometry* sharedGeometry = nullptr,
         int32_t geometryPartIndex = -1);
+    PbrMaterialHandle addOrReuseMaterial(const PbrMaterialParams& params);
+
+    struct SceneMeshletSource {
+        const TriangleMesh* mesh{nullptr};
+        glm::mat4 modelMatrix{1.0f};
+        uint32_t vertexBase{0};     // Where this mesh's vertices start in the merged vertex buffer.
+        uint32_t transformIndex{0}; // Index into the scene's transform storage buffer.
+        uint32_t materialIndex{0};  // Index into the PBR material table.
+    };
+
+    struct SceneMeshlets {
+        std::vector<Meshlet> meshlets;
+        std::vector<MeshletBounds> bounds;      // World space; the scene's models do not move.
+        std::vector<uint32_t> transformIndices; // Parallel to meshlets.
+        std::vector<uint32_t> vertices;         // Indices into the merged vertex buffer.
+        std::vector<uint8_t> triangles;
+
+        struct MaterialGroup {
+            uint32_t firstMeshlet{0};
+            uint32_t meshletCount{0};
+            PbrDrawParameters drawParameters{};
+        };
+
+        std::vector<MaterialGroup> groups;
+    };
+
+    void buildSceneMeshlets(std::span<const SceneMeshletSource> sources);
+    void createMeshletResources(const Geometry& mergedGeometry);
+    void drawSceneMeshlets(const FrameContext& ctx);
     void createPlane();
     void createMeshletTestNode();
     void rebuildDrawCommandCache();
@@ -85,6 +116,12 @@ private:
     bool m_cullMeshlets{true};
     bool m_drawMeshlets{false};
     MeshletGeometry m_meshletData;
+    FlatStringHashMap<PbrMaterialHandle> m_materialHandles;
+
+    SceneMeshlets m_sceneMeshlets;
+    std::unique_ptr<Material> m_meshletMaterial;
+    bool m_useMeshletPath{false};
+    bool m_cullSceneMeshlets{true};
 
     struct CachedDrawCommand {
         const RenderNode* renderNode{nullptr};
