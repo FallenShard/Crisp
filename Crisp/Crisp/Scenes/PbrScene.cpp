@@ -81,17 +81,14 @@ struct DrawCommandRecordingState {
 };
 
 void executeDrawCommand(
-    const DrawCommand& command,
-    const VulkanCommandEncoder& commandEncoder,
-    DrawCommandRecordingState& state) {
+    const DrawCommand& command, const VulkanCommandEncoder& commandEncoder, DrawCommandRecordingState& state) {
     if (state.pipeline != command.getPipeline()) {
         commandEncoder.bindPipeline(*command.getPipeline());
         state.pipeline = command.getPipeline();
     }
     commandEncoder.setPushConstants(*command.getPipeline()->getPipelineLayout(), command.pushConstantView.asSpan());
 
-    if (command.material != nullptr &&
-        (state.material != command.material || command.dynamicBufferOffsetCount > 0)) {
+    if (command.material != nullptr && (state.material != command.material || command.dynamicBufferOffsetCount > 0)) {
         commandEncoder.bindDescriptorSets(command.material->getDescriptorSetBinding(command.getDynamicBufferOffsets()));
         state.material = command.material;
     }
@@ -128,8 +125,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
         const auto orientationDegrees = cameraIt->value("orientationDegrees", std::array{30.0f, -15.0f});
         m_cameraController->setTarget(glm::vec3{target[0], target[1], target[2]});
         m_cameraController->setDistance(cameraIt->value("distance", 10.0f));
-        m_cameraController->setOrientation(
-            glm::radians(orientationDegrees[0]), glm::radians(orientationDegrees[1]));
+        m_cameraController->setOrientation(glm::radians(orientationDegrees[0]), glm::radians(orientationDegrees[1]));
     } else {
         m_cameraController->setOrbitDistance(1.0f);
     }
@@ -285,10 +281,7 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     rebuildDrawCommandCache();
 
     m_pipelineStatsQueryPool = std::make_unique<VulkanPipelineStatsQueryPool>(
-        m_renderer->getDevice(),
-        kPbrGeometryStats,
-        kRendererVirtualFrameCount * kStatsPassCount,
-        "Pbr Geometry Stats");
+        m_renderer->getDevice(), kPbrGeometryStats, kRendererVirtualFrameCount * kStatsPassCount, "Pbr Geometry Stats");
 
     for (const auto& dir :
          std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps")) {
@@ -450,8 +443,7 @@ void PbrScene::drawGui() {
 
         const auto forwardFragments =
             static_cast<double>(m_pipelineStats[kForwardStatsPass].fragmentShaderInvocations.value_or(0));
-        ImGui::Text(
-            "Forward overdraw: %.2fx over %.0f pixels", pixels > 0.0 ? forwardFragments / pixels : 0.0, pixels);
+        ImGui::Text("Forward overdraw: %.2fx over %.0f pixels", pixels > 0.0 ? forwardFragments / pixels : 0.0, pixels);
         ImGui::TextDisabled("Forward row covers the PBR batch only; skybox and meshlets draw after the query.");
     }
     ImGui::End();
@@ -610,9 +602,10 @@ void PbrScene::addSceneObject(
     const glm::mat4& modelMatrix,
     Geometry* sharedGeometry,
     const int32_t geometryPartIndex) {
-    auto& geometry = sharedGeometry != nullptr
-                         ? *sharedGeometry
-                         : m_resourceContext->addGeometry(nodeId, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
+    auto& geometry =
+        sharedGeometry != nullptr
+            ? *sharedGeometry
+            : m_resourceContext->addGeometry(nodeId, createGeometry(*m_renderer, mesh, kPbrVertexFormat));
 
     auto& node = createRenderNode(nodeId);
     node.geometry = &geometry;
