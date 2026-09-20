@@ -18,6 +18,11 @@ const auto logger = createLoggerMt("PbrScene");
 constexpr uint32_t kShadowMapSize = 4096;
 constexpr float kFloorHeight = -1.0f;
 
+constexpr VkQueryPipelineStatisticFlags kPbrGeometryStats =
+    VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT | VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT |
+    VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT | VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT |
+    VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT | VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT;
+
 struct ShadowMaterialVariant {
     std::string_view suffix;
     std::string_view pipelineConfig;
@@ -153,6 +158,13 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                 BindlessImageRegistry::kGlobalSetIndex);
 
+            CRISP_TRACE_SCOPE("csm_record");
+            const uint32_t statsQueryIndex = getStatsQueryIndex(ctx.virtualFrameIndex, cascadeIndex);
+            const bool recordStats = shouldRecordPipelineStats(statsQueryIndex);
+            if (recordStats) {
+                ctx.commandEncoder.beginQuery(*m_pipelineStatsQueryPool, statsQueryIndex);
+            }
+
             DrawCommandRecordingState recordingState{};
             const glm::mat4 cascadeViewProjection{m_lightSystem->getCascadeViewProjection(cascadeIndex)};
             for (const auto& cached : drawCommands) {
@@ -166,6 +178,10 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
                     continue;
                 }
                 executeDrawCommand(cached.command, ctx.commandEncoder, recordingState);
+            }
+            if (recordStats) {
+                ctx.commandEncoder.endQuery(*m_pipelineStatsQueryPool, statsQueryIndex);
+                m_pipelineStatsQueryPool->setPending(statsQueryIndex);
             }
         });
 
@@ -185,6 +201,13 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
             VK_PIPELINE_BIND_POINT_GRAPHICS,
             BindlessImageRegistry::kGlobalSetIndex);
         ctx.commandEncoder.bindDescriptorSets(m_forwardPassMaterial->getDescriptorSetBinding());
+        CRISP_TRACE_SCOPE("forward_record");
+        const uint32_t statsQueryIndex = getStatsQueryIndex(ctx.virtualFrameIndex, kForwardStatsPass);
+        const bool recordStats = shouldRecordPipelineStats(statsQueryIndex);
+        if (recordStats) {
+            ctx.commandEncoder.beginQuery(*m_pipelineStatsQueryPool, statsQueryIndex);
+        }
+
         DrawCommandRecordingState recordingState{};
         for (const auto& cached : drawCommands) {
             if (cached.nodeIndex >= nodeCount) {
@@ -198,6 +221,11 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
                 &pbrPipelineLayout,
                 "Every draw in the bindless PBR batch must use its pipeline layout; draw special pipelines afterward.");
             executeDrawCommand(cached.command, ctx.commandEncoder, recordingState);
+        }
+
+        if (recordStats) {
+            ctx.commandEncoder.endQuery(*m_pipelineStatsQueryPool, statsQueryIndex);
+            m_pipelineStatsQueryPool->setPending(statsQueryIndex);
         }
 
         std::vector<DrawCommand> specialDrawCommands{};
@@ -256,6 +284,12 @@ PbrScene::PbrScene(Renderer* renderer, Window* window, const nlohmann::json& arg
     m_nodesToDraw = static_cast<int32_t>(m_renderNodes.size());
     rebuildDrawCommandCache();
 
+    m_pipelineStatsQueryPool = std::make_unique<VulkanPipelineStatsQueryPool>(
+        m_renderer->getDevice(),
+        kPbrGeometryStats,
+        kRendererVirtualFrameCount * kStatsPassCount,
+        "Pbr Geometry Stats");
+
     for (const auto& dir :
          std::filesystem::directory_iterator(m_renderer->getResourcesPath() / "Textures/EnvironmentMaps")) {
         m_environmentMapNames.push_back(dir.path().stem().string());
@@ -276,8 +310,32 @@ void PbrScene::update(const UpdateParams& updateParams) {
     m_transformBuffer->update(camParams.V, camParams.P);
 }
 
+void PbrScene::beginPipelineStatsFrame(const uint32_t virtualFrameIndex) {
+    if (m_pipelineStatsQueryPool == nullptr) {
+        return;
+    }
+
+    for (uint32_t passIndex = 0; passIndex < kStatsPassCount; ++passIndex) {
+        const uint32_t queryIndex = getStatsQueryIndex(virtualFrameIndex, passIndex);
+        if (!m_pipelineStatsQueryPool->isPending(queryIndex)) {
+            continue;
+        }
+        if (!m_pipelineStatsQueryPool->tryGetResults(m_pipelineStats[passIndex], queryIndex)) {
+            continue;
+        }
+        m_pipelineStatsQueryPool->reset(queryIndex);
+    }
+}
+
+bool PbrScene::shouldRecordPipelineStats(const uint32_t queryIndex) const {
+    return m_collectPipelineStats && m_pipelineStatsQueryPool != nullptr &&
+           !m_pipelineStatsQueryPool->isPending(queryIndex);
+}
+
 void PbrScene::render(const FrameContext& frameContext) {
     CRISP_TRACE_VK_SCOPE("PbrScene::render", frameContext.commandEncoder);
+
+    beginPipelineStatsFrame(frameContext.virtualFrameIndex);
 
     frameContext.commandEncoder.insertBarrier(
         (kVertexUniformRead | kFragmentUniformRead | kFragmentRead) >> kTransferWrite);
@@ -345,6 +403,56 @@ void PbrScene::drawGui() {
         if (!m_meshletData.meshlets.empty()) {
             ImGui::Checkbox("Draw Meshlets", &m_drawMeshlets);
         }
+    }
+    if (ImGui::CollapsingHeader("Pipeline Stats")) {
+        ImGui::Checkbox("Collect", &m_collectPipelineStats);
+
+        const auto extent = m_renderer->getSwapChainExtent();
+        const auto pixels = static_cast<double>(extent.width) * extent.height;
+        const auto toMillions = [](const std::optional<uint64_t>& value) {
+            return static_cast<double>(value.value_or(0)) / 1.0e6;
+        };
+
+        if (ImGui::BeginTable("pipelineStats", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+            ImGui::TableSetupColumn("Pass");
+            ImGui::TableSetupColumn("IA prims (M)");
+            ImGui::TableSetupColumn("Rasterized (M)");
+            ImGui::TableSetupColumn("Culled");
+            ImGui::TableSetupColumn("VS inv (M)");
+            ImGui::TableSetupColumn("FS inv (M)");
+            ImGui::TableHeadersRow();
+
+            for (uint32_t passIndex = 0; passIndex < kStatsPassCount; ++passIndex) {
+                const auto& stats = m_pipelineStats[passIndex];
+                const double submitted = toMillions(stats.inputAssemblyPrimitives);
+                const double rasterized = toMillions(stats.clippingPrimitives);
+
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                if (passIndex == kForwardStatsPass) {
+                    ImGui::TextUnformatted("forward");
+                } else {
+                    ImGui::Text("csm%u", passIndex);
+                }
+                ImGui::TableNextColumn();
+                ImGui::Text("%8.3f", submitted);
+                ImGui::TableNextColumn();
+                ImGui::Text("%8.3f", rasterized);
+                ImGui::TableNextColumn();
+                ImGui::Text("%5.1f%%", submitted == 0.0 ? 0.0 : 100.0 * (1.0 - rasterized / submitted));
+                ImGui::TableNextColumn();
+                ImGui::Text("%8.3f", toMillions(stats.vertexShaderInvocations));
+                ImGui::TableNextColumn();
+                ImGui::Text("%8.3f", toMillions(stats.fragmentShaderInvocations));
+            }
+            ImGui::EndTable();
+        }
+
+        const auto forwardFragments =
+            static_cast<double>(m_pipelineStats[kForwardStatsPass].fragmentShaderInvocations.value_or(0));
+        ImGui::Text(
+            "Forward overdraw: %.2fx over %.0f pixels", pixels > 0.0 ? forwardFragments / pixels : 0.0, pixels);
+        ImGui::TextDisabled("Forward row covers the PBR batch only; skybox and meshlets draw after the query.");
     }
     ImGui::End();
 

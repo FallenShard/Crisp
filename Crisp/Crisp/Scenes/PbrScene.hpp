@@ -10,6 +10,7 @@
 #include <Crisp/Renderer/RenderGraph/RenderGraph.hpp>
 #include <Crisp/Renderer/RenderPasses/ShadowPass.hpp>
 #include <Crisp/Scenes/Scene.hpp>
+#include <Crisp/Vulkan/Rhi/VulkanPipelineStatsQueryPool.hpp>
 
 namespace crisp {
 class PbrScene : public Scene {
@@ -44,6 +45,16 @@ private:
     void rebuildDrawCommandCache();
 
     void setupInput();
+
+    static constexpr uint32_t kStatsPassCount = kDefaultCascadeCount + 1;
+    static constexpr uint32_t kForwardStatsPass = kDefaultCascadeCount;
+
+    static uint32_t getStatsQueryIndex(const uint32_t virtualFrameIndex, const uint32_t passIndex) {
+        return virtualFrameIndex * kStatsPassCount + passIndex;
+    }
+
+    void beginPipelineStatsFrame(uint32_t virtualFrameIndex);
+    bool shouldRecordPipelineStats(uint32_t queryIndex) const;
 
     int32_t m_nodesToDraw = 0;
     std::unique_ptr<rg::RenderGraph> m_renderGraph;
@@ -91,5 +102,9 @@ private:
     };
 
     DrawStats m_drawStats{};
+
+    std::unique_ptr<VulkanPipelineStatsQueryPool> m_pipelineStatsQueryPool;
+    std::array<PipelineStats, kStatsPassCount> m_pipelineStats{};
+    bool m_collectPipelineStats{true};
 };
 } // namespace crisp
